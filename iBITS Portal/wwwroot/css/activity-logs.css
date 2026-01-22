@@ -1,0 +1,93 @@
+﻿/* activity-logs.css */
+
+/* ======================================================= */
+/*                 SECTION 1: THEME & BACKGROUND           */
+/* ======================================================= */
+:root {
+    /* DARK THEME (DEFAULT) */
+    --bg-body: #030a16;
+    --bg-gradient: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.1) 0, transparent 60%);
+    --bg-glass: rgba(11, 26, 51, 0.65);
+    --gold-primary: #D4AF37;
+    --gold-dim: rgba(212, 175, 55, 0.1);
+    --gold-text: #D4AF37;
+    --text-main: #94a3b8;
+    --text-strong: #ffffff;
+    --text-inverse: #000000;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+}
+
+/* LIGHT THEME OVERRIDES */
+[data-theme="light"] {
+    --bg-body: #f8fafc;
+    --bg-glass: rgba(255, 255, 255, 0.9);
+    --text-main: #64748b;
+    --text-strong: #0f172a;
+    --text-inverse: #ffffff;
+    --border-color: #e2e8f0;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --gold-dim: rgba(212, 175, 55, 0.2);
+}
+
+/* APPLY BACKGROUND TO PAGE */
+body {
+    background-color: var(--bg-body);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+/* ======================================================= */
+/*                 SECTION 2: ACTIVITY LOGS SPECIFIC       */
+/* ======================================================= */
+
+/* --- CONTAINER --- */
+.glass-panel {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: var(--shadow-soft);
+}
+
+/* --- TABLE STYLES --- */
+.log-table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+    .log-table th {
+        color: var(--gold-primary);
+        border-bottom: 2px solid var(--gold-primary);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        padding: 12px;
+    }
+
+    .log-table td {
+        color: var(--text-main);
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px;
+    }
+
+/* --- BADGES --- */
+.badge-action {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: var(--gold-text);
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* --- UTILS --- */
+.text-strong {
+    color: var(--text-strong) !important;
+}

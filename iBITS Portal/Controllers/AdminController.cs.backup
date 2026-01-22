@@ -1,0 +1,204 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using iBITS_Portal.Models;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace iBITS_Portal.Controllers
+{
+    [Authorize(Roles = "Admin")]
+    public class AdminController : Controller
+    {
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly PortaliBitsContext _context;
+        private readonly ILogger<AdminController> _logger;
+        private readonly IWebHostEnvironment _env;
+        private readonly IPasswordHasher<IdentityUser> _passwordHasher;
+
+        public AdminController(
+            UserManager<IdentityUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            PortaliBitsContext context,
+            ILogger<AdminController> logger,
+            IWebHostEnvironment env,
+            IPasswordHasher<IdentityUser> passwordHasher)
+        {
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _context = context;
+            _logger = logger;
+            _env = env;
+            _passwordHasher = passwordHasher;
+        }
+
+        private async Task LogAction(string action, string description)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var logEntry = new ActivityLog
+            {
+                Action = action,
+                Description = description,
+                PerformedBy = currentUser?.UserName ?? "System",
+                Timestamp = DateTime.Now
+            };
+            _context.ActivityLogs.Add(logEntry);
+            await _context.SaveChangesAsync();
+        }
+
+        // =========================================================
+        // 1. DASHBOARD & BALANCE CALCULATION
+        // =========================================================
+        public async Task<IActionResult> Index()
+        {
+            ViewBag.TotalStudents = await _context.Students.CountAsync();
+            ViewBag.TotalOfficers = await _context.Students.CountAsync(s => s.OfficerId != null);
+            return View();
+        }
+
+        // =========================================================
+        // 2. STUDENT MANAGEMENT
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ArchiveStudent(string id)
+        {
+            var student = await _context.Students.FindAsync(id);
+            if (student == null) return NotFound();
+
+            student.IsArchived = true;
+            student.ArchiveStatus = "Graduated";
+            student.ArchiveDate = DateOnly.FromDateTime(DateTime.Now);
+
+            await _context.SaveChangesAsync();
+            await LogAction("Archive Student", $"Archived student: {id}");
+            TempData["Message"] = "Student archived successfully.";
+            return RedirectToAction("StudentRecords");
+        }
+
+        // =========================================================
+        // 3. EVENT MANAGEMENT - FULL ADMIN AUTHORITY
+        // =========================================================
+        public async Task<IActionResult> Events()
+        {
+            var events = await _context.Events
+                .Include(e => e.Attendances)
+                .OrderByDescending(e => e.EventDate)
+                .ToListAsync();
+            return View(events);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditEvent(Event updatedEvent)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(updatedEvent);
+            }
+
+            try
+            {
+                var eventToUpdate = await _context.Events.FindAsync(updatedEvent.EventId);
+                if (eventToUpdate == null)
+                {
+                    TempData["Error"] = "Event not found.";
+                    return RedirectToAction("Events");
+                }
+
+                await LogAction("Update Event", $"Updated event ID: {updatedEvent.EventId}");
+                
+                _context.Events.Update(eventToUpdate);
+                await _context.SaveChangesAsync();
+                TempData["Message"] = "Event updated successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating event.");
+                TempData["Error"] = "An error occurred while updating the event.";
+            }
+            return RedirectToAction("Events");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteEvent(int eventId, AdminActionConfirmation confirmation)
+        {
+            // Verify admin password first
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null || string.IsNullOrEmpty(confirmation.Password))
+            {
+                TempData["Error"] = "Password is required to delete an event.";
+                return RedirectToAction("Events");
+            }
+
+var passwordResult = _passwordHasher.CheckPasswordAsync(currentUser, confirmation.Password);
+            if (!passwordResult.Succeeded)
+            {
+                TempData["Error"] = "Invalid password. Event deletion cancelled.";
+                return RedirectToAction("Events");
+            }
+
+            var eventToDelete = await _context.Events
+                .Include(e => e.Attendances)
+                .FirstOrDefaultAsync(e => e.EventId == eventId);
+            if (eventToDelete == null)
+            {
+                TempData["Error"] = "Event not found.";
+                return RedirectToAction("Events");
+            }
+
+            // Show detailed impact information
+            int attendanceCount = eventToDelete.Attendances?.Count ?? 0;
+            if (attendanceCount > 0)
+            {
+                TempData["Warning"] = $"Deleting this event will remove {attendanceCount} attendance records and any associated fines. This action cannot be undone.";
+            }
+
+            try
+            {
+                _context.Events.Remove(eventToDelete);
+                await _context.SaveChangesAsync();
+                await LogAction("Delete Event", $"Deleted event: {eventToDelete.EventName} (affected {attendanceCount} attendees)");
+                TempData["Message"] = "Event deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting event.");
+                TempData["Error"] = "Error deleting event.";
+            }
+            return RedirectToAction("Events");
+            }
+
+            var eventToDelete = await _context.Events.FindAsync(eventId);
+            if (eventToDelete == null)
+            {
+                TempData["Error"] = "Event not found.";
+                return RedirectToAction("Events");
+            }
+
+            // Show impact information
+            int attendanceCount = eventToDelete.Attendances?.Count ?? 0;
+            if (attendanceCount > 0)
+            {
+                TempData["Warning"] = $"Deleting this event will remove {attendanceCount} attendance records and any associated fines. This action cannot be undone.";
+            }
+
+            try
+            {
+                _context.Events.Remove(eventToDelete);
+                await _context.SaveChangesAsync();
+                await LogAction("Delete Event", $"Deleted event: {eventToDelete.EventName} (affected {attendanceCount} attendees)");
+                TempData["Message"] = "Event deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting event.");
+                TempData["Error"] = "Error deleting event.";
+            }
+            return RedirectToAction("Events");
+        }
+    }
+}

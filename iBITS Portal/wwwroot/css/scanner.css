@@ -1,0 +1,789 @@
+﻿/* scanner.css */
+
+/* ============================================================= */
+/*                    PROFESSIONAL SCANNER UI                     */
+/*                    Updated: January 2026                       */
+/* ============================================================= */
+
+/* --- THEME-ALIGNED UI --- */
+.scanner-mode-panel {
+    display: none;
+}
+
+    .scanner-mode-panel.active {
+        display: block;
+    }
+
+.nav-link-scanner {
+    cursor: pointer;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .nav-link-scanner:hover {
+        color: var(--gold-text);
+    }
+
+    .nav-link-scanner.active {
+        color: var(--gold-text);
+        background-color: var(--gold-dim);
+    }
+
+.glass-panel {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow-soft);
+    height: 100%;
+}
+
+/* --- CAMERA CONTAINER --- */
+.reader-container {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 450px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--border-color);
+}
+
+    .reader-container video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+/* --- OVERLAY & ANIMATION --- */
+.scanner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+    .scanner-overlay.success-overlay {
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .scanner-overlay.error-overlay {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .scanner-overlay.processing-overlay {
+        background: rgba(212, 175, 55, 0.1);
+    }
+
+.overlay-text {
+    position: absolute;
+    bottom: 20px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px black;
+    backdrop-filter: blur(5px);
+}
+
+.heartbeat {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 14px;
+    height: 14px;
+    background: #dc3545;
+    border-radius: 50%;
+    z-index: 20;
+    border: 2px solid var(--bg-body);
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+    .heartbeat.active {
+        background: #10b981;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        animation: pulse 1s infinite;
+    }
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+    }
+
+    50% {
+        transform: scale(1.3);
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.8);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+    }
+}
+
+/* ============================================================= */
+/*              PROFESSIONAL VERIFICATION CARD STYLES             */
+/* ============================================================= */
+
+/* --- Main Card Containers --- */
+#verifier-result-card,
+.flash-card-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    padding: 40px 30px;
+    border: 2px solid var(--border-color);
+    border-radius: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(145deg, rgba(8, 20, 40, 0.9), rgba(12, 30, 50, 0.95));
+    position: relative;
+    overflow: hidden;
+}
+
+    /* Subtle background pattern */
+    #verifier-result-card::before,
+    .flash-card-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+#verifier-result-card {
+    min-height: 520px;
+}
+
+    /* Card Success State */
+    #verifier-result-card.success,
+    .flash-card-container.success {
+        border: 2px solid var(--gold-primary);
+        background: linear-gradient(145deg, rgba(8, 20, 40, 0.95), rgba(15, 35, 55, 0.98));
+        box-shadow: 0 0 40px rgba(212, 175, 55, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(212, 175, 55, 0.1);
+    }
+
+    /* Card Error State */
+    #verifier-result-card.error,
+    .flash-card-container.error {
+        border: 2px solid #ef4444;
+        background: linear-gradient(145deg, rgba(40, 8, 8, 0.95), rgba(50, 15, 15, 0.98));
+        box-shadow: 0 0 40px rgba(239, 68, 68, 0.15), 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+/* ============================================================= */
+/*                    PROFILE IMAGE STYLES                        */
+/* ============================================================= */
+
+.profile-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+/* Profile Image - Large Verifier Card */
+#verifier-result-card .profile-image {
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid transparent;
+    background: linear-gradient(var(--bg-glass), var(--bg-glass)) padding-box, linear-gradient(135deg, var(--gold-primary), #fff8dc, var(--gold-primary)) border-box;
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2), 0 0 50px rgba(212, 175, 55, 0.3), 0 20px 40px rgba(0, 0, 0, 0.4);
+    animation: profileZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Profile Image - Compact Flash Card */
+.flash-card-container .profile-image {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid transparent;
+    background: linear-gradient(var(--bg-glass), var(--bg-glass)) padding-box, linear-gradient(135deg, var(--gold-primary), #fff8dc, var(--gold-primary)) border-box;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2), 0 0 35px rgba(212, 175, 55, 0.25), 0 15px 30px rgba(0, 0, 0, 0.3);
+    animation: profileZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Generic Profile Image Base */
+.profile-image {
+    background-color: var(--bg-glass);
+}
+
+/* ============================================================= */
+/*                   VERIFICATION BADGE                           */
+/* ============================================================= */
+
+.verification-badge {
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--gold-primary), #f0d060);
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.5), 0 0 0 4px rgba(8, 20, 40, 1);
+    animation: badgePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+
+/* Badge Size - Large */
+#verifier-result-card .verification-badge {
+    width: 40px;
+    height: 40px;
+}
+
+    #verifier-result-card .verification-badge .bi {
+        font-size: 1.2rem;
+    }
+
+/* Badge Size - Compact */
+.flash-card-container .verification-badge {
+    width: 32px;
+    height: 32px;
+}
+
+    .flash-card-container .verification-badge .bi {
+        font-size: 1rem;
+    }
+
+/* Badge pulse animation on success */
+.success .verification-badge {
+    animation: badgePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), badgePulse 2s ease-in-out infinite 0.6s;
+}
+
+@keyframes badgePop {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(212, 175, 55, 0.5), 0 0 0 4px rgba(8, 20, 40, 1);
+    }
+
+    50% {
+        box-shadow: 0 4px 30px rgba(212, 175, 55, 0.7), 0 0 0 4px rgba(8, 20, 40, 1), 0 0 0 12px rgba(212, 175, 55, 0.2);
+    }
+}
+
+/* ============================================================= */
+/*                      TYPOGRAPHY                                */
+/* ============================================================= */
+
+/* Divider Line */
+.profile-divider {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+    margin: 1.25rem auto;
+    border-radius: 2px;
+}
+
+/* Name - Large */
+#verifier-result-card .profile-name {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--text-strong);
+    margin-top: 0.5rem;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+    animation: textFadeIn 0.5s ease-out 0.3s both;
+}
+
+/* Name - Compact */
+.flash-card-container .profile-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    animation: textFadeIn 0.5s ease-out 0.3s both;
+}
+
+/* Info Badge Container */
+.info-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 0.5rem;
+    width: 100%;
+    max-width: 280px;
+}
+
+/* Individual Info Badge */
+.info-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    animation: badgeSlideIn 0.5s ease-out both;
+}
+
+    .info-badge:nth-child(1) {
+        animation-delay: 0.4s;
+    }
+
+    .info-badge:nth-child(2) {
+        animation-delay: 0.5s;
+    }
+
+    .info-badge:hover {
+        background: rgba(212, 175, 55, 0.12);
+        border-color: rgba(212, 175, 55, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .info-badge .badge-icon {
+        font-size: 1.1rem;
+        color: var(--gold-text);
+    }
+
+    .info-badge .badge-text {
+        color: var(--text-main);
+        font-size: 1rem;
+    }
+
+/* Large card specific badge sizes */
+#verifier-result-card .info-badge {
+    padding: 14px 28px;
+}
+
+    #verifier-result-card .info-badge .badge-icon {
+        font-size: 1.25rem;
+    }
+
+    #verifier-result-card .info-badge .badge-text {
+        font-size: 1.1rem;
+    }
+
+/* Section Badge - Gold accent */
+.info-badge.section-badge {
+    background: rgba(212, 175, 55, 0.12);
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+    .info-badge.section-badge .badge-text {
+        color: var(--gold-text);
+    }
+
+@keyframes badgeSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes textFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Legacy Typography (fallback) */
+.profile-id {
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+}
+
+.profile-section {
+    color: var(--gold-text);
+    font-weight: 600;
+}
+
+/* ============================================================= */
+/*                    SCAN NEXT BUTTON                            */
+/* ============================================================= */
+
+.btn-scan-next {
+    margin-top: 2rem;
+    width: 100%;
+    max-width: 320px;
+    background: linear-gradient(135deg, var(--gold-primary), #f0d060);
+    color: #000;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3), 0 8px 30px rgba(0, 0, 0, 0.2);
+    animation: buttonFadeIn 0.5s ease-out 0.6s both;
+    position: relative;
+    overflow: hidden;
+}
+
+    .btn-scan-next::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-scan-next:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4), 0 15px 40px rgba(0, 0, 0, 0.25);
+        background: linear-gradient(135deg, #f0d060, var(--gold-primary));
+    }
+
+        .btn-scan-next:hover::before {
+            left: 100%;
+        }
+
+    .btn-scan-next:active {
+        transform: translateY(-1px);
+    }
+
+    .btn-scan-next .bi {
+        font-size: 1.3rem;
+        animation: rotateIcon 0.5s ease-out 0.8s both;
+    }
+
+@keyframes buttonFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes rotateIcon {
+    0% {
+        transform: rotate(-180deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* ============================================================= */
+/*                    ERROR STATE STYLING                         */
+/* ============================================================= */
+
+.error-message-card {
+    color: #ef4444;
+    padding: 20px;
+}
+
+    .error-message-card .error-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        animation: errorShake 0.5s ease-out;
+    }
+
+    .error-message-card h3 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .error-message-card p {
+        color: var(--text-main);
+        font-size: 1.1rem;
+        opacity: 0.8;
+    }
+
+@keyframes errorShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-10px);
+    }
+
+    40% {
+        transform: translateX(10px);
+    }
+
+    60% {
+        transform: translateX(-10px);
+    }
+
+    80% {
+        transform: translateX(10px);
+    }
+}
+
+/* ============================================================= */
+/*                    FLASH CARD SPECIFIC                         */
+/* ============================================================= */
+
+#live-flash-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flash-card-container {
+    padding: 30px 24px;
+}
+
+.flash-card-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+    .flash-card-error .bi {
+        font-size: 4rem;
+        animation: errorShake 0.5s ease-out;
+    }
+
+    .flash-card-error h4 {
+        margin-top: 1rem;
+    }
+
+/* ============================================================= */
+/*                    TABLE STYLING                               */
+/* ============================================================= */
+
+#attendance-table thead th {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: var(--gold-text);
+    font-weight: 600;
+    padding: 14px 12px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+#attendance-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+    #attendance-table tbody tr:hover {
+        background-color: rgba(212, 175, 55, 0.05);
+    }
+
+.table-profile-img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold-primary);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-present {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-late {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-absent {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================================= */
+/*                    ANIMATIONS                                  */
+/* ============================================================= */
+
+@keyframes profileZoomIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutDown {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+}
+
+/* ============================================================= */
+/*                    RESPONSIVE DESIGN                           */
+/* ============================================================= */
+
+@media (max-width: 992px) {
+    #verifier-result-card {
+        min-height: 450px;
+    }
+
+        #verifier-result-card .profile-image {
+            width: 160px;
+            height: 160px;
+        }
+
+        #verifier-result-card .profile-name {
+            font-size: 1.875rem;
+        }
+
+        #verifier-result-card .verification-badge {
+            width: 50px;
+            height: 50px;
+        }
+}
+
+@media (max-width: 768px) {
+    #verifier-result-card,
+    .flash-card-container {
+        padding: 30px 20px;
+    }
+
+        #verifier-result-card .profile-image {
+            width: 140px;
+            height: 140px;
+        }
+
+        #verifier-result-card .profile-name {
+            font-size: 1.625rem;
+        }
+
+    .info-badge {
+        padding: 10px 20px;
+    }
+
+    .btn-scan-next {
+        padding: 14px 24px;
+        font-size: 1rem;
+    }
+}
+
+/* ============================================================= */
+/*          UI STABILITY & SKELETON LOADER (JAN 2026 FIX)        */
+/* ============================================================= */
+
+/* Add a min-height to the flash card to prevent collapse during redraw */
+.flash-card-container {
+    min-height: 480px;
+}
+
+/* Base style for profile images to act as a skeleton loader */
+.profile-image {
+    /* Existing background color will serve as the base */
+    background: linear-gradient( 100deg, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 60% ) var(--bg-glass);
+    background-size: 200% 100%;
+    background-position-x: 150%;
+    animation: pulse-bg 1.5s infinite;
+}
+
+/* Keyframes for the skeleton loader shimmer effect */
+@keyframes pulse-bg {
+    to {
+        background-position-x: -50%;
+    }
+}
+
+/* Ensure verifier card maintains size and centers content */
+#verifier-result-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}

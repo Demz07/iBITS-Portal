@@ -1,0 +1,271 @@
+@* ============================================================ *@
+@* FILE PATH: Areas/Identity/Pages/Account/ConfirmRoleChange.cshtml *@
+@* ============================================================ *@
+@* NEW FILE: View for students to confirm or decline role changes *@
+@* ============================================================ *@
+
+@page
+@model iBITS_Portal.Areas.Identity.Pages.Account.ConfirmRoleChangeModel
+@{
+    ViewData["Title"] = "Role Change Notification";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - iBITS Portal</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <style>
+        :root {
+            --gold-primary: #d4a537;
+            --gold-dim: rgba(212, 165, 55, 0.1);
+            --bg-dark: #0a0a0f;
+            --bg-card: rgba(20, 20, 30, 0.95);
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --border-color: rgba(212, 165, 55, 0.2);
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0a0a0f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-white);
+        }
+
+        .confirmation-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .notification-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gold-dim);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            border: 2px solid var(--gold-primary);
+        }
+
+        .notification-icon i {
+            font-size: 2.5rem;
+            color: var(--gold-primary);
+        }
+
+        .card-title {
+            color: var(--gold-primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .card-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        .role-change-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .role-badge {
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .role-badge.old {
+            background: rgba(108, 117, 125, 0.3);
+            color: #adb5bd;
+            border: 1px solid #6c757d;
+        }
+
+        .role-badge.new {
+            background: var(--gold-dim);
+            color: var(--gold-primary);
+            border: 1px solid var(--gold-primary);
+            animation: pulse 2s infinite;
+        }
+
+        .arrow-icon {
+            color: var(--gold-primary);
+            font-size: 1.5rem;
+        }
+
+        .info-box {
+            background: rgba(13, 110, 253, 0.1);
+            border: 1px solid rgba(13, 110, 253, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .info-box i {
+            color: #0d6efd;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .assigned-info {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin: 20px 0;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+            color: white;
+        }
+
+        .btn-decline {
+            background: transparent;
+            border: 2px solid #dc3545;
+            color: #dc3545;
+            padding: 12px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-decline:hover {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .disclaimer {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            height: 60px;
+        }
+
+        @@keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(212, 165, 55, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(212, 165, 55, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-card">
+        <!-- Logo -->
+        <div class="logo-container">
+            <img src="~/images/ibits-logo.png" alt="iBITS Logo" onerror="this.style.display='none'" />
+        </div>
+
+        <!-- Icon -->
+        <div class="notification-icon">
+            <i class="bi bi-person-badge"></i>
+        </div>
+
+        <!-- Title -->
+        <h2 class="card-title">Role Change Notification</h2>
+        <p class="card-subtitle">Hello, @Model.StudentFullName!</p>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <p><i class="bi bi-info-circle me-2"></i> An administrator has assigned you a new role in the iBITS Portal system. Please review the change below and confirm or decline.</p>
+        </div>
+
+        <!-- Role Change Display -->
+        <div class="role-change-display">
+            <span class="role-badge old">
+                <i class="bi bi-person me-2"></i>@Model.PendingChange.OldRole
+            </span>
+            <i class="bi bi-arrow-right arrow-icon"></i>
+            <span class="role-badge new">
+                <i class="bi bi-star-fill me-2"></i>@Model.PendingChange.NewRole
+            </span>
+        </div>
+
+        <!-- Assigned Info -->
+        <p class="assigned-info">
+            <i class="bi bi-calendar-event me-1"></i> Assigned on: @Model.PendingChange.AssignedDate.ToString("MMMM dd, yyyy") at @Model.PendingChange.AssignedDate.ToString("hh:mm tt")
+        </p>
+        @if (!string.IsNullOrEmpty(Model.PendingChange.AssignedByAdminName))
+        {
+            <p class="assigned-info" style="margin-top: -15px;">
+                <i class="bi bi-person-check me-1"></i> By: @Model.PendingChange.AssignedByAdminName
+            </p>
+        }
+
+        <!-- Action Buttons -->
+        <div class="button-group mt-4">
+            <form method="post" style="display: inline;">
+                <input type="hidden" name="changeId" value="@Model.PendingChange.Id" />
+                <input type="hidden" name="action" value="accept" />
+                <button type="submit" class="btn btn-accept">
+                    <i class="bi bi-check-circle me-2"></i> Accept Role
+                </button>
+            </form>
+
+            <form method="post" style="display: inline;">
+                <input type="hidden" name="changeId" value="@Model.PendingChange.Id" />
+                <input type="hidden" name="action" value="decline" />
+                <button type="submit" class="btn btn-decline">
+                    <i class="bi bi-x-circle me-2"></i> Decline
+                </button>
+            </form>
+        </div>
+
+        <!-- Disclaimer -->
+        <p class="disclaimer">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            If you <strong>accept</strong>, you will be logged out and must log in again to use your new role privileges.
+            <br />
+            If you <strong>decline</strong>, you will continue with your current role.
+        </p>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

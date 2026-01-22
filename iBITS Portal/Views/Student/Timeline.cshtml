@@ -1,0 +1,73 @@
+@model IEnumerable<iBITS_Portal.Models.Attendance>
+@{
+    ViewData["Title"] = "Participation Timeline";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/student-features.css" asp-append-version="true" />
+}
+
+<div class="glass-panel">
+    <h4 class="glass-header-title">
+        <i class="bi bi-calendar-check-fill me-2" style="color:var(--gold-primary)"></i> My Participation Timeline
+    </h4>
+    <p class="mb-0 small" style="color: var(--text-main);">A chronological record of your attendance at all iBITS events.</p>
+</div>
+
+<div class="timeline-container">
+    @if (Model.Any())
+    {
+        foreach (var record in Model)
+        {
+            string statusClass = "secondary";
+            string icon = "bi-question-circle";
+            string statusText = record.AttendanceStatus ?? "N/A";
+
+            switch (statusText.ToLower())
+            {
+                case "present":
+                    statusClass = "success";
+                    icon = "bi-check-circle-fill";
+                    break;
+                case "absent":
+                    statusClass = "danger";
+                    icon = "bi-x-circle-fill";
+                    break;
+                case "excused":
+                    statusClass = "info";
+                    icon = "bi-info-circle-fill";
+                    break;
+            }
+
+            <div class="timeline-item">
+                <div class="timeline-dot bg-@statusClass"></div>
+                <div class="timeline-content glass-card-flat">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="event-title">@record.Event?.EventName</h5>
+                            <p class="event-date">@record.Event?.EventDate?.ToString("MMMM dd, yyyy")</p>
+                        </div>
+                        <span class="badge badge-@statusClass"><i class="bi @icon me-1"></i> @statusText</span>
+                    </div>
+                    @if (statusText.ToLower() == "absent")
+                    {
+                        <div class="mt-3 text-end">
+                            <a href="@Url.Action("SubmitExcuse", "Excuse", new { eventId = record.EventId })" class="btn btn-outline-warning btn-sm">
+                                <i class="bi bi-pencil-square"></i> Submit Excuse Letter
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="glass-panel text-center">
+            <i class="bi bi-inbox fs-1"></i>
+            <h5 class="mt-3">No Records Found</h5>
+            <p>You haven't participated in any events yet.</p>
+        </div>
+    }
+</div>

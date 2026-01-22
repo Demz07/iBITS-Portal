@@ -1,0 +1,102 @@
+﻿@model IEnumerable<iBITS_Portal.Models.Fee>
+@{
+    ViewData["Title"] = "Approve Remittances";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .table thead th {
+            color: var(--gold-primary);
+            font-weight: 700;
+        }
+
+        .table tbody td {
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        .table .student-name {
+            color: var(--text-strong);
+            font-weight: 600;
+        }
+
+        .table .section-badge {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            padding: 0.4em 0.8em;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+    </style>
+}
+
+<!-- TempData for feedback messages -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<!-- ======================= HEADER ======================= -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title"><i class="bi bi-check-circle-fill me-2 text-gold"></i> @ViewData["TreasuryTitle"]</h4>
+        <p class="mb-0 small text-muted">Review payments submitted by Class Treasurers and mark them as officially paid.</p>
+    </div>
+</div>
+
+<!-- ======================= PENDING REMITTANCES TABLE ======================= -->
+<div class="glass-panel">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Fee Description</th>
+                    <th>Amount</th>
+                    <th>Section</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var fee in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="student-name">@fee.StudentNumNavigation?.StudentFn @fee.StudentNumNavigation?.StudentLn</div>
+                                <div class="small font-monospace">@fee.StudentNum</div>
+                            </td>
+                            <td>@fee.FeeName</td>
+                            <td class="fw-bold">₱@fee.Amount?.ToString("N2")</td>
+                            <td><span class="section-badge">@fee.StudentNumNavigation?.YearLevelSection</span></td>
+                            <td class="text-end">
+                                <form asp-controller="Officer" asp-action="ApproveRemittance" method="post" onsubmit="return confirm('Are you sure you want to approve this remittance?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2"></i>
+                            <p class="mt-2 mb-0">There are no pending remittances to approve.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

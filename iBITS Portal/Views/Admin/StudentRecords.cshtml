@@ -1,0 +1,633 @@
+﻿@* ============================================================ *@
+@* FILE PATH: Views/Admin/StudentRecords.cshtml                 *@
+@* ============================================================ *@
+@* UPDATED: Added Dynamic Filter Management feature             *@
+@* - Users can show/hide filters from a settings dropdown       *@
+@* - Filter preferences are saved in localStorage               *@
+@* - Active filters shown as removable pills                    *@
+@* ============================================================ *@
+
+@using System.Text.RegularExpressions
+@model iBITS_Portal.Models.PagedList<iBITS_Portal.Models.Student>
+
+@{
+    ViewData["Title"] = "Student Records";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var currentFilter = ViewBag.CurrentFilter as string;
+}
+
+<!-- Link External CSS -->
+<link rel="stylesheet" href="~/css/student-records.css" asp-append-version="true" />
+
+<!-- HEADER SECTION -->
+<div class="glass-panel d-flex justify-content-between align-items-center" style="padding: 24px 30px;">
+    <div>
+        <h4 class="glass-header-title mb-2" style="font-size: 1.5rem;">
+            <i class="bi bi-people-fill me-2" style="color:var(--gold-primary)"></i> Student Records
+            <span class="badge bg-primary ms-2" style="font-size: 0.85rem;">@Model.TotalCount Total</span>
+        </h4>
+        <p class="mb-0" style="color: var(--text-main); font-size: 0.95rem;">Manage registered students, update roles, and monitor status.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <div class="d-flex gap-2">
+            <button type="button" id="btnExportExcel" class="btn btn-success" onclick="exportToExcelWithColumns()">
+                <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
+            </button>
+            <button class="btn-gold" data-bs-toggle="modal" data-bs-target="#createStudentModal">
+                <i class="bi bi-person-plus-fill me-2"></i> Add New Student
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STATS CARDS SECTION ================= -->
+<div class="row mb-4 g-4">
+    <div class="col-md-3">
+        <div class="glass-stat">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-label">Total Population</div>
+                    <div class="stat-value">@ViewBag.TotalStudents</div>
+                </div>
+                <i class="bi bi-people-fill stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-stat">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-label">Officers</div>
+                    <div class="stat-value">@ViewBag.TotalOfficers</div>
+                </div>
+                <i class="bi bi-shield-shaded stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-stat">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-label">Active Status</div>
+                    <div class="stat-value">@ViewBag.ActiveMembers</div>
+                </div>
+                <i class="bi bi-check-circle-fill stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-stat">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-label">Archived</div>
+                    <div class="stat-value">@ViewBag.ArchivedMembers</div>
+                </div>
+                <i class="bi bi-archive-fill stat-icon" style="filter: grayscale(1);"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IMPORT SECTION -->
+<div class="glass-panel mb-4">
+    <div class="glass-header" data-bs-toggle="collapse" data-bs-target="#importCollapse" aria-expanded="false" aria-controls="importCollapse">
+        <h5><i class="bi bi-database-add me-2" style="color:var(--gold-primary)"></i> Smart Batch Import</h5>
+        <i class="bi bi-chevron-down collapse-icon"></i>
+    </div>
+    <div id="importCollapse" class="collapse">
+        <div class="glass-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-9"><input type="file" id="csvFileUpload" class="form-control" accept=".csv" /></div>
+                <div class="col-md-3"><button type="button" class="btn-gold w-100" onclick="uploadAndAnalyze()"><i class="bi bi-upload"></i> Upload</button></div>
+            </div>
+            <div class="mt-2 text-muted small"><i class="bi bi-info-circle me-1"></i> Upload any CSV file. You will map the columns in the next step.</div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTER SECTION -->
+<div class="glass-panel filter-section-panel" style="padding: 20px;">
+    <form asp-action="StudentRecords" method="get" id="filterForm">
+        <!-- ACTIVE FILTERS PILLS (At the top) -->
+        <div id="activeFiltersPills" class="active-filters-container mb-3" style="display: none;">
+            <span class="active-filters-label"><i class="bi bi-funnel-fill me-1"></i>Active Filters:</span>
+            <div id="activeFiltersList" class="active-filters-list"></div>
+            <button type="button" class="btn-clear-all-filters" onclick="clearAllActiveFilters()" title="Clear All Filters">
+                <i class="bi bi-x-lg me-1"></i>Clear All
+            </button>
+        </div>
+
+        <!-- ROW 1: Search, Sort & Actions -->
+        <div class="row g-3 mb-3 align-items-end">
+            <!-- Search Field (Always Visible) -->
+            <div class="col-md-6 filter-item" data-filter="search">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Search</label>
+                <div class="input-group position-relative">
+                    <span class="input-group-text" style="background:var(--gold-dim); border-color:var(--input-border); color:var(--gold-primary);"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchString" id="searchString" value="@currentFilter" class="form-control" placeholder="ID, Name, Email, or Course..." style="padding-right: 35px;" />
+                    <button type="button" id="btnClearSearch" class="btn-clear-search" style="display: none;" title="Clear Search">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Sort Order -->
+            <div class="col-md-2 filter-item" data-filter="sortOrder">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Sort Order</label>
+                <select name="sortOrder" id="sortOrder" class="form-control select2-enable" style="width:100%;">
+                    <option value="" selected="@(ViewBag.CurrentSort?.ToString() == "")">A-Z (Default)</option>
+                    <option value="name_desc" selected="@(ViewBag.CurrentSort?.ToString() == "name_desc")">Z-A</option>
+                    <option value="id_asc" selected="@(ViewBag.CurrentSort?.ToString() == "id_asc")">ID Ascending</option>
+                    <option value="id_desc" selected="@(ViewBag.CurrentSort?.ToString() == "id_desc")">ID Descending</option>
+                </select>
+            </div>
+            <!-- Actions -->
+            <div class="col-md-4">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Actions</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-gold flex-grow-1" title="Apply Filters"><i class="bi bi-funnel-fill me-2"></i> Apply</button>
+                    <button type="button" id="btnSelectMode" class="btn-gold-outline" onclick="toggleSelectionMode()" title="Select Multiple">
+                        <i class="bi bi-ui-checks me-1"></i> Select
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="resetFilters()" title="Reset Filters" style="border-color:var(--gold-primary); color:var(--gold-primary); min-width: 45px;"><i class="bi bi-arrow-clockwise"></i></button>
+
+                    <!-- FILTER SETTINGS DROPDOWN (NEW) -->
+                    <div class="dropdown">
+                        <button class="btn btn-glass" type="button" id="filterSettingsMenu" data-bs-toggle="dropdown" aria-expanded="false" title="Customize Filters" style="height: 100%; min-width: 45px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-sliders"></i>
+                        </button>
+                        <ul class="dropdown-menu p-3 dropdown-menu-end filter-settings-dropdown" aria-labelledby="filterSettingsMenu" style="min-width: 280px; z-index: 2000;">
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="dropdown-header text-uppercase p-0 m-0" style="color: var(--text-strong);"><i class="bi bi-sliders me-2" style="color: var(--gold-primary);"></i>Show Filters</h6>
+                                <button type="button" class="btn btn-sm btn-link p-0" id="btnResetFiltersInside" style="font-size: 0.75rem; text-decoration: none; color: var(--gold-primary); font-weight: 600;">Reset</button>
+                            </li>
+                            <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="search" id="chkFilterSearch" checked disabled><label class="form-check-label" for="chkFilterSearch">Search <span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">Always On</span></label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="sortOrder" id="chkFilterSort" checked><label class="form-check-label" for="chkFilterSort">Sort Order</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="program" id="chkFilterProgram" checked><label class="form-check-label" for="chkFilterProgram">Program</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="year" id="chkFilterYear" checked><label class="form-check-label" for="chkFilterYear">Year</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="section" id="chkFilterSection" checked><label class="form-check-label" for="chkFilterSection">Section</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="type" id="chkFilterType" checked><label class="form-check-label" for="chkFilterType">Student Type</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="role" id="chkFilterRole" checked><label class="form-check-label" for="chkFilterRole">Role</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="status" id="chkFilterStatus" checked><label class="form-check-label" for="chkFilterStatus">Status</label></div></li>
+                        </ul>
+                    </div>
+
+                    <!-- COLUMN VISIBILITY DROPDOWN (Existing) -->
+                    <div class="dropdown">
+                        <button class="btn btn-glass dropdown-toggle" type="button" id="colMenu" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide Columns" style="height: 100%; min-width: 45px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-layout-three-columns"></i>
+                        </button>
+                        <ul class="dropdown-menu p-3 dropdown-menu-end" aria-labelledby="colMenu" style="min-width: 250px; z-index: 2000;">
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="dropdown-header text-uppercase p-0 m-0" style="color: var(--text-strong);">Show Columns</h6>
+                                <button type="button" class="btn btn-sm btn-link p-0" id="btnResetColumnsInside" style="font-size: 0.75rem; text-decoration: none; color: var(--gold-primary); font-weight: 600;">Reset</button>
+                            </li>
+                            <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-id" id="chkId" checked><label class="form-check-label" for="chkId">ID</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-name" id="chkName" checked><label class="form-check-label" for="chkName">Name</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-program" id="chkProgram" checked><label class="form-check-label" for="chkProgram">Program</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-section" id="chkSec" checked><label class="form-check-label" for="chkSec">Section</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-year" id="chkYear" checked><label class="form-check-label" for="chkYear">Year</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-type" id="chkType" checked><label class="form-check-label" for="chkType">Student Type</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-role" id="chkRole" checked><label class="form-check-label" for="chkRole">Role</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-status" id="chkStatus" checked><label class="form-check-label" for="chkStatus">Status</label></div></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2: Dynamic Filters -->
+        <div class="row g-2" id="dynamicFiltersRow">
+            <!-- Program Filter -->
+            <div class="col-md-2 filter-item" data-filter="program">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Program</label>
+                <select name="programFilter" id="programFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Programs</option>
+                    @if (ViewBag.Programs != null)
+                    {
+                        foreach (var prog in ViewBag.Programs)
+                        {
+                            <option value="@prog" selected="@(ViewBag.ProgramFilter == prog)">@prog</option>
+                        }
+                    }
+                </select>
+            </div>
+            <!-- Year Filter -->
+            <div class="col-md-2 filter-item" data-filter="year">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Year</label>
+                <select name="yearFilter" id="yearFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Years</option>
+                    @if (ViewBag.Years != null)
+                    {
+                        foreach (var year in ViewBag.Years)
+                        {
+                            var yearLabel = year switch
+                            {
+                                "1" => "1st Year",
+                                "2" => "2nd Year",
+                                "3" => "3rd Year",
+                                "4" => "4th Year",
+                                _ => $"Year {year}"
+                            };
+                            <option value="@year" selected="@(ViewBag.YearFilter == year)">@yearLabel</option>
+                        }
+                    }
+                </select>
+            </div>
+            <!-- Section Filter -->
+            <div class="col-md-2 filter-item" data-filter="section">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Section</label>
+                <select name="sectionFilter" id="sectionFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Sections</option>
+                    @if (ViewBag.Sections != null)
+                    {
+                        foreach (var sec in ViewBag.Sections)
+                        {
+                            <option value="@sec" selected="@(ViewBag.SectionFilter == sec)">Section @sec</option>
+                        }
+                    }
+                </select>
+            </div>
+            <!-- Student Type Filter -->
+            <div class="col-md-2 filter-item" data-filter="type">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Student Type</label>
+                <select name="typeFilter" id="typeFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Types</option>
+                    @if (ViewBag.StudentTypes != null)
+                    {
+                        foreach (var type in ViewBag.StudentTypes)
+                        {
+                            <option value="@type" selected="@(ViewBag.TypeFilter == type)">@type</option>
+                        }
+                    }
+                </select>
+            </div>
+            <!-- Role Filter -->
+            <div class="col-md-2 filter-item" data-filter="role">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Role</label>
+                <select name="roleFilter" id="roleFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Roles</option>
+                    <option value="Officer" selected="@(ViewBag.RoleFilter == "Officer")">Officer</option>
+                    <option value="Member" selected="@(ViewBag.RoleFilter == "Member")">Member</option>
+                </select>
+            </div>
+            <!-- Status Filter -->
+            <div class="col-md-2 filter-item" data-filter="status">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Status</label>
+                <select name="statusFilter" id="statusFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                    <option value="">All Statuses</option>
+                    <option value="Active" selected="@(ViewBag.StatusFilter == "Active")">Active</option>
+                    <option value="Archived" selected="@(ViewBag.StatusFilter == "Archived")">Archived</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- BULK ACTIONS BAR (Hidden by default, shows when items selected) -->
+<div id="bulkActionsBar" class="bulk-actions-bar" style="display: none;">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <span class="selected-count"><i class="bi bi-check2-square me-2"></i><span id="selectedCountText">0</span> selected</span>
+            <button type="button" class="btn btn-bulk-action" onclick="selectAllVisible()" title="Select All Visible">
+                <i class="bi bi-check-all me-1"></i> Select All
+            </button>
+            <button type="button" class="btn btn-bulk-action" onclick="deselectAll()" title="Deselect All">
+                <i class="bi bi-x-lg me-1"></i> Deselect All
+            </button>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-bulk-success" onclick="exportSelectedToExcel()" title="Export Selected">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Selected
+            </button>
+            <button type="button" class="btn btn-bulk-warning" onclick="archiveSelected()" title="Archive Selected">
+                <i class="bi bi-archive me-1"></i> Archive
+            </button>
+            <button type="button" class="btn btn-bulk-reset" onclick="resetPasswordSelectedConfirm()" title="Reset Password">
+                <i class="bi bi-key me-1"></i> Reset Password
+            </button>
+            <div class="vr mx-2" style="height: 24px; opacity: 0.3;"></div>
+            <button type="button" class="btn btn-bulk-cancel" onclick="exitSelectionMode()" title="Cancel Selection">
+                <i class="bi bi-x-circle me-1"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- DATA TABLE -->
+<div class="glass-panel data-table-panel p-0">
+    <div class="table-responsive p-3">
+        <table class="table table-glass align-middle" id="studentTable">
+            <thead>
+                <tr>
+                    <th class="col-checkbox text-center" style="width: 50px; display: none;">
+                        <input type="checkbox" class="form-check-input select-all-checkbox" id="selectAllCheckbox" title="Select All" />
+                    </th>
+                    <th class="ps-4 col-id">ID</th>
+                    <th class="col-name">Name & Email</th>
+                    <th class="col-program">Program</th>
+                    <th class="col-section">Section</th>
+                    <th class="col-year">Year</th>
+                    <th class="col-type">Type</th>
+                    <th class="col-role">Role</th>
+                    <th class="col-status">Status</th>
+                    <th class="text-end pe-4 col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Items != null && Model.Items.Any())
+                {
+                    @foreach (var student in Model.Items)
+                    {
+                        <tr class="student-row" data-id="@student.StudentNum" style="cursor: pointer;">
+                            <td class="col-checkbox text-center" style="display: none;">
+                                <input type="checkbox" class="form-check-input row-checkbox" value="@student.StudentNum" onclick="event.stopPropagation(); updateSelectionCount();" />
+                            </td>
+                            <td class="ps-4 fw-bold col-id" style="color:var(--gold-primary) !important; font-family:monospace; font-size:1rem;">@student.StudentNum</td>
+
+                            <!-- PROFILE ICON UI (MATCHING DASHBOARD) -->
+                            <td class="col-name">
+                                <div class="d-flex align-items-center">
+                                    <div class="profile-icon-container">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div class="student-name">@student.StudentLn, @student.StudentFn @(string.IsNullOrEmpty(student.StudentMn) ? "" : student.StudentMn.Substring(0, 1) + ".")</div>
+                                        <div class="student-email">@student.StudentEmail</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="col-program"><span class="badge badge-gray">@student.Course</span></td>
+                            <td class="col-section"><span class="badge badge-gray">@student.YearLevelSection</span></td>
+                            <td class="col-year">
+                                @{
+                                    string yearDisplay = "N/A"; if (!string.IsNullOrEmpty(student.YearLevelSection)) { var match = Regex.Match(student.YearLevelSection, @"\d"); if (match.Success) { string d = match.Value; string sfx = "th"; if (d == "1") sfx = "st"; else if (d == "2") sfx = "nd"; else if (d == "3") sfx = "rd"; yearDisplay = $"{d}{sfx} Year"; } }
+                                }
+                                @yearDisplay
+                            </td>
+                            <td class="col-type">
+                                @if (student.StudentType == "Regular")
+                                {
+                                    <span class="badge badge-green">Regular</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-gray">@(student.StudentType ?? "N/A")</span>
+                                }
+                            </td>
+                            <td class="col-role">
+                                @if (student.Officer != null)
+                                {
+                                    <span class="badge badge-gold"><i class="bi bi-star-fill me-1"></i> @student.Officer.Position</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-blue">Member</span>
+                                }
+                            </td>
+                            <td class="col-status">
+                                @if (student.Classification == "Active")
+                                {
+                                    <span class="badge badge-green"><i class="bi bi-check-circle me-1"></i> Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-gray"><i class="bi bi-archive me-1"></i> Archived</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4 col-actions">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-icon-only" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="openEditModal(event, '@student.StudentNum', '@student.StudentFn', '@student.StudentMn', '@student.StudentLn', '@student.StudentEmail', '@student.Course', '@student.YearLevelSection', '@student.StudentType', '@student.Birthday?.ToString("yyyy-MM-dd")', '@student.SchoolYearEnrolled')"><i class="bi bi-pencil-fill me-2"></i> Edit Student</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="setRoleModal(event, '@student.StudentNum', '@student.FullName', '@(student.Officer?.Position ?? "Member")')"><i class="bi bi-shield-lock-fill me-2"></i> Manage Role</a></li>
+                                        <li>
+                                            <!-- RESET PASSWORD (Custom Modal) -->
+                                            <a class="dropdown-item" href="#" onclick="openResetPasswordModal(event, '@student.StudentNum', '@student.FullName')">
+                                                <i class="bi bi-key-fill me-2"></i> Reset Password
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form asp-action="ArchiveStudent" method="post" onsubmit="return confirm('Toggle status for @student.StudentNum?');">
+                                                <input type="hidden" name="id" value="@student.StudentNum" />
+                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-archive-fill me-2"></i> @(student.Classification == "Active" ? "Archive" : "Activate") Student</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1" style="color: var(--border-color);"></i>
+                            <p class="mt-3" style="color: var(--text-main);">No student records found matching the criteria.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PAGINATION -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center p-3" style="border-top: 1px solid var(--border-color);">
+            <div class="text-muted small">Showing @((Model.PageNumber - 1) * Model.Items.Count + 1) to @((Model.PageNumber - 1) * Model.Items.Count + Model.Items.Count) of @Model.TotalCount students</div>
+            <nav>
+                <ul class="pagination mb-0">
+                    <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber - 1 })"><i class="bi bi-chevron-left"></i></a></li>
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.PageNumber ? "active" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = i })">@i</a></li>
+                    }
+                    <li class="page-item @(!Model.HasNextPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber + 1 })"><i class="bi bi-chevron-right"></i></a></li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+<!-- ================= MODALS & PARTIALS ================= -->
+<div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content glass-modal" id="detailsModalContent"></div></div></div>
+
+<!-- Create Student Modal -->
+<div class="modal fade" id="createStudentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: var(--gold-primary);"><i class="bi bi-person-plus-fill me-2"></i> Register New Student</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateStudent" method="post" id="createStudentForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Student ID <span class="text-danger">*</span></label>
+                            <input type="text" name="StudentNum" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" name="StudentFn" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" name="StudentLn" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" name="StudentMn" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="StudentEmail" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Birthday</label>
+                            <input type="date" name="Birthday" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Course/Program</label>
+                            <input type="text" name="Course" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Year & Section</label>
+                            <input type="text" name="YearLevelSection" class="form-control" placeholder="e.g., 3-1" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Student Type</label>
+                            <select name="StudentType" class="form-select select2-modal">
+                                <option value="Regular">Regular</option>
+                                <option value="Irregular">Irregular</option>
+                                <option value="Transferee">Transferee</option>
+                                <option value="Ladderized">Ladderized</option>
+                            </select>
+                        </div>
+                        <!-- NEW: School Year Enrolled Field -->
+                        <div class="col-md-4">
+                            <label class="form-label">School Year Enrolled <span class="text-danger">*</span></label>
+                            <select name="SchoolYearEnrolled" id="createSchoolYearEnrolled" class="form-select select2-modal" required>
+                                @if (ViewBag.AcademicYearOptions != null)
+                                {
+                                    foreach (var ay in ViewBag.AcademicYearOptions)
+                                    {
+                                        <option value="@ay" selected="@(ViewBag.CurrentAcademicYear == ay)">@ay</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Register Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================= FIXED: ROLE MODAL WITH PASSWORD ================= -->
+<div class="modal fade" id="roleModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-warning"><i class="bi bi-shield-lock me-2"></i> Manage Access Role</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="UpdateUserRole" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <!-- Hidden field for student number - FIXED ID to match JS -->
+                    <input type="hidden" name="studentNum" id="modalStudentNum" />
+
+                    <!-- Student name display - FIXED ID to match JS -->
+                    <p class="text-muted small mb-3">
+                        Updating role for: <strong class="text-white" id="modalStudentName"></strong>
+                    </p>
+
+                    <!-- Role Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select New Role</label>
+                        <select name="newRole" id="modalRoleSelect" class="form-select select2-role">
+                            @if (ViewBag.AvailableRoles != null)
+                            {
+                                foreach (var role in ViewBag.AvailableRoles)
+                                {
+                                    <option value="@role">@role</option>
+                                }
+                            }
+                            else
+                            {
+                                <option disabled selected>Error: No roles loaded</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Admin Password Verification - NEW -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-key-fill me-1 text-warning"></i> Admin Password
+                            <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" name="adminPassword" id="adminPasswordInput" class="form-control"
+                               placeholder="Enter your admin password to confirm" required />
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Your password is required to authorize this role change.
+                        </small>
+                    </div>
+
+                    <!-- Info Alert -->
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        The student will need to confirm this role change upon their next login.
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold">
+                        <i class="bi bi-check-circle me-1"></i> Assign Role
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Edit Student Modal Partial -->
+<partial name="_EditStudentModal" model="new iBITS_Portal.Models.Student()" />
+
+<!-- 4. Reset Password Modal Partial -->
+<partial name="_ResetPasswordModal" />
+
+<!-- 5. IMPORT MODALS PARTIAL -->
+<partial name="_ImportModals" />
+
+
+@section Scripts {
+    <script>
+        // Define Razor URLs for external JS
+        window.getStudentDetailsUrl = '@Url.Action("GetStudentDetails", "Admin")';
+        window.analyzeCsvUrl = '@Url.Action("AnalyzeCsv", "Admin")';
+        window.previewImportUrl = '@Url.Action("PreviewImport", "Admin")';
+        window.executeImportUrl = '@Url.Action("ExecuteImport", "Admin")';
+        window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
+        window.exportToExcelUrl = '@Url.Action("ExportStudentsToExcel", "Admin")';
+        // Bulk action URLs
+        window.exportSelectedUrl = '@Url.Action("ExportSelectedStudents", "Admin")';
+        window.archiveSelectedUrl = '@Url.Action("ArchiveSelectedStudents", "Admin")';
+        window.resetPasswordSelectedUrl = '@Url.Action("ResetPasswordSelected", "Admin")';
+    </script>
+    <script src="~/js/student-records.js" asp-append-version="true"></script>
+}

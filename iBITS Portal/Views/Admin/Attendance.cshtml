@@ -1,0 +1,284 @@
+﻿@* ============================================================ *@
+@* FILE PATH: Views/Admin/Attendance.cshtml *@
+@* ============================================================ *@
+@* UPDATED: View-Only Attendance List with Filters (Event, Program, Year) *@
+@* UPDATED: Added CSV Export functionality *@
+@* REMOVED: Adjust Attendance button and modal (View Only) *@
+@* ============================================================ *@
+
+@model IEnumerable<iBITS_Portal.Models.Attendance>
+@{
+    ViewData["Title"] = "Attendance Records";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var events = ViewBag.Events as List<iBITS_Portal.Models.Event>;
+    var programs = ViewBag.Programs as List<string>;
+    var years = ViewBag.Years as List<string>;
+
+    var eventFilter = ViewData["EventFilter"]?.ToString();
+    var programFilter = ViewData["ProgramFilter"]?.ToString();
+    var yearFilter = ViewData["YearFilter"]?.ToString();
+}
+
+<!-- Link External CSS -->
+<link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" />
+
+<!-- HEADER -->
+<div class="glass-panel p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-lg-6 mb-3 mb-lg-0">
+            <h4 class="glass-header-title mb-1">
+                <i class="bi bi-clipboard-check-fill me-2"></i> Attendance Records (View Only)
+            </h4>
+            <p class="text-muted small mb-0">Monitor attendance records for all events. Filter by event, program, or year level.</p>
+        </div>
+        <div class="col-lg-6">
+            <div class="d-flex justify-content-lg-end align-items-center gap-2">
+                <!-- Export Dropdown -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-gold-outline btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-1"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li>
+                            <a class="dropdown-item"
+                               asp-action="ExportAttendanceToExcel"
+                               asp-route-eventFilter="@eventFilter"
+                               asp-route-programFilter="@programFilter"
+                               asp-route-yearFilter="@yearFilter">
+                                <i class="bi bi-file-earmark-excel me-2"></i> Export as Excel (.xlsx)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item"
+                               asp-action="ExportAttendanceToCSV"
+                               asp-route-eventFilter="@eventFilter"
+                               asp-route-programFilter="@programFilter"
+                               asp-route-yearFilter="@yearFilter">
+                                <i class="bi bi-file-earmark-spreadsheet me-2"></i> Export as CSV (.csv)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GLASSMORPHISM FILTER PANEL -->
+<div class="filter-glass-panel">
+    <!-- Filter Section Header -->
+    <div class="filter-section-header">
+        <div class="filter-icon">
+            <i class="bi bi-funnel-fill"></i>
+        </div>
+        <h5 class="filter-section-title">Filter Options</h5>
+        @if (!string.IsNullOrEmpty(eventFilter) || !string.IsNullOrEmpty(programFilter) || !string.IsNullOrEmpty(yearFilter))
+        {
+            <span class="badge badge-gold ms-auto">Active Filters</span>
+        }
+    </div>
+
+    <!-- FILTER FORM -->
+    <form asp-action="Attendance" method="get" id="filterForm">
+        <div class="row g-3 mb-3">
+            <!-- Event Filter -->
+            <div class="col-md-4">
+                <label for="eventFilter" class="filter-label">
+                    <i class="bi bi-calendar-event me-1"></i> Filter by Event
+                </label>
+                <select name="eventFilter" id="eventFilter" class="glass-select" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Events</option>
+                    @if (events != null)
+                    {
+                        @foreach (var ev in events)
+                        {
+                            <option value="@ev.EventId" selected="@(eventFilter == ev.EventId.ToString())">
+                                @ev.EventName - @ev.EventDate?.ToString("MMM dd, yyyy")
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Program Filter -->
+            <div class="col-md-3">
+                <label for="programFilter" class="filter-label">
+                    <i class="bi bi-mortarboard me-1"></i> Program
+                </label>
+                <select name="programFilter" id="programFilter" class="glass-select" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Programs</option>
+                    @if (programs != null)
+                    {
+                        @foreach (var program in programs)
+                        {
+                            <option value="@program" selected="@(programFilter == program)">@program</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Year Filter -->
+            <div class="col-md-3">
+                <label for="yearFilter" class="filter-label">
+                    <i class="bi bi-123 me-1"></i> Year Level
+                </label>
+                <select name="yearFilter" id="yearFilter" class="glass-select" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Years</option>
+                    @if (years != null)
+                    {
+                        @foreach (var year in years)
+                        {
+                            <option value="@year" selected="@(yearFilter == year)">Year @year</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Clear Filters Button -->
+            <div class="col-md-2 d-flex align-items-end">
+                <a asp-action="Attendance" class="btn-glass w-100" style="text-align: center;">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ALERT MESSAGES -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show glass-alert" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show glass-alert" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- ATTENDANCE TABLE -->
+<div class="glass-panel p-4">
+    @if (Model != null && Model.Any())
+    {
+        <div class="mb-3 text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Showing <strong>@Model.Count()</strong> attendance record(s)
+            @if (!string.IsNullOrEmpty(eventFilter) || !string.IsNullOrEmpty(programFilter) || !string.IsNullOrEmpty(yearFilter))
+            {
+                <span class="text-gold">(Filtered)</span>
+            }
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-glass">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Program</th>
+                    <th>Year</th>
+                    <th>Event</th>
+                    <th>Event Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var record in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-strong">@record.StudentNumNavigation?.StudentFn @record.StudentNumNavigation?.StudentLn</div>
+                                <div class="small text-muted">@record.StudentNum</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-info">@record.StudentNumNavigation?.Course</span>
+                            </td>
+                            <td>
+                                @{
+                                    var yearLevel = "";
+                                    var yearSection = record.StudentNumNavigation?.YearLevelSection;
+                                    if (!string.IsNullOrEmpty(yearSection))
+                                    {
+                                        // Extract year from formats like "1-1", "BSIT 3-1", "DIT 2-1"
+                                        var parts = yearSection.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                                        foreach (var part in parts)
+                                        {
+                                            if (int.TryParse(part, out int year) && year >= 1 && year <= 4)
+                                            {
+                                                yearLevel = year.ToString();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                <span class="text-muted">Year @yearLevel</span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@record.Event?.EventName</div>
+                                @if (!string.IsNullOrEmpty(record.Event?.EventType))
+                                {
+                                    <div class="small text-muted">@record.Event?.EventType</div>
+                                }
+                            </td>
+                            <td class="text-muted">
+                                @record.Event?.EventDate?.ToString("MMM dd, yyyy")
+                            </td>
+                            <td>
+                                @{
+                                    var status = record.AttendanceStatus?.ToLower() ?? "unknown";
+                                    string badgeClass = "badge-gray";
+                                    string iconClass = "bi-question-circle";
+
+                                    if (status == "present") { badgeClass = "badge-green"; iconClass = "bi-check-circle-fill"; }
+                                    else if (status == "absent") { badgeClass = "badge-red"; iconClass = "bi-x-circle-fill"; }
+                                    else if (status == "excused") { badgeClass = "badge-blue"; iconClass = "bi-info-circle-fill"; }
+                                }
+                                <span class="badge @badgeClass"><i class="bi @iconClass me-1"></i> @record.AttendanceStatus</span>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            <p class="mb-0">No attendance records found.</p>
+                            @if (!string.IsNullOrEmpty(eventFilter) || !string.IsNullOrEmpty(programFilter) || !string.IsNullOrEmpty(yearFilter))
+                            {
+                                <p class="small mt-2">Try adjusting your filters or <a asp-action="Attendance" class="text-gold">clear all filters</a>.</p>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Optional: Add loading indicator when exporting
+        document.querySelectorAll('a[href*="Export"]').forEach(link => {
+            link.addEventListener('click', function() {
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-info position-fixed top-0 start-50 translate-middle-x mt-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = '<i class="bi bi-download me-2"></i>Preparing download...';
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            });
+        });
+    </script>
+}
+

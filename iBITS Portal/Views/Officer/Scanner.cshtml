@@ -1,0 +1,222 @@
+@model IEnumerable<iBITS_Portal.Models.Event>
+@{
+    ViewData["Title"] = "High-Speed QR Scanner";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml"; // Ensure this path is correct for your project
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/scanner.css" asp-append-version="true" />
+}
+
+<!-- HEADER & MODE TOGGLE -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0" style="color: var(--text-strong);"><i class="bi bi-qr-code-scan me-2" style="color: var(--gold-text);"></i>QR Scanner</h4>
+    <ul class="nav nav-pills" style="background: var(--bg-glass); border: 1px solid var(--border-color); border-radius: 12px; padding: 5px;">
+        <li class="nav-item"><a class="nav-link nav-link-scanner active rounded-pill px-4" data-mode="live">Live Attendance</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-4" data-mode="verifier">Verifier</a></li>
+    </ul>
+</div>
+
+<!-- LIVE ATTENDANCE MODE -->
+<div id="live-panel" class="scanner-mode-panel active">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="glass-panel">
+                @if (Model != null && Model.Any())
+                {
+<div class="input-group mb-4">
+                        <select id="eventSelector" class="form-select form-select-lg">
+                            <option value="0" selected disabled>-- Select an event to begin --</option>
+                            @foreach (var ev in Model)
+                            {
+                                var now = DateTime.Now;
+                                var today = DateOnly.FromDateTime(now);
+                                var isActive = false;
+                                var statusText = "";
+                                var statusClass = "";
+                                
+                                if (ev.EventDate.HasValue && ev.StartTime.HasValue)
+                                {
+                                    var eventStart = ev.EventDate.Value.ToDateTime(ev.StartTime.Value);
+                                    var endTime = ev.CalculatedEndTime;
+                                    isActive = eventStart <= now && (!endTime.HasValue || endTime.Value > now);
+                                    
+                                    if (isActive)
+                                    {
+                                        statusText = "🟢 ACTIVE NOW";
+                                        statusClass = "text-success fw-bold";
+                                    }
+                                    else if (eventStart > now)
+                                    {
+                                        statusText = "⏰ UPCOMING";
+                                        statusClass = "text-info";
+                                    }
+                                    else if (endTime.HasValue && endTime.Value <= now)
+                                    {
+                                        statusText = "❌ ENDED";
+                                        statusClass = "text-danger";
+                                    }
+                                    else
+                                    {
+                                        statusText = "📅 SCHEDULED";
+                                        statusClass = "text-warning";
+                                    }
+                                }
+                                else
+                                {
+                                    statusText = "📅 SCHEDULED";
+                                    statusClass = "text-warning";
+                                }
+                                
+                                <option value="@ev.EventId" data-active="@(isActive ? "true" : "false")">
+                                    @ev.EventName (@ev.EventDate?.ToString("MMM dd")) 
+                                    <span class="@statusClass">• @statusText</span>
+                                    @if (ev.StartTime.HasValue)
+                                    {
+                                        <text>• @ev.StartTime.Value.ToString(@"h\:mm tt")</text>
+                                    }
+                                </option>
+                            }
+                        </select>
+                        <button id="startSessionBtn" class="btn btn-primary fw-bold px-4" disabled><i class="bi bi-camera-video-fill me-2"></i> START</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">No active events found.</div>
+                }
+
+                <div id="live-scanner-container" style="display: none;">
+                    <div class="reader-container">
+                        <video id="live-video"></video>
+                        <div class="scanner-overlay"><p class="overlay-text" id="live-overlay-text">Starting Camera...</p></div>
+                        <div class="heartbeat" id="live-heartbeat"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button class="btn btn-sm" style="background-color:var(--gold-dim); color:var(--gold-text);" onclick="document.getElementById('live-file-input').click()"><i class="bi bi-image"></i> Upload Image</button>
+                        <button id="endSessionBtn-live" class="btn btn-sm btn-danger px-3">STOP SESSION</button>
+                    </div>
+                    <input type="file" id="live-file-input" hidden accept="image/*">
+                </div>
+            </div>
+
+            <div id="live-flash-card" class="glass-panel mt-3" style="display: none;">
+                <div id="live-flash-content" class="text-center position-relative"></div>
+            </div>
+
+        </div>
+
+        <!-- TABLE RESULTS -->
+        <div class="col-lg-5">
+            <div class="glass-panel d-flex flex-column" style="height: 100%; max-height: 600px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--text-strong);">Live Log</h5>
+                    <div class="btn-group">
+                        <button onclick="exportToExcel()" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i></button>
+                        <button onclick="exportToPdf()" class="btn btn-sm btn-danger"><i class="bi bi-file-earmark-pdf"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="overflow-y: auto; flex-grow: 1;">
+                    <table class="table table-hover table-borderless align-middle" id="attendance-table">
+                        <thead style="position: sticky; top: 0; background: var(--bg-glass); backdrop-filter: blur(10px); z-index: 2;">
+                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--gold-text);">
+                                <th>Time</th>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body" style="color: var(--text-main);"></tbody>
+                    </table>
+                    <div id="empty-state-msg" class="text-center mt-5" style="color: var(--text-muted);">
+                        <i class="bi bi-table" style="font-size: 2rem;"></i>
+                        <p>Waiting for scans...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VERIFIER MODE -->
+<div id="verifier-panel" class="scanner-mode-panel">
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="glass-panel">
+                <h5 class="fw-bold mb-3" style="color: var(--text-strong);">Verifier Camera</h5>
+                <div class="reader-container">
+                    <video id="verifier-video"></video>
+                    <div class="scanner-overlay"><p class="overlay-text" id="verifier-overlay-text">Starting Camera...</p></div>
+                    <div class="heartbeat" id="verifier-heartbeat"></div>
+                </div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-sm" style="background-color:var(--gold-dim); color:var(--gold-text);" onclick="document.getElementById('verifier-file-input').click()"><i class="bi bi-image"></i> Upload Image</button>
+                </div>
+                <input type="file" id="verifier-file-input" hidden accept="image/*">
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <!-- This container now holds the card which will be dynamically populated -->
+            <div id="verifier-result-card" class="glass-panel">
+                <div class="text-center" style="color: var(--text-main);">
+                    <i class="bi bi-qr-code-scan" style="font-size: 4rem;"></i>
+                    <p class="mt-2 fw-500">Scan a QR code to verify.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<audio id="success-sound" src="/sounds/success.mp3" preload="auto"></audio>
+<audio id="error-sound" src="/sounds/error.mp3" preload="auto"></audio>
+
+@section Scripts {
+    <!-- Scanner Logic -->
+    <script src="~/js/scanner.js" asp-append-version="true" type="module"></script>
+    
+    <script>
+        // Helper function to parse event duration (simplified version for frontend)
+        function parseEventDuration(startTime, duration, eventDate) {
+            if (!duration) return null;
+            
+            try {
+                // Handle "X hours" format
+                if (duration.toLowerCase().includes('hour')) {
+                    const hours = parseInt(duration.split(' ')[0]);
+                    const startDate = new Date(eventDate + 'T' + startTime);
+                    return new Date(startDate.getTime() + (hours * 60 * 60 * 1000));
+                }
+                
+                // Handle "9am-5pm" format
+                if (duration.toLowerCase().includes('am') || duration.toLowerCase().includes('pm')) {
+                    const parts = duration.split('-');
+                    if (parts.length === 2) {
+                        const endHour = parseInt(parts[1].replace('am', '').replace('pm', ''));
+                        const isPM = parts[1].includes('pm');
+                        const actualEndHour = isPM ? (endHour % 12 + 12) : endHour;
+                        const endDate = new Date(eventDate + 'T' + actualEndHour + ':00');
+                        return endDate;
+                    }
+                }
+            } catch (e) {
+                console.error('Duration parsing error:', e);
+                return null;
+            }
+            return null;
+        }
+        
+        // Auto-refresh scanner for active events
+        setInterval(() => {
+            const eventSelect = document.getElementById('eventSelector');
+            if (!eventSelect) return;
+            
+            const selectedOption = eventSelect.options[eventSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset.active === 'true') {
+                // Check if event should still be active
+                const eventId = selectedOption.value;
+                // You could add an API call here to verify event status
+            }
+        }, 30000); // Check every 30 seconds
+    </script>
+}

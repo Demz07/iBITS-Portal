@@ -1,0 +1,555 @@
+﻿@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Secure Login";
+    Layout = null;
+
+    // FIXED: Null checks to silence warnings
+    string userType = Model?.UserType ?? "Member";
+    string loginType = (userType == "Admin") ? "ADMINISTRATOR" : "MEMBER";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - iBITS Portal</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-deep: #030a16;
+            --gold-primary: #D4AF37;
+            --gold-light: #F9E076;
+            --gold-glow: rgba(212, 175, 55, 0.4);
+            --text-muted: #94a3b8;
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-deep);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* --- 1. FULL SCREEN MATRIX BACKGROUND --- */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        /* --- 2. TOP HEADER (PUP LOGO) --- */
+        .top-header {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .header-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            margin-right: 15px;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+        }
+
+        .header-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .uni-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.2;
+        }
+
+        .campus-name {
+            font-weight: 400;
+            font-size: 0.9rem;
+            color: var(--gold-primary);
+            letter-spacing: 2px;
+            margin-top: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* --- 3. SPLIT LAYOUT --- */
+        .split-layout {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* --- LEFT SIDE: BRANDING --- */
+        .left-brand {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            margin-bottom: -50px;
+            animation: fadeUp 1s ease-out forwards;
+            z-index: 1;
+        }
+
+        .logo-img {
+            width: 500px;
+            height: 500px;
+            object-fit: contain;
+            filter: drop-shadow(0 25px 50px rgba(0,0,0,0.6));
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-text {
+            text-align: center;
+            animation: fadeUp 1.2s ease-out forwards;
+            max-width: 800px;
+            position: relative;
+            z-index: 5;
+        }
+
+            .brand-text h1 {
+                font-size: 4.5rem;
+                font-weight: 800;
+                line-height: 1;
+                margin: 0 0 15px 0;
+                background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+
+            .brand-text .gold-accent {
+                font-size: 1.1rem;
+                color: var(--gold-primary);
+                text-transform: uppercase;
+                letter-spacing: 3px;
+                font-weight: 600;
+                display: block;
+                text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+                opacity: 0.9;
+            }
+
+        /* --- RIGHT SIDE: LOGIN FORM --- */
+        .right-controls {
+            flex: 1;
+            display: flex;
+            justify-content: flex-start;
+            padding-left: 0;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- GLASS PANEL --- */
+        .glass-panel {
+            width: 100%;
+            max-width: 650px;
+            padding: 80px;
+            margin: 50px 0 50px 50px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
+            animation: cardEntrance 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .panel-header {
+            margin-bottom: 3rem;
+            position: relative;
+            border-left: 5px solid var(--gold-primary);
+            padding-left: 30px;
+        }
+
+            .panel-header h3 {
+                font-weight: 800;
+                font-size: 2.2rem;
+                color: #fff;
+                margin: 0;
+                line-height: 1;
+                text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+            }
+
+            .panel-header p {
+                color: var(--gold-primary);
+                font-size: 0.85rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 3px;
+                margin-top: 10px;
+                opacity: 0.8;
+            }
+
+        /* --- FORM STYLES --- */
+        .form-floating {
+            margin-bottom: 25px;
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff !important;
+            border-radius: 15px;
+            height: 65px;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 1px;
+            font-size: 1.1rem;
+        }
+
+            .form-control:focus {
+                background: rgba(255, 255, 255, 0.1) !important;
+                border-color: var(--gold-primary);
+                box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+                color: var(--gold-primary) !important;
+            }
+
+        .form-floating label {
+            color: #888;
+            padding-top: 20px;
+        }
+
+        /* Autofill Fix */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0b1421 inset !important;
+            -webkit-text-fill-color: white !important;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: #666;
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 10;
+            font-size: 1.4rem;
+        }
+
+            .password-toggle:hover {
+                color: var(--gold-primary);
+            }
+
+        /* --- BUTTON --- */
+        .btn-gold {
+            background: var(--gold-primary);
+            color: #000;
+            font-weight: 800;
+            font-size: 1.1rem;
+            width: 100%;
+            padding: 20px;
+            border: none;
+            border-radius: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+            .btn-gold:hover {
+                background: #fff;
+                transform: translateY(-3px);
+                box-shadow: 0 0 25px var(--gold-glow);
+            }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            letter-spacing: 1px;
+        }
+
+            .back-link:hover {
+                color: var(--gold-primary);
+            }
+
+        .form-check-input:checked {
+            background-color: var(--gold-primary);
+            border-color: var(--gold-primary);
+        }
+
+        .scrambling {
+            color: var(--gold-primary) !important;
+            text-shadow: 0 0 8px var(--gold-primary);
+            font-family: monospace !important;
+        }
+
+        /* --- ANIMATIONS --- */
+        @@keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes cardEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @@keyframes pulseGlow {
+            0% {
+                opacity: 0.1;
+            }
+
+            100% {
+                opacity: 0.25;
+            }
+        }
+
+        /* --- RESPONSIVE --- */
+        @@media (max-width: 900px) {
+            .split-layout {
+                flex-direction: column;
+            }
+
+            .left-brand {
+                padding: 4rem 1rem 1rem 1rem;
+                flex: 0.8;
+            }
+
+            .right-controls {
+                padding: 1rem;
+                flex: 1.2;
+                justify-content: center;
+            }
+
+            .glass-panel {
+                max-width: 100%;
+                margin: 0;
+                padding: 40px;
+            }
+
+            .logo-img {
+                width: 200px;
+                height: 200px;
+            }
+
+            .brand-text h1 {
+                font-size: 3rem;
+            }
+
+            .top-header {
+                top: 20px;
+                left: 20px;
+            }
+
+            .header-logo {
+                width: 45px;
+                height: 45px;
+            }
+
+            .uni-name {
+                font-size: 0.8rem;
+            }
+
+            .campus-name {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Full Screen Matrix Background -->
+    <canvas id="matrixCanvas"></canvas>
+
+    <!-- 2. Top Header -->
+    <div class="top-header">
+        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
+        <div class="header-info">
+            <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+            <span class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</span>
+        </div>
+    </div>
+
+    <!-- 3. Split Layout -->
+    <div class="split-layout">
+
+        <!-- LEFT SIDE: BRANDING -->
+        <div class="left-brand">
+            <div class="logo-wrapper">
+                <img src="~/images/logo.png" alt="iBITS Logo" class="logo-img">
+            </div>
+            <div class="brand-text">
+                <h1>iBITS PORTAL</h1>
+                <span class="gold-accent">Unified Attendance & Payment System</span>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: LOGIN FORM -->
+        <div class="right-controls">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <h3>@loginType</h3>
+                    <p>Enter your credentials to proceed</p>
+                </div>
+
+                <form id="account" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                    <div class="form-floating">
+                        <input asp-for="Input.Email" type="text" class="form-control" autocomplete="off" placeholder="ID" />
+                        <label asp-for="Input.Email">Student ID / Username</label>
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-floating position-relative">
+                        <input asp-for="Input.Password" type="password" class="form-control" id="passwordField" placeholder="Password" />
+                        <label asp-for="Input.Password">Password</label>
+                        <i class="bi bi-eye password-toggle" id="toggleBtn" onclick="matrixReveal()"></i>
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-check-label text-secondary" style="font-size: 0.9rem;">
+                            <input class="form-check-input bg-dark border-secondary" asp-for="Input.RememberMe" />
+                            Keep Session Active
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-gold">Initialize Session</button>
+
+                    <div class="text-center">
+                        <a href="/" class="back-link">
+                            <i class="bi bi-arrow-left me-1"></i> Return to Gateway
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <!-- Matrix Rain Script -->
+    <script>
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const fontSize = 26; // Bigger Matrix Text
+        const columns = canvas.width / fontSize;
+        const drops = [];
+
+        for (let x = 0; x < columns; x++) { drops[x] = 1; }
+
+        const characters = "01";
+
+        function draw() {
+            ctx.fillStyle = 'rgba(3, 10, 22, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#D4AF37';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = characters.charAt(Math.floor(Math.random() * characters.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) { drops[i] = 0; }
+                drops[i]++;
+            }
+        }
+        setInterval(draw, 33);
+    </script>
+
+    <!-- Password Reveal Script -->
+    <script>
+        function matrixReveal() {
+            const input = document.getElementById("passwordField");
+            const btn = document.getElementById("toggleBtn");
+            const originalValue = input.value;
+
+            if (!originalValue) return;
+
+            if (input.type === "password") {
+                input.type = "text";
+                btn.classList.remove("bi-eye");
+                btn.classList.add("bi-eye-slash");
+
+                let iterations = 0;
+                const scrambleChars = "0101010101XYZABC#$&";
+                input.classList.add("scrambling");
+
+                const interval = setInterval(() => {
+                    input.value = input.value.split("")
+                        .map((letter, index) => {
+                            if (index < iterations) return originalValue[index];
+                            return scrambleChars[Math.floor(Math.random() * 18)];
+                        }).join("");
+
+                    if (iterations >= originalValue.length) {
+                        clearInterval(interval);
+                        input.value = originalValue;
+                        input.classList.remove("scrambling");
+                    }
+                    iterations += 1 / 2;
+                }, 30);
+            } else {
+                input.type = "password";
+                btn.classList.remove("bi-eye-slash");
+                btn.classList.add("bi-eye");
+            }
+        }
+    </script>
+</body>
+</html>

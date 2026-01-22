@@ -1,0 +1,98 @@
+﻿@* ============================================================ *@
+@* FILE PATH: Views/Admin/_EditStudentModal.cshtml              *@
+@* ============================================================ *@
+@* UPDATED: Changed Student Type from text input to dropdown    *@
+@* with options: Regular, Irregular, Transferee, Ladderized     *@
+@* UPDATED: Added School Year Enrolled dropdown field           *@
+@* ============================================================ *@
+
+@model iBITS_Portal.Models.Student
+
+<div class="modal fade" id="editStudentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: var(--gold-primary);"><i class="bi bi-pencil-square me-2"></i> Edit Student Record</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="UpdateStudent" method="post" id="editStudentForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Student ID (Read-only) -->
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Student ID</label>
+                            <input type="text" asp-for="StudentNum" class="form-control" readonly style="background: rgba(0,0,0,0.2) !important;" />
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label small text-uppercase fw-bold">Email *</label>
+                            <input type="email" asp-for="StudentEmail" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">First Name *</label>
+                            <input type="text" asp-for="StudentFn" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Middle Name</label>
+                            <input type="text" asp-for="StudentMn" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Last Name *</label>
+                            <input type="text" asp-for="StudentLn" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Program</label>
+                            <input type="text" asp-for="Course" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Year & Section</label>
+                            <input type="text" asp-for="YearLevelSection" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Student Type</label>
+                            <select asp-for="StudentType" id="editStudentType" class="form-select select2-modal" style="width: 100%;">
+                                <option value="">-- Select Type --</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Irregular">Irregular</option>
+                                <option value="Transferee">Transferee</option>
+                                <option value="Ladderized">Ladderized</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Birthday</label>
+                            <input type="date" asp-for="Birthday" class="form-control" />
+                        </div>
+
+                        <!-- NEW: School Year Enrolled Field -->
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">School Year Enrolled <span class="text-danger">*</span></label>
+                            <select asp-for="SchoolYearEnrolled" id="editSchoolYearEnrolled" class="form-select select2-modal" style="width: 100%;" required>
+                                <option value="">-- Select Year --</option>
+                                @{
+                                    int currentYear = DateTime.Now.Year;
+                                    for (int year = currentYear - 5; year <= currentYear + 2; year++)
+                                    {
+                                        string ayValue = $"A.Y. {year}-{year + 1}";
+                                        <option value="@ayValue">@ayValue</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gold"><i class="bi bi-save me-2"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

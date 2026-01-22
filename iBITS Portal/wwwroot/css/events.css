@@ -1,0 +1,328 @@
+/* wwwroot/css/events.css */
+
+/* ======================================================= */
+/*          SECTION 1: THEME & SHARED STYLES               */
+/* ======================================================= */
+:root {
+    /* DARK THEME (DEFAULT) */
+    --bg-body: #030a16;
+    /* UPDATED: Increased opacity to 0.15 and size to 70% for stronger glow */
+    --bg-gradient: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.15) 0, transparent 70%);
+    --bg-glass: rgba(11, 26, 51, 0.65);
+    --gold-primary: #D4AF37;
+    --gold-dim: rgba(212, 175, 55, 0.1);
+    --gold-text: #D4AF37;
+    --text-main: #94a3b8;
+    --text-strong: #ffffff;
+    --text-inverse: #000000;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+}
+
+/* LIGHT THEME OVERRIDES */
+[data-theme="light"] {
+    --bg-body: #f8fafc;
+    /* Stronger warm glow for light mode */
+    --bg-gradient: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.08) 0, transparent 75%);
+    --bg-glass: rgba(255, 255, 255, 0.85);
+    --gold-primary: #c29d2b;
+    --gold-dim: rgba(194, 157, 43, 0.15);
+    --gold-text: #b08d26;
+    --text-main: #64748b;
+    --text-strong: #0f172a;
+    --text-inverse: #ffffff;
+    --border-color: rgba(148, 163, 184, 0.2);
+    --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+}
+
+/* ======================================================= */
+/*                 GLASS COMPONENTS                        */
+/* ======================================================= */
+
+.glass-panel {
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+    color: var(--text-main);
+}
+
+.glass-alert {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* ======================================================= */
+/*                 EVENT CARDS                             */
+/* ======================================================= */
+
+glass-card {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-soft);
+}
+
+/* UPDATED: Added a Gold Glow Box-Shadow on Hover */
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.15), 0 10px 20px rgba(0, 0, 0, 0.4);
+    border-color: var(--gold-primary);
+}
+
+/* Image Placeholder Area */
+.event-img-placeholder {
+    height: 140px;
+    background: linear-gradient(45deg, rgba(11, 26, 51, 0.9), rgba(212, 175, 55, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .event-img-placeholder {
+    background: linear-gradient(45deg, #f1f5f9, rgba(194, 157, 43, 0.2));
+}
+
+.event-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+/* ======================================================= */
+/*                 TYPOGRAPHY & CONTENT                    */
+/* ======================================================= */
+
+.event-date {
+    font-size: 0.8rem;
+    color: var(--gold-text);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.event-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.event-desc {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    flex-grow: 1; /* Pushes footer down */
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Limit description to 3 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ======================================================= */
+/*                 STATUS BADGES                           */
+/* ======================================================= */
+
+.status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.badge-upcoming {
+    background: #3b82f6; /* Blue */
+    color: white;
+}
+
+.badge-today {
+    background: #10b981; /* Green */
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.badge-completed {
+    background: #64748b; /* Gray */
+    color: white;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* ======================================================= */
+/*                 BUTTONS & UTILS                         */
+/* ======================================================= */
+
+.btn-gold {
+    background: var(--gold-primary);
+    color: var(--text-inverse);
+    font-weight: 700;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+    .btn-gold:hover {
+        background: #fff;
+        color: #000;
+    }
+
+.btn-outline-custom {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    transition: 0.3s;
+}
+
+    .btn-outline-custom:hover {
+        border-color: var(--gold-primary);
+        color: var(--gold-primary);
+        background: var(--gold-dim);
+    }
+
+.btn-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+    .btn-glass:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-strong);
+    }
+
+/* ======================================================= */
+/*                 MODAL STYLES                            */
+/* ======================================================= */
+
+.glass-modal {
+    background: var(--bg-glass);
+    backdrop-filter: blur(25px);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.form-control, .form-select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-strong);
+}
+
+    .form-control:focus, .form-select:focus {
+        background-color: var(--input-bg);
+        border-color: var(--gold-primary);
+        box-shadow: 0 0 0 3px var(--gold-dim);
+        color: var(--text-strong);
+    }
+
+.text-gold {
+    color: var(--gold-primary) !important;
+}
+
+.alert-warning-custom {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+/* ======================================================= */
+/*           SECTION 9: SELECT2 DROPDOWN OVERRIDES         */
+/* ======================================================= */
+
+/* Styles the dropdown container itself - KEEP GLASS EFFECT */
+.select2-container--default .select2-dropdown {
+    background-color: rgba(11, 26, 51, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Styles the search box inside the dropdown (if any) */
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-strong) !important;
+}
+
+/* Styles each individual option in the dropdown */
+.select2-container--default .select2-results__option {
+    color: var(--text-main) !important;
+    padding: 10px 15px !important;
+    background-color: transparent !important;
+}
+
+/* --- CRITICAL FIX: ALL HOVER STATES --- */
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: var(--gold-dim) !important;
+    color: var(--gold-primary) !important;
+}
+
+/* --- SELECTED STATE (not hovering) --- */
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: rgba(212, 175, 55, 0.1) !important;
+    color: var(--text-strong) !important;
+}
+
+/* Styles the main select box to match other inputs */
+.select2-container--default .select2-selection--single {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    border-radius: 8px !important;
+    height: auto !important;
+    padding: 10px 15px !important;
+}
+
+    /* Styles the text of the selected item */
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: var(--text-strong) !important;
+        line-height: inherit !important;
+        padding: 0 !important;
+    }
+
+    /* Styles the dropdown arrow */
+    .select2-container--default .select2-selection--single .select2-selection__arrow b {
+        border-color: var(--text-main) transparent transparent transparent !important;
+        top: 70% !important;
+    }
+
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent var(--text-main) transparent !important;
+}

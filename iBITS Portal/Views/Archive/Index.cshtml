@@ -1,0 +1,163 @@
+﻿@{
+    ViewData["Title"] = "Archive";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- EXTERNAL CSS -->
+<link rel="stylesheet" href="~/css/archive.css" asp-append-version="true" />
+
+<div class="container-fluid">
+    <!-- HEADER -->
+    <div class="glass-panel mb-4 d-flex justify-content-between align-items-center p-4">
+        <div>
+            <h3 class="fw-bold mb-1" style="color:var(--text-strong)">
+                <i class="bi bi-archive-fill me-2" style="color:var(--gold-primary)"></i> Archive Viewer
+            </h3>
+            <p class="mb-0 text-muted small">Search and manage historical records.</p>
+        </div>
+        <!-- Archive Tabs (Pill Style) -->
+        <ul class="nav nav-pills" id="archiveTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="students-tab" data-bs-toggle="pill" data-bs-target="#students" type="button" role="tab">
+                    <i class="bi bi-people me-2"></i>Students
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="payments-tab" data-bs-toggle="pill" data-bs-target="#payments" type="button" role="tab">
+                    <i class="bi bi-credit-card me-2"></i>Payments
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="events-tab" data-bs-toggle="pill" data-bs-target="#events" type="button" role="tab">
+                    <i class="bi bi-calendar-event me-2"></i>Events
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- FILTERS SECTION (Student Records Style) -->
+    <div class="glass-panel p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <!-- Search Bar -->
+            <div class="col-md-6">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="archiveSearch" class="form-control" placeholder="Search ID, Name, Program or Section..." />
+                </div>
+            </div>
+
+            <!-- Year Archived Filter -->
+            <div class="col-md-3">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Year Archived</label>
+                <select id="archiveYearFilter" class="form-select">
+                    @if (ViewBag.ArchiveYears != null)
+                    {
+                        foreach (var year in ViewBag.ArchiveYears)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="">No Archives</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Payment Status Filter (Only visible for payments tab) -->
+            <div class="col-md-3" id="paymentStatusContainer" style="display:none;">
+                <label class="small text-muted mb-1 text-uppercase fw-bold">Payment Status</label>
+                <select id="paymentStatusFilter" class="form-select">
+                    <option value="all">All Statuses</option>
+                    <option value="paid">Paid / Completed</option>
+                    <option value="unpaid">Unpaid / Pending</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-md-auto ms-auto">
+                <button type="button" class="btn-gold" id="btnApplyFilter">
+                    <i class="bi bi-funnel-fill me-2"></i> Apply
+                </button>
+                <button type="button" class="btn-glass ms-2" id="btnResetFilter" title="Reset">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENT TABLE SECTION -->
+    <div class="tab-content" id="archiveTabsContent">
+
+        <!-- STUDENTS TABLE -->
+        <div class="tab-pane fade show active" id="students" role="tabpanel">
+            <div class="glass-panel p-0">
+                <div class="table-responsive p-3">
+                    <table class="table table-glass align-middle">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Full Name</th>
+                                <th>Program & Section</th>
+                                <th>Status</th>
+                                <th>Archived Date</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAYMENTS TABLE -->
+        <div class="tab-pane fade" id="payments" role="tabpanel">
+            <div class="glass-panel p-0">
+                <div class="table-responsive p-3">
+                    <table class="table table-glass align-middle">
+                        <thead>
+                            <tr>
+                                <th>Fee Name</th>
+                                <th>Student</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- EVENTS TABLE -->
+        <div class="tab-pane fade" id="events" role="tabpanel">
+            <div class="glass-panel p-0">
+                <div class="table-responsive p-3">
+                    <table class="table table-glass align-middle">
+                        <thead>
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/archive.js" asp-append-version="true"></script>
+}

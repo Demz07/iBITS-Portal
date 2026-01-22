@@ -1,0 +1,90 @@
+﻿@model iBITS_Portal.Models.Student
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>Student</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentLn)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentLn)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentFn)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentFn)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentMn)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentMn)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Birthday)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Birthday)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.YearLevelSection)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.YearLevelSection)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Course)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Course)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentType)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentType)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Classification)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Classification)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentEmail)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentEmail)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Qrcode)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Qrcode)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentImage)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentImage)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Officer)
+        </dt>
+        <dd class = "col-sm-10">
+            @(Model.Officer?.OfficerId.ToString() ?? "N/A")
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model?.StudentNum">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>

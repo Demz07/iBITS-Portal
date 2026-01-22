@@ -1,0 +1,42 @@
+﻿@model iBITS_Portal.ViewModels.ImportPreviewViewModel
+
+<div class="table-responsive">
+    <table class="table table-borderless align-middle" style="color: var(--text-main);">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--gold-primary);">
+                @if (Model != null && Model.Headers.Any())
+                {
+                    @foreach (var header in Model.Headers)
+                    {
+                        <th>@header</th>
+                    }
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.PreviewRows.Any())
+            {
+                @foreach (var row in Model.PreviewRows)
+                {
+                    <tr>
+                        @foreach (var cell in row)
+                        {
+                            <td>@cell</td>
+                        }
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="@(Model?.Headers.Count ?? 1)" class="text-center text-muted">No data found in preview.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="alert small mt-3 mb-0" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd;">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>Verification:</strong> This is a snapshot of the first 5 rows based on your mapping. If the data looks wrong (e.g., Email is in the Name column), click <strong>Back</strong> to adjust your mapping.
+</div>

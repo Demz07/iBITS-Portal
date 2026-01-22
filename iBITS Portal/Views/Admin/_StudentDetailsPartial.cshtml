@@ -1,0 +1,505 @@
+﻿@* ============================================================ *@
+@* FILE: Views/Admin/_StudentDetailsPartial.cshtml              *@
+@* ============================================================ *@
+
+@model iBITS_Portal.ViewModels.StudentDetailsViewModel
+
+<div class="modal-header d-block border-0" style="background: linear-gradient(180deg, var(--gold-dim) 0%, transparent 100%);">
+    <div class="d-flex justify-content-between align-items-start">
+        <div class="d-flex align-items-center">
+
+            @* ============================================================ *@
+            @* PROFILE PICTURE SECTION - WITH CLICK TO EXPAND                *@
+            @* ============================================================ *@
+            <div class="profile-image-container me-3"
+                 onclick="openProfileExpand('@(Model.Student.StudentImage ?? "")', '@Model.FullName')"
+                 title="Click to expand"
+                 style="cursor: pointer;">
+                @if (!string.IsNullOrEmpty(Model.Student.StudentImage))
+                {
+                    <img src="@Model.Student.StudentImage"
+                         alt="@Model.FullName"
+                         class="profile-image"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <div class="fallback-icon" style="display: none;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                }
+                else
+                {
+                    <div class="fallback-icon">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                }
+                <!-- Expand Icon Overlay -->
+                <div class="expand-overlay">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </div>
+            </div>
+            @* ============================================================ *@
+            @* END PROFILE PICTURE SECTION                                   *@
+            @* ============================================================ *@
+
+            <div>
+                <h5 class="modal-title fw-bold mb-0" style="color: var(--text-strong);">@Model.FullName</h5>
+                <p class="mb-0 small" style="color: var(--gold-text); font-family: monospace;">@Model.Student.StudentNum</p>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="d-flex justify-content-around mt-3 small">
+        <span class="badge badge-gray"><strong>Program:</strong> @Model.Student.Course</span>
+        <span class="badge badge-gray"><strong>Section:</strong> @Model.Student.YearLevelSection</span>
+        <span class="badge badge-gray"><strong>Type:</strong> @Model.Student.StudentType</span>
+        <span class="badge badge-gold"><strong>Role:</strong> @Model.Role</span>
+    </div>
+</div>
+
+<div class="modal-body p-0">
+    <!-- TABS -->
+    <ul class="nav nav-tabs nav-justified details-tabs" id="detailsTab" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="financials-tab" data-bs-toggle="tab" data-bs-target="#financials" type="button" role="tab">Financials</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">Attendance</button></li>
+    </ul>
+
+    <!-- TAB CONTENT -->
+    <div class="tab-content p-3" id="detailsTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-6"><div class="stat-card"><div class="stat-title">Attendance Rate</div><div class="stat-value text-success">@Model.AttendanceRate.ToString("0.0")%</div></div></div>
+                <div class="col-6"><div class="stat-card"><div class="stat-title">Events Attended</div><div class="stat-value">@Model.EventsAttended / @Model.TotalEvents</div></div></div>
+                <div class="col-6"><div class="stat-card"><div class="stat-title">Total Balance Due</div><div class="stat-value text-danger">₱@Model.Balance.ToString("N2")</div></div></div>
+                <div class="col-6"><div class="stat-card"><div class="stat-title">Total Payments</div><div class="stat-value">₱@Model.TotalPaid.ToString("N2")</div></div></div>
+            </div>
+        </div>
+
+        <!-- Financials Tab -->
+        <div class="tab-pane fade" id="financials" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-uppercase small fw-bold" style="color:var(--gold-text)">Fees (₱@Model.TotalFees.ToString("N2"))</h6>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var fee in Model.Fees)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@fee.FeeName</span>
+                                <span class="badge @(fee.FeeStatus == "Paid" ? "badge-green" : "badge-gray")">₱@fee.Amount?.ToString("N2")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-uppercase small fw-bold" style="color:var(--gold-text)">Fines (₱@Model.TotalFines.ToString("N2"))</h6>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var fine in Model.Fines)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@fine.EventName (@fine.Reason)</span>
+                                <span class="badge @(fine.Status == "Paid" ? "badge-green" : "badge-gray")">₱@fine.Amount.ToString("N2")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Tab -->
+        <div class="tab-pane fade" id="attendance" role="tabpanel" style="max-height: 300px; overflow-y: auto;">
+            <ul class="list-group list-group-flush">
+                @foreach (var record in Model.AttendanceHistory)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="color:var(--text-strong)">@record.EventName</div>
+                            <small class="text-muted">@record.Date?.ToString("MMMM dd, yyyy")</small>
+                        </div>
+                        <div>
+                            @if (record.Status == "Present")
+                            {
+                                <span class="badge badge-green">Present</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-gray">Absent</span>
+                            }
+                            @if (record.HasFine)
+                            {
+                                <i class="bi bi-exclamation-triangle-fill text-danger ms-2" title="Fine Issued"></i>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@* ============================================================ *@
+@* EXPANDED PROFILE PICTURE MODAL - GLASSY UI                    *@
+@* ============================================================ *@
+<div class="profile-expand-overlay" id="profileExpandOverlay" onclick="closeProfileExpand()">
+    <div class="profile-expand-container" onclick="event.stopPropagation()">
+        <!-- Close Button - Fixed Position -->
+        <button type="button" class="profile-expand-close" onclick="closeProfileExpand()" title="Close (ESC)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+
+        <!-- Glass Card Container -->
+        <div class="profile-expand-card">
+            <!-- Image Wrapper - Full Ratio -->
+            <div class="profile-expand-image-wrapper">
+                <img id="expandedProfileImage" src="" alt="Profile Picture" />
+                <div class="profile-expand-fallback" id="expandedProfileFallback" style="display: none;">
+                    <i class="bi bi-person-fill"></i>
+                    <span>No Photo Available</span>
+                </div>
+            </div>
+
+            <!-- Student Info Footer -->
+            <div class="profile-expand-footer">
+                <div class="profile-expand-name" id="expandedProfileName"></div>
+                <div class="profile-expand-hint">
+                    <i class="bi bi-lightbulb"></i> Click outside or press ESC to close
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ============================================================ *@
+@* PROFILE PICTURE STYLES - ADD TO YOUR CSS OR KEEP INLINE       *@
+@* ============================================================ *@
+<style>
+    /* ============================================================ */
+    /* PROFILE IMAGE CONTAINER (Thumbnail)                          */
+    /* ============================================================ */
+    .profile-image-container {
+        position: relative;
+        width: 70px;
+        height: 70px;
+        min-width: 70px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--gold-primary);
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        background: var(--gold-dim);
+        transition: all 0.3s ease;
+    }
+
+        .profile-image-container:hover {
+            border-color: var(--gold-light, #F9E076);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Actual Profile Image */
+        .profile-image-container .profile-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .profile-image-container:hover .profile-image {
+            transform: scale(1.1);
+        }
+
+        /* Fallback Icon Container */
+        .profile-image-container .fallback-icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold-dim);
+        }
+
+            .profile-image-container .fallback-icon i {
+                font-size: 2rem;
+                color: var(--gold-primary);
+            }
+
+        /* Expand Icon Overlay */
+        .profile-image-container .expand-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 50%;
+        }
+
+        .profile-image-container:hover .expand-overlay {
+            opacity: 1;
+        }
+
+        .profile-image-container .expand-overlay i {
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+    /* ============================================================ */
+    /* EXPANDED PROFILE MODAL - GLASSY DARK NAVY + GOLD             */
+    /* ============================================================ */
+    .profile-expand-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(3, 10, 22, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    }
+
+        .profile-expand-overlay.active {
+            display: flex;
+        }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+    }
+
+    .profile-expand-container {
+        position: relative;
+        text-align: center;
+        animation: zoomIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        max-width: 90vw;
+        max-height: 90vh;
+    }
+
+    @@keyframes zoomIn {
+        from
+
+    {
+        opacity: 0;
+        transform: scale(0.85) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    }
+
+    /* Glass Card Container */
+    .profile-expand-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.5), 0 0 60px rgba(212, 175, 55, 0.15);
+    }
+
+    /* Close Button - Fixed Top Right */
+    .profile-expand-close {
+        position: absolute;
+        top: -15px;
+        right: -15px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(3, 10, 22, 0.8);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 2px solid var(--gold-primary, #D4AF37);
+        color: var(--gold-primary, #D4AF37);
+        font-size: 1.3rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+
+        .profile-expand-close:hover {
+            background: var(--gold-primary, #D4AF37);
+            color: #000;
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+        }
+
+    /* Image Wrapper - Full Ratio */
+    .profile-expand-image-wrapper {
+        width: auto;
+        max-width: 500px;
+        max-height: 60vh;
+        overflow: hidden;
+        background: rgba(3, 10, 22, 0.5);
+    }
+
+        .profile-expand-image-wrapper img {
+            width: 100%;
+            height: auto;
+            max-height: 60vh;
+            object-fit: contain;
+            display: block;
+        }
+
+    /* Fallback - No Image */
+    .profile-expand-fallback {
+        width: 350px;
+        height: 350px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, rgba(212, 175, 55, 0.05) 0%, rgba(3, 10, 22, 0.3) 100%);
+    }
+
+        .profile-expand-fallback i {
+            font-size: 7rem;
+            color: var(--gold-primary, #D4AF37);
+            margin-bottom: 15px;
+            opacity: 0.6;
+        }
+
+        .profile-expand-fallback span {
+            color: var(--text-muted, #94a3b8);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+    /* Footer with Name */
+    .profile-expand-footer {
+        padding: 25px 30px;
+        background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.05) 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .profile-expand-name {
+        color: #fff;
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .profile-expand-hint {
+        color: var(--text-muted, #94a3b8);
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+        .profile-expand-hint i {
+            color: var(--gold-primary, #D4AF37);
+            margin-right: 5px;
+        }
+
+    /* Responsive */
+    @@media (max-width: 576px) {
+        .profile-expand-container
+
+    {
+        max-width: 95vw;
+    }
+
+    .profile-expand-card {
+        border-radius: 20px;
+    }
+
+    .profile-expand-image-wrapper {
+        max-width: 100%;
+    }
+
+    .profile-expand-close {
+        top: -12px;
+        right: -12px;
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+    }
+
+    .profile-expand-fallback {
+        width: 280px;
+        height: 280px;
+    }
+
+        .profile-expand-fallback i {
+            font-size: 5rem;
+        }
+
+    .profile-expand-footer {
+        padding: 20px;
+    }
+
+    .profile-expand-name {
+        font-size: 1.3rem;
+    }
+
+    }
+</style>
+
+@* ============================================================ *@
+@* JAVASCRIPT FOR EXPAND FUNCTIONALITY                           *@
+@* ============================================================ *@
+<script>
+    function openProfileExpand(imageSrc, name) {
+        const overlay = document.getElementById('profileExpandOverlay');
+        const image = document.getElementById('expandedProfileImage');
+        const fallback = document.getElementById('expandedProfileFallback');
+        const nameEl = document.getElementById('expandedProfileName');
+
+        nameEl.textContent = name;
+
+        if (imageSrc && imageSrc.trim() !== '') {
+            image.src = imageSrc;
+            image.style.display = 'block';
+            fallback.style.display = 'none';
+
+            // Handle image load error
+            image.onerror = function () {
+                image.style.display = 'none';
+                fallback.style.display = 'flex';
+            };
+        } else {
+            image.style.display = 'none';
+            fallback.style.display = 'flex';
+        }
+
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeProfileExpand() {
+        const overlay = document.getElementById('profileExpandOverlay');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeProfileExpand();
+        }
+    });
+</script>

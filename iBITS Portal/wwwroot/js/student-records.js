@@ -1,0 +1,1171 @@
+﻿/* ============================================================ */
+/* FILE PATH: wwwroot/js/student-records.js                     */
+/* ============================================================ */
+/* UPDATED: Added Dynamic Filter Management feature             */
+/* - Users can show/hide filters from a settings dropdown       */
+/* - Filter preferences are saved in localStorage               */
+/* - Active filters shown as removable pills                    */
+/* ============================================================ */
+/* NEW FEATURE: Auto-Apply Filters from Dashboard URL params    */
+/* - Automatically filters by program and year when coming      */
+/*   from Dashboard year level cards                            */
+/* ============================================================ */
+
+$(document).ready(function () {
+
+    // ==========================================
+    // AUTO-APPLY FILTERS FROM DASHBOARD (NEW)
+    // ==========================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoApply = urlParams.get('autoApply');
+    const programParam = urlParams.get('program');
+    const yearParam = urlParams.get('year');
+    const statusParam = urlParams.get('status');
+
+    if (autoApply === 'true') {
+        // Auto-apply filters based on URL parameters
+
+        // Set Program filter
+        if (programParam) {
+            const programSelect = document.getElementById('programFilter');
+            if (programSelect) {
+                programSelect.value = programParam;
+                // Trigger change event to update dependent filters
+                $(programSelect).trigger('change');
+            }
+        }
+
+        // Set Year filter
+        if (yearParam) {
+            // Wait a bit for program filter to update
+            setTimeout(() => {
+                const yearSelect = document.getElementById('yearFilter');
+                if (yearSelect) {
+                    // FIXED: The yearFilter dropdown now expects values like "1", "2", "3", "4" (without dash)
+                    // No need to append dash anymore - use the year value directly
+                    yearSelect.value = yearParam;
+                    $(yearSelect).trigger('change');
+                }
+            }, 100);
+        }
+
+        // Set Status filter (for archived view)
+        if (statusParam) {
+            setTimeout(() => {
+                const statusSelect = document.getElementById('statusFilter');
+                if (statusSelect) {
+                    statusSelect.value = statusParam;
+                    $(statusSelect).trigger('change');
+                }
+            }, 100);
+        }
+
+        // Auto-trigger the search/filter after a short delay
+        setTimeout(() => {
+            // Click the Apply button (btn-gold with type="submit")
+            const searchBtn = document.querySelector('button[type="submit"].btn-gold');
+            if (searchBtn) {
+                searchBtn.click();
+            }
+
+            // Show a toast notification
+            showToastNotification('success', 'Filters applied automatically from Dashboard');
+        }, 300);
+    }
+
+    // ==========================================
+    // 0. DYNAMIC FILTER VISIBILITY MANAGEMENT
+    // ==========================================
+    const FILTER_STORAGE_KEY = 'ibits_student_filters';
+    const allFilters = ['search', 'sortOrder', 'program', 'year', 'section', 'type', 'role', 'status'];
+    const alwaysVisibleFilters = ['search']; // Filters that cannot be hidden
+    let visibleFilters = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY)) || {};
+
+    // Initialize default filter visibility if not set
+    if (Object.keys(visibleFilters).length === 0) {
+        allFilters.forEach(f => visibleFilters[f] = true);
+        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(visibleFilters));
+    }
+
+    // Apply filter visibility on page load
+    function applyFilterVisibility() {
+        allFilters.forEach(filter => {
+            const $filterItem = $(`.filter-item[data-filter="${filter}"]`);
+            const $checkbox = $(`.filter-toggle[value="${filter}"]`);
+
+            if (alwaysVisibleFilters.includes(filter)) {
+                // Always visible filters
+                $filterItem.show();
+                $checkbox.prop('checked', true).prop('disabled', true);
+            } else {
+                // Toggleable filters
+                if (visibleFilters[filter]) {
+                    $filterItem.removeClass('filter-hidden').show();
+                    $checkbox.prop('checked', true);
+                } else {
+                    $filterItem.addClass('filter-hidden').hide();
+                    $checkbox.prop('checked', false);
+                }
+            }
+        });
+
+        // Update active filters pills display
+        updateActiveFiltersPills();
+    }
+
+    // Handle filter toggle checkbox changes
+    $('.filter-toggle').on('change', function () {
+        const filterName = $(this).val();
+
+        // Prevent disabling always-visible filters
+        if (alwaysVisibleFilters.includes(filterName)) {
+            $(this).prop('checked', true);
+            return;
+        }
+
+        const isVisible = $(this).is(':checked');
+        visibleFilters[filterName] = isVisible;
+        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(visibleFilters));
+
+        const $filterItem = $(`.filter-item[data-filter="${filterName}"]`);
+        if (isVisible) {
+            $filterItem.removeClass('filter-hidden').fadeIn(200);
+        } else {
+            $filterItem.addClass('filter-hidden').fadeOut(200);
+            // Also clear the filter value when hiding
+            clearFilterValue(filterName);
+        }
+
+        updateActiveFiltersPills();
+    });
+
+    // Reset all filters to visible
+    $('#btnResetFiltersInside').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        allFilters.forEach(f => visibleFilters[f] = true);
+        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(visibleFilters));
+
+        $('.filter-toggle').each(function () {
+            if (!alwaysVisibleFilters.includes($(this).val())) {
+                $(this).prop('checked', true);
+            }
+        });
+
+        $('.filter-item').removeClass('filter-hidden').show();
+        updateActiveFiltersPills();
+    });
+
+    // Clear a specific filter's value
+    function clearFilterValue(filterName) {
+        const filterMap = {
+            'search': '#searchString',
+            'sortOrder': '#sortOrder',
+            'program': '#programFilter',
+            'year': '#yearFilter',
+            'section': '#sectionFilter',
+            'type': '#typeFilter',
+            'role': '#roleFilter',
+            'status': '#statusFilter'
+        };
+
+        const $element = $(filterMap[filterName]);
+        if ($element.length) {
+            if ($element.is('select')) {
+                $element.val('').trigger('change');
+            } else {
+                $element.val('');
+            }
+        }
+    }
+
+    // Update the active filters pills display
+    function updateActiveFiltersPills() {
+        const $container = $('#activeFiltersPills');
+        const $list = $('#activeFiltersList');
+        $list.empty();
+
+        const filterDisplayNames = {
+            'search': 'Search',
+            'sortOrder': 'Sort',
+            'program': 'Program',
+            'year': 'Year',
+            'section': 'Section',
+            'type': 'Type',
+            'role': 'Role',
+            'status': 'Status'
+        };
+
+        const filterSelectors = {
+            'search': '#searchString',
+            'sortOrder': '#sortOrder',
+            'program': '#programFilter',
+            'year': '#yearFilter',
+            'section': '#sectionFilter',
+            'type': '#typeFilter',
+            'role': '#roleFilter',
+            'status': '#statusFilter'
+        };
+
+        let hasActiveFilters = false;
+
+        allFilters.forEach(filter => {
+            if (!visibleFilters[filter]) return; // Skip hidden filters
+
+            const $element = $(filterSelectors[filter]);
+            let value = $element.val();
+
+            if (value && value.trim() !== '') {
+                hasActiveFilters = true;
+
+                // Get display text for select elements
+                let displayValue = value;
+                if ($element.is('select')) {
+                    displayValue = $element.find('option:selected').text();
+                }
+
+                // Create pill element
+                const $pill = $(`
+                    <span class="filter-pill" data-filter="${filter}">
+                        <span class="filter-pill-label">${filterDisplayNames[filter]}:</span>
+                        <span class="filter-pill-value">${displayValue}</span>
+                        <button type="button" class="filter-pill-remove" onclick="removeFilterPill('${filter}')" title="Remove filter">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </span>
+                `);
+                $list.append($pill);
+            }
+        });
+
+        // Show/hide the active filters container
+        if (hasActiveFilters) {
+            $container.slideDown(200);
+        } else {
+            $container.slideUp(200);
+        }
+    }
+
+    // Apply visibility on page load
+    applyFilterVisibility();
+
+    // Update pills when form inputs change
+    $('#filterForm').on('change', 'select, input', function () {
+        updateActiveFiltersPills();
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    $('.filter-settings-dropdown').on('click', (e) => e.stopPropagation());
+
+    // ==========================================
+    // 1. SEARCH BAR CLEAR FUNCTIONALITY
+    // ==========================================
+    const $searchInput = $('#searchString');
+    const $clearBtn = $('#btnClearSearch');
+
+    function toggleClearButton() {
+        if ($searchInput.val() && $searchInput.val().length > 0) {
+            $clearBtn.addClass('show').fadeIn(150);
+        } else {
+            $clearBtn.removeClass('show').fadeOut(150);
+        }
+    }
+    $searchInput.on('input keyup', toggleClearButton);
+    $clearBtn.on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $searchInput.val('');
+        toggleClearButton();
+        $('#filterForm').submit();
+        $searchInput.focus();
+    });
+    toggleClearButton();
+
+    // ==========================================
+    // 2. INITIALIZE SELECT2
+    // ==========================================
+    $('.select2-enable').select2({ minimumResultsForSearch: Infinity, width: '100%' });
+
+    // Initialize Select2 inside create student modal when shown
+    $('#createStudentModal').on('shown.bs.modal', function () {
+        $('.select2-modal').select2({
+            dropdownParent: $('#createStudentModal'),
+            minimumResultsForSearch: Infinity,
+            width: '100%'
+        });
+    });
+
+    // Initialize Select2 inside role modal when shown
+    $('#roleModal').on('shown.bs.modal', function () {
+        $('#modalRoleSelect').select2({
+            dropdownParent: $('#roleModal'),
+            minimumResultsForSearch: Infinity,
+            width: '100%'
+        });
+    });
+
+    // ==========================================
+    // 3. MODAL FORM RESET
+    // ==========================================
+    $('#createStudentModal').on('hidden.bs.modal', function () {
+        $(this).find('form').trigger('reset');
+        $('.select2-modal').val(null).trigger('change');
+    });
+
+    // Reset role modal on close
+    $('#roleModal').on('hidden.bs.modal', function () {
+        // Clear password field when modal closes
+        $('#adminPasswordInput').val('');
+    });
+
+    // ==========================================
+    // 4. COLUMN VISIBILITY LOGIC
+    // ==========================================
+    const STORAGE_KEY = 'ibits_student_cols';
+    const allColumns = ['col-id', 'col-name', 'col-program', 'col-section', 'col-year', 'col-type', 'col-role', 'col-status'];
+    let visibleColumns = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+    if (Object.keys(visibleColumns).length === 0 || visibleColumns['col-program'] === undefined) {
+        allColumns.forEach(c => visibleColumns[c] = true);
+    }
+
+    function applyCols() {
+        allColumns.forEach(col => {
+            const el = $('.' + col);
+            visibleColumns[col] ? el.show() : el.hide();
+        });
+
+        if (document.getElementById('chkId')) {
+            document.getElementById('chkId').checked = visibleColumns['col-id'];
+            document.getElementById('chkName').checked = visibleColumns['col-name'];
+            document.getElementById('chkProgram').checked = visibleColumns['col-program'];
+            document.getElementById('chkSec').checked = visibleColumns['col-section'];
+            document.getElementById('chkYear').checked = visibleColumns['col-year'];
+            document.getElementById('chkType').checked = visibleColumns['col-type'];
+            document.getElementById('chkRole').checked = visibleColumns['col-role'];
+            document.getElementById('chkStatus').checked = visibleColumns['col-status'];
+        }
+    }
+    applyCols();
+
+    $('.col-toggle').on('change', function () {
+        const colClass = $(this).val();
+        visibleColumns[colClass] = $(this).is(':checked');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(visibleColumns));
+        visibleColumns[colClass] ? $('.' + colClass).fadeIn(200) : $('.' + colClass).fadeOut(200);
+    });
+
+    $('#btnResetColumnsInside').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        allColumns.forEach(c => visibleColumns[c] = true);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(visibleColumns));
+        $('.col-toggle').prop('checked', true);
+        allColumns.forEach(col => $('.' + col).show());
+    });
+
+    $('.dropdown-menu').on('click', (e) => e.stopPropagation());
+
+    // ==========================================
+    // 5. DOUBLE-CLICK FOR STUDENT DETAILS
+    // ==========================================
+    $('.student-row').dblclick(function () {
+        const studentId = $(this).data('id');
+        console.log('Double-click detected. Student ID:', studentId);
+
+        const modalContent = $('#detailsModalContent');
+        const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+        modalContent.html('<div class="modal-body text-center p-5"><div class="spinner-border text-warning" role="status"></div><p class="mt-2">Loading details...</p></div>');
+        detailsModal.show();
+
+        if (window.getStudentDetailsUrl) {
+            console.log('Fetching from:', window.getStudentDetailsUrl + '?id=' + studentId);
+            $.get(`${window.getStudentDetailsUrl}?id=${studentId}`, function (data) {
+                console.log('Data received successfully');
+                modalContent.html(data);
+            }).fail(function (xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                console.error('Response:', xhr.responseText);
+                modalContent.html('<div class="modal-body text-center p-5"><i class="bi bi-x-circle-fill text-danger fs-1"></i><p class="mt-2">Failed to load student details.</p><small class="text-muted">' + error + '</small></div>');
+            });
+        } else {
+            console.error('window.getStudentDetailsUrl is not defined!');
+            modalContent.html('<div class="modal-body text-center p-5"><i class="bi bi-x-circle-fill text-danger fs-1"></i><p class="mt-2">Configuration error: URL not defined.</p></div>');
+        }
+    });
+
+    $('#backToMappingBtn').on('click', function () {
+        const previewModalEl = document.getElementById('previewModal');
+        const previewModalInstance = bootstrap.Modal.getInstance(previewModalEl);
+
+        const mappingModalEl = document.getElementById('mappingModal');
+        const mappingModalInstance = bootstrap.Modal.getOrCreateInstance(mappingModalEl);
+
+        // First, hide the current modal
+        if (previewModalInstance) {
+            previewModalInstance.hide();
+        }
+
+        // Then, show the mapping modal
+        mappingModalInstance.show();
+    });
+
+});
+
+// ==========================================
+// GLOBAL HELPER FUNCTIONS
+// ==========================================
+
+/**
+ * Reset all filters and redirect to clean StudentRecords page
+ */
+function resetFilters() {
+    $('#searchString').val('');
+    $('#sortOrder, #yearFilter, #statusFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter').val('').trigger('change');
+    if (window.studentRecordsUrl) {
+        window.location.href = window.studentRecordsUrl;
+    } else {
+        $('#filterForm').submit();
+    }
+}
+
+/**
+ * Remove a specific filter pill and clear its value
+ * @param {string} filterName - The filter name to remove
+ */
+function removeFilterPill(filterName) {
+    const filterMap = {
+        'search': '#searchString',
+        'sortOrder': '#sortOrder',
+        'program': '#programFilter',
+        'year': '#yearFilter',
+        'section': '#sectionFilter',
+        'type': '#typeFilter',
+        'role': '#roleFilter',
+        'status': '#statusFilter'
+    };
+
+    const $element = $(filterMap[filterName]);
+    if ($element.length) {
+        if ($element.is('select')) {
+            $element.val('').trigger('change');
+        } else {
+            $element.val('');
+        }
+    }
+
+    // Update the pills display
+    updateActiveFiltersPillsGlobal();
+
+    // Auto-submit the form to apply the filter removal
+    $('#filterForm').submit();
+}
+
+/**
+ * Clear all active filters and submit
+ */
+function clearAllActiveFilters() {
+    $('#searchString').val('');
+    $('#sortOrder, #programFilter, #yearFilter, #sectionFilter, #typeFilter, #roleFilter, #statusFilter').val('').trigger('change');
+
+    // Submit the form
+    if (window.studentRecordsUrl) {
+        window.location.href = window.studentRecordsUrl;
+    } else {
+        $('#filterForm').submit();
+    }
+}
+
+/**
+ * Global function to update active filters pills
+ * Called from outside document.ready scope
+ */
+function updateActiveFiltersPillsGlobal() {
+    const $container = $('#activeFiltersPills');
+    const $list = $('#activeFiltersList');
+    $list.empty();
+
+    const filterDisplayNames = {
+        'search': 'Search',
+        'sortOrder': 'Sort',
+        'program': 'Program',
+        'year': 'Year',
+        'section': 'Section',
+        'type': 'Type',
+        'role': 'Role',
+        'status': 'Status'
+    };
+
+    const filterSelectors = {
+        'search': '#searchString',
+        'sortOrder': '#sortOrder',
+        'program': '#programFilter',
+        'year': '#yearFilter',
+        'section': '#sectionFilter',
+        'type': '#typeFilter',
+        'role': '#roleFilter',
+        'status': '#statusFilter'
+    };
+
+    const allFilters = ['search', 'sortOrder', 'program', 'year', 'section', 'type', 'role', 'status'];
+    let hasActiveFilters = false;
+
+    allFilters.forEach(filter => {
+        const $element = $(filterSelectors[filter]);
+        let value = $element.val();
+
+        if (value && value.trim() !== '') {
+            hasActiveFilters = true;
+
+            let displayValue = value;
+            if ($element.is('select')) {
+                displayValue = $element.find('option:selected').text();
+            }
+
+            const $pill = $(`
+                <span class="filter-pill" data-filter="${filter}">
+                    <span class="filter-pill-label">${filterDisplayNames[filter]}:</span>
+                    <span class="filter-pill-value">${displayValue}</span>
+                    <button type="button" class="filter-pill-remove" onclick="removeFilterPill('${filter}')" title="Remove filter">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </span>
+            `);
+            $list.append($pill);
+        }
+    });
+
+    if (hasActiveFilters) {
+        $container.slideDown(200);
+    } else {
+        $container.slideUp(200);
+    }
+}
+
+/**
+ * FIXED: Open the role management modal with correct element IDs
+ * @param {Event} event - Click event
+ * @param {string} studentId - Student number
+ * @param {string} studentName - Student full name  
+ * @param {string} currentRole - Current role of the student
+ */
+function setRoleModal(event, studentId, studentName, currentRole) {
+    if (event) event.stopPropagation();
+
+    $('#modalStudentNum').val(studentId);
+    $('#modalStudentName').text(studentName);
+
+    if (currentRole) {
+        var $select = $('#modalRoleSelect');
+        var found = false;
+        $select.find('option').each(function () {
+            if ($(this).val() === currentRole || $(this).text() === currentRole) {
+                $select.val($(this).val());
+                found = true;
+                return false;
+            }
+        });
+
+        if ($select.hasClass('select2-hidden-accessible')) {
+            $select.trigger('change');
+        }
+    }
+
+    $('#adminPasswordInput').val('');
+    new bootstrap.Modal(document.getElementById('roleModal')).show();
+}
+
+/**
+ * Open the edit student modal with pre-filled data
+ * UPDATED: Now properly sets the Student Type and School Year Enrolled dropdowns with Select2
+ */
+function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled) {
+    if (event) event.stopPropagation();
+    const form = $('#editStudentForm');
+    form.find('[name="StudentNum"]').val(id);
+    form.find('[name="StudentFn"]').val(fn);
+    form.find('[name="StudentMn"]').val(mn);
+    form.find('[name="StudentLn"]').val(ln);
+    form.find('[name="StudentEmail"]').val(email);
+    form.find('[name="Course"]').val(course);
+    form.find('[name="YearLevelSection"]').val(section);
+    form.find('[name="Birthday"]').val(birthday);
+
+    const $studentTypeSelect = $('#editStudentType');
+    if (type && type.trim() !== '') {
+        $studentTypeSelect.val(type).trigger('change');
+    } else {
+        $studentTypeSelect.val('').trigger('change');
+    }
+
+    const $schoolYearSelect = $('#editSchoolYearEnrolled');
+    if (schoolYearEnrolled && schoolYearEnrolled.trim() !== '') {
+        $schoolYearSelect.val(schoolYearEnrolled).trigger('change');
+    } else {
+        $schoolYearSelect.val('').trigger('change');
+    }
+
+    const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+    editModal.show();
+
+    $('#editStudentModal').on('shown.bs.modal', function () {
+        $('#editStudentType').select2({
+            dropdownParent: $('#editStudentModal'),
+            minimumResultsForSearch: Infinity,
+            placeholder: '-- Select Type --',
+            allowClear: false
+        });
+
+        $('#editSchoolYearEnrolled').select2({
+            dropdownParent: $('#editStudentModal'),
+            minimumResultsForSearch: Infinity,
+            placeholder: '-- Select Year --',
+            allowClear: false
+        });
+
+        if (type && type.trim() !== '') {
+            $('#editStudentType').val(type).trigger('change');
+        }
+        if (schoolYearEnrolled && schoolYearEnrolled.trim() !== '') {
+            $('#editSchoolYearEnrolled').val(schoolYearEnrolled).trigger('change');
+        }
+    });
+
+    $('#editStudentModal').on('hidden.bs.modal', function () {
+        if ($('#editStudentType').hasClass('select2-hidden-accessible')) {
+            $('#editStudentType').select2('destroy');
+        }
+        if ($('#editSchoolYearEnrolled').hasClass('select2-hidden-accessible')) {
+            $('#editSchoolYearEnrolled').select2('destroy');
+        }
+        $('#editStudentModal').off('shown.bs.modal');
+        $('#editStudentModal').off('hidden.bs.modal');
+    });
+}
+
+/**
+ * Open the reset password confirmation modal
+ */
+function openResetPasswordModal(event, id, name) {
+    if (event) event.stopPropagation();
+
+    $('#resetModalStudentId').val(id);
+    $('#resetModalStudentName').text(name);
+    $('#resetModalDefaultPassword').text(id);
+
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+/**
+ * Export to Excel with visible columns only (WYSIWYG)
+ * Passes current filters and visible columns to the export endpoint
+ */
+function exportToExcelWithColumns() {
+    const searchString = $('#searchString').val() || '';
+    const programFilter = $('#programFilter').val() || '';
+    const yearFilter = $('#yearFilter').val() || '';
+    const sectionFilter = $('#sectionFilter').val() || '';
+    const typeFilter = $('#typeFilter').val() || '';
+    const statusFilter = $('#statusFilter').val() || '';
+    const roleFilter = $('#roleFilter').val() || '';
+
+    const STORAGE_KEY = 'ibits_student_cols';
+    const visibleColumns = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+    const columnMapping = {
+        'col-id': 'Id',
+        'col-name': 'Name',
+        'col-program': 'Program',
+        'col-section': 'Section',
+        'col-year': 'Year',
+        'col-type': 'Type',
+        'col-role': 'Role',
+        'col-status': 'Status'
+    };
+
+    const columns = [];
+    Object.keys(columnMapping).forEach(colKey => {
+        if (Object.keys(visibleColumns).length === 0 || visibleColumns[colKey] !== false) {
+            columns.push(columnMapping[colKey]);
+        }
+    });
+
+    const baseUrl = window.exportToExcelUrl || '/Admin/ExportStudentsToExcel';
+    const params = new URLSearchParams({
+        searchString: searchString,
+        programFilter: programFilter,
+        yearFilter: yearFilter,
+        sectionFilter: sectionFilter,
+        typeFilter: typeFilter,
+        statusFilter: statusFilter,
+        roleFilter: roleFilter,
+        columns: columns.join(',')
+    });
+
+    window.location.href = `${baseUrl}?${params.toString()}`;
+}
+
+// ==========================================
+// TOAST NOTIFICATION HELPER (NEW)
+// ==========================================
+function showToastNotification(type, message) {
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toastId = 'toast_' + Date.now();
+    const iconClass = type === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill';
+    const bgClass = type === 'success' ? 'bg-success' : 'bg-info';
+
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi ${iconClass} me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    const toastEl = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+
+    toastEl.addEventListener('hidden.bs.toast', function () {
+        this.remove();
+    });
+}
+
+// ==========================================
+// CSV IMPORT FUNCTIONALITY
+// ==========================================
+let currentFile = null;
+let columnMap = {};
+
+window.uploadAndAnalyze = function () {
+    const fileInput = document.getElementById('csvFileUpload');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a CSV file first.');
+        return;
+    }
+    currentFile = fileInput.files[0];
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+
+    $.ajax({
+        url: window.analyzeCsvUrl,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if (response.success) {
+                window.currentFileName = response.fileName;
+                showMappingModal(response.headers);
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function () {
+            alert('Failed to upload file. Please try again.');
+        }
+    });
+};
+
+function showMappingModal(headers) {
+    const systemFields = ['StudentNum', 'StudentFn', 'StudentLn', 'StudentMn', 'StudentEmail', 'Course', 'Year', 'Section', 'StudentType', 'Birthday'];
+    const tableBody = $('#mappingTableBody');
+    tableBody.empty();
+
+    systemFields.forEach(field => {
+        let options = '<option value="-1">-- Skip this field --</option>';
+        headers.forEach((h, i) => {
+            options += `<option value="${i}">${h}</option>`;
+        });
+
+        const row = `
+            <tr>
+                <td>${field} <span class="text-danger">${field === 'StudentNum' || field === 'StudentFn' || field === 'StudentLn' ? '*' : ''}</span></td>
+                <td>
+                    <select class="form-select map-select" data-field="${field}">${options}</select>
+                </td>
+            </tr>`;
+        tableBody.append(row);
+    });
+
+    new bootstrap.Modal(document.getElementById('mappingModal')).show();
+}
+
+window.generatePreview = function () {
+    columnMap = {};
+    $('.map-select').each(function () {
+        const field = $(this).data('field');
+        const index = parseInt($(this).val());
+        if (index >= 0) {
+            columnMap[field] = index;
+        }
+    });
+
+    if (!columnMap.hasOwnProperty('StudentNum') || !columnMap.hasOwnProperty('StudentFn') || !columnMap.hasOwnProperty('StudentLn')) {
+        alert('Student ID, First Name, and Last Name must be mapped.');
+        return;
+    }
+
+    $.ajax({
+        url: window.previewImportUrl,
+        type: 'POST',
+        data: { fileName: window.currentFileName, map: columnMap },
+        success: function (html) {
+            $('#previewContent').html(html);
+            bootstrap.Modal.getInstance(document.getElementById('mappingModal')).hide();
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        },
+        error: function () {
+            alert('Failed to generate preview. Please check file format.');
+        }
+    });
+};
+
+window.confirmUpload = function () {
+    bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
+    $('#importProcessingOverlay').css('display', 'flex');
+
+    $.ajax({
+        url: window.executeImportUrl,
+        type: 'POST',
+        data: { fileName: window.currentFileName, map: columnMap },
+        success: function (response) {
+            $('#importProcessingOverlay').hide();
+            showResultModal(response);
+        },
+        error: function (xhr) {
+            $('#importProcessingOverlay').hide();
+            const errorResponse = {
+                success: false,
+                imported: 0,
+                failed: 'All',
+                errors: [xhr.responseText || 'A critical server error occurred.']
+            };
+            showResultModal(errorResponse);
+        }
+    });
+};
+
+function showResultModal(response) {
+    const icon = $('#importResultIcon');
+    const summary = $('#importResultSummary');
+    const detail = $('#importResultDetail');
+    const errorContainer = $('#importErrorContainer');
+    const errorList = $('#importErrorList');
+
+    icon.removeClass('bi-check-circle-fill text-success bi-exclamation-triangle-fill text-danger bi-info-circle-fill text-warning');
+    errorContainer.hide();
+    errorList.empty();
+
+    if (response.success) {
+        if (response.failed > 0) {
+            icon.addClass('bi-info-circle-fill text-warning');
+            summary.text('Import Partially Complete');
+            detail.text(`${response.imported} records were imported, but ${response.failed} failed.`);
+        } else {
+            icon.addClass('bi-check-circle-fill text-success');
+            summary.text('Import Successful');
+            detail.text(`All ${response.imported} student records were imported successfully.`);
+        }
+
+        if (response.errors && response.errors.length > 0) {
+            response.errors.forEach(err => {
+                errorList.append(`<li>${err}</li>`);
+            });
+            errorContainer.show();
+        }
+    } else {
+        icon.addClass('bi-exclamation-triangle-fill text-danger');
+        summary.text('Import Failed');
+        detail.text(response.message || 'The import could not be completed due to errors.');
+
+        if (response.errors && response.errors.length > 0) {
+            response.errors.forEach(err => {
+                errorList.append(`<li>${err}</li>`);
+            });
+            errorContainer.show();
+        }
+    }
+
+    new bootstrap.Modal(document.getElementById('importResultModal')).show();
+}
+
+// ==========================================
+// MULTI-SELECTION FUNCTIONALITY
+// ==========================================
+let isSelectionMode = false;
+
+function toggleSelectionMode() {
+    isSelectionMode = !isSelectionMode;
+    const $checkboxCols = $('.col-checkbox');
+    const $btnSelect = $('#btnSelectMode');
+    const $bulkBar = $('#bulkActionsBar');
+    const $table = $('#studentTable');
+
+    if (isSelectionMode) {
+        $checkboxCols.show();
+        $btnSelect.addClass('active');
+        $btnSelect.html('<i class="bi bi-x-lg me-1"></i> Cancel');
+        $table.addClass('selection-mode');
+        $('.student-row').off('dblclick');
+    } else {
+        exitSelectionMode();
+    }
+}
+
+function exitSelectionMode() {
+    isSelectionMode = false;
+    const $checkboxCols = $('.col-checkbox');
+    const $btnSelect = $('#btnSelectMode');
+    const $bulkBar = $('#bulkActionsBar');
+    const $table = $('#studentTable');
+
+    $checkboxCols.hide();
+    $btnSelect.removeClass('active');
+    $btnSelect.html('<i class="bi bi-ui-checks me-1"></i> Select');
+    $bulkBar.slideUp(200);
+    $table.removeClass('selection-mode');
+    $('.row-checkbox').prop('checked', false);
+    $('#selectAllCheckbox').prop('checked', false);
+    $('.student-row').removeClass('selected');
+
+    $('.student-row').dblclick(function () {
+        const studentId = $(this).data('id');
+        const modalContent = $('#detailsModalContent');
+        const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+        modalContent.html('<div class="modal-body text-center p-5"><div class="spinner-border text-warning" role="status"></div><p class="mt-2">Loading details...</p></div>');
+        detailsModal.show();
+
+        if (window.getStudentDetailsUrl) {
+            $.get(`${window.getStudentDetailsUrl}?id=${studentId}`, function (data) {
+                modalContent.html(data);
+            }).fail(function (xhr, status, error) {
+                modalContent.html('<div class="modal-body text-center p-5"><i class="bi bi-x-circle-fill text-danger fs-1"></i><p class="mt-2">Failed to load student details.</p></div>');
+            });
+        }
+    });
+}
+
+function updateSelectionCount() {
+    const selectedCount = $('.row-checkbox:checked').length;
+    const totalCount = $('.row-checkbox').length;
+    const $bulkBar = $('#bulkActionsBar');
+
+    $('#selectedCountText').text(selectedCount);
+
+    if (selectedCount > 0) {
+        $bulkBar.slideDown(200);
+    } else {
+        $bulkBar.slideUp(200);
+    }
+
+    if (selectedCount === totalCount && totalCount > 0) {
+        $('#selectAllCheckbox').prop('checked', true).prop('indeterminate', false);
+    } else if (selectedCount > 0) {
+        $('#selectAllCheckbox').prop('checked', false).prop('indeterminate', true);
+    } else {
+        $('#selectAllCheckbox').prop('checked', false).prop('indeterminate', false);
+    }
+
+    $('.row-checkbox').each(function () {
+        if ($(this).is(':checked')) {
+            $(this).closest('.student-row').addClass('selected');
+        } else {
+            $(this).closest('.student-row').removeClass('selected');
+        }
+    });
+}
+
+function selectAllVisible() {
+    $('.row-checkbox').prop('checked', true);
+    updateSelectionCount();
+}
+
+function deselectAll() {
+    $('.row-checkbox').prop('checked', false);
+    updateSelectionCount();
+}
+
+function getSelectedIds() {
+    const ids = [];
+    $('.row-checkbox:checked').each(function () {
+        ids.push($(this).val());
+    });
+    return ids;
+}
+
+function exportSelectedToExcel() {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one student to export.');
+        return;
+    }
+
+    const STORAGE_KEY = 'ibits_student_cols';
+    const visibleColumns = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+    const columnMapping = {
+        'col-id': 'Id',
+        'col-name': 'Name',
+        'col-program': 'Program',
+        'col-section': 'Section',
+        'col-year': 'Year',
+        'col-type': 'Type',
+        'col-role': 'Role',
+        'col-status': 'Status'
+    };
+
+    const columns = [];
+    Object.keys(columnMapping).forEach(colKey => {
+        if (Object.keys(visibleColumns).length === 0 || visibleColumns[colKey] !== false) {
+            columns.push(columnMapping[colKey]);
+        }
+    });
+
+    const baseUrl = window.exportSelectedUrl || '/Admin/ExportSelectedStudents';
+    const params = new URLSearchParams({
+        studentIds: selectedIds.join(','),
+        columns: columns.join(',')
+    });
+
+    window.location.href = `${baseUrl}?${params.toString()}`;
+}
+
+function archiveSelected() {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one student to archive.');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected student(s)?`)) {
+        $('#bulkActionsBar .btn').prop('disabled', true);
+
+        $.ajax({
+            url: window.archiveSelectedUrl || '/Admin/ArchiveSelectedStudents',
+            type: 'POST',
+            data: { studentIds: selectedIds },
+            traditional: true,
+            success: function (response) {
+                if (response.success) {
+                    alert(`Successfully archived ${response.count} student(s).`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.message || 'Failed to archive students.'));
+                }
+            },
+            error: function () {
+                alert('An error occurred while archiving students.');
+            },
+            complete: function () {
+                $('#bulkActionsBar .btn').prop('disabled', false);
+            }
+        });
+    }
+}
+
+function resetPasswordSelectedConfirm() {
+    const selectedIds = getSelectedIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one student to reset password.');
+        return;
+    }
+
+    const confirmHtml = `
+        <div class="modal fade" id="resetPasswordConfirmModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content glass-modal">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title" style="color: var(--gold-primary);"><i class="bi bi-key-fill me-2"></i>Reset Password</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <i class="bi bi-key" style="font-size: 3rem; color: var(--gold-primary);"></i>
+                        <p class="mt-3 mb-0" style="color: var(--text-main);">
+                            Are you sure you want to reset the password for 
+                            <span class="badge" style="background: var(--gold-primary); color: #000;">${selectedIds.length}</span> selected student(s)?
+                        </p>
+                        <p class="text-muted small mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Passwords will be reset to their respective Student IDs.
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </button>
+                        <button type="button" class="btn btn-gold" onclick="executeResetPasswordSelected()">
+                            <i class="bi bi-key me-1"></i> Reset ${selectedIds.length} Password(s)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    $('#resetPasswordConfirmModal').remove();
+    $('body').append(confirmHtml);
+
+    new bootstrap.Modal(document.getElementById('resetPasswordConfirmModal')).show();
+}
+
+function executeResetPasswordSelected() {
+    const selectedIds = getSelectedIds();
+
+    bootstrap.Modal.getInstance(document.getElementById('resetPasswordConfirmModal')).hide();
+
+    $('#bulkActionsBar .btn').prop('disabled', true);
+
+    $.ajax({
+        url: window.resetPasswordSelectedUrl || '/Admin/ResetPasswordSelected',
+        type: 'POST',
+        data: { studentIds: selectedIds },
+        traditional: true,
+        success: function (response) {
+            if (response.success) {
+                alert(`Successfully reset password for ${response.count} student(s).`);
+                exitSelectionMode();
+            } else {
+                alert('Error: ' + (response.message || 'Failed to reset passwords.'));
+            }
+        },
+        error: function () {
+            alert('An error occurred while resetting passwords.');
+        },
+        complete: function () {
+            $('#bulkActionsBar .btn').prop('disabled', false);
+        }
+    });
+}
+
+$(document).ready(function () {
+    $('#selectAllCheckbox').on('change', function () {
+        const isChecked = $(this).is(':checked');
+        $('.row-checkbox').prop('checked', isChecked);
+        updateSelectionCount();
+    });
+
+    $('.student-row').on('click', function (e) {
+        if (isSelectionMode && !$(e.target).is('input, button, a, i')) {
+            const $checkbox = $(this).find('.row-checkbox');
+            $checkbox.prop('checked', !$checkbox.is(':checked'));
+            updateSelectionCount();
+        }
+    });
+});

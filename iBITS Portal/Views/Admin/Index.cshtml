@@ -1,0 +1,758 @@
+﻿@* ============================================================ *@
+@* FILE PATH: Views/Admin/Index.cshtml                          *@
+@* ============================================================ *@
+@* DASHBOARD: Charts & Statistics Overview                      *@
+@* Gold & Navy Blue Theme - Glassmorphism Design                *@
+@* Categorized Sections: Enrollment, Status, Financial, Events  *@
+@* ============================================================ *@
+
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="dashboard-container">
+    <!-- ============================================================ -->
+    <!-- HEADER SECTION                                               -->
+    <!-- ============================================================ -->
+    <div class="dashboard-header glass-panel">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h4 class="dashboard-title">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </h4>
+                <p class="dashboard-subtitle mb-0">Overview of student statistics and analytics</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="date-display">
+                    <i class="bi bi-calendar3 me-2"></i>
+                    <span id="currentDate">@DateTime.Now.ToString("MMMM dd, yyyy")</span>
+                </div>
+                <button class="btn-gold-outline" onclick="refreshDashboard()" title="Refresh Data" id="btnRefresh">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- QUICK ACTIONS PANEL (Collapsible)                            -->
+    <!-- ============================================================ -->
+    <div class="quick-actions-panel glass-panel" id="quickActionsPanel">
+        <div class="quick-actions-header" data-bs-toggle="collapse" data-bs-target="#quickActionsContent">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-lightning-charge-fill me-2 text-gold"></i>
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <button class="btn-collapse" type="button">
+                <i class="bi bi-chevron-down" id="quickActionsChevron"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="quickActionsContent">
+            <div class="quick-actions-grid">
+                <!-- Add Student -->
+                <a href="@Url.Action("StudentRecords", "Admin")?action=add" class="quick-action-card">
+                    <div class="action-icon add-student">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Add Student</span>
+                        <span class="action-desc">Quick enroll</span>
+                    </div>
+                </a>
+
+                <!-- Create Fee -->
+                <a href="@Url.Action("Payments", "Admin")?action=createFee" class="quick-action-card">
+                    <div class="action-icon create-fee">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Create Fee</span>
+                        <span class="action-desc">Assign payment</span>
+                    </div>
+                </a>
+
+                <!-- Create Event -->
+                <a href="@Url.Action("Events", "Admin")?action=create" class="quick-action-card">
+                    <div class="action-icon create-event">
+                        <i class="bi bi-calendar-plus-fill"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Create Event</span>
+                        <span class="action-desc">Schedule new</span>
+                    </div>
+                </a>
+
+                <!-- Export Reports -->
+                <div class="quick-action-card dropdown">
+                    <div class="action-icon export-reports" data-bs-toggle="dropdown">
+                        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                    </div>
+                    <div class="action-content" data-bs-toggle="dropdown">
+                        <span class="action-title">Export Reports</span>
+                        <span class="action-desc">Download data</span>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=students"><i class="bi bi-people me-2"></i>Student List (Excel)</a></li>
+                        <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=financial"><i class="bi bi-cash-stack me-2"></i>Financial Report (Excel)</a></li>
+                        <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=attendance"><i class="bi bi-calendar-check me-2"></i>Attendance Report (Excel)</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=full"><i class="bi bi-file-earmark-zip me-2"></i>Full Dashboard Report</a></li>
+                    </ul>
+                </div>
+
+                <!-- Send Notice -->
+                <button type="button" class="quick-action-card" data-bs-toggle="modal" data-bs-target="#sendNoticeModal">
+                    <div class="action-icon send-notice">
+                        <i class="bi bi-bell-fill"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Send Notice</span>
+                        <span class="action-desc">Bulk notify</span>
+                    </div>
+                </button>
+
+                <!-- Scan Attendance -->
+                <a href="@Url.Action("Attendance", "Admin")" class="quick-action-card">
+                    <div class="action-icon scan-attendance">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Attendance</span>
+                        <span class="action-desc">Attendance Records</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 1: STUDENT ENROLLMENT                                -->
+    <!-- ============================================================ -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <div class="section-icon">
+                <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <h5 class="section-title">Student Enrollment</h5>
+            <span class="section-badge">BSIT & DIT Programs</span>
+        </div>
+
+        <div class="row g-4">
+            <!-- Doughnut Chart: Students per Program -->
+            <div class="col-lg-5">
+                <div class="glass-panel chart-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-pie-chart-fill me-2"></i>Students per Program</h5>
+                        <span class="badge badge-gold">Total: <span id="totalStudents">0</span></span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="studentsPerProgramChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program Counters Grid -->
+            <div class="col-lg-7">
+                <div class="glass-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Enrollment by Year Level</h5>
+                    </div>
+                    <div class="counters-grid">
+                        <!-- BSIT Counters -->
+                        <div class="program-section">
+                            <h6 class="program-label">
+                                <span class="program-indicator bsit"></span>
+                                BSIT <span class="program-years">(4-Year Program)</span>
+                            </h6>
+                            <div class="counters-row">
+                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="1" onclick="showYearLevelModal('BSIT', 1)">
+                                    <span class="counter-value" id="bsit1Count">0</span>
+                                    <span class="counter-label">1st Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="2" onclick="showYearLevelModal('BSIT', 2)">
+                                    <span class="counter-value" id="bsit2Count">0</span>
+                                    <span class="counter-label">2nd Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="3" onclick="showYearLevelModal('BSIT', 3)">
+                                    <span class="counter-value" id="bsit3Count">0</span>
+                                    <span class="counter-label">3rd Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="4" onclick="showYearLevelModal('BSIT', 4)">
+                                    <span class="counter-value" id="bsit4Count">0</span>
+                                    <span class="counter-label">4th Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- DIT Counters -->
+                        <div class="program-section">
+                            <h6 class="program-label">
+                                <span class="program-indicator dit"></span>
+                                DIT <span class="program-years">(3-Year Program)</span>
+                            </h6>
+                            <div class="counters-row dit-row">
+                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="1" onclick="showYearLevelModal('DIT', 1)">
+                                    <span class="counter-value" id="dit1Count">0</span>
+                                    <span class="counter-label">1st Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="2" onclick="showYearLevelModal('DIT', 2)">
+                                    <span class="counter-value" id="dit2Count">0</span>
+                                    <span class="counter-label">2nd Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="3" onclick="showYearLevelModal('DIT', 3)">
+                                    <span class="counter-value" id="dit3Count">0</span>
+                                    <span class="counter-label">3rd Year</span>
+                                    <span class="counter-hint"><i class="bi bi-eye"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 2: STUDENT STATUS                                    -->
+    <!-- ============================================================ -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <div class="section-icon status-icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <h5 class="section-title">Student Status</h5>
+            <span class="section-badge section-badge-green">Activity Overview</span>
+        </div>
+
+        <div class="row g-4">
+            <!-- Active Students Line Graph -->
+            <div class="col-lg-5">
+                <div class="glass-panel chart-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-graph-up me-2"></i>Active Students</h5>
+                        <span class="badge badge-success">Monthly Trend</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="activeStudentsLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Archive Counter (Clickable) -->
+            <div class="col-lg-3">
+                <div class="glass-panel h-100 d-flex flex-column clickable-panel" onclick="showArchivedStudentsModal()">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-archive-fill me-2"></i>Archive</h5>
+                    </div>
+                    <div class="archive-counter flex-grow-1 d-flex flex-column justify-content-center align-items-center">
+                        <div class="archive-icon">
+                            <i class="bi bi-archive"></i>
+                        </div>
+                        <span class="archive-value" id="archiveCount">0</span>
+                        <span class="archive-label">Total Archived Students</span>
+                        <span class="click-hint mt-2"><i class="bi bi-eye me-1"></i>Click to view</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active vs Inactive Pie Chart -->
+            <div class="col-lg-4">
+                <div class="glass-panel chart-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-pie-chart me-2"></i>Status Distribution</h5>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="activeInactivePieChart"></canvas>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color active"></span>
+                            <span class="legend-text">Active</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color inactive"></span>
+                            <span class="legend-text">Inactive</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 3: FINANCIAL OVERVIEW                                -->
+    <!-- ============================================================ -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <div class="section-icon financial-icon">
+                <i class="bi bi-currency-exchange"></i>
+            </div>
+            <h5 class="section-title">Financial Overview</h5>
+            <span class="section-badge section-badge-cyan">Payments & Fines</span>
+        </div>
+
+        <!-- Financial Summary Cards -->
+        <div class="financial-summary-cards">
+            <div class="summary-card total">
+                <div class="card-icon">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-value">₱<span id="totalExpected">0.00</span></div>
+                    <div class="card-label">Total Expected</div>
+                </div>
+            </div>
+            <div class="summary-card collected">
+                <div class="card-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-value">₱<span id="totalCollected">0.00</span></div>
+                    <div class="card-label">Collected</div>
+                    <div class="card-badge success"><span id="collectionRate">0</span>%</div>
+                </div>
+            </div>
+            <div class="summary-card pending">
+                <div class="card-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-value">₱<span id="totalPendingCard">0.00</span></div>
+                    <div class="card-label">Pending</div>
+                    <div class="card-badge warning"><span id="pendingRate">0</span>%</div>
+                </div>
+            </div>
+            <div class="summary-card fines">
+                <div class="card-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-value">₱<span id="totalFinesCard">0.00</span></div>
+                    <div class="card-label">Fines Issued</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-2">
+            <!-- Payments Collected Pie Chart -->
+            <div class="col-lg-4">
+                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="payments" data-status="paid">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-check-circle me-2"></i>Payments Collected</h5>
+                        <span class="badge badge-success">₱<span id="totalPayments">0.00</span></span>
+                    </div>
+                    <div class="chart-container-medium">
+                        <canvas id="paymentsPieChart"></canvas>
+                    </div>
+                    <div class="chart-legend-horizontal compact">
+                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
+                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
+                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
+                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
+                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
+                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
+                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
+                    </div>
+                    <div class="chart-click-hint">
+                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Pending Pie Chart -->
+            <div class="col-lg-4">
+                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="payments" data-status="pending">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-clock-history me-2"></i>Payments Pending</h5>
+                        <span class="badge badge-warning">₱<span id="totalPending">0.00</span></span>
+                    </div>
+                    <div class="chart-container-medium">
+                        <canvas id="pendingPieChart"></canvas>
+                    </div>
+                    <div class="chart-legend-horizontal compact">
+                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
+                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
+                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
+                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
+                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
+                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
+                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
+                    </div>
+                    <div class="chart-click-hint">
+                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fines Pie Chart -->
+            <div class="col-lg-4">
+                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="fines">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Fines Issued</h5>
+                        <span class="badge badge-danger">₱<span id="totalFines">0.00</span></span>
+                    </div>
+                    <div class="chart-container-medium">
+                        <canvas id="finesPieChart"></canvas>
+                    </div>
+                    <div class="chart-legend-horizontal compact">
+                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
+                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
+                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
+                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
+                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
+                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
+                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
+                    </div>
+                    <div class="chart-click-hint">
+                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL: Chart Details                                         -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="chartDetailsModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title text-gold">
+                        <i class="bi bi-bar-chart-fill me-2"></i>
+                        <span id="modalTitle">Chart Details</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Loading State -->
+                    <div id="modalLoading" class="text-center py-5">
+                        <div class="spinner-border text-gold" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading details...</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="modalContent" style="display: none;">
+                        <!-- Summary Cards -->
+                        <div class="details-summary">
+                            <div class="summary-item">
+                                <div class="summary-value" id="detailTotalAmount">₱0.00</div>
+                                <div class="summary-label">Total Amount</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value" id="detailStudentCount">0</div>
+                                <div class="summary-label">Students</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value" id="detailAverage">₱0.00</div>
+                                <div class="summary-label">Average/Student</div>
+                            </div>
+                        </div>
+
+                        <!-- Fee/Event Breakdown Table -->
+                        <div class="details-section">
+                            <h6 class="details-section-title" id="breakdownTitle">
+                                <i class="bi bi-list-ul me-2"></i>Fee Breakdown
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover" id="breakdownTable">
+                                    <thead>
+                                        <tr>
+                                            <th id="breakdownColName">Fee Name</th>
+                                            <th>Amount</th>
+                                            <th>Students</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="breakdownBody">
+                                        <!-- Dynamic content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Student List (Collapsible) -->
+                        <div class="details-section">
+                            <h6 class="details-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#studentListCollapse" style="cursor: pointer;">
+                                <i class="bi bi-people me-2"></i>Student List
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                            </h6>
+                            <div class="collapse" id="studentListCollapse">
+                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-dark table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Student ID</th>
+                                                <th>Name</th>
+                                                <th id="studentColDetail">Fee</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="studentListBody">
+                                            <!-- Dynamic content -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <!-- Quick Actions in Modal -->
+                    <div class="modal-quick-actions me-auto">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="exportModalData()" title="Export to Excel">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="sendNoticeToModalStudents()" title="Send Notice" id="modalSendNoticeBtn">
+                            <i class="bi bi-bell"></i>
+                        </button>
+                    </div>
+                    <a href="@Url.Action("Payments", "Admin")" class="btn btn-gold-outline" id="goToPaymentsBtn">
+                        <i class="bi bi-arrow-right-circle me-1"></i> Go to Payments
+                    </a>
+                    <a href="@Url.Action("StudentRecords", "Admin")" class="btn btn-gold-outline" id="goToStudentsBtn" style="display: none;">
+                        <i class="bi bi-arrow-right-circle me-1"></i> View in Student Records
+                    </a>
+                    <a href="@Url.Action("Events", "Admin")" class="btn btn-gold-outline" id="goToEventsBtn" style="display: none;">
+                        <i class="bi bi-arrow-right-circle me-1"></i> View All Events
+                    </a>
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL: Send Notice                                           -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="sendNoticeModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title text-gold">
+                        <i class="bi bi-bell-fill me-2"></i> Send Notice to Students
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="sendNoticeForm">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <!-- Recipients Section -->
+                        <div class="notice-section">
+                            <label class="form-label fw-bold"><i class="bi bi-people me-2"></i>Recipients</label>
+                            <div class="recipient-options">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="recipientFilter" id="recipientAll" value="all" checked>
+                                    <label class="form-check-label" for="recipientAll">
+                                        All Students
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="recipientFilter" id="recipientProgram" value="program">
+                                    <label class="form-check-label" for="recipientProgram">
+                                        By Program
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="recipientFilter" id="recipientYear" value="year">
+                                    <label class="form-check-label" for="recipientYear">
+                                        By Program & Year Level
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="recipientFilter" id="recipientPending" value="pending">
+                                    <label class="form-check-label" for="recipientPending">
+                                        Students with Pending Fees
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Filter Options (shown conditionally) -->
+                            <div class="filter-row mt-3" id="programFilterRow" style="display: none;">
+                                <select class="form-select" id="noticeProgram" name="programFilter">
+                                    <option value="BSIT">BSIT</option>
+                                    <option value="DIT">DIT</option>
+                                </select>
+                            </div>
+                            <div class="filter-row mt-2" id="yearFilterRow" style="display: none;">
+                                <select class="form-select" id="noticeYear" name="yearFilter">
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year (BSIT only)</option>
+                                </select>
+                            </div>
+
+                            <!-- Preview Recipients -->
+                            <div class="recipient-preview mt-3" id="recipientPreview">
+                                <i class="bi bi-people-fill me-2"></i>
+                                <span id="recipientCount">0</span> students will receive this notice
+                                <small class="d-block text-muted mt-1" id="recipientSample"></small>
+                            </div>
+                        </div>
+
+                        <!-- Message Section -->
+                        <div class="notice-section mt-4">
+                            <label class="form-label fw-bold"><i class="bi bi-envelope me-2"></i>Message</label>
+                            <input type="text" class="form-control mb-3" id="noticeSubject" name="subject" placeholder="Subject" required>
+                            <textarea class="form-control" id="noticeMessage" name="message" rows="5" placeholder="Enter your message here..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-gold" id="sendNoticeBtn">
+                            <i class="bi bi-send me-1"></i> Send Notice
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 4: EVENTS OVERVIEW                                   -->
+    <!-- ============================================================ -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <div class="section-icon events-icon">
+                <i class="bi bi-calendar-event-fill"></i>
+            </div>
+            <h5 class="section-title">Events Overview</h5>
+            <span class="section-badge section-badge-purple">@DateTime.Now.Year Schedule</span>
+        </div>
+
+        <div class="row g-4">
+            <!-- Events Line Graph -->
+            <div class="col-lg-7">
+                <div class="glass-panel chart-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-graph-up-arrow me-2"></i>Monthly Events</h5>
+                        <span class="badge badge-info">This Year</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="eventsLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed/Upcoming Doughnut -->
+            <div class="col-lg-5">
+                <div class="glass-panel chart-panel h-100">
+                    <div class="panel-header">
+                        <h5 class="panel-title"><i class="bi bi-check2-circle me-2"></i>Event Status</h5>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="eventStatusDoughnutChart"></canvas>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color completed"></span>
+                            <span class="legend-text">Completed</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color upcoming"></span>
+                            <span class="legend-text">Upcoming</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+            // Pass data from controller to JavaScript
+            window.dashboardData = {
+                // Students per program
+                studentsPerProgram: @Html.Raw(Json.Serialize(ViewBag.StudentsPerProgram ?? new Dictionary<string, int> { { "BSIT", 0 }, { "DIT", 0 } })),
+
+                // Total students (BSIT + DIT only)
+                totalStudents: @(ViewBag.TotalStudents ?? 0),
+
+                // Year level counts
+                yearLevelCounts: @Html.Raw(Json.Serialize(ViewBag.YearLevelCounts ?? new Dictionary<string, int> {
+                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
+                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
+                                                })),
+
+    // Monthly active students
+    monthlyActiveStudents: @Html.Raw(Json.Serialize(ViewBag.MonthlyActiveStudents ?? new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 })),
+
+                // Archive count
+                archiveCount: @(ViewBag.ArchiveCount ?? 0),
+
+                // Active vs Inactive
+                activeInactive: @Html.Raw(Json.Serialize(ViewBag.ActiveInactive ?? new Dictionary<string, int> { { "Active", 0 }, { "Inactive", 0 } })),
+
+                // Payments by program (Paid)
+                paymentsByProgram: @Html.Raw(Json.Serialize(ViewBag.PaymentsByProgram ?? new Dictionary<string, decimal> {
+                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
+                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
+                                                })),
+
+    // Total payments (Paid)
+    totalPayments: @(ViewBag.TotalPayments ?? 0),
+
+                // Pending payments by program (Unpaid)
+                pendingByProgram: @Html.Raw(Json.Serialize(ViewBag.PendingByProgram ?? new Dictionary<string, decimal> {
+                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
+                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
+                                                })),
+
+    // Total pending (Unpaid)
+    totalPending: @(ViewBag.TotalPending ?? 0),
+
+                // Financial summary
+                totalExpected: @(ViewBag.TotalExpected ?? 0),
+                totalCollected: @(ViewBag.TotalCollected ?? 0),
+                collectionRate: @(ViewBag.CollectionRate ?? 0),
+
+                // Fines by program
+                finesByProgram: @Html.Raw(Json.Serialize(ViewBag.FinesByProgram ?? new Dictionary<string, decimal> {
+                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
+                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
+                                                })),
+
+    // Total fines
+    totalFines: @(ViewBag.TotalFines ?? 0),
+
+                // Monthly events
+                monthlyEvents: @Html.Raw(Json.Serialize(ViewBag.MonthlyEvents ?? new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 })),
+
+                // Event status
+                eventStatus: @Html.Raw(Json.Serialize(ViewBag.EventStatus ?? new Dictionary<string, int> { { "Completed", 0 }, { "Upcoming", 0 } }))
+            };
+
+            // Dashboard URLs for AJAX
+            window.dashboardRefreshUrl = '@Url.Action("GetDashboardData", "Admin")';
+            window.chartDetailsUrl = '@Url.Action("GetChartDetails", "Admin")';
+            window.finesDetailsUrl = '@Url.Action("GetFinesDetails", "Admin")';
+            window.studentsByProgramUrl = '@Url.Action("GetStudentsByProgram", "Admin")';
+            window.studentsByYearLevelUrl = '@Url.Action("GetStudentsByYearLevel", "Admin")';
+            window.archivedStudentsUrl = '@Url.Action("GetArchivedStudents", "Admin")';
+            window.studentsByStatusUrl = '@Url.Action("GetStudentsByStatus", "Admin")';
+            window.eventsByMonthUrl = '@Url.Action("GetEventsByMonth", "Admin")';
+            window.eventsByStatusUrl = '@Url.Action("GetEventsByStatus", "Admin")';
+            window.sendNotificationUrl = '@Url.Action("SendNotification", "Admin")';
+            window.notificationPreviewUrl = '@Url.Action("GetNotificationPreview", "Admin")';
+            window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
+            window.eventsUrl = '@Url.Action("Events", "Admin")';
+    </script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+}

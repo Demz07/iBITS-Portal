@@ -1,0 +1,91 @@
+﻿@model IEnumerable<iBITS_Portal.Models.Fee>
+@{
+    ViewData["Title"] = "Section Fee Collection";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .table thead th {
+            color: var(--gold-primary);
+            font-weight: 700;
+        }
+
+        .table tbody td {
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        .table .student-name {
+            color: var(--text-strong);
+            font-weight: 600;
+        }
+    </style>
+}
+
+<!-- TempData for feedback messages -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<!-- ======================= HEADER ======================= -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> @ViewData["TreasuryTitle"]</h4>
+        <p class="mb-0 small text-muted">Process payments for members in your section.</p>
+    </div>
+</div>
+
+<!-- ======================= UNPAID FEES TABLE ======================= -->
+<div class="glass-panel">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Student ID</th>
+                    <th>Fee Description</th>
+                    <th>Amount Due</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var fee in Model)
+                    {
+                        <tr>
+                            <td class="student-name">@fee.StudentNumNavigation?.StudentFn @fee.StudentNumNavigation?.StudentLn</td>
+                            <td class="font-monospace">@fee.StudentNum</td>
+                            <td>@fee.FeeName</td>
+                            <td class="fw-bold">₱@fee.Amount?.ToString("N2")</td>
+                            <td class="text-end">
+                                <form asp-controller="Officer" asp-action="SubmitRemittance" method="post" onsubmit="return confirm('Submit this payment for validation?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        Submit for Remittance
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-check2-circle fs-2"></i>
+                            <p class="mt-2 mb-0">All members in this section are fully paid.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

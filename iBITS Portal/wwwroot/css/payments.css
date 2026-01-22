@@ -1,0 +1,567 @@
+﻿/* ======================================================= */
+/*                 SECTION 1: THEME & BACKGROUND           */
+/* ======================================================= */
+:root {
+    /* DARK THEME (DEFAULT) */
+    --bg-body: #030a16;
+    --bg-gradient: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.1) 0, transparent 60%);
+    --bg-glass: rgba(11, 26, 51, 0.65);
+    --gold-primary: #D4AF37;
+    --gold-dim: rgba(212, 175, 55, 0.1);
+    --gold-text: #D4AF37;
+    --text-main: #94a3b8;
+    --text-strong: #ffffff;
+    --text-inverse: #000000;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+}
+
+/* LIGHT THEME OVERRIDES */
+[data-theme="light"] {
+    --bg-body: #f8fafc;
+    --bg-glass: rgba(255, 255, 255, 0.9);
+    --text-main: #64748b;
+    --text-strong: #0f172a;
+    --text-inverse: #ffffff;
+    --border-color: #e2e8f0;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --gold-dim: rgba(212, 175, 55, 0.2);
+}
+
+/* APPLY BACKGROUND TO PAGE */
+body {
+    background-color: var(--bg-body);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+/* ======================================================= */
+/*                 SECTION 2: PAYMENTS SPECIFIC            */
+/* ======================================================= */
+
+/* --- PANELS & CARDS --- */
+.glass-panel {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: var(--shadow-soft);
+}
+
+.summary-card {
+    background: var(--input-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s;
+}
+
+    .summary-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--gold-primary);
+    }
+
+.summary-icon {
+    font-size: 2.5rem;
+    color: var(--gold-primary);
+    opacity: 0.5;
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.summary-val {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-strong);
+    margin-top: 5px;
+}
+
+/* --- TABLE --- */
+.table-glass {
+    width: 100%;
+    color: var(--text-main);
+    margin-top: 20px;
+    border-collapse: separate;
+    border-spacing: 0 5px;
+}
+
+    .table-glass thead th {
+        border-bottom: 2px solid var(--gold-primary);
+        padding: 15px;
+        color: var(--gold-primary);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+
+    .table-glass tbody tr {
+        background-color: rgba(255, 255, 255, 0.02);
+        transition: 0.2s;
+    }
+
+        .table-glass tbody tr:hover {
+            background-color: var(--input-bg);
+        }
+
+    .table-glass td {
+        padding: 15px;
+        vertical-align: middle;
+        border: none;
+    }
+
+        .table-glass td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .table-glass td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+/* --- BUTTONS & BADGES --- */
+.btn-gold {
+    background: var(--gold-primary);
+    color: var(--text-inverse);
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+    .btn-gold:hover {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+    }
+
+.btn-gold-outline {
+    border: 1px solid var(--gold-primary);
+    color: var(--gold-primary);
+    background: transparent;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+    .btn-gold-outline:hover {
+        background: var(--gold-primary);
+        color: #000;
+    }
+
+.badge-paid {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-pending {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-gray {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* --- MODALS & ALERTS --- */
+.glass-alert {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.glass-modal {
+    background: var(--bg-glass);
+    backdrop-filter: blur(25px);
+    border: 1px solid var(--border-color);
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--border-color);
+}
+
+.text-gold {
+    color: var(--gold-primary);
+}
+
+.form-control, .form-select {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-strong) !important;
+    border-radius: 8px;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--gold-primary) !important;
+        box-shadow: 0 0 0 3px var(--gold-dim) !important;
+    }
+
+.btn-glass {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+    .btn-glass:hover {
+        border-color: var(--gold-primary);
+        color: var(--gold-primary);
+        background: var(--gold-dim);
+    }
+
+/* ======================================================= */
+/*           SECTION 3: CREATE FEE MODAL STYLES            */
+/* ======================================================= */
+
+/* --- Fee Section Container --- */
+.fee-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.fee-section-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    display: flex;
+    align-items: center;
+}
+
+    .fee-section-header i {
+        font-size: 1rem;
+    }
+
+/* --- Filter Options (Radio Button Cards) --- */
+.filter-options {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+    .filter-options.year-filter {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+    }
+
+.filter-option {
+    flex: 1;
+    min-width: 100px;
+}
+
+    .filter-option input[type="radio"] {
+        display: none;
+    }
+
+    .filter-option label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 12px;
+        background: var(--input-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        min-height: 70px;
+    }
+
+        .filter-option label i {
+            font-size: 1.3rem;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            transition: color 0.2s ease;
+        }
+
+        .filter-option label span {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-strong);
+            display: block;
+        }
+
+        .filter-option label small {
+            font-size: 0.7rem;
+            color: var(--text-main);
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+
+        /* Hover state */
+        .filter-option label:hover {
+            border-color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+            .filter-option label:hover i {
+                color: var(--gold-primary);
+            }
+
+    /* Selected state */
+    .filter-option input[type="radio"]:checked + label {
+        border-color: var(--gold-primary);
+        background: rgba(212, 175, 55, 0.15);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    }
+
+        .filter-option input[type="radio"]:checked + label i {
+            color: var(--gold-primary);
+        }
+
+        .filter-option input[type="radio"]:checked + label span {
+            color: var(--gold-primary);
+        }
+
+    /* Disabled state (for 4th year when DIT is selected) */
+    .filter-option.disabled-option label {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+/* BSIT Only Badge */
+.bsit-only-badge {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--gold-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* --- Year Filter Specific Styles --- */
+.year-filter .filter-option label {
+    min-height: auto;
+    padding: 12px 8px;
+}
+
+    .year-filter .filter-option label span {
+        font-size: 0.8rem;
+    }
+
+/* --- Preview Section --- */
+.fee-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 16px;
+    transition: all 0.3s ease;
+}
+
+    .fee-preview.loading {
+        opacity: 0.6;
+    }
+
+    .fee-preview.no-students {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+        border-color: rgba(239, 68, 68, 0.25);
+    }
+
+.preview-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: rgba(212, 175, 55, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+    .preview-icon i {
+        font-size: 1.5rem;
+        color: var(--gold-primary);
+    }
+
+.fee-preview.no-students .preview-icon {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+    .fee-preview.no-students .preview-icon i {
+        color: #f87171;
+    }
+
+.preview-content {
+    flex-grow: 1;
+}
+
+.preview-title {
+    font-size: 0.75rem;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.preview-count {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gold-primary);
+}
+
+    .preview-count span {
+        font-size: 1.8rem;
+    }
+
+.fee-preview.no-students .preview-count {
+    color: #f87171;
+}
+
+.preview-breakdown {
+    display: flex;
+    gap: 16px;
+    margin-top: 6px;
+}
+
+.preview-bsit,
+.preview-dit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+}
+
+    .preview-bsit i {
+        font-size: 0.5rem;
+        color: var(--gold-primary);
+    }
+
+    .preview-dit i {
+        font-size: 0.5rem;
+        color: #3B82F6;
+    }
+
+    .preview-bsit span,
+    .preview-dit span {
+        font-weight: 600;
+        color: var(--text-strong);
+    }
+
+.preview-loading {
+    color: var(--gold-primary);
+}
+
+/* --- Count Update Animation --- */
+.count-updating {
+    animation: countPulse 0.3s ease;
+}
+
+@keyframes countPulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+        color: var(--gold-primary);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .filter-options {
+        flex-direction: column;
+    }
+
+        .filter-options.year-filter {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+    .filter-option {
+        min-width: auto;
+    }
+
+    .fee-preview {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .preview-breakdown {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-options.year-filter {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* --- Light Theme Adjustments --- */
+[data-theme="light"] .fee-section {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .filter-option label {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+
+    [data-theme="light"] .filter-option label:hover {
+        background: rgba(212, 175, 55, 0.08);
+    }
+
+[data-theme="light"] .filter-option input[type="radio"]:checked + label {
+    background: rgba(212, 175, 55, 0.12);
+}
+
+[data-theme="light"] .fee-preview {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.03));
+}
+
+[data-theme="light"] .preview-icon {
+    background: rgba(212, 175, 55, 0.15);
+}
+
+[data-theme="light"] .fee-preview.no-students {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+}
+
+    [data-theme="light"] .fee-preview.no-students .preview-icon {
+        background: rgba(239, 68, 68, 0.15);
+    }

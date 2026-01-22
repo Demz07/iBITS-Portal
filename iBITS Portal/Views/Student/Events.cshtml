@@ -1,0 +1,172 @@
+@model IEnumerable<iBITS_Portal.Models.Event>
+@{
+    ViewData["Title"] = "Upcoming Events";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var eventAttendances = ViewBag.EventAttendances as List<dynamic> ?? new List<dynamic>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/events.css" asp-append-version="true" />
+}
+
+<div class="glass-panel">
+    <h4 class="glass-header-title">
+        <i class="bi bi-calendar-event me-2" style="color:var(--gold-primary)"></i> Upcoming Events
+    </h4>
+    <p class="mb-0 small" style="color: var(--text-main);">View and register for upcoming iBITS events.</p>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show glass-alert" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show glass-alert" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var item in Model)
+        {
+            // Find attendance status for this event
+            var attendanceInfo = eventAttendances.FirstOrDefault(e => e.Event.EventId == item.EventId);
+            var attendanceStatus = attendanceInfo?.AttendanceStatus ?? "Not Registered";
+            
+            string statusClass = "badge-upcoming";
+            string statusText = "Upcoming";
+            var today = DateOnly.FromDateTime(DateTime.Now);
+
+            if (item.EventDate.HasValue)
+            {
+                if (item.EventDate.Value == today) { statusClass = "badge-today"; statusText = "Today"; }
+                else if (item.EventDate.Value <= today.AddDays(3)) { statusClass = "badge-soon"; statusText = "Soon"; }
+            }
+
+            <div class="col-md-6 col-lg-4">
+                <div class="glass-card">
+                    <div class="event-img-placeholder">
+                        <span class="status-badge @statusClass">@statusText</span>
+                        <i class="bi bi-calendar-week" style="font-size: 4rem; opacity: 0.3;"></i>
+                    </div>
+                    <div class="event-body">
+                        <div class="event-date">
+                            @(item.EventDate.HasValue? item.EventDate.Value.ToString("MMM dd, yyyy") : "TBA")
+                            @if (item.StartTime.HasValue)
+                            {
+                                <span class="text-muted ms-1">• @item.StartTime.Value.ToString(@"h\:mm tt")</span>
+                                if (item.EndTime.HasValue)
+                                {
+                                    <span class="text-muted"> - @item.EndTime.Value.ToString(@"h\:mm tt")</span>
+                                }
+                            }
+                            @if (!string.IsNullOrEmpty(item.EventDuration))
+                            {
+                                <span class="text-muted ms-1">• @item.EventDuration</span>
+                            }
+                        </div>
+                        <div class="event-title">@item.EventName</div>
+                        <div class="event-desc">
+                            @(string.IsNullOrEmpty(item.EventDesc) ? "No description provided." : item.EventDesc)
+                        </div>
+                        
+                        <!-- Attendance Status Badge -->
+                        <div class="mt-2">
+                            @{
+                                string attendanceBadgeClass = "bg-secondary";
+                                string attendanceIcon = "bi-question-circle";
+                                switch (attendanceStatus.ToLower())
+                                {
+                                    case "present":
+                                        attendanceBadgeClass = "bg-success";
+                                        attendanceIcon = "bi-check-circle-fill";
+                                        break;
+                                    case "absent":
+                                        attendanceBadgeClass = "bg-danger";
+                                        attendanceIcon = "bi-x-circle-fill";
+                                        break;
+                                    case "excused":
+                                        attendanceBadgeClass = "bg-info";
+                                        attendanceIcon = "bi-info-circle-fill";
+                                        break;
+                                    case "not registered":
+                                        attendanceBadgeClass = "bg-warning";
+                                        attendanceIcon = "bi-clock";
+                                        break;
+                                }
+                            }
+                            <span class="badge @attendanceBadgeClass">
+                                <i class="bi @attendanceIcon me-1"></i> @attendanceStatus
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="d-flex align-items-center gap-2 text-muted small">
+                                <i class="bi bi-geo-alt"></i> @(item.EventLocation ?? "TBA")
+                            </div>
+                            <div class="d-flex gap-2">
+                                @if (attendanceStatus == "Not Registered" && item.EventDate >= DateOnly.FromDateTime(DateTime.Now))
+                                {
+                                    <button class="btn btn-sm btn-success"
+                                            onclick="registerForEvent(@item.EventId)">
+                                        <i class="bi bi-check-circle"></i> Register
+                                    </button>
+                                }
+                                else if (attendanceStatus != "Not Registered")
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="bi bi-check-circle"></i> Registered
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+            <h5 class="text-muted mt-3">No upcoming events</h5>
+            <p class="small text-muted">Check back later for new events.</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function registerForEvent(eventId) {
+            if (confirm('Are you sure you want to register for this event?')) {
+                fetch('/Student/RegisterForEvent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ eventId: eventId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Registration failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during registration');
+                });
+            }
+        }
+    </script>
+}

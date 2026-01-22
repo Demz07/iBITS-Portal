@@ -1,0 +1,80 @@
+﻿@{
+    ViewData["Title"] = "My Financials";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var fees = ViewBag.Fees as List<iBITS_Portal.Models.Fee> ?? new List<iBITS_Portal.Models.Fee>();
+    var fines = ViewBag.Fines as List<iBITS_Portal.Models.Fine> ?? new List<iBITS_Portal.Models.Fine>();
+
+    var totalFees = fees.Sum(f => f.Amount ?? 0);
+    var totalFines = fines.Sum(f => f.Amount ?? 0);
+    var paidFees = fees.Where(f => f.FeeStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+    var paidFines = fines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+    var totalDue = (totalFees + totalFines) - (paidFees + paidFines);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/student-features.css" asp-append-version="true" />
+}
+
+<div class="row">
+    <!-- Balance Summary -->
+    <div class="col-12">
+        <div class="glass-panel text-center">
+            <p class="text-uppercase small text-muted mb-2">Current Balance Due</p>
+            <h1 class="display-4 fw-bold" style="color: @(totalDue > 0 ? "#f87171" : "#34d399")">₱@totalDue.ToString("N2")</h1>
+        </div>
+    </div>
+
+    <!-- Fees Breakdown -->
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3"><i class="bi bi-receipt me-2 text-gold"></i> Membership Fees</h5>
+            <ul class="list-group">
+                @foreach (var fee in fees)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">@fee.FeeName</h6>
+                            <span class="fw-bold">₱@fee.Amount?.ToString("N2")</span>
+                        </div>
+                        <small>Due: @fee.FeesDueDate?.ToString("MMM dd, yyyy")</small>
+                        @if (fee.FeeStatus?.ToLower() == "paid")
+                        {
+                            <span class="badge badge-success float-end"><i class="bi bi-check-circle-fill"></i> Paid</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger float-end"><i class="bi bi-hourglass-split"></i> Unpaid</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <!-- Fines Breakdown -->
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3"><i class="bi bi-exclamation-octagon-fill me-2 text-danger"></i> Fines</h5>
+            <ul class="list-group">
+                @foreach (var fine in fines)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Fine for @fine.Attendance?.Event?.EventName</h6>
+                            <span class="fw-bold">₱@fine.Amount?.ToString("N2")</span>
+                        </div>
+                        <small>Due: @fine.FinesDueDate?.ToString("MMM dd, yyyy")</small>
+                        @if (fine.FinesStatus?.ToLower() == "paid")
+                        {
+                            <span class="badge badge-success float-end"><i class="bi bi-check-circle-fill"></i> Paid</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger float-end"><i class="bi bi-hourglass-split"></i> Unpaid</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

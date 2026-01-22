@@ -1,0 +1,162 @@
+﻿/* ======================================================= */
+/* FILE PATH: wwwroot/css/archive.css                      */
+/* ======================================================= */
+
+:root {
+    --bg-glass: rgba(11, 26, 51, 0.65);
+    --gold-primary: #D4AF37;
+    --gold-dim: rgba(212, 175, 55, 0.1);
+    --text-main: #94a3b8;
+    --text-strong: #ffffff;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] {
+    --bg-glass: rgba(255, 255, 255, 0.9);
+    --text-main: #64748b;
+    --text-strong: #0f172a;
+    --border-color: #e2e8f0;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --gold-dim: rgba(212, 175, 55, 0.2);
+}
+
+/* --- LAYOUT COMPONENTS --- */
+.glass-panel {
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+    margin-bottom: 24px;
+}
+
+/* --- BUTTONS & INPUTS --- */
+.btn-gold {
+    background: var(--gold-primary);
+    color: #000;
+    font-weight: 700;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+    .btn-gold:hover {
+        background: #fff;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+    }
+
+.btn-glass {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+    .btn-glass:hover {
+        border-color: var(--gold-primary);
+        color: var(--gold-primary);
+        background: var(--gold-dim);
+    }
+
+.form-control, .form-select {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-strong) !important;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--gold-primary) !important;
+        box-shadow: 0 0 0 3px var(--gold-dim) !important;
+    }
+
+/* --- TABS --- */
+.nav-pills .nav-link {
+    color: var(--text-main);
+    border-radius: 50px;
+    padding: 10px 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .nav-pills .nav-link.active {
+        background-color: var(--gold-primary);
+        color: #000;
+        font-weight: 700;
+        box-shadow: 0 4px 15px var(--gold-dim);
+    }
+
+/* --- TABLES --- */
+.table-glass {
+    width: 100%;
+    color: var(--text-main);
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+    .table-glass thead th {
+        background-color: rgba(0, 0, 0, 0.2);
+        color: var(--gold-primary);
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--gold-primary);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+    .table-glass tbody tr {
+        background-color: rgba(255, 255, 255, 0.02);
+        transition: all 0.2s ease;
+    }
+
+        .table-glass tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+    .table-glass tbody td {
+        padding: 15px 20px;
+        border: none;
+        vertical-align: middle;
+    }
+
+    .table-glass td:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+
+    .table-glass td:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+/* --- SEARCH BAR ANIMATION --- */
+.input-group-text {
+    background-color: var(--gold-dim);
+    border-color: var(--input-border);
+    color: var(--gold-primary);
+}
+
+/* --- BADGES --- */
+.badge-gray {
+    background: rgba(255,255,255,0.1);
+    color: #ccc;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.badge-gold {
+    background: rgba(212,175,55,0.2);
+    color: var(--gold-primary);
+    border: 1px solid var(--gold-primary);
+}

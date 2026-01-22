@@ -1,0 +1,96 @@
+﻿@{
+    //Gateway.cshtml(Gateway)
+}
+
+@{
+    ViewData["Title"] = "Gateway";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iBITS Portal Gateway</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;800&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/gateway.css" asp-append-version="true" />
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+    <canvas id="matrixCanvas"></canvas>
+
+    <!-- TOP LEFT HEADER -->
+    <div class="top-header">
+        <!-- Ensure this path is correct in your project -->
+        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
+        <div class="header-info">
+            <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+            <span class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</span>
+        </div>
+    </div>
+
+    <div class="split-layout">
+
+        <!-- LEFT SIDE -->
+        <div class="left-brand">
+            <div class="logo-wrapper">
+                <!-- Ensure this path is correct in your project -->
+                <img src="~/images/logo.png" alt="iBITS Logo" class="logo-img">
+            </div>
+            <div class="brand-text">
+                <h1>iBITS PORTAL</h1>
+                <span class="gold-accent">Unified Attendance & Payment System</span>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="right-controls">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <h3>Secure Access</h3>
+                    <p>Identify yourself to proceed</p>
+                </div>
+
+                <!-- MEMBER BUTTON -->
+                <a href="/Identity/Account/Login?userType=Member" class="nav-btn">
+                    <div class="btn-icon-box">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div class="btn-content">
+                        <h4>Member Access</h4>
+                        <span>Student Command Center</span>
+                    </div>
+                    <i class="bi bi-chevron-right arrow-icon"></i>
+                </a>
+
+                <!-- ADMIN BUTTON -->
+                <a href="/Identity/Account/Login?userType=Admin" class="nav-btn">
+                    <div class="btn-icon-box">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </div>
+                    <div class="btn-content">
+                        <h4>Admin Console</h4>
+                        <span>System Management & Logs</span>
+                    </div>
+                    <i class="bi bi-chevron-right arrow-icon"></i>
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="~/js/gateway.js" asp-append-version="true"></script>
+
+</body>
+</html>

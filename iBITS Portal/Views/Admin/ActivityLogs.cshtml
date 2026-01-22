@@ -1,0 +1,68 @@
+﻿@{
+    //ActivityLogs.cshtml
+}
+
+@model IEnumerable<iBITS_Portal.Models.ActivityLog>
+@{
+    ViewData["Title"] = "Activity Logs";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- Link External CSS -->
+<link rel="stylesheet" href="~/css/activity-logs.css" asp-append-version="true" />
+
+<div class="glass-panel">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 style="color: var(--text-strong); margin: 0; font-weight: 700;">
+                <i class="bi bi-activity me-2"></i> System Audit Trail
+            </h4>
+            <p class="mb-0 small text-muted">Tracks critical system actions (DBA Access Only).</p>
+        </div>
+        <button id="btnExportLogs" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-download me-1"></i> Export Logs
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table log-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Description</th>
+                    <th>Performed By</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var log in Model)
+                    {
+                        <tr>
+                            <td class="small text-strong">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td><span class="badge-action">@log.Action</span></td>
+                            <td>@log.Description</td>
+                            <td class="fw-bold">@log.PerformedBy</td>
+                            <td class="font-monospace small text-muted">@(log.IpAddress ?? "Unknown")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-clipboard-check mb-2 d-block fs-4"></i>
+                            No activity recorded yet.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/activity-logs.js" asp-append-version="true"></script>
+}

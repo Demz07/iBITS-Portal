@@ -1,0 +1,273 @@
+@{
+    ViewData["Title"] = "Command Center";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+
+    // ==========================================
+    // 1. GET DATA & MODELS
+    // ==========================================
+    var student = ViewBag.Student as iBITS_Portal.Models.Student;
+    var nextEvent = ViewBag.NextEvent as iBITS_Portal.Models.Event;
+    var upcomingEvents = ViewBag.UpcomingEvents as List<iBITS_Portal.Models.Event> ?? new List<iBITS_Portal.Models.Event>();
+    var announcements = ViewBag.Announcements as List<iBITS_Portal.Models.Announcement> ?? new List<iBITS_Portal.Models.Announcement>();
+
+    // ==========================================
+    // 2. BADGE LOGIC (Connects to CSS)
+    // ==========================================
+    string displayRole = "Member";
+    string badgeClass = "badge-role-member";
+    string badgeIcon = "bi-person-fill";
+
+    // A. ADMIN CHECK
+    if (User.IsInRole("Admin"))
+    {
+        displayRole = "System Admin";
+        badgeClass = "badge-role-admin";
+        badgeIcon = "bi-shield-lock-fill";
+    }
+    // B. DATABASE CHECK (Prioritize Linked Officer Data)
+    else if (student?.Officer != null)
+    {
+        string pos = student.Officer.Position ?? "Officer";
+        string posLower = pos.ToLower();
+
+        if (posLower.Contains("class") && posLower.Contains("secretary"))
+        {
+            displayRole = "Class Secretary";
+            badgeClass = "badge-role-classsecretary";
+            badgeIcon = "bi-journal-check";
+        }
+        else if (posLower.Contains("class") && posLower.Contains("treasurer"))
+        {
+            displayRole = "Class Treasurer";
+            badgeClass = "badge-role-classtreasurer";
+            badgeIcon = "bi-wallet2";
+        }
+        else if (posLower.Contains("org") && posLower.Contains("secretary"))
+        {
+            displayRole = "Org. Secretary";
+            badgeClass = "badge-role-orgsecretary";
+            badgeIcon = "bi-pen-fill";
+        }
+        else if (posLower.Contains("org") && posLower.Contains("treasurer"))
+        {
+            displayRole = "Org. Treasurer";
+            badgeClass = "badge-role-orgtreasurer";
+            badgeIcon = "bi-bank2";
+        }
+        else
+        {
+            displayRole = pos; // Generic Officer
+            badgeClass = "badge-role-officer";
+            badgeIcon = "bi-star-fill";
+        }
+    }
+    // C. IDENTITY ROLE FALLBACK
+    else if (User.IsInRole("OrgSecretary"))
+    {
+        displayRole = "Org. Secretary";
+        badgeClass = "badge-role-orgsecretary";
+        badgeIcon = "bi-pen-fill";
+    }
+    else if (User.IsInRole("OrgTreasurer"))
+    {
+        displayRole = "Org. Treasurer";
+        badgeClass = "badge-role-orgtreasurer";
+        badgeIcon = "bi-bank2";
+    }
+    else if (User.IsInRole("ClassSecretary"))
+    {
+        displayRole = "Class Secretary";
+        badgeClass = "badge-role-classsecretary";
+        badgeIcon = "bi-journal-check";
+    }
+    else if (User.IsInRole("ClassTreasurer"))
+    {
+        displayRole = "Class Treasurer";
+        badgeClass = "badge-role-classtreasurer";
+        badgeIcon = "bi-wallet2";
+    }
+    else if (User.IsInRole("Officer"))
+    {
+        displayRole = "Officer";
+        badgeClass = "badge-role-officer";
+        badgeIcon = "bi-star-fill";
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/student-dashboard.css" asp-append-version="true" />
+}
+
+<!-- Hidden Data for JS -->
+<input type="hidden" id="hiddenStudentId" value="@student?.StudentNum" />
+@if (nextEvent != null && nextEvent.EventDate.HasValue)
+{
+    <input type="hidden" id="eventDate" value="@nextEvent.EventDate.Value.ToString("yyyy-MM-dd")" />
+}
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row g-4">
+    <!-- LEFT MAIN COLUMN -->
+    <div class="col-lg-8">
+
+        <!-- ========================================== -->
+        <!--        WELCOME HEADER (ADDED HERE)         -->
+        <!-- ========================================== -->
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! 👋</h2>
+
+            <!-- This Span uses the C# variables calculated at the top -->
+            <span class="role-badge @badgeClass">
+                <i class="bi @badgeIcon"></i> @displayRole
+            </span>
+        </div>
+
+        <p class="text-muted mb-4" style="margin-top:-15px;">Welcome to your iBITS Command Center.</p>
+
+        <!-- Next Activity Card -->
+        <div class="glass-card mb-4">
+            <h5 class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-event me-2"></i> Next Activity</span>
+                <a href="@Url.Action("Events", "Student")" class="btn btn-sm btn-outline-warning">View All Events</a>
+            </h5>
+            <div class="card-body">
+                @if (nextEvent != null)
+                {
+                    <div id="countdown-active">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="fw-bold text-white mb-0">@nextEvent.EventName</h3>
+                            <span class="badge bg-primary">@(nextEvent.EventDate?.ToString("MMM dd") ?? "TBA")</span>
+                        </div>
+                        <p class="text-muted small"><i class="bi bi-geo-alt"></i> @nextEvent.EventLocation</p>
+
+                        <div class="countdown-container mt-4">
+                            <div class="time-box"><span id="days">00</span><small>Days</small></div>
+                            <div class="time-box"><span id="hours">00</span><small>Hours</small></div>
+                            <div class="time-box"><span id="minutes">00</span><small>Mins</small></div>
+                            <div class="time-box"><span id="seconds">00</span><small>Secs</small></div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x fs-1"></i>
+                        <p class="mt-2 mb-0">No upcoming events scheduled.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- More Upcoming Events -->
+        @if (upcomingEvents.Any() && upcomingEvents.Count > 1)
+        {
+            <div class="glass-card mb-4">
+                <h5 class="card-header"><i class="bi bi-calendar3 me-2"></i> More Upcoming Events</h5>
+                <div class="card-body">
+                    @foreach (var evt in upcomingEvents.Skip(1).Take(2))
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
+                            <div>
+                                <h6 class="text-white mb-1">@evt.EventName</h6>
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-calendar"></i> @evt.EventDate?.ToString("MMM dd, yyyy")
+                                    @if (!string.IsNullOrEmpty(evt.EventLocation))
+                                    {
+                                        <span class="ms-2"><i class="bi bi-geo-alt"></i> @evt.EventLocation</span>
+                                    }
+                                </p>
+                            </div>
+                            <span class="badge bg-warning text-dark">Upcoming</span>
+                        </div>
+                    }
+                    <div class="text-center mt-3">
+                        <a href="@Url.Action("Events", "Student")" class="btn btn-outline-warning btn-sm">See All Events</a>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Announcements Card -->
+        <div class="glass-card">
+            <h5 class="card-header"><i class="bi bi-megaphone me-2"></i> Announcements</h5>
+            <div class="card-body">
+                @if (announcements.Any())
+                {
+                    foreach (var announcement in announcements)
+                    {
+                        <div class="announcement-item">
+                            <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") • Posted by @announcement.PostedBy</small>
+                            <p class="mb-0 mt-1 text-white">@announcement.Content</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted text-center mb-0">No announcements yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PROFILE COLUMN -->
+    <div class="col-lg-4">
+        <div class="profile-card">
+            <div class="profile-pic-wrapper">
+                <img src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)" alt="Profile Picture" id="profilePic">
+                <button class="btn-change-pic" data-bs-toggle="modal" data-bs-target="#profilePicModal"><i class="bi bi-camera-fill"></i></button>
+            </div>
+            <h4 class="text-white fw-bold mt-3 mb-1">@student?.StudentFn @student?.StudentLn</h4>
+            <p class="text-gold mono-font">@student?.StudentNum</p>
+            <p class="text-muted small">@student?.Course | @student?.YearLevelSection</p>
+
+            <hr class="my-4" style="border-color: var(--border-color);" />
+
+            <h6 class="text-uppercase small fw-bold text-muted">iBITS Digital ID</h6>
+            <div class="qr-container my-3">
+                <div id="qrcode"></div>
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn-action-outline" id="btnExpandQr"><i class="bi bi-arrows-fullscreen"></i> Expand ID</button>
+                <button class="btn-action-outline" id="btnDownloadQr"><i class="bi bi-download"></i> Download ID</button>
+                <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn-action-dark"><i class="bi bi-gear-fill"></i> Account Settings</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL for Profile Picture Upload -->
+<div class="modal fade" id="profilePicModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-gold"><i class="bi bi-image"></i> Update Photo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-controller="Student" asp-action="UpdateProfilePicture" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-body text-center">
+                    <img src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)" id="imagePreview" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover; border: 3px solid var(--gold-primary);" />
+                    <input type="file" name="profileImage" id="profileImageInput" class="form-control bg-dark text-light border-secondary" accept="image/*" required>
+                    <small class="d-block mt-2 text-muted">Recommended: Square image (1:1 aspect ratio).</small>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
+}

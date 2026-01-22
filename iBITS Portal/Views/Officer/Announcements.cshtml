@@ -1,0 +1,111 @@
+@* C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Officer\Announcements.cshtml *@
+@model List<iBITS_Portal.Models.Announcement>
+@{
+    ViewData["Title"] = "Announcements";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-megaphone"></i> Announcements</h2>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Message"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Post New Announcement Form -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Post New Announcement</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="PostAnnouncement" method="post">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                    <label for="content" class="form-label">Announcement Content</label>
+                    <textarea name="content" id="content" class="form-control" rows="4" 
+                              placeholder="Enter your announcement here..." required></textarea>
+                    <div class="form-text">This will be visible to all students on their dashboard.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Post Announcement
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recent Announcements List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Recent Announcements</h5>
+        </div>
+        <div class="card-body">
+            @if (Model != null && Model.Any())
+            {
+                <div class="list-group">
+                    @foreach (var announcement in Model)
+                    {
+                        <div class="list-group-item mb-3">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <i class="bi bi-megaphone-fill text-primary"></i>
+                                    @(!string.IsNullOrEmpty(announcement.Title) ? announcement.Title : "Announcement #" + announcement.Id)
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> 
+                                    @announcement.Timestamp.ToString("MMM dd, yyyy hh:mm tt")
+                                </small>
+                            </div>
+                            <p class="mb-1 mt-2">@announcement.Content</p>
+                            @if (!string.IsNullOrEmpty(announcement.PostedBy))
+                            {
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> Posted by: @announcement.PostedBy
+                                </small>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No announcements yet. Be the first to post one!</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .list-group-item {
+        border-left: 4px solid #0d6efd;
+        transition: transform 0.2s;
+    }
+
+    .list-group-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .card {
+        border-radius: 10px;
+    }
+
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+    }
+</style>

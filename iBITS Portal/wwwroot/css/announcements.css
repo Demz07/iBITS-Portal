@@ -1,0 +1,134 @@
+﻿/* ======================================================= */
+/*                 SECTION 1: THEME & BACKGROUND           */
+/* ======================================================= */
+:root {
+    /* DARK THEME (DEFAULT) */
+    --bg-body: #030a16;
+    --bg-gradient: radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.1) 0, transparent 60%);
+    --bg-glass: rgba(11, 26, 51, 0.65);
+    --gold-primary: #D4AF37;
+    --gold-dim: rgba(212, 175, 55, 0.1);
+    --gold-text: #D4AF37;
+    --text-main: #94a3b8;
+    --text-strong: #ffffff;
+    --text-inverse: #000000;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+}
+
+/* APPLY BACKGROUND TO PAGE */
+body {
+    background-color: var(--bg-body);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+/* ======================================================= */
+/*               SECTION 2: GENERAL COMPONENTS             */
+/* ======================================================= */
+
+.glass-panel {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: var(--shadow-soft);
+}
+
+.glass-header-title {
+    color: var(--text-strong);
+    font-weight: 700;
+}
+
+    .glass-header-title i {
+        color: var(--gold-primary);
+    }
+
+.form-control, .form-select {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-strong) !important;
+    border-radius: 8px;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--gold-primary) !important;
+        box-shadow: 0 0 0 3px var(--gold-dim) !important;
+    }
+
+.btn-gold {
+    background: var(--gold-primary);
+    color: var(--text-inverse);
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    transition: 0.3s;
+    padding: 10px 20px;
+}
+
+    .btn-gold:hover {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+    }
+
+.glass-alert {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+/* ======================================================= */
+/*               SECTION 3: ANNOUNCEMENT LIST              */
+/* ======================================================= */
+
+.announcement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.announcement-item {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.announcement-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.1);
+}
+
+.announcement-title {
+    color: var(--text-strong);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.announcement-meta {
+    font-size: 0.8rem;
+    color: var(--text-main);
+}
+
+    .announcement-meta strong {
+        color: var(--gold-text);
+    }
+
+.announcement-body {
+    padding: 20px;
+    color: var(--text-main);
+    white-space: pre-wrap; /* Preserves line breaks from textarea */
+}
+
+.announcement-footer {
+    padding: 10px 20px;
+    text-align: right;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.1);
+}

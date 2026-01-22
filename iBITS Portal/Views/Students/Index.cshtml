@@ -1,0 +1,101 @@
+﻿@model IEnumerable<iBITS_Portal.Models.Student>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentLn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentFn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentMn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Birthday)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.YearLevelSection)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Classification)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentEmail)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Qrcode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.StudentImage)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Officer)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentLn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentFn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentMn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Birthday)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.YearLevelSection)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Course)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Classification)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentEmail)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Qrcode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentImage)
+            </td>
+            <td>
+                @(item.Officer?.OfficerId.ToString() ?? "N/A")
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.StudentNum">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.StudentNum">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.StudentNum">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
