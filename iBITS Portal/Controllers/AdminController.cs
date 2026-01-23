@@ -2456,75 +2456,58 @@ namespace iBITS_Portal.Controllers
                     return RedirectToAction("Events");
                 }
 
-                var activeStudents = await _context.Students.Include(s => s.Officer).Where(s => s.Classification == "Active").ToListAsync();
-                var existingAttendance = await _context.Attendances.Where(a => a.EventId == eventId).ToListAsync();
-                int finesIssued = 0;
+                // Get all active students
+                var activeStudents = await _context.Students
+                    .Include(s => s.Officer)
+                    .Where(s => s.Classification == "Active")
+                    .ToListAsync();
+
+                // Get existing attendance records
+                var existingAttendance = await _context.Attendances
+                    .Where(a => a.EventId == eventId)
+                    .ToListAsync();
+
+                int finesGenerated = 0;
+                int attendanceCreated = 0;
 
                 foreach (var student in activeStudents)
                 {
                     var attendance = existingAttendance.FirstOrDefault(a => a.StudentNum == student.StudentNum);
-                    bool isAbsent = attendance == null || attendance.AttendanceStatus != "Present";
-
-                    if (isAbsent)
+                    
+                    // If no attendance record exists, create one as "Absent"
+                    if (attendance == null)
                     {
-                        decimal fineAmount = 0;
-                        string roleType = "Member";
+                        attendance = new Attendance 
+                        { 
+                            StudentNum = student.StudentNum, 
+                            EventId = eventId, 
+                            AttendanceStatus = "Absent" 
+                        };
+                        _context.Attendances.Add(attendance);
+                        await _context.SaveChangesAsync(); // Save to get AttendanceId
+                        attendanceCreated++;
+                    }
 
-                        if (student.Officer != null)
-                        {
-                            if (student.Officer.Classification == "Class Officer") roleType = "Class Officer";
-                            else if (student.Officer.Classification == "Org Officer") roleType = "Org Officer";
-                        }
-
-                        if (eventToClose.EventType == "iBITS Event")
-                        {
-                            if (roleType == "Member") fineAmount = eventToClose.FineForMember ?? 0;
-                            else if (roleType == "Class Officer") fineAmount = eventToClose.FineForClassOfficer ?? 0;
-                            else if (roleType == "Org Officer") fineAmount = eventToClose.FineForOrgOfficer ?? 0;
-                        }
-                        else
-                        {
-                            if (roleType == "Member") fineAmount = eventToClose.NonIbitsFineForMember ?? 0;
-                            else if (roleType == "Class Officer") fineAmount = eventToClose.NonIbitsFineForClassOfficer ?? 0;
-                            else if (roleType == "Org Officer") fineAmount = eventToClose.NonIbitsFineForOrgOfficer ?? 0;
-                        }
-
-                        if (fineAmount > 0)
-                        {
-                            if (attendance == null)
-                            {
-                                attendance = new Attendance { StudentNum = student.StudentNum, EventId = eventId, AttendanceStatus = "Absent" };
-                                _context.Attendances.Add(attendance);
-                                await _context.SaveChangesAsync();
-                            }
-                            else if (attendance.AttendanceStatus == "Absent")
-                            {
-                                bool hasFine = await _context.Fines.AnyAsync(f => f.AttendanceId == attendance.AttendanceId);
-                                if (hasFine) continue;
-                            }
-
-                            var fine = new Fine
-                            {
-                                AttendanceId = attendance.AttendanceId,
-                                Amount = fineAmount,
-                                FinesStatus = "Unpaid",
-                                FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
-                                FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7))
-                            };
-                            _context.Fines.Add(fine);
-                            finesIssued++;
-                        }
+                    // Generate fine if absent or excused (uses our new helper method)
+                    if (attendance.AttendanceStatus == "Absent" || attendance.AttendanceStatus == "Excused")
+                    {
+                        bool fineCreated = await GenerateFineForAttendance(attendance.AttendanceId, notifyStudent: true);
+                        if (fineCreated) finesGenerated++;
                     }
                 }
 
-                await _context.SaveChangesAsync();
-                await LogAction("Close Event", $"Closed event {eventToClose.EventName}. Issued {finesIssued} fines.");
-                TempData["Message"] = $"Event closed. {finesIssued} fines were automatically assigned to absentees.";
+                await LogAction("Close Event", 
+                    $"Closed event '{eventToClose.EventName}'. Created {attendanceCreated} absence records. " +
+                    $"Issued {finesGenerated} fines.");
+
+                TempData["Message"] = $"Event closed successfully. " +
+                                     $"Created {attendanceCreated} absence records and issued {finesGenerated} fines. " +
+                                     $"Students have been notified.";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error closing event");
-                TempData["Error"] = "An error occurred while calculating fines.";
+                _logger.LogError(ex, "Error closing event and assigning fines");
+                TempData["Error"] = "An error occurred while closing the event and calculating fines.";
             }
 
             return RedirectToAction("Events");
