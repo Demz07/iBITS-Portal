@@ -276,42 +276,96 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Class Treasurer, Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkFeeAsPaid(int feeId)
+        public async Task<IActionResult> MarkFeeAsPaid(int feeId, string? paymentMethod, string? transactionRef, string? notes)
         {
-            var user = await _userManager.GetUserAsync(User);
-            var treasurer = await _context.Students.FindAsync(user.UserName);
-            var fee = await _context.Fees.Include(f => f.StudentNumNavigation).FirstOrDefaultAsync(f => f.FeeId == feeId);
-
-            if (fee == null) return RedirectToAction("Payments");
-
-            // Security check for Class Treasurer
-            if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
+            try
             {
-                if (fee.StudentNumNavigation.YearLevelSection != treasurer.YearLevelSection)
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
                 {
-                    TempData["Error"] = "Unauthorized section.";
+                    TempData["Error"] = "Fee not found.";
                     return RedirectToAction("Payments");
                 }
+
+                if (treasurer == null)
+                {
+                    TempData["Error"] = "Treasurer profile not found.";
+                    return RedirectToAction("Payments");
+                }
+
+                // Security check for Class Treasurer
+                if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
+                {
+                    if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                    {
+                        TempData["Error"] = "Unauthorized: Student belongs to a different section.";
+                        return RedirectToAction("Payments");
+                    }
+                }
+
+                // Check if already paid
+                if (fee.FeeStatus?.ToUpper() == "PAID")
+                {
+                    TempData["Warning"] = "This fee is already marked as paid.";
+                    return RedirectToAction("Payments");
+                }
+
+                // Get current academic year from system settings
+                var currentAcadYear = await _context.SystemSettings
+                    .Where(s => s.SettingKey == "CurrentAcademicYear")
+                    .Select(s => s.SettingValue)
+                    .FirstOrDefaultAsync();
+
+                // Update fee status
+                fee.FeeStatus = "Paid";
+                _context.Update(fee);
+
+                // Create payment transaction record for audit trail
+                var transaction = new PaymentTransaction
+                {
+                    FeeId = feeId,
+                    StudentNum = fee.StudentNum ?? "",
+                    Amount = fee.Amount ?? 0,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = paymentMethod ?? "Cash",
+                    ProcessedBy = treasurer.StudentNum ?? "",
+                    TransactionReference = transactionRef,
+                    Notes = notes,
+                    AcademicYear = currentAcadYear
+                };
+
+                _context.PaymentTransactions.Add(transaction);
+
+                // Send notification to student
+                _context.Notifications.Add(new Notification
+                {
+                    StudentNum = fee.StudentNum,
+                    Title = "Payment Confirmed",
+                    Message = $"Your payment of ₱{fee.Amount} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}. " +
+                             $"Payment method: {paymentMethod ?? "Cash"}. " +
+                             (string.IsNullOrEmpty(transactionRef) ? "" : $"Reference: {transactionRef}."),
+                    NotificationType = "Payment",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = treasurer.StudentNum
+                });
+
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = $"Payment of ₱{fee.Amount} marked as PAID successfully.";
+                return RedirectToAction("Payments");
             }
-
-            fee.FeeStatus = "Paid";
-            _context.Update(fee);
-
-            // Notification
-            _context.Notifications.Add(new Notification
+            catch (Exception ex)
             {
-                StudentNum = fee.StudentNum,
-                Title = "Payment Confirmed",
-                Message = $"Fee '{fee.FeeName}' marked as PAID by {treasurer.FullName}.",
-                NotificationType = "Payment",
-                NotificationDate = DateTime.Now,
-                IsRead = false,
-                SentBy = treasurer.StudentNum
-            });
-
-            await _context.SaveChangesAsync();
-            TempData["Message"] = "Payment marked as PAID.";
-            return RedirectToAction("Payments");
+                // Log the exception
+                TempData["Error"] = "An error occurred while processing the payment.";
+                return RedirectToAction("Payments");
+            }
         }
 
         // ============================================================
