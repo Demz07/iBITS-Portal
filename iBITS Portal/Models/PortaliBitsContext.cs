@@ -29,6 +29,8 @@ public partial class PortaliBitsContext : DbContext
     public virtual DbSet<PendingRoleChange> PendingRoleChanges { get; set; }
     public virtual DbSet<SystemSetting> SystemSettings { get; set; }
     public virtual DbSet<Notification> Notifications { get; set; }
+    public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    public virtual DbSet<FinePaymentTransaction> FinePaymentTransactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -114,6 +116,64 @@ public partial class PortaliBitsContext : DbContext
                 .HasForeignKey(d => d.StudentNum)
                 .HasConstraintName("FK_Notification_Student")
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Payment Transaction Configuration
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasKey(e => e.TransactionId);
+            entity.ToTable("PaymentTransactions");
+
+            entity.Property(e => e.PaymentDate)
+                .HasDefaultValueSql("GETDATE()");
+
+            entity.HasOne(d => d.Fee)
+                .WithMany()
+                .HasForeignKey(d => d.FeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Treasurer)
+                .WithMany()
+                .HasForeignKey(d => d.ProcessedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => e.FeeId);
+            entity.HasIndex(e => e.StudentNum);
+            entity.HasIndex(e => e.PaymentDate);
+        });
+
+        // Fine Payment Transaction Configuration
+        modelBuilder.Entity<FinePaymentTransaction>(entity =>
+        {
+            entity.HasKey(e => e.FineTransactionId);
+            entity.ToTable("FinePaymentTransactions");
+
+            entity.Property(e => e.PaymentDate)
+                .HasDefaultValueSql("GETDATE()");
+
+            entity.HasOne(d => d.Fine)
+                .WithMany()
+                .HasForeignKey(d => d.FineId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Treasurer)
+                .WithMany()
+                .HasForeignKey(d => d.ProcessedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => e.FineId);
+            entity.HasIndex(e => e.StudentNum);
+            entity.HasIndex(e => e.PaymentDate);
         });
 
         OnModelCreatingPartial(modelBuilder);
