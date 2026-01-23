@@ -2531,6 +2531,220 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
+        // FINE MANAGEMENT - ENHANCED AUTO-GENERATION
+        // =========================================================
+        
+        /// <summary>
+        /// Generates a fine for an attendance record if the student is absent or excused.
+        /// </summary>
+        private async Task<bool> GenerateFineForAttendance(int attendanceId, bool notifyStudent = true)
+        {
+            try
+            {
+                var attendance = await _context.Attendances
+                    .Include(a => a.StudentNumNavigation)
+                        .ThenInclude(s => s.Officer)
+                    .Include(a => a.Event)
+                    .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
+
+                if (attendance == null)
+                {
+                    _logger.LogWarning($"Attendance ID {attendanceId} not found for fine generation.");
+                    return false;
+                }
+
+                if (attendance.AttendanceStatus != "Absent" && attendance.AttendanceStatus != "Excused")
+                    return false;
+
+                var existingFine = await _context.Fines.FirstOrDefaultAsync(f => f.AttendanceId == attendanceId);
+                if (existingFine != null)
+                {
+                    _logger.LogInformation($"Fine already exists for Attendance ID {attendanceId}. Skipping.");
+                    return false;
+                }
+
+                decimal fineAmount = CalculateFineAmount(attendance);
+                if (fineAmount <= 0)
+                {
+                    _logger.LogInformation($"No fine configured. Attendance ID: {attendanceId}");
+                    return false;
+                }
+
+                var fine = new Fine
+                {
+                    AttendanceId = attendanceId,
+                    Amount = fineAmount,
+                    FinesStatus = "Unpaid",
+                    FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                    FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30))
+                };
+
+                _context.Fines.Add(fine);
+                await _context.SaveChangesAsync();
+
+                await LogAction("Generate Fine", 
+                    $"Fine of ₱{fineAmount} created for {attendance.StudentNumNavigation?.FullName} " +
+                    $"(Event: {attendance.Event?.EventName}, Status: {attendance.AttendanceStatus})");
+
+                if (notifyStudent && attendance.StudentNum != null)
+                    await SendFineNotification(attendance.StudentNum, fine, attendance.Event?.EventName ?? "Unknown Event");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error generating fine for Attendance ID {attendanceId}");
+                return false;
+            }
+        }
+
+        private decimal CalculateFineAmount(Attendance attendance)
+        {
+            if (attendance.Event == null || attendance.StudentNumNavigation == null)
+                return 0;
+
+            string roleType = "Member";
+            if (attendance.StudentNumNavigation.Officer != null)
+            {
+                if (attendance.StudentNumNavigation.Officer.Classification == "Class Officer")
+                    roleType = "Class Officer";
+                else if (attendance.StudentNumNavigation.Officer.Classification == "Org Officer")
+                    roleType = "Org Officer";
+            }
+
+            decimal fineAmount = 0;
+            if (attendance.Event.EventType == "iBITS Event")
+            {
+                if (roleType == "Member")
+                    fineAmount = attendance.Event.FineForMember ?? 0;
+                else if (roleType == "Class Officer")
+                    fineAmount = attendance.Event.FineForClassOfficer ?? 0;
+                else if (roleType == "Org Officer")
+                    fineAmount = attendance.Event.FineForOrgOfficer ?? 0;
+            }
+            else
+            {
+                if (roleType == "Member")
+                    fineAmount = attendance.Event.NonIbitsFineForMember ?? 0;
+                else if (roleType == "Class Officer")
+                    fineAmount = attendance.Event.NonIbitsFineForClassOfficer ?? 0;
+                else if (roleType == "Org Officer")
+                    fineAmount = attendance.Event.NonIbitsFineForOrgOfficer ?? 0;
+            }
+            return fineAmount;
+        }
+
+        private async Task SendFineNotification(string studentNum, Fine fine, string eventName)
+        {
+            try
+            {
+                var notification = new Notification
+                {
+                    StudentNum = studentNum,
+                    Title = "Fine Issued",
+                    Message = $"A fine of ₱{fine.Amount} has been issued for your absence at '{eventName}'. " +
+                             $"Due date: {fine.FinesDueDate?.ToString("MMMM dd, yyyy")}. Please settle this at your earliest convenience.",
+                    NotificationType = "Fine",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = "System"
+                };
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending fine notification to {studentNum}");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateAttendanceStatus(int attendanceId, string newStatus)
+        {
+            try
+            {
+                var attendance = await _context.Attendances
+                    .Include(a => a.StudentNumNavigation)
+                    .Include(a => a.Event)
+                    .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
+
+                if (attendance == null)
+                    return Json(new { success = false, message = "Attendance record not found." });
+
+                string oldStatus = attendance.AttendanceStatus ?? "Unknown";
+                attendance.AttendanceStatus = newStatus;
+                _context.Update(attendance);
+                await _context.SaveChangesAsync();
+
+                await LogAction("Update Attendance", 
+                    $"Changed attendance for {attendance.StudentNumNavigation?.FullName} " +
+                    $"at '{attendance.Event?.EventName}' from '{oldStatus}' to '{newStatus}'");
+
+                bool fineGenerated = false;
+                if (newStatus == "Absent" || newStatus == "Excused")
+                {
+                    fineGenerated = await GenerateFineForAttendance(attendanceId, true);
+                }
+                else if (oldStatus == "Absent" || oldStatus == "Excused")
+                {
+                    var existingFine = await _context.Fines
+                        .FirstOrDefaultAsync(f => f.AttendanceId == attendanceId && f.FinesStatus == "Unpaid");
+                    
+                    if (existingFine != null)
+                    {
+                        _context.Fines.Remove(existingFine);
+                        await _context.SaveChangesAsync();
+                        await LogAction("Remove Fine", $"Removed unpaid fine after status changed to '{newStatus}'");
+                    }
+                }
+
+                string message = $"Attendance status updated to '{newStatus}'.";
+                if (fineGenerated)
+                    message += " A fine has been automatically generated.";
+
+                return Json(new { success = true, message, fineGenerated });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating attendance status for ID {attendanceId}");
+                return Json(new { success = false, message = "An error occurred while updating attendance." });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateFinesForEvent(int eventId)
+        {
+            try
+            {
+                var eventRecord = await _context.Events.FindAsync(eventId);
+                if (eventRecord == null)
+                    return Json(new { success = false, message = "Event not found." });
+
+                var absentAttendances = await _context.Attendances
+                    .Where(a => a.EventId == eventId && 
+                               (a.AttendanceStatus == "Absent" || a.AttendanceStatus == "Excused"))
+                    .ToListAsync();
+
+                int finesGenerated = 0;
+                foreach (var attendance in absentAttendances)
+                {
+                    bool created = await GenerateFineForAttendance(attendance.AttendanceId, true);
+                    if (created) finesGenerated++;
+                }
+
+                await LogAction("Bulk Generate Fines", $"Generated {finesGenerated} fines for event '{eventRecord.EventName}'");
+                return Json(new { success = true, message = $"Successfully generated {finesGenerated} fine(s).", finesGenerated });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error generating fines for event ID {eventId}");
+                return Json(new { success = false, message = "An error occurred while generating fines." });
+            }
+        }
+
+        // =========================================================
         // OTHER PAGES & UTILITIES
         // =========================================================
         public async Task<IActionResult> ActivityLogs()
