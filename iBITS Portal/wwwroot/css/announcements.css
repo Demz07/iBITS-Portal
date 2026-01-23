@@ -16,6 +16,7 @@
     --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
     --input-bg: rgba(255, 255, 255, 0.05);
     --input-border: rgba(255, 255, 255, 0.1);
+    --bg-glass-hover: rgba(11, 26, 51, 0.75);
 }
 
 /* APPLY BACKGROUND TO PAGE */
