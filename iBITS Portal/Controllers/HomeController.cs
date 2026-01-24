@@ -37,7 +37,7 @@ namespace iBITS_Portal.Controllers
         {
             if (!_signInManager.IsSignedIn(User))
             {
-                return View("Gateway");
+                return RedirectToAction("LandingPage");
             }
 
             var user = await _userManager.GetUserAsync(User);
@@ -157,6 +157,26 @@ namespace iBITS_Portal.Controllers
             ViewBag.Announcements = announcements;
 
             return View("StudentDashboard");
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> LandingPage()
+        {
+            if (_signInManager.IsSignedIn(User)) { return RedirectToAction("Index"); }
+
+            // Get real statistics from database
+            var totalStudents = await _context.Students.CountAsync();
+            var totalEvents = await _context.Events.CountAsync();
+            var totalTransactions = await _context.PaymentTransactions.CountAsync();
+            var totalScans = await _context.Attendances.Where(a => a.AttendanceStatus == "Present").CountAsync();
+
+            // Pass to ViewBag
+            ViewBag.TotalStudents = totalStudents;
+            ViewBag.TotalEvents = totalEvents;
+            ViewBag.TotalTransactions = totalTransactions;
+            ViewBag.TotalScans = totalScans;
+
+            return View();
         }
 
         [AllowAnonymous]

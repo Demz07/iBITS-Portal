@@ -1,7 +1,4 @@
-﻿@* C:\Users\Dave\OneDrive\Desktop\needs to be update\Heres the code you will need to update\Payments.cshtml *@
-@* Views/Admin/Payments.cshtml *@
-
-@model IEnumerable<iBITS_Portal.Models.Fee>
+﻿@model IEnumerable<iBITS_Portal.Models.Fee>
 @{
     ViewData["Title"] = "Payments";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
@@ -11,10 +8,9 @@
     var totalExp = allFees.Sum(f => f.Amount ?? 0);
     var totalCol = allFees.Where(f => f.FeeStatus?.ToLower() == "paid" || f.FeeStatus?.ToLower() == "completed").Sum(f => f.Amount ?? 0);
     var totalPending = totalExp - totalCol;
-    var paidCount = allFees.Count(f => f.FeeStatus?.ToLower() == "paid" || f.FeeStatus?.ToLower() == "completed");
-    var pendingCount = allFees.Count(f => f.FeeStatus?.ToLower() == "pending" || f.FeeStatus?.ToLower() == "unpaid");
 
-    @* Paste this inside Views/Admin/Payments.cshtml, just after Layout = ... *@
+    // Calculate Collection Rate
+    var collectionRate = totalExp > 0 ? Math.Round((totalCol / totalExp) * 100, 1) : 0;
 
     <style>
         /* New styles for No Data state in Charts */
@@ -46,7 +42,6 @@
             min-height: 110px;
         }
     </style>
-
 }
 
 <link rel="stylesheet" href="~/css/payments.css" asp-append-version="true" />
@@ -76,23 +71,20 @@
 }
 
 <!-- ============================================================ -->
-<!-- FINANCIAL OVERVIEW (From Dashboard)                          -->
-<!-- ============================================================ -->
-<!-- ============================================================ -->
-<!-- FINANCIAL OVERVIEW (Reorganized Layout + No Data UI)         -->
+<!-- FINANCIAL OVERVIEW (Updated to match Fines UI)               -->
 <!-- ============================================================ -->
 <div class="glass-panel p-4 mb-4">
     <h5 style="color: var(--text-strong); font-weight: 700; margin-bottom: 1.5rem;">
         <i class="bi bi-graph-up me-2"></i> Financial Overview
     </h5>
 
-    <!-- Row 1: Summary Cards (Grid Layout for better organization) -->
+    <!-- Row 1: Summary Cards (4 Columns) -->
     <div class="row g-4 mb-4">
-        <!-- Total Expected -->
-        <div class="col-md-4">
+        <!-- Total Expected (Red Style) -->
+        <div class="col-md-3">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
@@ -103,11 +95,11 @@
             </div>
         </div>
 
-        <!-- Collected -->
-        <div class="col-md-4">
+        <!-- Collected (Green Style) -->
+        <div class="col-md-3">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
@@ -118,16 +110,31 @@
             </div>
         </div>
 
-        <!-- Pending -->
-        <div class="col-md-4">
+        <!-- Outstanding (Yellow/Amber Style) -->
+        <div class="col-md-3">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Pending</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collection Rate (Purple Style) -->
+        <div class="col-md-3">
+            <div class="summary-card rate">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-percent fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRateDisplay">@collectionRate</span>%</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
                     </div>
                 </div>
             </div>
@@ -170,6 +177,7 @@
         </div>
     </div>
 </div>
+
 <!-- ============================================================ -->
 <!-- FILTERS SECTION                                              -->
 <!-- ============================================================ -->
@@ -184,7 +192,7 @@
     </div>
 
     <div class="row g-3">
-        <!-- Search Filter (New) -->
+        <!-- Search Filter -->
         <div class="col-md-3">
             <label class="form-label small text-muted">Search</label>
             <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ref ID, Student Name or ID...">
@@ -245,242 +253,141 @@
     </div>
 </div>
 
-
 <!-- ============================================================ -->
-<!-- TABS & TABLES                                                -->
+<!-- FEE RECORDS TABLE                                            -->
 <!-- ============================================================ -->
-<div class="glass-panel p-2 mb-3 d-inline-block">
-    <ul class="nav nav-pills" id="recordsTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active rounded-pill px-4" id="fees-tab" data-bs-toggle="pill" data-bs-target="#fees" type="button" role="tab">
-                <i class="bi bi-receipt me-2"></i>Fee Records
+<div class="glass-panel p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">Fee Records</h5>
+        <div>
+            <button type="button" class="btn-gold-outline btn-sm me-2" onclick="exportPayments()">
+                <i class="bi bi-download me-1"></i> Export Fees
             </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill px-4" id="fines-tab" data-bs-toggle="pill" data-bs-target="#fines" type="button" role="tab">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Fine Records
+            <button class="btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createFeeModal">
+                <i class="bi bi-plus-lg me-1"></i> Create Fee
             </button>
-        </li>
-    </ul>
-</div>
-
-<div class="tab-content" id="recordsTabsContent">
-
-    <!-- FEES TAB -->
-    <div class="tab-pane fade show active" id="fees" role="tabpanel">
-        <div class="glass-panel p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">Fee Records</h5>
-                <div>
-                    <button type="button" class="btn-gold-outline btn-sm me-2" onclick="exportPayments()"><i class="bi bi-download me-1"></i> Export Fees</button>
-                    <button class="btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createFeeModal"><i class="bi bi-plus-lg me-1"></i> Create Fee</button>
-                </div>
-            </div>
-            <!-- Standard Fees Table -->
-            <div class="table-responsive">
-                <table class="table table-glass" id="feesTable">
-                    <thead>
-                        <tr>
-                            <th>Ref ID</th>
-                            <th>Student Name</th>
-                            <th>Program</th>
-                            <th>Year</th>
-                            <th>Description</th>
-                            <th>Acad Year</th>
-                            <th>Amount</th>
-                            <th>Due Date</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model != null && Model.Any())
-                        {
-                            foreach (var fee in Model)
-                            {
-                                var student = fee.StudentNumNavigation;
-                                var isPaid = fee.FeeStatus?.ToLower() == "paid" || fee.FeeStatus?.ToLower() == "completed";
-
-                                <tr class="fee-row"
-                                    data-ref-id="@fee.FeeId"
-                                    data-student-name="@(fee.StudentNumNavigation?.FullName?.ToLower() ?? "")"
-                                    data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
-                                    data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
-                                    data-program="@(student?.Course ?? "")"
-                                    data-year="@(student?.YearLevelSection ?? "")"
-                                    data-status="@(fee.FeeStatus?.ToLower() ?? "")"
-                                    data-acad-year="@(fee.AcadYear ?? "")">
-                                    <td class="font-monospace text-muted">#@fee.FeeId</td>
-                                    <td>
-                                        @if (student != null)
-                                        {
-                                            <div style="color: var(--text-strong); font-weight: 600;">@student.StudentFn @student.StudentLn</div>
-                                            <div class="small text-muted" style="font-size: 0.75rem;">@fee.StudentNum</div>
-                                        }
-                                        else
-                                        {
-
-                                            <span class="text-danger">ID: @fee.StudentNum</span>
-                                        }
-                                    </td>
-                                    <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
-                                    <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
-                                    <td>@fee.FeeName</td>
-                                    <td><span class="text-muted small">@(fee.AcadYear ?? "N/A")</span></td>
-                                    <td style="color: var(--gold-primary); font-weight: bold;">₱ @(fee.Amount.HasValue? fee.Amount.Value.ToString("N2") : "0.00")</td>
-                                    <td>@(fee.FeesDueDate.HasValue? fee.FeesDueDate.Value.ToString("MMM dd, yyyy") : "-")</td>
-                                    <td>
-                                        @{
-                                            var status = fee.FeeStatus?.ToLower() ?? "";
-                                            if (status == "paid" || status == "completed")
-                                            {
-                                                <span class="badge-paid">@fee.FeeStatus</span>
-                                            }
-                                            else if (status == "pending" || status == "unpaid")
-                                            {
-
-                                                <span class="badge-pending">@fee.FeeStatus</span>
-                                            }
-                                            else
-                                            {
-
-                                                <span class="badge-gray">@fee.FeeStatus</span>
-                                            }
-                                        }
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                                            <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                                @if (!isPaid)
-                                                {
-                                                    <li>
-                                                        <form asp-action="UpdateFeeStatus" method="post">
-                                                            <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                            <input type="hidden" name="status" value="Paid" />
-                                                            <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark as Paid</button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                else
-                                                {
-                                                    <li>
-                                                        <form asp-action="UpdateFeeStatus" method="post">
-                                                            <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                            <input type="hidden" name="status" value="Unpaid" />
-                                                            <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Mark as Unpaid</button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <form asp-action="DeleteFee" method="post" onsubmit="return confirm('Delete this fee record?');">
-                                                        <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete Record</button>
-                                                    </form>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
 
-    <!-- FINES TAB -->
-    <div class="tab-pane fade" id="fines" role="tabpanel">
-        <div class="glass-panel p-4">
-            <h5 class="mb-3" style="color: var(--text-strong); font-weight: 700;">Fine Records</h5>
-            <div class="table-responsive">
-                <table class="table table-glass">
-                    <thead>
-                        <tr>
-                            <th>Student</th>
-                            <th>Event / Reason</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @{
-                            var finesList = ViewBag.Fines as List<iBITS_Portal.Models.Fine>;
-                        }
-                        @if (finesList != null && finesList.Any())
-                        {
-                            foreach (var fine in finesList)
-                            {
-                                var status = fine.FinesStatus ?? "Unpaid";
-                                var student = fine.Attendance?.StudentNumNavigation;
-                                var evt = fine.Attendance?.Event;
+    <!-- Standard Fees Table -->
+    <div class="table-responsive">
+        <table class="table table-glass" id="feesTable">
+            <thead>
+                <tr>
+                    <th>Ref ID</th>
+                    <th>Student Name</th>
+                    <th>Program</th>
+                    <th>Year</th>
+                    <th>Description</th>
+                    <th>Acad Year</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var fee in Model)
+                    {
+                        var student = fee.StudentNumNavigation;
+                        var isPaid = fee.FeeStatus?.ToLower() == "paid" || fee.FeeStatus?.ToLower() == "completed";
 
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold text-white">@(student?.FullName ?? "Unknown")</div>
-                                        <div class="small text-muted">@(student?.StudentNum ?? "-")</div>
-                                    </td>
-                                    <td>@(evt?.EventName ?? "Unknown Event")</td>
-                                    <td class="text-danger fw-bold">₱ @(fine.Amount?.ToString("N2"))</td>
-                                    <td>
-                                        @if (status.ToLower() == "paid")
+                        <tr class="fee-row"
+                            data-ref-id="@fee.FeeId"
+                            data-student-name="@(fee.StudentNumNavigation?.FullName?.ToLower() ?? "")"
+                            data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
+                            data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
+                            data-program="@(student?.Course ?? "")"
+                            data-year="@(student?.YearLevelSection ?? "")"
+                            data-status="@(fee.FeeStatus?.ToLower() ?? "")"
+                            data-acad-year="@(fee.AcadYear ?? "")">
+                            <td class="font-monospace text-muted">#@fee.FeeId</td>
+                            <td>
+                                @if (student != null)
+                                {
+                                    <div style="color: var(--text-strong); font-weight: 600;">@student.StudentFn @student.StudentLn</div>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">@fee.StudentNum</div>
+                                }
+                                else
+                                {
+
+                                    <span class="text-danger">ID: @fee.StudentNum</span>
+                                }
+                            </td>
+                            <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
+                            <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
+                            <td>@fee.FeeName</td>
+                            <td><span class="text-muted small">@(fee.AcadYear ?? "N/A")</span></td>
+                            <td style="color: var(--gold-primary); font-weight: bold;">₱ @(fee.Amount.HasValue? fee.Amount.Value.ToString("N2") : "0.00")</td>
+                            <td>@(fee.FeesDueDate.HasValue? fee.FeesDueDate.Value.ToString("MMM dd, yyyy") : "-")</td>
+                            <td>
+                                @{
+                                    var status = fee.FeeStatus?.ToLower() ?? "";
+                                    if (status == "paid" || status == "completed")
+                                    {
+                                        <span class="badge-paid">@fee.FeeStatus</span>
+                                    }
+                                    else if (status == "pending" || status == "unpaid")
+                                    {
+
+                                        <span class="badge-pending">@fee.FeeStatus</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="badge-gray">@fee.FeeStatus</span>
+                                    }
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                    <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
+                                        @if (!isPaid)
                                         {
-                                            <span class="badge-paid">Paid</span>
+                                            <li>
+                                                <form asp-action="UpdateFeeStatus" method="post">
+                                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                                    <input type="hidden" name="status" value="Paid" />
+                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark as Paid</button>
+                                                </form>
+                                            </li>
                                         }
                                         else
                                         {
-
-                                            <span class="badge-pending">Unpaid</span>
+                                            <li>
+                                                <form asp-action="UpdateFeeStatus" method="post">
+                                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                                    <input type="hidden" name="status" value="Unpaid" />
+                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Mark as Unpaid</button>
+                                                </form>
+                                            </li>
                                         }
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                                            <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                                @if (status.ToLower() != "paid")
-                                                {
-                                                    <li>
-                                                        <form asp-action="UpdateFineStatus" method="post">
-                                                            <input type="hidden" name="fineId" value="@fine.FineId" />
-                                                            <input type="hidden" name="status" value="Paid" />
-                                                            <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark as Paid</button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                                else
-                                                {
-                                                    <li>
-                                                        <form asp-action="UpdateFineStatus" method="post">
-                                                            <input type="hidden" name="fineId" value="@fine.FineId" />
-                                                            <input type="hidden" name="status" value="Unpaid" />
-                                                            <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Mark as Unpaid</button>
-                                                        </form>
-                                                    </li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr><td colspan="5" class="text-center py-4 text-muted">No fines record found.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form asp-action="DeleteFee" method="post" onsubmit="return confirm('Delete this fee record?');">
+                                                <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete Record</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
-<!-- ================= MODAL: CREATE FEE (UPDATED WITH ACAD YEAR) ================= -->
+
+<!-- ================= MODAL: CREATE FEE ================= -->
 <div class="modal fade" id="createFeeModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content glass-modal">
@@ -631,7 +538,6 @@
     </div>
 </div>
 
-
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -644,7 +550,7 @@
 
         // Export Function
          function exportPayments() {
-             const search = document.getElementById('filterSearch').value; // NEW
+             const search = document.getElementById('filterSearch').value;
              const feeName = document.getElementById('filterFeeName').value;
              const program = document.getElementById('filterProgram').value;
              const year = document.getElementById('filterYear').value;
@@ -652,7 +558,7 @@
              const acadYear = document.getElementById('filterAcadYear').value;
 
              const params = new URLSearchParams({
-                 searchString: search, // Pass to controller
+                 searchString: search,
                  feeNameFilter: feeName,
                  programFilter: program,
                  yearFilter: year,

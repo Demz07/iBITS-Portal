@@ -1,0 +1,89 @@
+@* FILE PATH: Views/Admin/_CloseEventModal.cshtml *@
+@* ✅ FILE 11 OF 50 - Close Event Confirmation Modal *@
+
+<!-- Close Event Modal -->
+<div class="modal fade" id="closeEventModal" tabindex="-1" aria-labelledby="closeEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(212, 175, 55, 0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);">
+                <h5 class="modal-title" id="closeEventModalLabel" style="color: #D4AF37;">
+                    <i class="bi bi-lock-fill me-2"></i>Close Event
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="color: #fff;">
+                <div id="closeEventContent">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem; color: #F9E076;"></i>
+                    </div>
+                    
+                    <h6 class="mb-3">Are you sure you want to close this event?</h6>
+                    
+                    <div class="event-details mb-4" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                        <p class="mb-2"><strong>Event:</strong> <span id="modalEventName"></span></p>
+                        <p class="mb-2"><strong>Date:</strong> <span id="modalEventDate"></span></p>
+                    </div>
+
+                    <div class="alert alert-warning" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #FCD34D;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>This action will:</strong>
+                        <ul class="mt-2 mb-0">
+                            <li>Automatically assign fines to absent students</li>
+                            <li>Mark the event as closed (cannot be reopened)</li>
+                            <li>Create an audit log entry</li>
+                        </ul>
+                    </div>
+
+                    <div class="statistics mb-3" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                        <h6 style="color: #D4AF37; margin-bottom: 1rem;">Expected Results:</h6>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="stat-value" style="font-size: 2rem; font-weight: bold; color: #4ade80;" id="modalPresent">-</div>
+                                <div class="stat-label" style="font-size: 0.85rem; color: #94a3b8;">Present</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-value" style="font-size: 2rem; font-weight: bold; color: #f87171;" id="modalAbsent">-</div>
+                                <div class="stat-label" style="font-size: 0.85rem; color: #94a3b8;">Absent</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-value" style="font-size: 1.5rem; font-weight: bold; color: #F9E076;" id="modalTotalFines">₱0.00</div>
+                                <div class="stat-label" style="font-size: 0.85rem; color: #94a3b8;">Total Fines</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="closeEventId" value="" />
+                </div>
+
+                <div id="closeEventLoading" style="display: none; text-align: center; padding: 2rem;">
+                    <div class="spinner-border" style="color: #D4AF37;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Closing event and generating fines...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(212, 175, 55, 0.2);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-warning" id="confirmCloseEventBtn" onclick="confirmCloseEvent()">
+                    <i class="bi bi-lock-fill me-2"></i>Close Event
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-warning {
+        background: linear-gradient(135deg, #D4AF37 0%, #F9E076 100%);
+        color: #000;
+        border: none;
+        font-weight: 600;
+    }
+    .btn-warning:hover {
+        background: linear-gradient(135deg, #F9E076 0%, #D4AF37 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+    }
+</style>

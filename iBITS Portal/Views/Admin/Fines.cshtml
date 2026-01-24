@@ -1,5 +1,3 @@
-@* Views/Admin/Fines.cshtml *@
-
 @model IEnumerable<iBITS_Portal.Models.Fine>
 @{
     ViewData["Title"] = "Fines Management";
@@ -7,43 +5,12 @@
 
     // Calculate financial summaries
     var allFines = Model?.ToList() ?? new List<iBITS_Portal.Models.Fine>();
-    var totalExp = allFines.Sum(f => f.Amount ?? 0);
+    var totalExp = allFines.Where(f => f.FinesStatus != "Waived").Sum(f => f.Amount ?? 0);
     var totalCol = allFines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
     var totalPending = totalExp - totalCol;
     var paidCount = allFines.Count(f => f.FinesStatus?.ToLower() == "paid");
     var unpaidCount = allFines.Count(f => f.FinesStatus?.ToLower() == "unpaid");
     var waivedCount = allFines.Count(f => f.FinesStatus?.ToLower() == "waived");
-
-    <style>
-        /* No Data state in Charts */
-        .chart-no-data {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            min-height: 250px;
-            color: rgba(255, 255, 255, 0.4);
-            text-align: center;
-        }
-
-            .chart-no-data i {
-                font-size: 4rem;
-                margin-bottom: 1rem;
-                color: rgba(212, 175, 55, 0.2);
-            }
-
-            .chart-no-data p {
-                font-size: 1.1rem;
-                font-weight: 600;
-                margin: 0;
-            }
-
-        .summary-card {
-            height: 100%;
-            min-height: 110px;
-        }
-    </style>
 }
 
 <link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
@@ -71,13 +38,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
-@if (TempData["Warning"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show glass-alert" role="alert" style="border-left: 5px solid #f59e0b; background: rgba(245, 158, 11, 0.2); color: #fbbf24;">
-        <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Warning"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
 
 <!-- FINANCIAL OVERVIEW -->
 <div class="glass-panel p-4 mb-4">
@@ -92,7 +52,7 @@
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-exclamation-triangle fs-3"></i>
+                        <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
@@ -107,11 +67,11 @@
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-check-circle fs-3"></i>
+                        <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Total Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
                     </div>
                 </div>
             </div>
@@ -121,8 +81,8 @@
         <div class="col-md-3">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-hourglass-split fs-3"></i>
+                    <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
@@ -152,103 +112,119 @@
     <div class="row g-4">
         <!-- Paid Fines Chart -->
         <div class="col-md-6">
-            <div class="chart-container">
-                <h6 class="chart-title">Paid Fines by Program</h6>
-                <canvas id="paidChart"></canvas>
-                <div class="chart-no-data" id="paidNoData">
-                    <i class="bi bi-inbox"></i>
-                    <p>No paid fines data available</p>
+            <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fines by Year Level</h6>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="paidChart"></canvas>
+                    <div class="chart-no-data" id="paidNoData">
+                        <i class="bi bi-inbox-fill"></i>
+                        <p>No paid fines data available</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Unpaid Fines Chart -->
         <div class="col-md-6">
-            <div class="chart-container">
-                <h6 class="chart-title">Unpaid Fines by Program</h6>
-                <canvas id="unpaidChart"></canvas>
-                <div class="chart-no-data" id="unpaidNoData">
-                    <i class="bi bi-inbox"></i>
-                    <p>No unpaid fines data available</p>
+            <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fines by Year Level</h6>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="unpaidChart"></canvas>
+                    <div class="chart-no-data" id="unpaidNoData">
+                        <i class="bi bi-check2-all"></i>
+                        <p>No unpaid fines data available</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- FINES TABLE -->
-<div class="glass-panel p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<!-- FILTERS SECTION -->
+<div class="glass-panel p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); font-weight: 700; margin: 0;">
-            <i class="bi bi-table me-2"></i> Fines Records
+            <i class="bi bi-funnel me-2"></i> Filters
         </h5>
-        <button class="btn btn-gold" onclick="exportFines()">
-            <i class="bi bi-download me-1"></i> Export to Excel
+        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+            <i class="bi bi-x-circle me-1"></i> Clear Filters
         </button>
     </div>
 
-    <!-- Filters -->
-    <div class="filters-container mb-4">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <input type="text" id="filterSearch" class="form-control glass-input" placeholder="Search student name or ID...">
-            </div>
-            <div class="col-md-2">
-                <select id="filterEvent" class="form-select glass-input">
-                    <option value="">All Events</option>
-                    @if (ViewBag.Events != null)
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Search</label>
+            <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Search student name or ID...">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Event</label>
+            <select id="filterEvent" class="form-select form-select-sm">
+                <option value="">All Events</option>
+                @if (ViewBag.Events != null)
+                {
+                    foreach (var evt in ViewBag.Events)
                     {
-                        foreach (var evt in ViewBag.Events)
-                        {
-                            <option value="@evt.EventId">@evt.EventName</option>
-                        }
+                        <option value="@evt.EventId">@evt.EventName</option>
                     }
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="filterStatus" class="form-select glass-input">
-                    <option value="">All Status</option>
-                    <option value="Unpaid">Unpaid</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Waived">Waived</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="filterProgram" class="form-select glass-input">
-                    <option value="">All Programs</option>
-                    <option value="BSIT">BSIT</option>
-                    <option value="DIT">DIT</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select id="filterOverdue" class="form-select glass-input">
-                    <option value="">All Fines</option>
-                    <option value="overdue">Overdue Only</option>
-                    <option value="upcoming">Due Soon</option>
-                </select>
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-glass w-100" onclick="clearFilters()">
-                    <i class="bi bi-x-lg"></i> Clear
-                </button>
-            </div>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Status</label>
+            <select id="filterStatus" class="form-select form-select-sm">
+                <option value="">All Status</option>
+                <option value="Unpaid">Unpaid</option>
+                <option value="Paid">Paid</option>
+                <option value="Waived">Waived</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Program</label>
+            <select id="filterProgram" class="form-select form-select-sm">
+                <option value="">All Programs</option>
+                <option value="BSIT">BSIT</option>
+                <option value="DIT">DIT</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Due Status</label>
+            <select id="filterOverdue" class="form-select form-select-sm">
+                <option value="">All Fines</option>
+                <option value="overdue">Overdue Only</option>
+                <option value="upcoming">Due Soon</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- FINES TABLE -->
+<div class="glass-panel p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">Fine Records</h5>
+        <div>
+            <button class="btn-gold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#createFineModal">
+                <i class="bi bi-plus-lg me-1"></i> Create Fine
+            </button>
+            <button class="btn-gold-outline btn-sm" onclick="exportFines()">
+                <i class="bi bi-download me-1"></i> Export to Excel
+            </button>
         </div>
     </div>
 
-    <!-- Table -->
     <div class="table-responsive">
-        <table class="table glass-table" id="finesTable">
+        <table class="table table-glass" id="finesTable">
             <thead>
                 <tr>
-                    <th>Fine ID</th>
-                    <th>Student</th>
-                    <th>Event</th>
-                    <th>Event Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Due Date</th>
-                    <th>Days Overdue</th>
-                    <th>Actions</th>
+                    <th>REF ID</th>
+                    <th>STUDENT NAME</th>
+                    <th>PROGRAM</th>
+                    <th>YEAR</th>
+                    <th>DESCRIPTION</th>
+                    <th>ACAD YEAR</th>
+                    <th>AMOUNT</th>
+                    <th>DUE DATE</th>
+                    <th>STATUS</th>
+                    <th class="text-end">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
@@ -256,9 +232,10 @@
                 {
                     var student = fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
-                    var isOverdue = fine.FinesStatus?.ToLower() == "unpaid" && 
-                                   fine.FinesDueDate.HasValue && 
-                                   fine.FinesDueDate.Value < DateOnly.FromDateTime(DateTime.Now);
+                    var isOverdue = fine.FinesStatus?.ToLower() == "unpaid" &&
+                    fine.FinesDueDate.HasValue &&
+                    fine.FinesDueDate.Value < DateOnly.FromDateTime(DateTime.Now);
+
                     var daysOverdue = 0;
                     if (isOverdue)
                     {
@@ -266,78 +243,99 @@
                         daysOverdue = today.DayNumber - fine.FinesDueDate!.Value.DayNumber;
                     }
 
-                    <tr data-student="@student?.FullName" 
-                        data-studentnum="@student?.StudentNum"
+                    <tr data-student="@student?.FullName?.ToLower()"
+                        data-studentnum="@student?.StudentNum?.ToLower()"
                         data-event="@fine.Attendance?.EventId"
                         data-status="@fine.FinesStatus"
                         data-program="@student?.Course"
                         data-overdue="@(isOverdue ? "true" : "false")"
                         data-daysoverdue="@daysOverdue">
-                        <td>@fine.FineId</td>
+
+                        <td class="font-monospace text-muted">#@fine.FineId</td>
                         <td>
-                            <div class="student-info">
-                                <strong>@student?.FullName</strong>
-                                <div class="text-muted small">@student?.StudentNum</div>
-                                <span class="badge bg-secondary">@student?.YearLevelSection</span>
-                            </div>
+                            @if (student != null)
+                            {
+                                <div style="color: var(--text-strong); font-weight: 600;">@student.FullName</div>
+                                <div class="small text-muted" style="font-size: 0.75rem;">@student.StudentNum</div>
+                            }
+                            else
+                            {
+                                <span class="text-danger">ID: @fine.Attendance?.StudentNum</span>
+                            }
                         </td>
-                        <td>@eventRecord?.EventName</td>
-                        <td>@eventRecord?.EventDate?.ToString("MM/dd/yyyy")</td>
-                        <td class="fw-bold">₱@fine.Amount?.ToString("N2")</td>
+                        <!-- PROGRAM BADGE (Consistent with Payments) -->
+                        <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
+                        <!-- YEAR BADGE (Consistent with Payments) -->
+                        <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
+
+                        <!-- DESCRIPTION (Event Name) -->
+                        <td>@(eventRecord?.EventName ?? "Unknown")</td>
+
+                        <!-- ACAD YEAR (New Column) -->
+                        <td><span class="text-muted small">@(eventRecord?.AcadYear ?? "N/A")</span></td>
+
+                        <!-- AMOUNT (Gold & Bold) -->
+                        <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
+
+                        <!-- DUE DATE -->
+                        <td>
+                            <div>@(fine.FinesDueDate?.ToString("MMM dd, yyyy") ?? "-")</div>
+                            @if (isOverdue)
+                            {
+                                <div class="text-danger small fw-bold">(@daysOverdue days overdue)</div>
+                            }
+                        </td>
+
+                        <!-- STATUS BADGE -->
                         <td>
                             @if (fine.FinesStatus?.ToLower() == "paid")
                             {
-                                <span class="badge badge-success">Paid</span>
+                                <span class="badge-paid">Paid</span>
                             }
                             else if (fine.FinesStatus?.ToLower() == "waived")
                             {
-                                <span class="badge badge-info">Waived</span>
+                                <span class="badge-info-custom">Waived</span>
                             }
                             else if (isOverdue)
                             {
-                                <span class="badge badge-danger">Overdue</span>
+                                <span class="badge-danger-custom">Overdue</span>
                             }
                             else
                             {
-                                <span class="badge badge-warning">Unpaid</span>
+                                <span class="badge-pending">Pending</span>
                             }
                         </td>
-                        <td>@fine.FinesDueDate?.ToString("MM/dd/yyyy")</td>
-                        <td>
-                            @if (isOverdue)
-                            {
-                                <span class="text-danger fw-bold">@daysOverdue days</span>
-                            }
-                            else if (fine.FinesStatus?.ToLower() == "paid")
-                            {
-                                <span class="text-success">Paid</span>
-                            }
-                            else if (fine.FinesStatus?.ToLower() == "waived")
-                            {
-                                <span class="text-info">Waived</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                @if (fine.FinesStatus?.ToLower() == "unpaid")
-                                {
-                                    <button class="btn btn-sm btn-success" onclick="markAsPaid(@fine.FineId)" title="Mark as Paid">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" onclick="waiveFine(@fine.FineId, '@student?.FullName', @fine.Amount)" title="Waive Fine">
-                                        <i class="bi bi-hand-thumbs-up"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" onclick="adjustFine(@fine.FineId, '@student?.FullName', @fine.Amount)" title="Adjust Amount">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                }
-                                <button class="btn btn-sm btn-danger" onclick="deleteFine(@fine.FineId, '@student?.FullName', @fine.Amount)" title="Delete Fine">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+
+                        <!-- ACTIONS DROPDOWN -->
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
+                                    @if (fine.FinesStatus?.ToLower() == "unpaid")
+                                    {
+                                        <li>
+                                            <a href="#" class="dropdown-item text-success" onclick="openMarkPaidModal(@fine.FineId)">
+                                                <i class="bi bi-check-circle me-2"></i> Mark as Paid
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" class="dropdown-item text-info" onclick="openWaiveModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
+                                                <i class="bi bi-hand-thumbs-up me-2"></i> Waive Fine
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" class="dropdown-item text-warning" onclick="openAdjustModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
+                                                <i class="bi bi-pencil me-2"></i> Adjust Amount
+                                            </a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a href="#" class="dropdown-item text-danger" onclick="openDeleteModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
+                                            <i class="bi bi-trash me-2"></i> Delete Fine
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </td>
                     </tr>
@@ -347,97 +345,149 @@
     </div>
 </div>
 
-<!-- MODALS -->
-
-<!-- Waive Fine Modal -->
-<div class="modal fade" id="waiveFineModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- ================= MODALS ================= -->
+<!-- Create Fine Modal -->
+<div class="modal fade" id="createFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content glass-modal">
-            <form asp-action="WaiveFine" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title text-gold"><i class="bi bi-exclamation-circle me-2"></i> Create Manual Fine</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateFine" method="post" id="createFineForm">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="fineId" id="waiveFineId" />
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-hand-thumbs-up me-2"></i> Waive Fine</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to waive this fine?</p>
-                    <div class="alert alert-info">
-                        <strong>Student:</strong> <span id="waiveStudentName"></span><br>
-                        <strong>Amount:</strong> ₱<span id="waiveFineAmount"></span>
+                    <!-- Fine Details Section -->
+                    <div class="fee-section">
+                        <div class="fee-section-header">
+                            <i class="bi bi-info-circle me-2"></i> Fine Details
+                        </div>
+
+                        <!-- Row 1: Reason + Amount -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Fine Reason / Event <span class="text-danger">*</span></label>
+                                <input type="text" name="FineReason" class="form-control" placeholder="e.g., Uniform Violation, Late Attendance" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Amount (₱) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" min="0.01" name="Amount" class="form-control" placeholder="0.00" required />
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Due Date -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" name="FinesDueDate" class="form-control" />
+                                <small class="text-muted">Leave blank for default (15 days)</small>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="waiveReason" class="form-label">Reason for Waiving (Optional)</label>
-                        <textarea class="form-control glass-input" name="reason" id="waiveReason" rows="3" placeholder="e.g., Legitimate excuse, Medical emergency, etc."></textarea>
+
+                    <!-- Apply To Students Section -->
+                    <div class="fee-section mt-4">
+                        <div class="fee-section-header">
+                            <i class="bi bi-people me-2"></i> Apply To Students
+                        </div>
+
+                        <!-- Program Filter -->
+                        <div class="mb-3">
+                            <label class="form-label">Program <span class="text-danger">*</span></label>
+                            <div class="filter-options" id="programFilter">
+                                <div class="filter-option">
+                                    <input type="radio" name="programFilter" id="programAll" value="all" checked>
+                                    <label for="programAll">
+                                        <i class="bi bi-grid-3x3-gap"></i>
+                                        <span>All Programs</span>
+                                        <small>BSIT & DIT</small>
+                                    </label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="radio" name="programFilter" id="programBSIT" value="bsit">
+                                    <label for="programBSIT">
+                                        <i class="bi bi-laptop"></i>
+                                        <span>BSIT Only</span>
+                                        <small>4-Year Program</small>
+                                    </label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="radio" name="programFilter" id="programDIT" value="dit">
+                                    <label for="programDIT">
+                                        <i class="bi bi-hdd-network"></i>
+                                        <span>DIT Only</span>
+                                        <small>3-Year Program</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Year Level Filter -->
+                        <div class="mb-3">
+                            <label class="form-label">Year Level <span class="text-danger">*</span></label>
+                            <div class="filter-options year-filter" id="yearFilter">
+                                <div class="filter-option">
+                                    <input type="radio" name="yearFilter" id="yearAll" value="all" checked>
+                                    <label for="yearAll">
+                                        <span>All Years</span>
+                                    </label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="radio" name="yearFilter" id="year1" value="1">
+                                    <label for="year1">
+                                        <span>1st Year</span>
+                                    </label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="radio" name="yearFilter" id="year2" value="2">
+                                    <label for="year2">
+                                        <span>2nd Year</span>
+                                    </label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="radio" name="yearFilter" id="year3" value="3">
+                                    <label for="year3">
+                                        <span>3rd Year</span>
+                                    </label>
+                                </div>
+                                <div class="filter-option" id="year4Option">
+                                    <input type="radio" name="yearFilter" id="year4" value="4">
+                                    <label for="year4">
+                                        <span>4th Year</span>
+                                        <small class="bsit-only-badge">BSIT only</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview Section -->
+                        <div class="fee-preview" id="feePreview">
+                            <div class="preview-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div class="preview-content">
+                                <div class="preview-title">This fine will be applied to:</div>
+                                <div class="preview-count">
+                                    <span id="previewTotal">0</span> students
+                                </div>
+                                <div class="preview-breakdown">
+                                    <span class="preview-bsit"><i class="bi bi-circle-fill"></i> BSIT: <span id="previewBSIT">0</span></span>
+                                    <span class="preview-dit"><i class="bi bi-circle-fill"></i> DIT: <span id="previewDIT">0</span></span>
+                                </div>
+                            </div>
+                            <div class="preview-loading" id="previewLoading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info"><i class="bi bi-check-lg me-1"></i> Waive Fine</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Adjust Fine Modal -->
-<div class="modal fade" id="adjustFineModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content glass-modal">
-            <form asp-action="AdjustFineAmount" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="fineId" id="adjustFineId" />
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i> Adjust Fine Amount</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong>Student:</strong> <span id="adjustStudentName"></span><br>
-                        <strong>Current Amount:</strong> ₱<span id="adjustCurrentAmount"></span>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newAmount" class="form-label">New Amount</label>
-                        <input type="number" class="form-control glass-input" name="newAmount" id="newAmount" step="0.01" min="0" required />
-                    </div>
-                    <div class="mb-3">
-                        <label for="adjustReason" class="form-label">Reason for Adjustment (Optional)</label>
-                        <textarea class="form-control glass-input" name="reason" id="adjustReason" rows="3" placeholder="e.g., Partial waiver, Correction, etc."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i> Adjust Amount</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Fine Modal -->
-<div class="modal fade" id="deleteFineModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content glass-modal">
-            <form asp-action="DeleteFine" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="fineId" id="deleteFineId" />
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-trash me-2"></i> Delete Fine</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i> This action cannot be undone!
-                    </div>
-                    <p>Are you sure you want to permanently delete this fine?</p>
-                    <div class="alert alert-info">
-                        <strong>Student:</strong> <span id="deleteStudentName"></span><br>
-                        <strong>Amount:</strong> ₱<span id="deleteFineAmount"></span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i> Delete Fine</button>
+                    <button type="submit" class="btn btn-gold" id="submitFineBtn">
+                        <i class="bi bi-check-lg me-1"></i> Create and Assign Fine
+                    </button>
                 </div>
             </form>
         </div>
@@ -445,26 +495,123 @@
 </div>
 
 <!-- Mark as Paid Modal -->
-<div class="modal fade" id="markPaidModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="markPaidModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content glass-modal">
             <form asp-action="MarkFineAsPaidAdmin" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="fineId" id="markPaidFineId" />
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i> Mark Fine as Paid</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title text-success"><i class="bi bi-check-circle me-2"></i> Mark Fine as Paid</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    <p class="mt-3">Are you sure you want to mark this fine as <strong>PAID</strong>?</p>
+                    <div class="alert alert-success d-inline-block">
+                        <strong>Fine ID:</strong> #<span id="markPaidFineIdDisplay"></span>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Confirm Paid</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Waive Fine Modal -->
+<div class="modal fade" id="waiveFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <form asp-action="WaiveFine" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="fineId" id="waiveFineId" />
+                <div class="modal-header">
+                    <h5 class="modal-title text-info"><i class="bi bi-hand-thumbs-up me-2"></i> Waive Fine</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Confirm that this fine has been paid.</p>
-                    <div class="alert alert-success">
-                        <strong>Fine ID:</strong> <span id="markPaidFineIdDisplay"></span><br>
-                        <strong>This will mark the fine as PAID.</strong>
+                    <div class="fee-section p-3 mb-3">
+                        <div class="row">
+                            <div class="col-6"><small class="text-muted">Student</small><div id="waiveStudentName" class="fw-bold"></div></div>
+                            <div class="col-6 text-end"><small class="text-muted">Amount</small><div class="text-gold fw-bold">₱<span id="waiveFineAmount"></span></div></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="waiveReason" class="form-label">Reason for Waiving <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="reason" id="waiveReason" rows="3" placeholder="e.g., Valid medical certificate submitted..." required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i> Mark as Paid</button>
+                    <button type="submit" class="btn btn-info text-white"><i class="bi bi-check-lg me-1"></i> Waive Fine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Adjust Fine Modal -->
+<div class="modal fade" id="adjustFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <form asp-action="AdjustFineAmount" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="fineId" id="adjustFineId" />
+                <div class="modal-header">
+                    <h5 class="modal-title text-warning"><i class="bi bi-pencil-square me-2"></i> Adjust Fine Amount</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="fee-section p-3 mb-3">
+                        <div class="row">
+                            <div class="col-6"><small class="text-muted">Student</small><div id="adjustStudentName" class="fw-bold"></div></div>
+                            <div class="col-6 text-end"><small class="text-muted">Current Amount</small><div class="text-gold fw-bold">₱<span id="adjustCurrentAmount"></span></div></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newAmount" class="form-label">New Amount (₱) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="newAmount" id="newAmount" step="0.01" min="0" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="adjustReason" class="form-label">Reason for Adjustment</label>
+                        <textarea class="form-control" name="reason" id="adjustReason" rows="2" placeholder="e.g., Correction of calculation..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i> Update Amount</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Fine Modal -->
+<div class="modal fade" id="deleteFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <form asp-action="DeleteFine" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="fineId" id="deleteFineId" />
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-trash me-2"></i> Delete Fine</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    <p class="mt-3 text-danger fw-bold">Warning: This action cannot be undone!</p>
+                    <p>You are about to delete the fine for:</p>
+                    <div class="fee-section p-3 d-inline-block text-start" style="min-width: 250px;">
+                        <div><strong>Student:</strong> <span id="deleteStudentName"></span></div>
+                        <div><strong>Amount:</strong> ₱<span id="deleteFineAmount"></span></div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash-fill me-1"></i> Delete Permanently</button>
                 </div>
             </form>
         </div>
@@ -476,10 +623,40 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <script>
+        // Data passed from Controller
         window.finesChartsData = {
-            paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown ?? new {})),
-            unpaid: @Html.Raw(Json.Serialize(ViewBag.UnpaidBreakdown ?? new {}))
+            paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown ?? new { })),
+            unpaid: @Html.Raw(Json.Serialize(ViewBag.UnpaidBreakdown ?? new { }))
         };
+
+        // Modal Helpers
+        function openMarkPaidModal(id) {
+            document.getElementById('markPaidFineId').value = id;
+            document.getElementById('markPaidFineIdDisplay').innerText = id;
+            new bootstrap.Modal(document.getElementById('markPaidModal')).show();
+        }
+
+        function openWaiveModal(id, name, amount) {
+            document.getElementById('waiveFineId').value = id;
+            document.getElementById('waiveStudentName').innerText = name;
+            document.getElementById('waiveFineAmount').innerText = amount.toFixed(2);
+            new bootstrap.Modal(document.getElementById('waiveFineModal')).show();
+        }
+
+        function openAdjustModal(id, name, amount) {
+            document.getElementById('adjustFineId').value = id;
+            document.getElementById('adjustStudentName').innerText = name;
+            document.getElementById('adjustCurrentAmount').innerText = amount.toFixed(2);
+            document.getElementById('newAmount').value = amount;
+            new bootstrap.Modal(document.getElementById('adjustFineModal')).show();
+        }
+
+        function openDeleteModal(id, name, amount) {
+            document.getElementById('deleteFineId').value = id;
+            document.getElementById('deleteStudentName').innerText = name;
+            document.getElementById('deleteFineAmount').innerText = amount.toFixed(2);
+            new bootstrap.Modal(document.getElementById('deleteFineModal')).show();
+        }
 
         // Export Function
         function exportFines() {

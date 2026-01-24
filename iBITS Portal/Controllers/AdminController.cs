@@ -2918,7 +2918,189 @@ namespace iBITS_Portal.Controllers
             return RedirectToAction(nameof(Fines));
         }
 
+        // =========================================================
+        // FINES MANAGEMENT PAGE (NEW SECTION)
+        // =========================================================
 
+        public async Task<IActionResult> Fines()
+        {
+            var allFines = await _context.Fines
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .OrderByDescending(f => f.FineId)
+                .ToListAsync();
+
+            // --- Calculate Summaries ---
+            var totalExpected = allFines.Sum(f => f.Amount ?? 0);
+            var totalCollected = allFines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+            ViewBag.CollectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+
+            // --- Prepare Chart Data ---
+            int ExtractYear(string? yls)
+            {
+                if (string.IsNullOrEmpty(yls)) return 0;
+                var match = System.Text.RegularExpressions.Regex.Match(yls, @"\d");
+                return match.Success ? int.Parse(match.Value) : 0;
+            }
+            bool IsBSIT(string? course) => course != null && course.ToUpper().Contains("BSIT");
+            bool IsDIT(string? course) => course != null && course.ToUpper().Contains("DIT");
+            decimal SumFines(Func<Fine, bool> criteria) => allFines.Where(criteria).Sum(f => f.Amount ?? 0);
+
+            ViewBag.PaidBreakdown = new Dictionary<string, decimal>
+    {
+        { "BSIT1", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
+        { "BSIT2", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
+        { "BSIT3", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) },
+        { "BSIT4", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 4) },
+        { "DIT1", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
+        { "DIT2", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
+        { "DIT3", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) }
+    };
+
+            ViewBag.UnpaidBreakdown = new Dictionary<string, decimal>
+    {
+        { "BSIT1", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
+        { "BSIT2", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
+        { "BSIT3", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) },
+        { "BSIT4", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 4) },
+        { "DIT1", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
+        { "DIT2", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
+        { "DIT3", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) }
+    };
+
+            // For Filter Dropdown
+            ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
+
+            return View(allFines);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkFineAsPaidAdmin(int fineId)
+        {
+            var fine = await _context.Fines.FindAsync(fineId);
+            if (fine == null)
+            {
+                TempData["Error"] = "Fine not found.";
+                return RedirectToAction(nameof(Fines));
+            }
+
+            fine.FinesStatus = "Paid";
+            await _context.SaveChangesAsync();
+            await LogAction("Mark Fine Paid", $"Marked fine ID {fineId} as Paid.");
+            TempData["Message"] = "Fine has been marked as Paid.";
+
+            return RedirectToAction(nameof(Fines));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> WaiveFine(int fineId, string reason)
+        {
+            var fine = await _context.Fines.FindAsync(fineId);
+            if (fine == null)
+            {
+                TempData["Error"] = "Fine not found.";
+                return RedirectToAction(nameof(Fines));
+            }
+
+            fine.FinesStatus = "Waived";
+            await _context.SaveChangesAsync();
+            await LogAction("Waive Fine", $"Waived fine ID {fineId}. Reason: {reason}");
+            TempData["Message"] = "Fine has been waived.";
+
+            return RedirectToAction(nameof(Fines));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AdjustFineAmount(int fineId, decimal newAmount, string reason)
+        {
+            var fine = await _context.Fines.FindAsync(fineId);
+            if (fine == null)
+            {
+                TempData["Error"] = "Fine not found.";
+                return RedirectToAction(nameof(Fines));
+            }
+
+            fine.Amount = newAmount;
+            await _context.SaveChangesAsync();
+            await LogAction("Adjust Fine", $"Adjusted fine ID {fineId} to {newAmount:C}. Reason: {reason}");
+            TempData["Message"] = "Fine amount has been adjusted.";
+
+            return RedirectToAction(nameof(Fines));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFine(int fineId)
+        {
+            var fine = await _context.Fines.FindAsync(fineId);
+            if (fine == null)
+            {
+                TempData["Error"] = "Fine not found.";
+                return RedirectToAction(nameof(Fines));
+            }
+
+            _context.Fines.Remove(fine);
+            await _context.SaveChangesAsync();
+            await LogAction("Delete Fine", $"Permanently deleted fine ID {fineId}.");
+            TempData["Warning"] = "Fine has been permanently deleted.";
+
+            return RedirectToAction(nameof(Fines));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportFinesToExcel()
+        {
+            var allFines = await _context.Fines
+                .Include(f => f.Attendance.StudentNumNavigation)
+                .Include(f => f.Attendance.Event)
+                .OrderBy(f => f.FineId)
+                .ToListAsync();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Fines");
+                var currentRow = 1;
+
+                // Headers
+                worksheet.Cell(currentRow, 1).Value = "Fine ID";
+                worksheet.Cell(currentRow, 2).Value = "Student ID";
+                worksheet.Cell(currentRow, 3).Value = "Student Name";
+                worksheet.Cell(currentRow, 4).Value = "Event";
+                worksheet.Cell(currentRow, 5).Value = "Event Date";
+                worksheet.Cell(currentRow, 6).Value = "Amount";
+                worksheet.Cell(currentRow, 7).Value = "Status";
+                worksheet.Cell(currentRow, 8).Value = "Due Date";
+                worksheet.Row(currentRow).Style.Font.Bold = true;
+
+                // Body
+                foreach (var fine in allFines)
+                {
+                    currentRow++;
+                    worksheet.Cell(currentRow, 1).Value = fine.FineId;
+                    worksheet.Cell(currentRow, 2).Value = fine.Attendance?.StudentNumNavigation?.StudentNum;
+                    worksheet.Cell(currentRow, 3).Value = fine.Attendance?.StudentNumNavigation?.FullName;
+                    worksheet.Cell(currentRow, 4).Value = fine.Attendance?.Event?.EventName;
+                    worksheet.Cell(currentRow, 5).Value = fine.Attendance?.Event?.EventDate?.ToString("yyyy-MM-dd");
+                    worksheet.Cell(currentRow, 6).Value = fine.Amount;
+                    worksheet.Cell(currentRow, 7).Value = fine.FinesStatus;
+                    worksheet.Cell(currentRow, 8).Value = fine.FinesDueDate?.ToString("yyyy-MM-dd");
+                }
+
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fines_Export_{DateTime.Now:yyyyMMdd}.xlsx");
+                }
+            }
+        }
 
         // =========================================================
         // CREATE FEE - Apply to students by Program and Year Level
