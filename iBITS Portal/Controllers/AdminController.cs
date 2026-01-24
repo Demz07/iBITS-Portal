@@ -2473,15 +2473,15 @@ namespace iBITS_Portal.Controllers
                 foreach (var student in activeStudents)
                 {
                     var attendance = existingAttendance.FirstOrDefault(a => a.StudentNum == student.StudentNum);
-                    
+
                     // If no attendance record exists, create one as "Absent"
                     if (attendance == null)
                     {
-                        attendance = new Attendance 
-                        { 
-                            StudentNum = student.StudentNum, 
-                            EventId = eventId, 
-                            AttendanceStatus = "Absent" 
+                        attendance = new Attendance
+                        {
+                            StudentNum = student.StudentNum,
+                            EventId = eventId,
+                            AttendanceStatus = "Absent"
                         };
                         _context.Attendances.Add(attendance);
                         await _context.SaveChangesAsync(); // Save to get AttendanceId
@@ -2496,7 +2496,7 @@ namespace iBITS_Portal.Controllers
                     }
                 }
 
-                await LogAction("Close Event", 
+                await LogAction("Close Event",
                     $"Closed event '{eventToClose.EventName}'. Created {attendanceCreated} absence records. " +
                     $"Issued {finesGenerated} fines.");
 
@@ -2516,7 +2516,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // FINE MANAGEMENT - ENHANCED AUTO-GENERATION
         // =========================================================
-        
+
         /// <summary>
         /// Generates a fine for an attendance record if the student is absent or excused.
         /// </summary>
@@ -2565,7 +2565,7 @@ namespace iBITS_Portal.Controllers
                 _context.Fines.Add(fine);
                 await _context.SaveChangesAsync();
 
-                await LogAction("Generate Fine", 
+                await LogAction("Generate Fine",
                     $"Fine of ₱{fineAmount} created for {attendance.StudentNumNavigation?.FullName} " +
                     $"(Event: {attendance.Event?.EventName}, Status: {attendance.AttendanceStatus})");
 
@@ -2660,7 +2660,7 @@ namespace iBITS_Portal.Controllers
                 _context.Update(attendance);
                 await _context.SaveChangesAsync();
 
-                await LogAction("Update Attendance", 
+                await LogAction("Update Attendance",
                     $"Changed attendance for {attendance.StudentNumNavigation?.FullName} " +
                     $"at '{attendance.Event?.EventName}' from '{oldStatus}' to '{newStatus}'");
 
@@ -2673,7 +2673,7 @@ namespace iBITS_Portal.Controllers
                 {
                     var existingFine = await _context.Fines
                         .FirstOrDefaultAsync(f => f.AttendanceId == attendanceId && f.FinesStatus == "Unpaid");
-                    
+
                     if (existingFine != null)
                     {
                         _context.Fines.Remove(existingFine);
@@ -2706,7 +2706,7 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "Event not found." });
 
                 var absentAttendances = await _context.Attendances
-                    .Where(a => a.EventId == eventId && 
+                    .Where(a => a.EventId == eventId &&
                                (a.AttendanceStatus == "Absent" || a.AttendanceStatus == "Excused"))
                     .ToListAsync();
 
@@ -2827,40 +2827,23 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // PAYMENTS PAGE
-        // =========================================================
-        // =========================================================
-        // PAYMENTS PAGE (Updated to include Fines)
+        // PAYMENTS PAGE (FEES ONLY)
         // =========================================================
         public async Task<IActionResult> Payments()
         {
-            // 1. Fetch Fees
+            // Fetch Fees only (Fines moved to separate page)
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
                 .OrderBy(f => f.FeeStatus)
                 .ThenByDescending(f => f.FeesDueDate)
                 .ToListAsync();
 
-            // 2. Fetch Fines
-            var fines = await _context.Fines
-                .Include(f => f.Attendance).ThenInclude(a => a.StudentNumNavigation)
-                .Include(f => f.Attendance).ThenInclude(a => a.Event)
-                .OrderBy(f => f.FinesStatus)
-                .ThenByDescending(f => f.FinesDueDate)
-                .ToListAsync();
-
-            // 3. Calculate COMBINED Summary Statistics
+            // Calculate Summary Statistics (FEES ONLY)
             decimal feesCollected = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID" || f.FeeStatus?.ToUpper() == "COMPLETED").Sum(f => f.Amount ?? 0);
-            decimal finesCollected = fines.Where(f => f.FinesStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
-
             decimal feesExpected = fees.Sum(f => f.Amount ?? 0);
-            decimal finesExpected = fines.Sum(f => f.Amount ?? 0);
 
-            ViewBag.TotalCollections = feesCollected + finesCollected;
-            ViewBag.TotalExpected = feesExpected + finesExpected;
-
-            // 4. Pass Lists to View
-            ViewBag.Fines = fines; // Pass the list of fines
+            ViewBag.TotalCollections = feesCollected;
+            ViewBag.TotalExpected = feesExpected;
 
             // 5. Populate Fee Name Dropdown
             ViewBag.FeeNames = await _context.Fees
@@ -2932,7 +2915,7 @@ namespace iBITS_Portal.Controllers
             await LogAction("Update Fine Status", $"Updated fine ID {fineId} status to {status}");
             TempData["Message"] = "Fine status updated successfully.";
 
-            return RedirectToAction(nameof(Payments));
+            return RedirectToAction(nameof(Fines));
         }
 
 

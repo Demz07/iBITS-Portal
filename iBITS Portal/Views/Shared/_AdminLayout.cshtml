@@ -134,6 +134,13 @@
                     </a>
                 </li>
 
+                <!-- Fines Link -->
+                <li class="@(action == "Fines" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Fines">
+                        <i class="bi bi-exclamation-triangle"></i> Fines
+                    </a>
+                </li>
+
                 <!-- Year-End Archiving Link -->
                 <!-- Archive Link (Renamed from Year-End Archiving) -->
                 <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Archive" ? "active" : "")">
