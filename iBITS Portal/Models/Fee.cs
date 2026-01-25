@@ -1,4 +1,4 @@
-﻿// C:\Users\Dave\OneDrive\Desktop\needs to be update\Heres the code you will need to update\Fee.cs
+﻿// C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\Fee.cs
 // Models/Fee.cs
 
 using System;
@@ -22,8 +22,14 @@ public partial class Fee
 
     public string? FeeStatus { get; set; }
 
-    // NEW: Academic Year field
+    // Academic Year field
     public string? AcadYear { get; set; }
+
+    // NEW: BatchId for grouping manually created fees
+    public string? BatchId { get; set; }
+
+    // NEW: DateCreated for tracking when the fee was created
+    public DateTime? DateCreated { get; set; }
 
     public string StudentNum { get; set; } = null!;
 

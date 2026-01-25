@@ -1,9 +1,9 @@
-﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\ManualFineBatches.cshtml *@
-@* File Path: Views/Admin/ManualFineBatches.cshtml *@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\ManualPaymentBatches.cshtml *@
+@* File Path: Views/Admin/ManualPaymentBatches.cshtml *@
 
-@model IEnumerable<iBITS_Portal.Controllers.ManualFineBatchViewModel>
+@model IEnumerable<iBITS_Portal.Controllers.ManualPaymentBatchViewModel>
 @{
-    ViewData["Title"] = "Manual Fine Batches";
+    ViewData["Title"] = "Manual Payment Batches";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
@@ -12,12 +12,12 @@
 <!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
-        <h3 style="color: var(--text-strong); font-weight: 700; margin:0;"><i class="bi bi-journal-album me-2"></i> Manual Fine Batches</h3>
-        <p class="text-muted small mb-0">Manage the batches of manual fines you have created.</p>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin:0;"><i class="bi bi-journal-album me-2"></i> Manual Payment Batches</h3>
+        <p class="text-muted small mb-0">Manage the batches of manual payments you have created.</p>
     </div>
     <div>
-        <a asp-action="Fines" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Back to Fines
+        <a asp-action="Payments" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Payments
         </a>
     </div>
 </div>
@@ -38,13 +38,13 @@
     <strong>Tip:</strong> Double-click on any batch row to view the list of students associated with that batch.
 </div>
 
-<!-- MANUAL FINE BATCHES TABLE -->
+<!-- MANUAL PAYMENT BATCHES TABLE -->
 <div class="glass-panel p-4">
     <div class="table-responsive">
         <table class="table table-glass">
             <thead>
                 <tr>
-                    <th>REASON / DESCRIPTION</th>
+                    <th>DESCRIPTION / FEE NAME</th>
                     <th>DEFAULT AMOUNT</th>
                     <th>DATE CREATED</th>
                     <th>STUDENTS AFFECTED</th>
@@ -55,21 +55,21 @@
                 @if (!Model.Any())
                 {
                     <tr>
-                        <td colspan="5" class="text-center text-muted p-4">No manual fine batches have been created yet.</td>
+                        <td colspan="5" class="text-center text-muted p-4">No manual payment batches have been created yet.</td>
                     </tr>
                 }
                 @foreach (var batch in Model)
                 {
-                    <tr style="cursor: pointer;"
-                        ondblclick="viewStudentsInBatch('@batch.BatchId', '@batch.Reason')"
+                    <tr style="cursor: pointer;" 
+                        ondblclick="viewStudentsInBatch('@batch.BatchId', '@batch.Description')"
                         title="Double-click to view students">
-                        <td><span class="text-gold fw-bold">@batch.Reason</span></td>
+                        <td><span class="text-gold fw-bold">@batch.Description</span></td>
                         <td style="color: var(--gold-primary);">₱@batch.Amount.ToString("N2")</td>
-                        <td class="text-muted">@batch.DateCreated?.ToString("MMM dd, yyyy")</td>
+                        <td class="text-muted">@batch.DateCreated?.ToString("MMM dd, yyyy hh:mm tt")</td>
                         <td>@batch.StudentCount student(s)</td>
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-danger"
-                                    onclick="event.stopPropagation(); openSecureDeleteModal('@batch.BatchId', '@batch.Reason', @batch.StudentCount)">
+                                    onclick="event.stopPropagation(); openSecureDeleteModal('@batch.BatchId', '@batch.Description', @batch.StudentCount)">
                                 <i class="bi bi-trash me-1"></i> Delete Batch
                             </button>
                         </td>
@@ -84,17 +84,17 @@
 <div class="modal fade" id="secureDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content glass-modal">
-            <form asp-action="DeleteFineBatch" method="post">
+            <form asp-action="DeletePaymentBatch" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="batchId" id="deleteBatchId" />
                 <div class="modal-header">
-                    <h5 class="modal-title text-danger"><i class="bi bi-trash me-2"></i> Delete Fine Batch</h5>
+                    <h5 class="modal-title text-danger"><i class="bi bi-trash me-2"></i> Delete Payment Batch</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-danger fw-bold">Warning: This will permanently delete ALL fines associated with this batch. This action cannot be undone.</p>
+                    <p class="text-danger fw-bold">Warning: This will permanently delete ALL payments associated with this batch. This action cannot be undone.</p>
                     <div class="fee-section p-3 mb-3">
-                        <div><strong>Reason:</strong> <span id="deleteBatchReason"></span></div>
+                        <div><strong>Description:</strong> <span id="deleteBatchDescription"></span></div>
                         <div><strong>Students Affected:</strong> <span id="deleteBatchCount"></span></div>
                     </div>
                     <div class="mb-3">
@@ -117,7 +117,7 @@
         <div class="modal-content glass-modal">
             <div class="modal-header">
                 <h5 class="modal-title text-gold">
-                    <i class="bi bi-people me-2"></i> Students in Batch: <span id="batchReasonTitle"></span>
+                    <i class="bi bi-people me-2"></i> Students in Batch: <span id="batchDescriptionTitle"></span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -158,16 +158,16 @@
 @section Scripts {
     <script>
         // Open secure delete modal
-        function openSecureDeleteModal(batchId, reason, count) {
+        function openSecureDeleteModal(batchId, description, count) {
             document.getElementById('deleteBatchId').value = batchId;
-            document.getElementById('deleteBatchReason').innerText = reason;
+            document.getElementById('deleteBatchDescription').innerText = description;
             document.getElementById('deleteBatchCount').innerText = count;
             new bootstrap.Modal(document.getElementById('secureDeleteModal')).show();
         }
 
         // View students in batch (double-click)
-        function viewStudentsInBatch(batchId, reason) {
-            document.getElementById('batchReasonTitle').innerText = reason;
+        function viewStudentsInBatch(batchId, description) {
+            document.getElementById('batchDescriptionTitle').innerText = description;
             document.getElementById('studentsLoadingSpinner').style.display = 'block';
             document.getElementById('studentsTableContainer').style.display = 'none';
 
@@ -175,7 +175,7 @@
             modal.show();
 
             // Fetch students via AJAX
-            fetch(`/Admin/GetStudentsInFineBatch?batchId=${encodeURIComponent(batchId)}`)
+            fetch(`/Admin/GetStudentsInPaymentBatch?batchId=${encodeURIComponent(batchId)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.students) {
@@ -186,10 +186,9 @@
                             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No students found in this batch.</td></tr>';
                         } else {
                             data.students.forEach(student => {
-                                const statusClass = student.status?.toLowerCase() === 'paid' ? 'success' :
-                                                   student.status?.toLowerCase() === 'waived' ? 'secondary' : 'warning';
-                                const statusText = student.status || 'Unpaid';
-
+                                const statusClass = student.status?.toLowerCase() === 'paid' || student.status?.toLowerCase() === 'completed' ? 'success' : 'warning';
+                                const statusText = student.status || 'Pending';
+                                
                                 const row = `
                                     <tr>
                                         <td>${student.studentNum || 'N/A'}</td>

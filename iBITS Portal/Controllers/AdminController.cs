@@ -2705,8 +2705,8 @@ namespace iBITS_Portal.Controllers
                 })
                 .ToListAsync();
 
-            // Process the aggregated results in memory
-            var paidBreakdown = new Dictionary<string, decimal>();
+            // Process the aggregated results in memory - Group by Program + Year (matching Fines)
+            var collectedBreakdown = new Dictionary<string, decimal>();
             var pendingBreakdown = new Dictionary<string, decimal>();
 
             foreach (var stat in paymentStats)
@@ -2714,14 +2714,15 @@ namespace iBITS_Portal.Controllers
                 string program = stat.Course.ToUpper().Contains("BSIT") ? "BSIT" :
                                  stat.Course.ToUpper().Contains("DIT") ? "DIT" : "Other";
                 int year = StringHelper.ExtractYearLevel(stat.YearLevelSection);
-                string key = $"{program}{year}";
 
                 if (year > 0)
                 {
+                    string key = $"{program}{year}"; // Program + Year: "BSIT1", "DIT2", etc.
+
                     if (stat.IsPaid)
                     {
-                        if (!paidBreakdown.ContainsKey(key)) paidBreakdown[key] = 0;
-                        paidBreakdown[key] += stat.TotalAmount;
+                        if (!collectedBreakdown.ContainsKey(key)) collectedBreakdown[key] = 0;
+                        collectedBreakdown[key] += stat.TotalAmount;
                     }
                     else
                     {
@@ -2731,7 +2732,7 @@ namespace iBITS_Portal.Controllers
                 }
             }
 
-            ViewBag.PaidBreakdown = paidBreakdown;
+            ViewBag.CollectedBreakdown = collectedBreakdown;
             ViewBag.PendingBreakdown = pendingBreakdown;
             ViewBag.TotalCollections = paymentStats.Where(s => s.IsPaid).Sum(s => s.TotalAmount);
             ViewBag.TotalExpected = paymentStats.Sum(s => s.TotalAmount);
@@ -3188,6 +3189,124 @@ namespace iBITS_Portal.Controllers
             return await PreviewFeeStudentCount(programFilter, yearFilter);
         }
 
+        // =========================================================
+        // NEW: GET STUDENTS IN FINE BATCH (AJAX for double-click)
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> GetStudentsInFineBatch(string batchId)
+        {
+            var students = await _context.Fines
+                .Where(f => f.BatchId == batchId)
+                .Include(f => f.Student)
+                .Select(f => new
+                {
+                    studentNum = f.StudentNum,
+                    fullName = f.Student.FullName,
+                    program = f.Student.Course,
+                    yearLevel = f.Student.YearLevelSection,
+                    amount = f.Amount,
+                    status = f.FinesStatus
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, students });
+        }
+
+        // =========================================================
+        // NEW: VIEW AND MANAGE MANUAL PAYMENT BATCHES
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> ManualPaymentBatches()
+        {
+            // Fetch only fees that have a BatchId (manual batch fees)
+            var manualFees = await _context.Fees
+                .Where(f => f.BatchId != null)
+                .Include(f => f.StudentNumNavigation)
+                .ToListAsync();
+
+            // Group the fees by their BatchId to create a summary view
+            var paymentBatches = manualFees
+                .GroupBy(f => f.BatchId)
+                .Select(g => new ManualPaymentBatchViewModel
+                {
+                    BatchId = g.Key,
+                    Description = g.First().FeeName,
+                    Amount = g.First().Amount ?? 0,
+                    DateCreated = g.First().DateCreated,
+                    StudentCount = g.Count()
+                })
+                .OrderByDescending(b => b.DateCreated)
+                .ToList();
+
+            return View(paymentBatches);
+        }
+
+        // =========================================================
+        // NEW: SECURELY DELETE AN ENTIRE PAYMENT BATCH
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePaymentBatch(string batchId, string adminPassword)
+        {
+            var adminUser = await _userManager.GetUserAsync(User);
+            if (string.IsNullOrEmpty(adminPassword) || !await _userManager.CheckPasswordAsync(adminUser, adminPassword))
+            {
+                TempData["Error"] = "Invalid password. Deletion cancelled.";
+                return RedirectToAction("ManualPaymentBatches");
+            }
+
+            if (string.IsNullOrEmpty(batchId))
+            {
+                TempData["Error"] = "Batch ID was not provided.";
+                return RedirectToAction("ManualPaymentBatches");
+            }
+
+            // Find all fees associated with this batch
+            var feesToDelete = await _context.Fees
+                .Where(f => f.BatchId == batchId)
+                .ToListAsync();
+
+            if (!feesToDelete.Any())
+            {
+                TempData["Warning"] = "This batch may have already been deleted.";
+                return RedirectToAction("ManualPaymentBatches");
+            }
+
+            var description = feesToDelete.First().FeeName;
+            var count = feesToDelete.Count;
+
+            _context.Fees.RemoveRange(feesToDelete);
+            await _context.SaveChangesAsync();
+
+            await LogAction("Delete Payment Batch", $"Deleted manual payment batch '{description}' ({batchId}), affecting {count} records.");
+            TempData["Message"] = $"Successfully deleted the entire '{description}' payment batch ({count} records).";
+
+            return RedirectToAction("ManualPaymentBatches");
+        }
+
+        // =========================================================
+        // NEW: GET STUDENTS IN PAYMENT BATCH (AJAX for double-click)
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> GetStudentsInPaymentBatch(string batchId)
+        {
+            var students = await _context.Fees
+                .Where(f => f.BatchId == batchId)
+                .Include(f => f.StudentNumNavigation)
+                .Select(f => new
+                {
+                    studentNum = f.StudentNum,
+                    fullName = f.StudentNumNavigation.FullName,
+                    program = f.StudentNumNavigation.Course,
+                    yearLevel = f.StudentNumNavigation.YearLevelSection,
+                    amount = f.Amount,
+                    status = f.FeeStatus
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, students });
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> ExportFinesToExcel()
@@ -3257,6 +3376,9 @@ namespace iBITS_Portal.Controllers
                     return RedirectToAction("Payments");
                 }
 
+                // Generate unique BatchId for this batch of fees
+                string batchId = $"FEE-{DateTime.Now:yyyyMMddHHmmss}";
+
                 // Create fee records for each matching student
                 var feesCreated = 0;
                 foreach (var student in students)
@@ -3268,8 +3390,10 @@ namespace iBITS_Portal.Controllers
                         FeesStartDate = DateOnly.FromDateTime(DateTime.Now),
                         FeesDueDate = FeesDueDate,
                         FeeStatus = "Pending",
-                        AcadYear = AcadYear, // NEW: Added Academic Year
-                        StudentNum = student.StudentNum
+                        AcadYear = AcadYear,
+                        StudentNum = student.StudentNum,
+                        BatchId = batchId,  // NEW: Assign BatchId
+                        DateCreated = DateTime.Now  // NEW: Set DateCreated
                     };
                     _context.Fees.Add(fee);
                     feesCreated++;
@@ -3294,7 +3418,7 @@ namespace iBITS_Portal.Controllers
                 };
 
                 TempData["Message"] = $"Fee '{FeeName}' (₱{Amount:N2}) for {AcadYear} successfully assigned to {feesCreated} students ({programDesc} - {yearDesc}).";
-                _logger.LogInformation($"Fee created: {FeeName}, Amount: {Amount}, AcadYear: {AcadYear}, Applied to: {feesCreated} students ({programDesc} - {yearDesc})");
+                _logger.LogInformation($"Fee batch created: {FeeName}, BatchId: {batchId}, Amount: {Amount}, AcadYear: {AcadYear}, Applied to: {feesCreated} students ({programDesc} - {yearDesc})");
             }
             catch (Exception ex)
             {
@@ -4149,6 +4273,15 @@ namespace iBITS_Portal.Controllers
         public string Reason { get; set; }
         public decimal Amount { get; set; }
         public DateOnly? DateCreated { get; set; }
+        public int StudentCount { get; set; }
+    }
+
+    public class ManualPaymentBatchViewModel
+    {
+        public string BatchId { get; set; }
+        public string Description { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime? DateCreated { get; set; }
         public int StudentCount { get; set; }
     }
 }

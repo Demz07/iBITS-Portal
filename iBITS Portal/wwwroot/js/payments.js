@@ -5,6 +5,75 @@
    ============================================================ */
 
 document.addEventListener('DOMContentLoaded', function () {
+
+    // =========================================================
+    // CHART INITIALIZATION (EXACT MATCH TO FINES)
+    // =========================================================
+    const createDoughnutChart = (canvasId, noDataId, data, label) => {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        const chartData = window.paymentsChartsData[data];
+        const labels = Object.keys(chartData);
+        const values = Object.values(chartData);
+        const total = values.reduce((acc, val) => acc + val, 0);
+
+        const noDataEl = document.getElementById(noDataId);
+
+        // Show "No Data" state if no values
+        if (total === 0) {
+            if (noDataEl) noDataEl.style.display = 'flex';
+            if (ctx) ctx.style.display = 'none';
+            return;
+        } else {
+            if (noDataEl) noDataEl.style.display = 'none';
+            if (ctx) ctx.style.display = 'block';
+        }
+
+        // Create the chart - SAME colors as Fines for consistency
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: values,
+                    backgroundColor: ['#3b82f6', '#10b981', '#ef4444', '#f97316', '#8b5cf6', '#14b8a6', '#ec4899'],
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom', // Legend at bottom like Fines
+                        labels: {
+                            color: '#94a3b8',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.label}: ₱${context.raw.toFixed(2)}`
+                        }
+                    }
+                },
+                cutout: '70%' // Creates donut hole
+            }
+        });
+    };
+
+    // Initialize charts
+    if (window.paymentsChartsData) {
+        createDoughnutChart('paymentsBreakdownChart', 'paymentsNoData', 'collected', 'Collected Payments');
+        createDoughnutChart('pendingBreakdownChart', 'pendingNoData', 'pending', 'Pending Payments');
+    }
+
+    // =========================================================
+    // REST OF PAYMENTS.JS CODE
+    // =========================================================
     console.log("💰 Payments & Fees Manager Initialized");
 
     // =========================================================

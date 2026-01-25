@@ -44,13 +44,18 @@
     </style>
 }
 
-<link rel="stylesheet" href="~/css/payments.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
 
 <!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin:0;"><i class="bi bi-cash-stack me-2"></i> Payments & Fees</h3>
         <p class="text-muted small mb-0">Track student payments, fees, and financial records.</p>
+    </div>
+    <div>
+        <a asp-action="ManualPaymentBatches" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-journal-album me-1"></i> Manage Payment Batches
+        </a>
     </div>
 </div>
 
@@ -146,7 +151,7 @@
         <!-- Collected Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Collected by Year Level</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Collected by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <!-- Canvas for Chart -->
                     <canvas id="paymentsBreakdownChart"></canvas>
@@ -162,7 +167,7 @@
         <!-- Pending Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Pending by Year Level</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Pending by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <!-- Canvas for Chart -->
                     <canvas id="pendingBreakdownChart"></canvas>
@@ -543,9 +548,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <script>
-        window.paymentChartsData = {
-            paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown)),
-            pending: @Html.Raw(Json.Serialize(ViewBag.PendingBreakdown))
+        // Pass chart data from server to JavaScript
+        window.paymentsChartsData = {
+            collected: @Html.Raw(Json.Serialize(ViewBag.CollectedBreakdown ?? new Dictionary<string, decimal>())),
+            pending: @Html.Raw(Json.Serialize(ViewBag.PendingBreakdown ?? new Dictionary<string, decimal>()))
         };
 
         // Export Function
