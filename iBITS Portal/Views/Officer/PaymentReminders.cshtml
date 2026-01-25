@@ -1,0 +1,160 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\PaymentReminders.cshtml *@
+@* FILE PATH: Views/Officer/PaymentReminders.cshtml *@
+@{
+    ViewData["Title"] = "Payment Reminders";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+@section Styles {
+<style>
+    .reminder-template {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .reminder-template:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: var(--gold-primary);
+        transform: translateX(5px);
+    }
+</style>
+}
+
+<!-- TempData Messages -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title">
+            <i class="bi bi-megaphone-fill me-2 text-warning"></i> Post Payment Reminder
+        </h4>
+        <p class="mb-0 small text-muted">Send reminders to students about pending fees and fines</p>
+    </div>
+    <a href="@Url.Action("OrgTreasurerDashboard", "Officer")" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <!-- REMINDER FORM -->
+    <div class="col-md-8">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-4">
+                <i class="bi bi-pencil-square me-2 text-gold"></i> Create Payment Reminder
+            </h5>
+
+            <form asp-action="PostPaymentReminder" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label for="targetAudience" class="form-label">Target Audience <span class="text-danger">*</span></label>
+                    <select class="form-select" id="targetAudience" name="targetAudience" required>
+                        <option value="All Students">All Students</option>
+                        <option value="1st Year">1st Year Students</option>
+                        <option value="2nd Year">2nd Year Students</option>
+                        <option value="3rd Year">3rd Year Students</option>
+                        <option value="4th Year">4th Year Students</option>
+                        <option value="BSIT">BSIT Program</option>
+                        <option value="BSCS">BSCS Program</option>
+                    </select>
+                    <small class="form-text text-muted">Select who should see this reminder</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="content" class="form-label">Reminder Message <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="content" name="content" rows="6" required 
+                              placeholder="Enter your payment reminder message..."></textarea>
+                    <small class="form-text text-muted">This will appear on student dashboards as a payment reminder</small>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                        <i class="bi bi-x-circle me-1"></i> Clear
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-send-fill me-1"></i> Post Reminder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REMINDER TEMPLATES -->
+    <div class="col-md-4">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-clipboard-check me-2 text-gold"></i> Quick Templates
+            </h5>
+            <p class="small text-muted mb-3">Click to use a template</p>
+
+            <div class="reminder-template" onclick="useTemplate('general')">
+                <h6 class="text-warning mb-1"><i class="bi bi-bell me-1"></i> General Reminder</h6>
+                <small class="text-muted">Friendly payment reminder</small>
+            </div>
+
+            <div class="reminder-template" onclick="useTemplate('urgent')">
+                <h6 class="text-danger mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Urgent Notice</h6>
+                <small class="text-muted">For approaching deadlines</small>
+            </div>
+
+            <div class="reminder-template" onclick="useTemplate('final')">
+                <h6 class="text-danger mb-1"><i class="bi bi-hourglass-split me-1"></i> Final Notice</h6>
+                <small class="text-muted">Last call before deadline</small>
+            </div>
+
+            <div class="reminder-template" onclick="useTemplate('thankyou')">
+                <h6 class="text-success mb-1"><i class="bi bi-hand-thumbs-up me-1"></i> Thank You</h6>
+                <small class="text-muted">Acknowledge payments</small>
+            </div>
+
+            <div class="reminder-template" onclick="useTemplate('newFee')">
+                <h6 class="text-info mb-1"><i class="bi bi-receipt me-1"></i> New Fee Posted</h6>
+                <small class="text-muted">Announce new fees</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const templates = {
+        general: "📢 Payment Reminder\n\nHello iBITS Members! 👋\n\nThis is a friendly reminder to settle any pending fees and fines. Please check your Financials page to view your current balance.\n\nPayment can be processed through your class treasurer during office hours.\n\nThank you for your cooperation! 🙏",
+        
+        urgent: "⚠️ URGENT: Payment Deadline Approaching\n\nDear iBITS Members,\n\nThe payment deadline is fast approaching! Please settle your pending fees and fines as soon as possible to avoid any inconvenience.\n\nDeadline: [SPECIFY DATE]\n\nCheck your Financials page now and contact your class treasurer for payment processing.\n\nYour prompt action is greatly appreciated.",
+        
+        final: "🚨 FINAL NOTICE: Payment Deadline\n\nAttention All Members,\n\nThis is a FINAL REMINDER that the payment deadline is [SPECIFY DATE]. Any unpaid fees and fines after this date may result in:\n- Late payment fees\n- Restrictions on event participation\n- Other penalties as per organization policy\n\nPlease settle your balance immediately through your class treasurer.\n\nThank you for your immediate attention to this matter.",
+        
+        thankyou: "✅ Thank You for Your Payment!\n\nDear iBITS Members,\n\nWe sincerely appreciate those who have already settled their fees and fines. Your prompt payment helps support our organization's activities and programs.\n\nFor those with remaining balances, please check your Financials page and process payment at your earliest convenience.\n\nThank you for your continued support! 💙",
+        
+        newFee: "📋 New Fee Posted\n\nHello iBITS Members!\n\nA new fee has been posted to your account:\n\nFee Name: [SPECIFY FEE NAME]\nAmount: ₱[AMOUNT]\nDue Date: [DATE]\n\nPlease check your Financials page for complete details. Payment can be made through your class treasurer.\n\nThank you!"
+    };
+
+    function useTemplate(type) {
+        document.getElementById('content').value = templates[type];
+    }
+
+    function clearForm() {
+        document.getElementById('content').value = '';
+        document.getElementById('targetAudience').selectedIndex = 0;
+    }
+</script>
+}

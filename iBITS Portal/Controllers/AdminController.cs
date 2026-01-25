@@ -1514,7 +1514,7 @@ namespace iBITS_Portal.Controllers
 
             // UPDATED: Include Student for Manual Fines
             var fines = await _context.Fines
-                .Include(f => f.Student) // Manual Fines
+                .Include(f => f.StudentNumNavigation) // Manual Fines
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation) // Event Fines
                 .ToListAsync();
@@ -1598,7 +1598,7 @@ namespace iBITS_Portal.Controllers
                 return fines
                     .Where(f => {
                         // Check Manual Student OR Event Student
-                        var s = f.Student ?? f.Attendance?.StudentNumNavigation;
+                        var s = f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation;
                         return s != null && programCheck(s) && ExtractYearLevel(s.YearLevelSection) == yearLevel;
                     })
                     .Sum(f => f.Amount ?? 0);
@@ -2789,7 +2789,7 @@ namespace iBITS_Portal.Controllers
 
             // --- 2. Build the base query ---
             var query = _context.Fines
-                .Include(f => f.Student) // Manual Fines
+                .Include(f => f.StudentNumNavigation) // Manual Fines
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation) // Event Fines
                 .Include(f => f.Attendance)
@@ -2826,7 +2826,7 @@ namespace iBITS_Portal.Controllers
             {
                 // Check program on either Manual Student link or Event Student link
                 query = query.Where(f =>
-                    (f.Student != null && f.Student.Course == programFilter) ||
+                    (f.StudentNumNavigation != null && f.StudentNumNavigation.Course == programFilter) ||
                     (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.Course == programFilter));
             }
 
@@ -2843,10 +2843,10 @@ namespace iBITS_Portal.Controllers
 
                 query = query.Where(f =>
                     // Search in Manual Fines
-                    (f.Student != null && (
-                        f.Student.StudentNum.Contains(searchString) ||
-                        f.Student.StudentFn.ToLower().Contains(searchString) ||
-                        f.Student.StudentLn.ToLower().Contains(searchString)
+                    (f.StudentNumNavigation != null && (
+                        f.StudentNumNavigation.StudentNum.Contains(searchString) ||
+                        f.StudentNumNavigation.StudentFn.ToLower().Contains(searchString) ||
+                        f.StudentNumNavigation.StudentLn.ToLower().Contains(searchString)
                     )) ||
                     // Search in Event Fines
                     (f.Attendance != null && f.Attendance.StudentNumNavigation != null && (
@@ -2867,7 +2867,7 @@ namespace iBITS_Portal.Controllers
 
             foreach (var fine in allFines)
             {
-                var student = fine.Student ?? fine.Attendance?.StudentNumNavigation;
+                var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                 if (student == null) continue;
 
                 string program = !string.IsNullOrEmpty(student.Course) && student.Course.ToUpper().Contains("BSIT") ? "BSIT" : "DIT";
@@ -2917,12 +2917,12 @@ namespace iBITS_Portal.Controllers
             ViewData["CurrentSearch"] = searchString;
 
             var manualFinesQuery = _context.Fines
-                .Include(f => f.Student)
+                .Include(f => f.StudentNumNavigation)
                 .Where(f => f.AttendanceId == null); // The key filter for manual fines
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                manualFinesQuery = manualFinesQuery.Where(f => (f.Student != null && (f.Student.FullName.Contains(searchString) || f.Student.StudentNum.Contains(searchString))) || (f.Description != null && f.Description.Contains(searchString)));
+                manualFinesQuery = manualFinesQuery.Where(f => (f.StudentNumNavigation != null && (f.StudentNumNavigation.FullName.Contains(searchString) || f.StudentNumNavigation.StudentNum.Contains(searchString))) || (f.Description != null && f.Description.Contains(searchString)));
             }
 
             var fines = await manualFinesQuery.OrderByDescending(f => f.FineId).ToListAsync();
@@ -3197,13 +3197,13 @@ namespace iBITS_Portal.Controllers
         {
             var students = await _context.Fines
                 .Where(f => f.BatchId == batchId)
-                .Include(f => f.Student)
+                .Include(f => f.StudentNumNavigation)
                 .Select(f => new
                 {
                     studentNum = f.StudentNum,
-                    fullName = f.Student.FullName,
-                    program = f.Student.Course,
-                    yearLevel = f.Student.YearLevelSection,
+                    fullName = f.StudentNumNavigation.FullName,
+                    program = f.StudentNumNavigation.Course,
+                    yearLevel = f.StudentNumNavigation.YearLevelSection,
                     amount = f.Amount,
                     status = f.FinesStatus
                 })

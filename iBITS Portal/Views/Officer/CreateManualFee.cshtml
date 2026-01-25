@@ -1,0 +1,219 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\CreateManualFee.cshtml *@
+@* FILE PATH: Views/Officer/CreateManualFee.cshtml *@
+@{
+    ViewData["Title"] = "Create Manual Fee";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+}
+
+@section Styles {
+<style>
+    .scope-option {
+        background: rgba(255,255,255,0.05);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .scope-option:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: var(--gold-primary);
+        transform: translateY(-3px);
+    }
+
+    .scope-option.selected {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        border-color: var(--gold-primary);
+    }
+
+    .scope-option i {
+        font-size: 3rem;
+        margin-bottom: 12px;
+    }
+</style>
+}
+
+<!-- TempData Messages -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title">
+            <i class="bi bi-receipt-cutoff me-2 text-gold"></i> Create Manual Fee
+        </h4>
+        <p class="mb-0 small text-muted">Post fees for all students or specific sections</p>
+    </div>
+    <a href="@Url.Action("OrgSecretaryDashboard", "Officer")" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-4">
+                <i class="bi bi-pencil-square me-2 text-gold"></i> Fee Details
+            </h5>
+
+            <form asp-action="CreateManualFee" method="post" id="feeForm">
+                @Html.AntiForgeryToken()
+
+                <!-- Fee Name -->
+                <div class="mb-4">
+                    <label for="feeName" class="form-label">Fee Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="feeName" name="feeName" required 
+                           placeholder="e.g., Membership Fee, Event Fee, Organization T-Shirt">
+                    <small class="form-text text-muted">Enter a descriptive name for the fee</small>
+                </div>
+
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">₱</span>
+                        <input type="number" class="form-control" id="amount" name="amount" required 
+                               step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                    <small class="form-text text-muted">Enter the fee amount in Philippine Pesos</small>
+                </div>
+
+                <!-- Due Date -->
+                <div class="mb-4">
+                    <label for="dueDate" class="form-label">Due Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="dueDate" name="dueDate" required>
+                    <small class="form-text text-muted">When should this fee be paid?</small>
+                </div>
+
+                <!-- Target Scope -->
+                <div class="mb-4">
+                    <label class="form-label">Target Scope <span class="text-danger">*</span></label>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="scope-option selected" onclick="selectScope('All')">
+                                <i class="bi bi-people-fill text-primary"></i>
+                                <h6 class="text-white mb-1">All Students</h6>
+                                <p class="text-muted small mb-0">Create fee for every active student</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="scope-option" onclick="selectScope('Section')">
+                                <i class="bi bi-person-lines-fill text-warning"></i>
+                                <h6 class="text-white mb-1">Specific Section</h6>
+                                <p class="text-muted small mb-0">Create fee for one section only</p>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="targetScope" name="targetScope" value="All">
+                </div>
+
+                <!-- Section Selector (Hidden by default) -->
+                <div class="mb-4" id="sectionSelector" style="display: none;">
+                    <label for="specificSection" class="form-label">Select Section <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="specificSection" name="specificSection" 
+                           placeholder="e.g., BSIT 3A, BSCS 2B">
+                    <small class="form-text text-muted">Enter the section code exactly (e.g., BSIT 3A)</small>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="bi bi-info-circle me-2"></i> Preview</h6>
+                    <p class="mb-1"><strong>Fee:</strong> <span id="previewFeeName">-</span></p>
+                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">₱0.00</span></p>
+                    <p class="mb-1"><strong>Due Date:</strong> <span id="previewDueDate">-</span></p>
+                    <p class="mb-0"><strong>Target:</strong> <span id="previewScope">All Active Students</span></p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle-fill me-2"></i> Create Fee
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                        <i class="bi bi-x-circle me-2"></i> Clear Form
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function selectScope(scope) {
+        // Update visual selection
+        document.querySelectorAll('.scope-option').forEach(el => el.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+        
+        // Update hidden input
+        document.getElementById('targetScope').value = scope;
+        
+        // Show/hide section selector
+        const sectionSelector = document.getElementById('sectionSelector');
+        const specificSection = document.getElementById('specificSection');
+        
+        if (scope === 'Section') {
+            sectionSelector.style.display = 'block';
+            specificSection.required = true;
+        } else {
+            sectionSelector.style.display = 'none';
+            specificSection.required = false;
+            specificSection.value = '';
+        }
+        
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const feeName = document.getElementById('feeName').value || '-';
+        const amount = document.getElementById('amount').value || '0.00';
+        const dueDate = document.getElementById('dueDate').value || '-';
+        const scope = document.getElementById('targetScope').value;
+        const section = document.getElementById('specificSection').value;
+        
+        document.getElementById('previewFeeName').textContent = feeName;
+        document.getElementById('previewAmount').textContent = '₱' + parseFloat(amount).toFixed(2);
+        document.getElementById('previewDueDate').textContent = dueDate;
+        
+        if (scope === 'Section' && section) {
+            document.getElementById('previewScope').textContent = 'Section ' + section;
+        } else {
+            document.getElementById('previewScope').textContent = 'All Active Students';
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('feeForm').reset();
+        document.querySelectorAll('.scope-option').forEach(el => el.classList.remove('selected'));
+        document.querySelector('.scope-option').classList.add('selected');
+        document.getElementById('targetScope').value = 'All';
+        document.getElementById('sectionSelector').style.display = 'none';
+        updatePreview();
+    }
+
+    // Update preview on input change
+    document.getElementById('feeName').addEventListener('input', updatePreview);
+    document.getElementById('amount').addEventListener('input', updatePreview);
+    document.getElementById('dueDate').addEventListener('change', updatePreview);
+    document.getElementById('specificSection').addEventListener('input', updatePreview);
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dueDate').min = today;
+</script>
+}

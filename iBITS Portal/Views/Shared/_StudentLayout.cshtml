@@ -100,7 +100,7 @@
                 <li class="@(controller == "Student" && action == "Financials" ? "active" : "")">
                     <a asp-controller="Student" asp-action="Financials"><i class="bi bi-wallet2"></i> My Financials</a>
                 </li>
-               
+
 
                 <!-- ================== ROLE-BASED OFFICER LINKS (Dynamically Shown) ================== -->
                 <!-- TREASURER FEATURES (Updated) -->
@@ -109,9 +109,7 @@
                     <li class="@(controller == "Officer" && action == "Payments" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="Payments"><i class="bi bi-cash-stack"></i> Payments & Fees</a>
                     </li>
-                    <li class="@(controller == "Officer" && action == "TreasuryDashboard" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="TreasuryDashboard"><i class="bi bi-bank"></i> Remittance</a>
-                    </li>
+                   
                 }
 
 
@@ -134,7 +132,7 @@
                     </li>
                 }
 
-                
+
 
                 <!-- ORGANIZATION TREASURER ONLY FEATURES -->
                 @if (User.IsInRole("Org Treasurer"))

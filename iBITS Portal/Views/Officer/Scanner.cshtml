@@ -1,21 +1,68 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\Scanner.cshtml *@
+@* FILE PATH: Views/Officer/Scanner.cshtml *@
 @model IEnumerable<iBITS_Portal.Models.Event>
 @{
     ViewData["Title"] = "High-Speed QR Scanner";
-    Layout = "~/Views/Shared/_StudentLayout.cshtml"; // Ensure this path is correct for your project
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+
+    var isClassSecretary = User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary");
+    var secretarySection = ViewBag.SecretarySection as string;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/scanner.css" asp-append-version="true" />
+    <style>
+        .section-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .section-notice {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
 }
 
 <!-- HEADER & MODE TOGGLE -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0" style="color: var(--text-strong);"><i class="bi bi-qr-code-scan me-2" style="color: var(--gold-text);"></i>QR Scanner</h4>
+    <div>
+        <h4 class="mb-0" style="color: var(--text-strong);">
+            <i class="bi bi-qr-code-scan me-2" style="color: var(--gold-text);"></i>QR Scanner
+        </h4>
+        @if (isClassSecretary && !string.IsNullOrEmpty(secretarySection))
+        {
+            <div class="mt-2">
+                <span class="section-badge">
+                    <i class="bi bi-people-fill me-2"></i>Section @secretarySection Only
+                </span>
+            </div>
+        }
+    </div>
     <ul class="nav nav-pills" style="background: var(--bg-glass); border: 1px solid var(--border-color); border-radius: 12px; padding: 5px;">
         <li class="nav-item"><a class="nav-link nav-link-scanner active rounded-pill px-4" data-mode="live">Live Attendance</a></li>
         <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-4" data-mode="verifier">Verifier</a></li>
     </ul>
 </div>
+
+<!-- SECTION NOTICE FOR CLASS SECRETARY -->
+@if (isClassSecretary)
+{
+    <div class="section-notice">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <strong>Class Secretary Mode:</strong> You can only scan QR codes for students in <strong>Section @secretarySection</strong>.
+        Students from other sections will be rejected automatically.
+    </div>
+}
 
 <!-- LIVE ATTENDANCE MODE -->
 <div id="live-panel" class="scanner-mode-panel active">
@@ -24,7 +71,7 @@
             <div class="glass-panel">
                 @if (Model != null && Model.Any())
                 {
-<div class="input-group mb-4">
+                    <div class="input-group mb-4">
                         <select id="eventSelector" class="form-select form-select-lg">
                             <option value="0" selected disabled>-- Select an event to begin --</option>
                             @foreach (var ev in Model)
@@ -34,13 +81,13 @@
                                 var isActive = false;
                                 var statusText = "";
                                 var statusClass = "";
-                                
+
                                 if (ev.EventDate.HasValue && ev.StartTime.HasValue)
                                 {
                                     var eventStart = ev.EventDate.Value.ToDateTime(ev.StartTime.Value);
                                     var endTime = ev.CalculatedEndTime;
                                     isActive = eventStart <= now && (!endTime.HasValue || endTime.Value > now);
-                                    
+
                                     if (isActive)
                                     {
                                         statusText = "🟢 ACTIVE NOW";
@@ -67,9 +114,9 @@
                                     statusText = "📅 SCHEDULED";
                                     statusClass = "text-warning";
                                 }
-                                
+
                                 <option value="@ev.EventId" data-active="@(isActive ? "true" : "false")">
-                                    @ev.EventName (@ev.EventDate?.ToString("MMM dd")) 
+                                    @ev.EventName (@ev.EventDate?.ToString("MMM dd"))
                                     <span class="@statusClass">• @statusText</span>
                                     @if (ev.StartTime.HasValue)
                                     {
@@ -174,12 +221,12 @@
 @section Scripts {
     <!-- Scanner Logic -->
     <script src="~/js/scanner.js" asp-append-version="true" type="module"></script>
-    
+
     <script>
         // Helper function to parse event duration (simplified version for frontend)
         function parseEventDuration(startTime, duration, eventDate) {
             if (!duration) return null;
-            
+
             try {
                 // Handle "X hours" format
                 if (duration.toLowerCase().includes('hour')) {
@@ -187,7 +234,7 @@
                     const startDate = new Date(eventDate + 'T' + startTime);
                     return new Date(startDate.getTime() + (hours * 60 * 60 * 1000));
                 }
-                
+
                 // Handle "9am-5pm" format
                 if (duration.toLowerCase().includes('am') || duration.toLowerCase().includes('pm')) {
                     const parts = duration.split('-');
@@ -205,12 +252,12 @@
             }
             return null;
         }
-        
+
         // Auto-refresh scanner for active events
         setInterval(() => {
             const eventSelect = document.getElementById('eventSelector');
             if (!eventSelect) return;
-            
+
             const selectedOption = eventSelect.options[eventSelect.selectedIndex];
             if (selectedOption && selectedOption.dataset.active === 'true') {
                 // Check if event should still be active

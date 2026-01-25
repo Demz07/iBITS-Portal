@@ -1,0 +1,200 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\AttendanceRecords.cshtml *@
+@* FILE PATH: Views/Officer/AttendanceRecords.cshtml *@
+@model IEnumerable<iBITS_Portal.Models.Attendance>
+@{
+    ViewData["Title"] = "Attendance Records";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var events = ViewBag.Events as List<iBITS_Portal.Models.Event> ?? new List<iBITS_Portal.Models.Event>();
+    var programs = ViewBag.Programs as List<string> ?? new List<string>();
+    var yearLevels = ViewBag.YearLevels as List<string> ?? new List<string>();
+}
+
+@section Styles {
+<style>
+    .filter-card {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .table thead th {
+        color: var(--gold-primary);
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        background: var(--bg-dark);
+        z-index: 10;
+    }
+
+    .badge-present {
+        background-color: #10b981;
+    }
+
+    .badge-absent {
+        background-color: #ef4444;
+    }
+
+    .badge-excused {
+        background-color: #f59e0b;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title">
+            <i class="bi bi-filter-circle-fill me-2 text-gold"></i> Attendance Records
+        </h4>
+        <p class="mb-0 small text-muted">Filter and view attendance by event, program, and year level</p>
+    </div>
+    <a href="@Url.Action("OrgSecretaryDashboard", "Officer")" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-card">
+    <form method="get" asp-action="AttendanceRecords">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="eventId" class="form-label">Filter by Event</label>
+                <select class="form-select" id="eventId" name="eventId">
+                    <option value="">-- All Events --</option>
+                    @foreach (var evt in events)
+                    {
+                        <option value="@evt.EventId">@evt.EventName (@evt.EventDate?.ToString("MMM dd, yyyy"))</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="program" class="form-label">Filter by Program</label>
+                <select class="form-select" id="program" name="program">
+                    <option value="">-- All Programs --</option>
+                    @foreach (var prog in programs)
+                    {
+                        <option value="@prog">@prog</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="yearLevel" class="form-label">Filter by Year Level</label>
+                <select class="form-select" id="yearLevel" name="yearLevel">
+                    <option value="">-- All Year Levels --</option>
+                    @foreach (var year in yearLevels)
+                    {
+                        <option value="@year">@year</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ATTENDANCE TABLE -->
+<div class="glass-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="glass-header-title mb-0">
+            <i class="bi bi-table me-2 text-gold"></i> Attendance Data
+        </h5>
+        <button class="btn btn-success btn-sm" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Student Name</th>
+                    <th>Program</th>
+                    <th>Year Level</th>
+                    <th>Section</th>
+                    <th>Event</th>
+                    <th>Event Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var attendance in Model)
+                    {
+                        var badgeClass = attendance.AttendanceStatus?.ToUpper() switch
+                        {
+                            "PRESENT" => "badge-present",
+                            "ABSENT" => "badge-absent",
+                            "EXCUSED" => "badge-excused",
+                            _ => "badge-secondary"
+                        };
+
+                        <tr>
+                            <td class="font-monospace">@attendance.StudentNum</td>
+                            <td class="fw-bold">@attendance.StudentNumNavigation?.StudentFn @attendance.StudentNumNavigation?.StudentLn</td>
+                            <td>@attendance.StudentNumNavigation?.Course</td>
+                            <td>@attendance.StudentNumNavigation?.YearLevelSection</td>
+                            <td>@attendance.Event?.EventName</td>
+                            <td>@attendance.Event?.EventDate?.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <span class="badge @badgeClass">
+                                    @attendance.AttendanceStatus
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2"></i>
+                            <p class="mt-2 mb-0">No attendance records found. Try adjusting your filters.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="mt-3 text-muted">
+            <small>
+                <i class="bi bi-info-circle me-1"></i>
+                Showing @Model.Count() attendance record(s)
+            </small>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script>
+    function exportToExcel() {
+        const table = document.getElementById('attendanceTable');
+        const wb = XLSX.utils.table_to_book(table, {sheet: "Attendance Records"});
+        XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toISOString().split('T')[0] + '.xlsx');
+    }
+
+    // Preserve selected filters on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        const eventId = urlParams.get('eventId');
+        const program = urlParams.get('program');
+        const yearLevel = urlParams.get('yearLevel');
+        
+        if (eventId) document.getElementById('eventId').value = eventId;
+        if (program) document.getElementById('program').value = program;
+        if (yearLevel) document.getElementById('yearLevel').value = yearLevel;
+    });
+</script>
+}

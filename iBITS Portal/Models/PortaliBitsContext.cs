@@ -90,7 +90,7 @@ public partial class PortaliBitsContext : DbContext
                 .HasConstraintName("FK_Fines_Attendance")
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(d => d.Student)
+            entity.HasOne(d => d.StudentNumNavigation)
                .WithMany(p => p.Fines)
                .HasForeignKey(d => d.StudentNum)
                .HasConstraintName("FK_Fines_Student")

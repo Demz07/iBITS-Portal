@@ -1,4 +1,4 @@
-@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\StudentDashboard.cshtml *@
+﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\StudentDashboard.cshtml *@
 @* FILE PATH: Views/Home/Index.cshtml (Student Dashboard) *@
 @{
     ViewData["Title"] = "Command Center";

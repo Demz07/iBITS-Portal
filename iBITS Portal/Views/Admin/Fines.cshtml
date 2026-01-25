@@ -251,8 +251,8 @@
             <tbody>
                 @foreach (var fine in Model)
                 {
-                    // UPDATED: Logic to handle both Manual Fines (fine.Student) and Event Fines (fine.Attendance)
-                    var student = fine.Student ?? fine.Attendance?.StudentNumNavigation;
+                    // UPDATED: Logic to handle both Manual Fines (fine.StudentNumNavigation) and Event Fines (fine.Attendance)
+                    var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
 
                     // Determine Description: Use Manual Description OR Event Name

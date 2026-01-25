@@ -1,0 +1,247 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\OrgTreasurerDashboard.cshtml *@
+@* FILE PATH: Views/Officer/OrgTreasurerDashboard.cshtml *@
+@{
+    ViewData["Title"] = "Organization Treasury Dashboard";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var totalFeesCollected = ViewBag.TotalFeesCollected ?? 0m;
+    var totalFinesCollected = ViewBag.TotalFinesCollected ?? 0m;
+    var pendingFees = ViewBag.PendingFees ?? 0m;
+    var pendingFines = ViewBag.PendingFines ?? 0m;
+    var totalCollections = ViewBag.TotalCollections ?? 0m;
+    var sectionStats = ViewBag.SectionStats as List<dynamic> ?? new List<dynamic>();
+}
+
+@section Styles {
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 15px;
+        padding: 24px;
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .stats-icon {
+        font-size: 3rem;
+        margin-bottom: 12px;
+    }
+
+    .section-breakdown-card {
+        background: rgba(255,255,255,0.05);
+        border-left: 4px solid var(--gold-primary);
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        transition: transform 0.2s ease;
+    }
+
+    .section-breakdown-card:hover {
+        transform: translateX(5px);
+        background: rgba(255,255,255,0.08);
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title">
+            <i class="bi bi-bank2 me-2 text-gold"></i> Organization Treasury Dashboard
+        </h4>
+        <p class="mb-0 small text-muted">Complete financial overview for all students</p>
+    </div>
+    <div>
+        <a href="@Url.Action("Payments", "Officer")" class="btn btn-primary me-2">
+            <i class="bi bi-cash-coin me-1"></i> Manage Payments
+        </a>
+        <a href="@Url.Action("PaymentReminders", "Officer")" class="btn btn-warning">
+            <i class="bi bi-megaphone me-1"></i> Post Reminder
+        </a>
+    </div>
+</div>
+
+<!-- STATISTICS CARDS -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-wallet-fill stats-icon text-success"></i>
+            <h6 class="text-muted mb-1">Total Collections</h6>
+            <h2 class="fw-bold text-success mb-0">₱@totalCollections.ToString("N2")</h2>
+            <small class="text-muted">Fees + Fines</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-receipt-cutoff stats-icon text-primary"></i>
+            <h6 class="text-muted mb-1">Fees Collected</h6>
+            <h2 class="fw-bold text-primary mb-0">₱@totalFeesCollected.ToString("N2")</h2>
+            <small class="text-muted">From all students</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-exclamation-octagon-fill stats-icon text-warning"></i>
+            <h6 class="text-muted mb-1">Fines Collected</h6>
+            <h2 class="fw-bold text-warning mb-0">₱@totalFinesCollected.ToString("N2")</h2>
+            <small class="text-muted">From penalties</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-hourglass-split stats-icon text-danger"></i>
+            <h6 class="text-muted mb-1">Total Pending</h6>
+            <h2 class="fw-bold text-danger mb-0">₱@(pendingFees + pendingFines).ToString("N2")</h2>
+            <small class="text-muted">Outstanding balance</small>
+        </div>
+    </div>
+</div>
+
+<!-- CHARTS AND BREAKDOWN -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-pie-chart-fill me-2 text-gold"></i> Financial Overview
+            </h5>
+            <div style="position: relative; height: 400px;">
+                <canvas id="financialChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-list-check me-2 text-gold"></i> Quick Stats
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-sm text-white">
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Total Collected</td>
+                            <td class="text-end fw-bold text-success">₱@totalCollections.ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-hourglass-split text-warning me-2"></i> Total Pending</td>
+                            <td class="text-end fw-bold text-warning">₱@(pendingFees + pendingFines).ToString("N2")</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><i class="bi bi-calculator me-2"></i> Grand Total</td>
+                            <td class="text-end fw-bold">₱@(totalCollections + pendingFees + pendingFines).ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <hr class="my-3" />
+
+            <h6 class="text-uppercase small fw-bold text-muted mb-3">Collection Rate</h6>
+            <div class="progress" style="height: 30px;">
+                @{
+                    var grandTotal = totalCollections + pendingFees + pendingFines;
+                    var collectionRate = grandTotal > 0 ? (totalCollections / grandTotal * 100) : 0;
+                }
+                <div class="progress-bar bg-success" role="progressbar" style="width: @collectionRate%" aria-valuenow="@collectionRate" aria-valuemin="0" aria-valuemax="100">
+                    @collectionRate.ToString("F1")%
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION BREAKDOWN -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Section Breakdown
+            </h5>
+            @if (sectionStats.Any())
+            {
+                @foreach (var stat in sectionStats)
+                {
+                    var sectionTotal = (decimal)stat.TotalFees;
+                    var sectionPaid = (decimal)stat.PaidFees;
+                    var sectionPending = sectionTotal - sectionPaid;
+                    var sectionRate = sectionTotal > 0 ? (sectionPaid / sectionTotal * 100) : 0;
+
+                    <div class="section-breakdown-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 text-white">Section @stat.Section</h6>
+                            <span class="badge bg-primary">@sectionRate.ToString("F1")% Collected</span>
+                        </div>
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Total Expected</small>
+                                <h6 class="text-white mb-0">₱@sectionTotal.ToString("N2")</h6>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Collected</small>
+                                <h6 class="text-success mb-0">₱@sectionPaid.ToString("N2")</h6>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Pending</small>
+                                <h6 class="text-danger mb-0">₱@sectionPending.ToString("N2")</h6>
+                            </div>
+                        </div>
+                        <div class="progress mt-3" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @sectionRate%"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-center text-muted py-4">No section data available.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Financial Doughnut Chart
+    const ctx = document.getElementById('financialChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Fees Collected', 'Fines Collected', 'Pending Fees', 'Pending Fines'],
+            datasets: [{
+                data: [@totalFeesCollected, @totalFinesCollected, @pendingFees, @pendingFines],
+                backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
+                borderWidth: 2,
+                borderColor: 'rgba(255, 255, 255, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff',
+                        padding: 20,
+                        font: { size: 14 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+}

@@ -1,0 +1,257 @@
+@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\CreateManualFine.cshtml *@
+@* FILE PATH: Views/Officer/CreateManualFine.cshtml *@
+@{
+    ViewData["Title"] = "Create Manual Fine";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var students = ViewBag.Students as List<iBITS_Portal.Models.Student> ?? new List<iBITS_Portal.Models.Student>();
+}
+
+@section Styles {
+<style>
+    .student-search-result {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .student-search-result:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: var(--gold-primary);
+        transform: translateX(5px);
+    }
+
+    .student-search-result.selected {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+        border-color: #ef4444;
+    }
+</style>
+}
+
+<!-- TempData Messages -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="glass-header-title">
+            <i class="bi bi-exclamation-octagon-fill me-2 text-danger"></i> Create Manual Fine
+        </h4>
+        <p class="mb-0 small text-muted">Impose fines on specific students</p>
+    </div>
+    <a href="@Url.Action("OrgSecretaryDashboard", "Officer")" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-4">
+                <i class="bi bi-pencil-square me-2 text-gold"></i> Fine Details
+            </h5>
+
+            <form asp-action="CreateManualFine" method="post" id="fineForm">
+                @Html.AntiForgeryToken()
+
+                <!-- Student Selection -->
+                <div class="mb-4">
+                    <label for="studentSearch" class="form-label">Select Student <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="studentSearch" 
+                           placeholder="Search by name or student ID..." autocomplete="off">
+                    <input type="hidden" id="studentNum" name="studentNum" required>
+                    
+                    <div id="searchResults" class="mt-2" style="max-height: 300px; overflow-y: auto; display: none;">
+                        <!-- Search results will appear here -->
+                    </div>
+                    
+                    <div id="selectedStudent" class="mt-2" style="display: none;">
+                        <div class="alert alert-info mb-0">
+                            <strong>Selected:</strong> <span id="selectedStudentName"></span> 
+                            (<span id="selectedStudentId" class="font-monospace"></span>)
+                            <button type="button" class="btn btn-sm btn-link text-danger float-end" onclick="clearStudent()">
+                                <i class="bi bi-x-circle"></i> Change
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fine Reason -->
+                <div class="mb-4">
+                    <label for="reason" class="form-label">Fine Reason <span class="text-danger">*</span></label>
+                    <select class="form-select" id="reasonSelect" onchange="handleReasonChange()">
+                        <option value="">-- Select Reason --</option>
+                        <option value="Absence from mandatory event">Absence from mandatory event</option>
+                        <option value="Late payment">Late payment</option>
+                        <option value="Violation of organization rules">Violation of organization rules</option>
+                        <option value="Missing required documents">Missing required documents</option>
+                        <option value="Other">Other (Specify below)</option>
+                    </select>
+                    <textarea class="form-control mt-2" id="reason" name="reason" rows="2" required
+                              placeholder="Enter or specify the reason for this fine"></textarea>
+                    <small class="form-text text-muted">Provide a clear reason for the fine</small>
+                </div>
+
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Fine Amount <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">₱</span>
+                        <input type="number" class="form-control" id="amount" name="amount" required 
+                               step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                    <small class="form-text text-muted">Enter the fine amount in Philippine Pesos</small>
+                </div>
+
+                <!-- Due Date -->
+                <div class="mb-4">
+                    <label for="dueDate" class="form-label">Payment Due Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="dueDate" name="dueDate" required>
+                    <small class="form-text text-muted">When should this fine be paid?</small>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="alert alert-warning">
+                    <h6 class="mb-2"><i class="bi bi-exclamation-triangle me-2"></i> Fine Preview</h6>
+                    <p class="mb-1"><strong>Student:</strong> <span id="previewStudent">Not selected</span></p>
+                    <p class="mb-1"><strong>Reason:</strong> <span id="previewReason">-</span></p>
+                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">₱0.00</span></p>
+                    <p class="mb-0"><strong>Due Date:</strong> <span id="previewDueDate">-</span></p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i> Create Fine
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                        <i class="bi bi-x-circle me-2"></i> Clear Form
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const students = @Html.Raw(Json.Serialize(students.Select(s => new { 
+        studentNum = s.StudentNum, 
+        name = s.StudentFn + " " + s.StudentLn,
+        section = s.YearLevelSection 
+    })));
+
+    let selectedStudentData = null;
+
+    // Student search functionality
+    document.getElementById('studentSearch').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        const resultsDiv = document.getElementById('searchResults');
+        
+        if (query.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const matches = students.filter(s => 
+            s.name.toLowerCase().includes(query) || 
+            s.studentNum.toLowerCase().includes(query)
+        ).slice(0, 10);
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(s => `
+                <div class="student-search-result" onclick="selectStudent('${s.studentNum}', '${s.name}', '${s.section}')">
+                    <strong>${s.name}</strong>
+                    <br><small class="text-muted">${s.studentNum} • ${s.section || 'N/A'}</small>
+                </div>
+            `).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.innerHTML = '<div class="text-center text-muted py-2">No students found</div>';
+            resultsDiv.style.display = 'block';
+        }
+    });
+
+    function selectStudent(studentNum, name, section) {
+        selectedStudentData = { studentNum, name, section };
+        document.getElementById('studentNum').value = studentNum;
+        document.getElementById('selectedStudentName').textContent = name;
+        document.getElementById('selectedStudentId').textContent = studentNum;
+        document.getElementById('selectedStudent').style.display = 'block';
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('studentSearch').value = '';
+        updatePreview();
+    }
+
+    function clearStudent() {
+        selectedStudentData = null;
+        document.getElementById('studentNum').value = '';
+        document.getElementById('selectedStudent').style.display = 'none';
+        updatePreview();
+    }
+
+    function handleReasonChange() {
+        const select = document.getElementById('reasonSelect');
+        const textarea = document.getElementById('reason');
+        
+        if (select.value && select.value !== 'Other') {
+            textarea.value = select.value;
+        } else if (select.value === 'Other') {
+            textarea.value = '';
+            textarea.focus();
+        }
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const studentName = selectedStudentData ? selectedStudentData.name : 'Not selected';
+        const reason = document.getElementById('reason').value || '-';
+        const amount = document.getElementById('amount').value || '0.00';
+        const dueDate = document.getElementById('dueDate').value || '-';
+        
+        document.getElementById('previewStudent').textContent = studentName;
+        document.getElementById('previewReason').textContent = reason;
+        document.getElementById('previewAmount').textContent = '₱' + parseFloat(amount).toFixed(2);
+        document.getElementById('previewDueDate').textContent = dueDate;
+    }
+
+    function resetForm() {
+        document.getElementById('fineForm').reset();
+        clearStudent();
+        updatePreview();
+    }
+
+    // Update preview on input change
+    document.getElementById('reason').addEventListener('input', updatePreview);
+    document.getElementById('amount').addEventListener('input', updatePreview);
+    document.getElementById('dueDate').addEventListener('change', updatePreview);
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dueDate').min = today;
+
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#studentSearch') && !e.target.closest('#searchResults')) {
+            document.getElementById('searchResults').style.display = 'none';
+        }
+    });
+</script>
+}

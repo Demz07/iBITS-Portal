@@ -1,7 +1,16 @@
-﻿@model IEnumerable<iBITS_Portal.Models.Fee>
+﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\ClassTreasuryDashboard.cshtml *@
+@* FILE PATH: Views/Officer/ClassTreasuryDashboard.cshtml *@
+@model IEnumerable<iBITS_Portal.Models.Fee>
 @{
     ViewData["Title"] = "Section Fee Collection";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    
+    var section = ViewBag.Section as string ?? "N/A";
+    var totalFeesCollected = ViewBag.TotalFeesCollected ?? 0m;
+    var totalFinesCollected = ViewBag.TotalFinesCollected ?? 0m;
+    var pendingFees = ViewBag.PendingFees ?? 0m;
+    var pendingFines = ViewBag.PendingFines ?? 0m;
+    var totalCollections = ViewBag.TotalCollections ?? 0m;
 }
 
 @section Styles {
@@ -20,72 +29,277 @@
             color: var(--text-strong);
             font-weight: 600;
         }
+
+        .stats-card {
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            padding: 20px;
+        }
     </style>
 }
 
 <!-- TempData for feedback messages -->
 @if (TempData["Message"] != null)
 {
-    <div class="alert alert-success">@TempData["Message"]</div>
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger">@TempData["Error"]</div>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 }
 
 <!-- ======================= HEADER ======================= -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> @ViewData["TreasuryTitle"]</h4>
-        <p class="mb-0 small text-muted">Process payments for members in your section.</p>
+        <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> Section Treasury</h4>
+        <p class="mb-0 small text-muted">Manage fees and fines for your section members.</p>
+    </div>
+    <a href="@Url.Action("Payments", "Officer")" class="btn btn-primary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Payments
+    </a>
+</div>
+
+<!-- ======================= STATISTICS CARDS ======================= -->
+<div class="row mb-4">
+    <!-- Total Collections -->
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-wallet2 stats-icon text-success"></i>
+            <h6 class="text-muted mb-1">Total Collections</h6>
+            <h3 class="fw-bold text-success mb-0">₱@totalCollections.ToString("N2")</h3>
+            <small class="text-muted">Fees + Fines</small>
+        </div>
+    </div>
+
+    <!-- Fees Collected -->
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-receipt stats-icon text-primary"></i>
+            <h6 class="text-muted mb-1">Fees Collected</h6>
+            <h3 class="fw-bold text-primary mb-0">₱@totalFeesCollected.ToString("N2")</h3>
+            <small class="text-muted">From membership fees</small>
+        </div>
+    </div>
+
+    <!-- Fines Collected -->
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-exclamation-octagon stats-icon text-warning"></i>
+            <h6 class="text-muted mb-1">Fines Collected</h6>
+            <h3 class="fw-bold text-warning mb-0">₱@totalFinesCollected.ToString("N2")</h3>
+            <small class="text-muted">From penalties</small>
+        </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="col-md-3">
+        <div class="stats-card">
+            <i class="bi bi-hourglass-split stats-icon text-danger"></i>
+            <h6 class="text-muted mb-1">Pending Payments</h6>
+            <h3 class="fw-bold text-danger mb-0">₱@(pendingFees + pendingFines).ToString("N2")</h3>
+            <small class="text-muted">Outstanding balance</small>
+        </div>
     </div>
 </div>
 
-<!-- ======================= UNPAID FEES TABLE ======================= -->
-<div class="glass-panel">
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Student ID</th>
-                    <th>Fee Description</th>
-                    <th>Amount Due</th>
-                    <th class="text-end">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model != null && Model.Any())
-                {
-                    @foreach (var fee in Model)
-                    {
-                        <tr>
-                            <td class="student-name">@fee.StudentNumNavigation?.StudentFn @fee.StudentNumNavigation?.StudentLn</td>
-                            <td class="font-monospace">@fee.StudentNum</td>
-                            <td>@fee.FeeName</td>
-                            <td class="fw-bold">₱@fee.Amount?.ToString("N2")</td>
-                            <td class="text-end">
-                                <form asp-controller="Officer" asp-action="SubmitRemittance" method="post" onsubmit="return confirm('Submit this payment for validation?');">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                    <button type="submit" class="btn btn-sm btn-primary">
-                                        Submit for Remittance
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="bi bi-check2-circle fs-2"></i>
-                            <p class="mt-2 mb-0">All members in this section are fully paid.</p>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<!-- ======================= CHARTS ROW ======================= -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-pie-chart me-2 text-gold"></i> Collections Breakdown
+            </h5>
+            <div class="chart-container">
+                <canvas id="collectionsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-bar-chart me-2 text-gold"></i> Fees vs Fines
+            </h5>
+            <div class="chart-container">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- ======================= DETAILED BREAKDOWN ======================= -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-receipt-cutoff me-2 text-primary"></i> Fees Summary
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Collected</td>
+                            <td class="text-end fw-bold text-success">₱@totalFeesCollected.ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-hourglass-split text-warning me-2"></i> Pending</td>
+                            <td class="text-end fw-bold text-warning">₱@pendingFees.ToString("N2")</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><i class="bi bi-calculator me-2"></i> Total Expected</td>
+                            <td class="text-end fw-bold">₱@(totalFeesCollected + pendingFees).ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-exclamation-triangle me-2 text-warning"></i> Fines Summary
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Collected</td>
+                            <td class="text-end fw-bold text-success">₱@totalFinesCollected.ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-hourglass-split text-danger me-2"></i> Pending</td>
+                            <td class="text-end fw-bold text-danger">₱@pendingFines.ToString("N2")</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><i class="bi bi-calculator me-2"></i> Total Expected</td>
+                            <td class="text-end fw-bold">₱@(totalFinesCollected + pendingFines).ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Collections Pie Chart
+    const collectionsCtx = document.getElementById('collectionsChart').getContext('2d');
+    new Chart(collectionsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Fees Collected', 'Fines Collected', 'Pending Fees', 'Pending Fines'],
+            datasets: [{
+                data: [@totalFeesCollected, @totalFinesCollected, @pendingFees, @pendingFines],
+                backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
+                borderWidth: 2,
+                borderColor: 'rgba(255, 255, 255, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff',
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Fees vs Fines Bar Chart
+    const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+    new Chart(comparisonCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Fees', 'Fines'],
+            datasets: [
+                {
+                    label: 'Collected',
+                    data: [@totalFeesCollected, @totalFinesCollected],
+                    backgroundColor: '#10b981',
+                    borderWidth: 0
+                },
+                {
+                    label: 'Pending',
+                    data: [@pendingFees, @pendingFines],
+                    backgroundColor: '#ef4444',
+                    borderWidth: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    ticks: { color: '#fff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    ticks: {
+                        color: '#fff',
+                        callback: function(value) {
+                            return '₱' + value.toLocaleString();
+                        }
+                    },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff',
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2});
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+}

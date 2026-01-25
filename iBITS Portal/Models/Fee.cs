@@ -1,6 +1,4 @@
-﻿// C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\Fee.cs
-// Models/Fee.cs
-
+// C:\Users\Dave\OneDrive\Desktop\this where the updated code must be located\Models\Fee.cs
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -33,5 +31,7 @@ public partial class Fee
 
     public string StudentNum { get; set; } = null!;
 
+    // Navigation property - using StudentNumNavigation to match existing codebase
+    [ForeignKey("StudentNum")]
     public virtual Student? StudentNumNavigation { get; set; }
 }
