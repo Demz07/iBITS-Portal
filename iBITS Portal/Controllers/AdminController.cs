@@ -25,6 +25,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
 using System.IO;
+using iBITS_Portal.Helpers;
 
 namespace iBITS_Portal.Controllers
 {
@@ -57,6 +58,11 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // HELPER: POPULATE DROPDOWNS DYNAMICALLY
         // =========================================================
+        // Replace the existing PopulateFilterDropdowns method
+
+        // =========================================================
+        // HELPER: POPULATE DROPDOWNS DYNAMICALLY
+        // =========================================================
         private async Task PopulateFilterDropdowns()
         {
             ViewBag.Roles = _roleManager.Roles
@@ -79,8 +85,7 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(t => t)
                 .ToListAsync();
 
-            // DYNAMIC: Populate Year filter options from actual data
-            // Handle formats: "1-1", "2-2", "BSIT 3-1", "DIT 3-1", etc.
+            // DYNAMIC: Populate Year filter options from actual data using the new helper
             var allYearSections = await _context.Students
                 .Where(s => s.YearLevelSection != null)
                 .Select(s => s.YearLevelSection)
@@ -88,14 +93,17 @@ namespace iBITS_Portal.Controllers
                 .ToListAsync();
 
             ViewBag.Years = allYearSections
-                .Select(ys => ExtractYearFromYearLevelSection(ys))
-                .Where(y => !string.IsNullOrEmpty(y))
+                .Select(ys => StringHelper.ExtractYearLevel(ys))
+                .Where(y => y > 0)
                 .Distinct()
                 .OrderBy(y => y)
+                .Select(y => y.ToString())
                 .ToList();
 
+            // This logic is simplified as section-only filtering is less common
+            // and can be achieved with the main search bar.
             ViewBag.Sections = allYearSections
-                .Select(ys => ExtractSectionFromYearLevelSection(ys))
+                .Select(ys => System.Text.RegularExpressions.Regex.Match(ys, @"-(\d+)").Groups[1].Value)
                 .Where(s => !string.IsNullOrEmpty(s))
                 .Distinct()
                 .OrderBy(s => s)
@@ -174,6 +182,84 @@ namespace iBITS_Portal.Controllers
             };
             _context.ActivityLogs.Add(logEntry);
             await _context.SaveChangesAsync();
+        }
+
+
+        // =========================================================
+        // HELPER: GET FILTERED STUDENTS QUERY (CONSOLIDATED)
+        // =========================================================
+        private IQueryable<Student> GetFilteredStudentsQuery(
+            string? searchString,
+            string? programFilter,
+            string? yearFilter,
+            string? sectionFilter,
+            string? typeFilter,
+            string? statusFilter,
+            string? roleFilter)
+        {
+            var studentsQuery = _context.Students
+                .Include(s => s.Officer)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                studentsQuery = studentsQuery.Where(s =>
+                    s.StudentNum.Contains(searchString) ||
+                    s.StudentFn.Contains(searchString) ||
+                    s.StudentLn.Contains(searchString) ||
+                    (s.StudentMn != null && s.StudentMn.Contains(searchString)) ||
+                    (s.StudentEmail != null && s.StudentEmail.Contains(searchString)) ||
+                    (s.Course != null && s.Course.Contains(searchString)) ||
+                    (s.YearLevelSection != null && s.YearLevelSection.Contains(searchString))
+                );
+            }
+
+            if (!string.IsNullOrEmpty(programFilter))
+            {
+                studentsQuery = studentsQuery.Where(s => s.Course == programFilter);
+            }
+
+            // Improved Year/Section filtering that can be translated to SQL
+            if (!string.IsNullOrEmpty(yearFilter) && !string.IsNullOrEmpty(sectionFilter))
+            {
+                string exactMatch = $"{yearFilter}-{sectionFilter}";
+                studentsQuery = studentsQuery.Where(s =>
+                    s.YearLevelSection != null &&
+                    (s.YearLevelSection == exactMatch || s.YearLevelSection.EndsWith(" " + exactMatch)));
+            }
+            else if (!string.IsNullOrEmpty(yearFilter))
+            {
+                string yearPattern = yearFilter + "-";
+                studentsQuery = studentsQuery.Where(s =>
+                    s.YearLevelSection != null &&
+                    (s.YearLevelSection.StartsWith(yearPattern) || s.YearLevelSection.Contains(" " + yearPattern)));
+            }
+            else if (!string.IsNullOrEmpty(sectionFilter))
+            {
+                string sectionPattern = "-" + sectionFilter;
+                studentsQuery = studentsQuery.Where(s =>
+                    s.YearLevelSection != null && s.YearLevelSection.EndsWith(sectionPattern));
+            }
+
+            if (!string.IsNullOrEmpty(typeFilter))
+            {
+                studentsQuery = studentsQuery.Where(s => s.StudentType == typeFilter);
+            }
+
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                studentsQuery = studentsQuery.Where(s => s.Classification == statusFilter);
+            }
+
+            if (!string.IsNullOrEmpty(roleFilter))
+            {
+                if (roleFilter == "Officer")
+                    studentsQuery = studentsQuery.Where(s => s.OfficerId != null);
+                else if (roleFilter == "Member")
+                    studentsQuery = studentsQuery.Where(s => s.OfficerId == null);
+            }
+
+            return studentsQuery;
         }
 
         // =========================================================
@@ -1797,65 +1883,10 @@ namespace iBITS_Portal.Controllers
             ViewBag.CurrentSort = sortOrder;
             ViewBag.PageSize = pageSize;
 
-            var studentsQuery = _context.Students
-                .Include(s => s.Officer)
-                .AsQueryable();
+            // Use the consolidated helper method to get the base query
+            var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter);
 
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                studentsQuery = studentsQuery.Where(s =>
-                    s.StudentNum.Contains(searchString) ||
-                    s.StudentFn.Contains(searchString) ||
-                    s.StudentLn.Contains(searchString) ||
-                    (s.StudentMn != null && s.StudentMn.Contains(searchString)) ||
-                    (s.StudentEmail != null && s.StudentEmail.Contains(searchString)) ||
-                    (s.Course != null && s.Course.Contains(searchString)) ||
-                    (s.YearLevelSection != null && s.YearLevelSection.Contains(searchString))
-                );
-            }
-
-            if (!string.IsNullOrEmpty(programFilter)) { studentsQuery = studentsQuery.Where(s => s.Course == programFilter); }
-
-            // IMPROVED: Handle year and section filters for multiple formats
-            // Supports: "1-1", "2-2", "BSIT 3-1", "DIT 3-1", etc.
-            // Uses EF Core compatible string methods (Contains, StartsWith, EndsWith)
-            if (!string.IsNullOrEmpty(yearFilter) && !string.IsNullOrEmpty(sectionFilter))
-            {
-                // Both filters applied - match both year AND section
-                // Match patterns like: "3-1", "BSIT 3-1", "DIT 3-1"
-                string exactMatch = $"{yearFilter}-{sectionFilter}";
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null &&
-                    (s.YearLevelSection == exactMatch || // Exact match: "3-1"
-                     s.YearLevelSection.EndsWith(" " + exactMatch))); // With prefix: "BSIT 3-1"
-            }
-            else if (!string.IsNullOrEmpty(yearFilter))
-            {
-                // Only year filter - match year part
-                // Match patterns like: "3-", " 3-" (for "BSIT 3-1", "DIT 3-1", or "3-1")
-                string yearPattern = yearFilter + "-";
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null &&
-                    (s.YearLevelSection.StartsWith(yearPattern) || // "3-1", "3-2"
-                     s.YearLevelSection.Contains(" " + yearPattern))); // "BSIT 3-1", "DIT 3-1"
-            }
-            else if (!string.IsNullOrEmpty(sectionFilter))
-            {
-                // Only section filter - match section part
-                // Match patterns like: "-1", "-2"
-                string sectionPattern = "-" + sectionFilter;
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null &&
-                    s.YearLevelSection.EndsWith(sectionPattern));
-            }
-            if (!string.IsNullOrEmpty(typeFilter)) { studentsQuery = studentsQuery.Where(s => s.StudentType == typeFilter); }
-            if (!string.IsNullOrEmpty(statusFilter)) { studentsQuery = studentsQuery.Where(s => s.Classification == statusFilter); }
-            if (!string.IsNullOrEmpty(roleFilter))
-            {
-                if (roleFilter == "Officer") studentsQuery = studentsQuery.Where(s => s.OfficerId != null);
-                else if (roleFilter == "Member") studentsQuery = studentsQuery.Where(s => s.OfficerId == null);
-            }
-
+            // Apply sorting
             switch (sortOrder)
             {
                 case "name_desc": studentsQuery = studentsQuery.OrderByDescending(s => s.StudentLn); break;
@@ -1867,13 +1898,12 @@ namespace iBITS_Portal.Controllers
             var pagedStudents = await PagedList<Student>.CreateAsync(studentsQuery, pageNumber, pageSize);
             await PopulateFilterDropdowns();
 
-            var allStudents = await _context.Students.Include(s => s.Officer).ToListAsync();
-            ViewBag.TotalStudents = allStudents.Count;
-            ViewBag.TotalOfficers = allStudents.Count(s => s.OfficerId != null);
-            ViewBag.ActiveMembers = allStudents.Count(s => s.Classification == "Active");
-            ViewBag.ArchivedMembers = allStudents.Count(s => s.Classification == "Archived");
+            // The summary counts can be simplified or adjusted as needed
+            ViewBag.TotalStudents = await _context.Students.CountAsync();
+            ViewBag.TotalOfficers = await _context.Students.CountAsync(s => s.OfficerId != null);
+            ViewBag.ActiveMembers = await _context.Students.CountAsync(s => s.Classification == "Active");
+            ViewBag.ArchivedMembers = await _context.Students.CountAsync(s => s.Classification == "Archived");
 
-            // NEW: Pass Current Academic Year and dropdown options to view
             ViewBag.CurrentAcademicYear = await GetCurrentAcademicYear();
             ViewBag.AcademicYearOptions = GenerateAcademicYearOptions();
 
@@ -2443,10 +2473,34 @@ namespace iBITS_Portal.Controllers
             return RedirectToAction("Events");
         }
 
+        // =========================================================
+        // ACTION: CLOSE EVENT & ASSIGN FINES
+        // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CloseEventAndAssignFines(int eventId)
+        public async Task<IActionResult> CloseEvent(int eventId, string password)
         {
+            // 1. Password Verification
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                TempData["Error"] = "Session expired.";
+                return RedirectToAction("Events");
+            }
+
+            if (string.IsNullOrEmpty(password))
+            {
+                TempData["Error"] = "Password is required to close an event.";
+                return RedirectToAction("Events");
+            }
+
+            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, password, false);
+            if (!passwordCheck.Succeeded)
+            {
+                TempData["Error"] = "Invalid password. Action cancelled.";
+                return RedirectToAction("Events");
+            }
+
             try
             {
                 var eventToClose = await _context.Events.FindAsync(eventId);
@@ -2456,13 +2510,17 @@ namespace iBITS_Portal.Controllers
                     return RedirectToAction("Events");
                 }
 
-                // Get all active students
+                // 2. Mark Event as Closed (Updates Status to Completed)
+                eventToClose.IsClosed = true;
+                _context.Events.Update(eventToClose);
+
+                // 3. Get all active students
                 var activeStudents = await _context.Students
                     .Include(s => s.Officer)
-                    .Where(s => s.Classification == "Active")
+                    .Where(s => s.IsArchived != true && (s.Classification == null || s.Classification == "Active"))
                     .ToListAsync();
 
-                // Get existing attendance records
+                // 4. Get existing attendance records for this event
                 var existingAttendance = await _context.Attendances
                     .Where(a => a.EventId == eventId)
                     .ToListAsync();
@@ -2474,7 +2532,7 @@ namespace iBITS_Portal.Controllers
                 {
                     var attendance = existingAttendance.FirstOrDefault(a => a.StudentNum == student.StudentNum);
 
-                    // If no attendance record exists, create one as "Absent"
+                    // If no record exists, create one as "Absent"
                     if (attendance == null)
                     {
                         attendance = new Attendance
@@ -2484,11 +2542,12 @@ namespace iBITS_Portal.Controllers
                             AttendanceStatus = "Absent"
                         };
                         _context.Attendances.Add(attendance);
-                        await _context.SaveChangesAsync(); // Save to get AttendanceId
+                        // Save individually to get ID for fine generation
+                        await _context.SaveChangesAsync();
                         attendanceCreated++;
                     }
 
-                    // Generate fine if absent or excused (uses our new helper method)
+                    // Generate fine if status is "Absent" or "Excused"
                     if (attendance.AttendanceStatus == "Absent" || attendance.AttendanceStatus == "Excused")
                     {
                         bool fineCreated = await GenerateFineForAttendance(attendance.AttendanceId, notifyStudent: true);
@@ -2496,23 +2555,22 @@ namespace iBITS_Portal.Controllers
                     }
                 }
 
-                await LogAction("Close Event",
-                    $"Closed event '{eventToClose.EventName}'. Created {attendanceCreated} absence records. " +
-                    $"Issued {finesGenerated} fines.");
+                // Save the Event Update (IsClosed)
+                await _context.SaveChangesAsync();
 
-                TempData["Message"] = $"Event closed successfully. " +
-                                     $"Created {attendanceCreated} absence records and issued {finesGenerated} fines. " +
-                                     $"Students have been notified.";
+                await LogAction("Close Event",
+                    $"Closed event '{eventToClose.EventName}'. Marked {attendanceCreated} absent and issued {finesGenerated} fines.");
+
+                TempData["Message"] = $"Event closed. Status set to Completed. {attendanceCreated} students marked absent. {finesGenerated} fines issued.";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error closing event and assigning fines");
-                TempData["Error"] = "An error occurred while closing the event and calculating fines.";
+                TempData["Error"] = "An error occurred while closing the event.";
             }
 
             return RedirectToAction("Events");
         }
-
         // =========================================================
         // FINE MANAGEMENT - ENHANCED AUTO-GENERATION
         // =========================================================
@@ -2524,34 +2582,21 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
+                // Load attendance with all necessary relationships for fine calculation
                 var attendance = await _context.Attendances
-                    .Include(a => a.StudentNumNavigation)
-                        .ThenInclude(s => s.Officer)
+                    .Include(a => a.StudentNumNavigation).ThenInclude(s => s.Officer)
                     .Include(a => a.Event)
                     .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
 
-                if (attendance == null)
-                {
-                    _logger.LogWarning($"Attendance ID {attendanceId} not found for fine generation.");
-                    return false;
-                }
-
-                if (attendance.AttendanceStatus != "Absent" && attendance.AttendanceStatus != "Excused")
+                if (attendance == null || (attendance.AttendanceStatus != "Absent" && attendance.AttendanceStatus != "Excused"))
                     return false;
 
-                var existingFine = await _context.Fines.FirstOrDefaultAsync(f => f.AttendanceId == attendanceId);
-                if (existingFine != null)
-                {
-                    _logger.LogInformation($"Fine already exists for Attendance ID {attendanceId}. Skipping.");
-                    return false;
-                }
+                // Prevent duplicate fines for the same attendance record
+                bool alreadyHasFine = await _context.Fines.AnyAsync(f => f.AttendanceId == attendanceId);
+                if (alreadyHasFine) return false;
 
                 decimal fineAmount = CalculateFineAmount(attendance);
-                if (fineAmount <= 0)
-                {
-                    _logger.LogInformation($"No fine configured. Attendance ID: {attendanceId}");
-                    return false;
-                }
+                if (fineAmount <= 0) return false;
 
                 var fine = new Fine
                 {
@@ -2559,24 +2604,22 @@ namespace iBITS_Portal.Controllers
                     Amount = fineAmount,
                     FinesStatus = "Unpaid",
                     FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
-                    FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30))
+                    FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(14)) // Default 2 weeks due date
                 };
 
                 _context.Fines.Add(fine);
                 await _context.SaveChangesAsync();
 
-                await LogAction("Generate Fine",
-                    $"Fine of ₱{fineAmount} created for {attendance.StudentNumNavigation?.FullName} " +
-                    $"(Event: {attendance.Event?.EventName}, Status: {attendance.AttendanceStatus})");
-
-                if (notifyStudent && attendance.StudentNum != null)
-                    await SendFineNotification(attendance.StudentNum, fine, attendance.Event?.EventName ?? "Unknown Event");
+                if (notifyStudent && !string.IsNullOrEmpty(attendance.StudentNum))
+                {
+                    await SendFineNotification(attendance.StudentNum, fine, attendance.Event?.EventName ?? "Event");
+                }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error generating fine for Attendance ID {attendanceId}");
+                _logger.LogError(ex, $"Fine generation failed for Attendance {attendanceId}");
                 return false;
             }
         }
@@ -2586,35 +2629,29 @@ namespace iBITS_Portal.Controllers
             if (attendance.Event == null || attendance.StudentNumNavigation == null)
                 return 0;
 
+            var student = attendance.StudentNumNavigation;
+            var evt = attendance.Event;
+
+            // Determine the student's role classification
             string roleType = "Member";
-            if (attendance.StudentNumNavigation.Officer != null)
+            if (student.Officer != null)
             {
-                if (attendance.StudentNumNavigation.Officer.Classification == "Class Officer")
+                // Use the classification from the Officer table
+                if (student.Officer.Classification == "Class Officer")
                     roleType = "Class Officer";
-                else if (attendance.StudentNumNavigation.Officer.Classification == "Org Officer")
+                else if (student.Officer.Classification == "Org Officer")
                     roleType = "Org Officer";
             }
 
-            decimal fineAmount = 0;
-            if (attendance.Event.EventType == "iBITS Event")
+            // Assign fine based on Event Type and Role Type
+            bool isIbits = evt.EventType == "iBITS Event";
+
+            return roleType switch
             {
-                if (roleType == "Member")
-                    fineAmount = attendance.Event.FineForMember ?? 0;
-                else if (roleType == "Class Officer")
-                    fineAmount = attendance.Event.FineForClassOfficer ?? 0;
-                else if (roleType == "Org Officer")
-                    fineAmount = attendance.Event.FineForOrgOfficer ?? 0;
-            }
-            else
-            {
-                if (roleType == "Member")
-                    fineAmount = attendance.Event.NonIbitsFineForMember ?? 0;
-                else if (roleType == "Class Officer")
-                    fineAmount = attendance.Event.NonIbitsFineForClassOfficer ?? 0;
-                else if (roleType == "Org Officer")
-                    fineAmount = attendance.Event.NonIbitsFineForOrgOfficer ?? 0;
-            }
-            return fineAmount;
+                "Org Officer" => isIbits ? (evt.FineForOrgOfficer ?? 0) : (evt.NonIbitsFineForOrgOfficer ?? 0),
+                "Class Officer" => isIbits ? (evt.FineForClassOfficer ?? 0) : (evt.NonIbitsFineForClassOfficer ?? 0),
+                _ => isIbits ? (evt.FineForMember ?? 0) : (evt.NonIbitsFineForMember ?? 0)
+            };
         }
 
         private async Task SendFineNotification(string studentNum, Fine fine, string eventName)
@@ -2743,50 +2780,47 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // ATTENDANCE - VIEW ONLY WITH FILTERS
+        // ATTENDANCE - VIEW ONLY WITH FILTERS (OPTIMIZED)
         // =========================================================
         public async Task<IActionResult> Attendance(string? eventFilter, string? programFilter, string? yearFilter)
         {
-            // Start with base query
+            // Start with base query including navigation properties
             var query = _context.Attendances
                 .Include(a => a.Event)
                 .Include(a => a.StudentNumNavigation)
                 .AsQueryable();
 
-            // Apply Event filter
+            // Apply Event filter (database-side)
             if (!string.IsNullOrEmpty(eventFilter) && int.TryParse(eventFilter, out int eventId))
             {
                 query = query.Where(a => a.EventId == eventId);
             }
 
-            // Apply Program filter (Course)
+            // Apply Program filter (database-side)
             if (!string.IsNullOrEmpty(programFilter))
             {
                 query = query.Where(a => a.StudentNumNavigation != null &&
-                                         a.StudentNumNavigation.Course != null &&
-                                         a.StudentNumNavigation.Course.ToUpper().Contains(programFilter.ToUpper()));
+                                            a.StudentNumNavigation.Course != null &&
+                                            a.StudentNumNavigation.Course.ToUpper().Contains(programFilter.ToUpper()));
             }
 
-            // Apply Year filter
+            // Apply Year filter (database-side)
             if (!string.IsNullOrEmpty(yearFilter))
             {
-                var attendances = await query.ToListAsync();
-                attendances = attendances.Where(a => ExtractYearFromYearLevelSection(a.StudentNumNavigation?.YearLevelSection) == yearFilter).ToList();
-
-                // Populate ViewBag data
-                await PopulateAttendanceFilters();
-                ViewData["EventFilter"] = eventFilter;
-                ViewData["ProgramFilter"] = programFilter;
-                ViewData["YearFilter"] = yearFilter;
-
-                return View(attendances.OrderByDescending(a => a.Event != null ? a.Event.EventDate : DateOnly.MinValue).ToList());
+                // This pattern matches year levels like "3-", "BSIT 3-", "DIT 3-", etc.
+                string yearPattern = yearFilter + "-";
+                query = query.Where(a => a.StudentNumNavigation != null &&
+                                            a.StudentNumNavigation.YearLevelSection != null &&
+                                            (a.StudentNumNavigation.YearLevelSection.StartsWith(yearPattern) ||
+                                            a.StudentNumNavigation.YearLevelSection.Contains(" " + yearPattern)));
             }
 
+            // Execute the final, filtered query on the database
             var result = await query
                 .OrderByDescending(a => a.Event != null ? a.Event.EventDate : DateOnly.MinValue)
                 .ToListAsync();
 
-            // Populate ViewBag data
+            // Populate dropdowns for the view
             await PopulateAttendanceFilters();
             ViewData["EventFilter"] = eventFilter;
             ViewData["ProgramFilter"] = programFilter;
@@ -2827,25 +2861,68 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // PAYMENTS PAGE (FEES ONLY)
+        // PAYMENTS PAGE (FEES ONLY) (OPTIMIZED)
         // =========================================================
         public async Task<IActionResult> Payments()
         {
-            // Fetch Fees only (Fines moved to separate page)
+            // Fetch Fees for the main table view
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
                 .OrderBy(f => f.FeeStatus)
                 .ThenByDescending(f => f.FeesDueDate)
                 .ToListAsync();
 
-            // Calculate Summary Statistics (FEES ONLY)
-            decimal feesCollected = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID" || f.FeeStatus?.ToUpper() == "COMPLETED").Sum(f => f.Amount ?? 0);
-            decimal feesExpected = fees.Sum(f => f.Amount ?? 0);
+            // --- OPTIMIZED CHART DATA & SUMMARY CALCULATION ---
+            // Perform aggregation directly on the database
+            var paymentStats = await _context.Fees
+                .Where(f => f.StudentNumNavigation != null && f.StudentNumNavigation.Course != null)
+                .GroupBy(f => new
+                {
+                    Course = f.StudentNumNavigation.Course,
+                    YearLevelSection = f.StudentNumNavigation.YearLevelSection,
+                    IsPaid = f.FeeStatus == "Paid" || f.FeeStatus == "Completed"
+                })
+                .Select(g => new
+                {
+                    g.Key.Course,
+                    g.Key.YearLevelSection,
+                    g.Key.IsPaid,
+                    TotalAmount = g.Sum(f => f.Amount ?? 0)
+                })
+                .ToListAsync();
 
-            ViewBag.TotalCollections = feesCollected;
-            ViewBag.TotalExpected = feesExpected;
+            // Process the aggregated results in memory
+            var paidBreakdown = new Dictionary<string, decimal>();
+            var pendingBreakdown = new Dictionary<string, decimal>();
 
-            // 5. Populate Fee Name Dropdown
+            foreach (var stat in paymentStats)
+            {
+                string program = stat.Course.ToUpper().Contains("BSIT") ? "BSIT" :
+                                 stat.Course.ToUpper().Contains("DIT") ? "DIT" : "Other";
+                int year = StringHelper.ExtractYearLevel(stat.YearLevelSection);
+                string key = $"{program}{year}";
+
+                if (year > 0)
+                {
+                    if (stat.IsPaid)
+                    {
+                        if (!paidBreakdown.ContainsKey(key)) paidBreakdown[key] = 0;
+                        paidBreakdown[key] += stat.TotalAmount;
+                    }
+                    else
+                    {
+                        if (!pendingBreakdown.ContainsKey(key)) pendingBreakdown[key] = 0;
+                        pendingBreakdown[key] += stat.TotalAmount;
+                    }
+                }
+            }
+
+            ViewBag.PaidBreakdown = paidBreakdown;
+            ViewBag.PendingBreakdown = pendingBreakdown;
+            ViewBag.TotalCollections = paymentStats.Where(s => s.IsPaid).Sum(s => s.TotalAmount);
+            ViewBag.TotalExpected = paymentStats.Sum(s => s.TotalAmount);
+
+            // Populate Fee Name Dropdown for filtering
             ViewBag.FeeNames = await _context.Fees
                 .Where(f => !string.IsNullOrEmpty(f.FeeName))
                 .Select(f => f.FeeName)
@@ -2853,44 +2930,7 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(n => n)
                 .ToListAsync();
 
-            // 6. Pie Chart Data (based on Fees)
-            int ExtractYear(string? yls)
-            {
-                if (string.IsNullOrEmpty(yls)) return 0;
-                if (yls.Contains("1")) return 1;
-                if (yls.Contains("2")) return 2;
-                if (yls.Contains("3")) return 3;
-                if (yls.Contains("4")) return 4;
-                return 0;
-            }
-
-            bool IsBSIT(string? course) => course != null && course.ToUpper().Contains("BSIT");
-            bool IsDIT(string? course) => course != null && course.ToUpper().Contains("DIT");
-            decimal SumFees(Func<Fee, bool> criteria) => fees.Where(criteria).Sum(f => f.Amount ?? 0);
-
-            ViewBag.PaidBreakdown = new Dictionary<string, decimal>
-            {
-                { "BSIT1", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 1) },
-                { "BSIT2", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 2) },
-                { "BSIT3", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 3) },
-                { "BSIT4", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 4) },
-                { "DIT1", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 1) },
-                { "DIT2", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 2) },
-                { "DIT3", SumFees(f => f.FeeStatus?.ToUpper() == "PAID" && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 3) }
-            };
-
-            ViewBag.PendingBreakdown = new Dictionary<string, decimal>
-            {
-                { "BSIT1", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 1) },
-                { "BSIT2", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 2) },
-                { "BSIT3", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 3) },
-                { "BSIT4", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsBSIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 4) },
-                { "DIT1", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 1) },
-                { "DIT2", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 2) },
-                { "DIT3", SumFees(f => (f.FeeStatus?.ToUpper() == "PENDING" || f.FeeStatus?.ToUpper() == "UNPAID") && f.StudentNumNavigation != null && IsDIT(f.StudentNumNavigation.Course) && ExtractYear(f.StudentNumNavigation.YearLevelSection) == 3) }
-            };
-
-            return View(fees); // Pass fees as the primary model
+            return View(fees);
         }
 
 
@@ -2919,11 +2959,11 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // FINES MANAGEMENT PAGE (NEW SECTION)
+        // FINES MANAGEMENT PAGE (OPTIMIZED)
         // =========================================================
-
         public async Task<IActionResult> Fines()
         {
+            // Fetch all fines with related data for the main table view
             var allFines = await _context.Fines
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
@@ -2932,43 +2972,55 @@ namespace iBITS_Portal.Controllers
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
-            // --- Calculate Summaries ---
-            var totalExpected = allFines.Sum(f => f.Amount ?? 0);
-            var totalCollected = allFines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
-            ViewBag.CollectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+            // --- OPTIMIZED CHART DATA & SUMMARY CALCULATION ---
+            var fineStats = await _context.Fines
+                .Where(f => f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.Course != null)
+                .GroupBy(f => new
+                {
+                    Course = f.Attendance.StudentNumNavigation.Course,
+                    YearLevelSection = f.Attendance.StudentNumNavigation.YearLevelSection,
+                    IsPaid = f.FinesStatus == "Paid"
+                })
+                .Select(g => new
+                {
+                    g.Key.Course,
+                    g.Key.YearLevelSection,
+                    g.Key.IsPaid,
+                    TotalAmount = g.Sum(f => f.Amount ?? 0)
+                })
+                .ToListAsync();
 
-            // --- Prepare Chart Data ---
-            int ExtractYear(string? yls)
+            // Process the aggregated results in memory
+            var paidBreakdown = new Dictionary<string, decimal>();
+            var unpaidBreakdown = new Dictionary<string, decimal>();
+
+            foreach (var stat in fineStats)
             {
-                if (string.IsNullOrEmpty(yls)) return 0;
-                var match = System.Text.RegularExpressions.Regex.Match(yls, @"\d");
-                return match.Success ? int.Parse(match.Value) : 0;
+                string program = stat.Course.ToUpper().Contains("BSIT") ? "BSIT" :
+                                 stat.Course.ToUpper().Contains("DIT") ? "DIT" : "Other";
+                int year = StringHelper.ExtractYearLevel(stat.YearLevelSection);
+                string key = $"{program}{year}";
+
+                if (year > 0)
+                {
+                    if (stat.IsPaid)
+                    {
+                        if (!paidBreakdown.ContainsKey(key)) paidBreakdown[key] = 0;
+                        paidBreakdown[key] += stat.TotalAmount;
+                    }
+                    else
+                    {
+                        if (!unpaidBreakdown.ContainsKey(key)) unpaidBreakdown[key] = 0;
+                        unpaidBreakdown[key] += stat.TotalAmount;
+                    }
+                }
             }
-            bool IsBSIT(string? course) => course != null && course.ToUpper().Contains("BSIT");
-            bool IsDIT(string? course) => course != null && course.ToUpper().Contains("DIT");
-            decimal SumFines(Func<Fine, bool> criteria) => allFines.Where(criteria).Sum(f => f.Amount ?? 0);
 
-            ViewBag.PaidBreakdown = new Dictionary<string, decimal>
-    {
-        { "BSIT1", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
-        { "BSIT2", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
-        { "BSIT3", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) },
-        { "BSIT4", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 4) },
-        { "DIT1", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
-        { "DIT2", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
-        { "DIT3", SumFines(f => f.FinesStatus?.ToLower() == "paid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) }
-    };
-
-            ViewBag.UnpaidBreakdown = new Dictionary<string, decimal>
-    {
-        { "BSIT1", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
-        { "BSIT2", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
-        { "BSIT3", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) },
-        { "BSIT4", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsBSIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 4) },
-        { "DIT1", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 1) },
-        { "DIT2", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 2) },
-        { "DIT3", SumFines(f => f.FinesStatus?.ToLower() == "unpaid" && f.Attendance?.StudentNumNavigation != null && IsDIT(f.Attendance.StudentNumNavigation.Course) && ExtractYear(f.Attendance.StudentNumNavigation.YearLevelSection) == 3) }
-    };
+            ViewBag.PaidBreakdown = paidBreakdown;
+            ViewBag.UnpaidBreakdown = unpaidBreakdown;
+            var totalExpected = fineStats.Sum(s => s.TotalAmount);
+            var totalCollected = fineStats.Where(s => s.IsPaid).Sum(s => s.TotalAmount);
+            ViewBag.CollectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
 
             // For Filter Dropdown
             ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
@@ -3262,7 +3314,6 @@ namespace iBITS_Portal.Controllers
 
         // =========================================================
         // EXPORT TO EXCEL - WYSIWYG (What You See What You Get)
-        // Exports only the visible columns based on user selection
         // =========================================================
         public async Task<IActionResult> ExportStudentsToExcel(
             string searchString,
@@ -3276,52 +3327,10 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                // Build query with same filters as StudentRecords
-                var studentsQuery = _context.Students
-                    .Include(s => s.Officer)
-                    .AsQueryable();
+                // Use the consolidated helper method to get the exact same filtered data
+                var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter);
 
-                // Apply filters
-                if (!string.IsNullOrEmpty(searchString))
-                {
-                    studentsQuery = studentsQuery.Where(s =>
-                        s.StudentNum.Contains(searchString) ||
-                        s.StudentFn.Contains(searchString) ||
-                        s.StudentLn.Contains(searchString) ||
-                        (s.StudentMn != null && s.StudentMn.Contains(searchString)) ||
-                        (s.StudentEmail != null && s.StudentEmail.Contains(searchString)) ||
-                        (s.Course != null && s.Course.Contains(searchString)) ||
-                        (s.YearLevelSection != null && s.YearLevelSection.Contains(searchString))
-                    );
-                }
-
-                if (!string.IsNullOrEmpty(programFilter))
-                    studentsQuery = studentsQuery.Where(s => s.Course == programFilter);
-
-                if (!string.IsNullOrEmpty(yearFilter))
-                    studentsQuery = studentsQuery.Where(s => s.YearLevelSection != null && s.YearLevelSection.StartsWith(yearFilter));
-
-                if (!string.IsNullOrEmpty(sectionFilter))
-                {
-                    string sectionSuffix = "-" + sectionFilter;
-                    studentsQuery = studentsQuery.Where(s => s.YearLevelSection != null && s.YearLevelSection.EndsWith(sectionSuffix));
-                }
-
-                if (!string.IsNullOrEmpty(typeFilter))
-                    studentsQuery = studentsQuery.Where(s => s.StudentType == typeFilter);
-
-                if (!string.IsNullOrEmpty(statusFilter))
-                    studentsQuery = studentsQuery.Where(s => s.Classification == statusFilter);
-
-                if (!string.IsNullOrEmpty(roleFilter))
-                {
-                    if (roleFilter == "Officer")
-                        studentsQuery = studentsQuery.Where(s => s.OfficerId != null);
-                    else if (roleFilter == "Member")
-                        studentsQuery = studentsQuery.Where(s => s.OfficerId == null);
-                }
-
-                // Order by last name
+                // Order the results for the export file
                 var students = await studentsQuery.OrderBy(s => s.StudentLn).ToListAsync();
 
                 // Parse visible columns (default to all if not specified)
@@ -3329,24 +3338,20 @@ namespace iBITS_Portal.Controllers
                     ? new[] { "Id", "Name", "Program", "Section", "Year", "Type", "Role", "Status" }
                     : columns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-                // Create Excel workbook using ClosedXML
                 using (var workbook = new XLWorkbook())
                 {
                     var worksheet = workbook.Worksheets.Add("Student Records");
 
                     // Build dynamic headers based on visible columns
                     var headersList = new List<string>();
-                    var columnOrder = new List<string>();
-
-                    // Map column names to header text (in order they appear in UI)
-                    if (visibleColumns.Contains("Id")) { headersList.Add("Student ID"); columnOrder.Add("Id"); }
-                    if (visibleColumns.Contains("Name")) { headersList.Add("Full Name"); headersList.Add("Email"); columnOrder.Add("Name"); columnOrder.Add("Email"); }
-                    if (visibleColumns.Contains("Program")) { headersList.Add("Course/Program"); columnOrder.Add("Program"); }
-                    if (visibleColumns.Contains("Section")) { headersList.Add("Year & Section"); columnOrder.Add("Section"); }
-                    if (visibleColumns.Contains("Year")) { headersList.Add("School Year Enrolled"); columnOrder.Add("Year"); }
-                    if (visibleColumns.Contains("Type")) { headersList.Add("Student Type"); columnOrder.Add("Type"); }
-                    if (visibleColumns.Contains("Role")) { headersList.Add("Role"); columnOrder.Add("Role"); }
-                    if (visibleColumns.Contains("Status")) { headersList.Add("Status"); columnOrder.Add("Status"); }
+                    if (visibleColumns.Contains("Id")) headersList.Add("Student ID");
+                    if (visibleColumns.Contains("Name")) { headersList.Add("Full Name"); headersList.Add("Email"); }
+                    if (visibleColumns.Contains("Program")) headersList.Add("Course/Program");
+                    if (visibleColumns.Contains("Section")) headersList.Add("Year & Section");
+                    if (visibleColumns.Contains("Year")) headersList.Add("School Year Enrolled");
+                    if (visibleColumns.Contains("Type")) headersList.Add("Student Type");
+                    if (visibleColumns.Contains("Role")) headersList.Add("Role");
+                    if (visibleColumns.Contains("Status")) headersList.Add("Status");
 
                     // Style header row
                     for (int i = 0; i < headersList.Count; i++)
@@ -3360,71 +3365,39 @@ namespace iBITS_Portal.Controllers
                         cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     }
 
-                    // Populate data rows based on visible columns
+                    // Populate data rows
                     int row = 2;
                     foreach (var student in students)
                     {
                         int col = 1;
-
-                        if (visibleColumns.Contains("Id"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.StudentNum;
-                        }
+                        if (visibleColumns.Contains("Id")) worksheet.Cell(row, col++).Value = student.StudentNum;
                         if (visibleColumns.Contains("Name"))
                         {
-                            // Full Name format: Surname, Firstname M.I.
                             string middleInitial = !string.IsNullOrEmpty(student.StudentMn) ? student.StudentMn.Substring(0, 1) + "." : "";
                             string fullName = $"{student.StudentLn ?? ""}, {student.StudentFn ?? ""} {middleInitial}".Trim();
                             worksheet.Cell(row, col++).Value = fullName;
-                            // Email
                             worksheet.Cell(row, col++).Value = student.StudentEmail ?? "";
                         }
-                        if (visibleColumns.Contains("Program"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.Course ?? "";
-                        }
-                        if (visibleColumns.Contains("Section"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.YearLevelSection ?? "";
-                        }
-                        if (visibleColumns.Contains("Year"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.SchoolYearEnrolled ?? "";
-                        }
-                        if (visibleColumns.Contains("Type"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.StudentType ?? "";
-                        }
-                        if (visibleColumns.Contains("Role"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.Officer?.Position ?? "Member";
-                        }
-                        if (visibleColumns.Contains("Status"))
-                        {
-                            worksheet.Cell(row, col++).Value = student.Classification ?? "";
-                        }
+                        if (visibleColumns.Contains("Program")) worksheet.Cell(row, col++).Value = student.Course ?? "";
+                        if (visibleColumns.Contains("Section")) worksheet.Cell(row, col++).Value = student.YearLevelSection ?? "";
+                        if (visibleColumns.Contains("Year")) worksheet.Cell(row, col++).Value = student.SchoolYearEnrolled ?? "";
+                        if (visibleColumns.Contains("Type")) worksheet.Cell(row, col++).Value = student.StudentType ?? "";
+                        if (visibleColumns.Contains("Role")) worksheet.Cell(row, col++).Value = student.Officer?.Position ?? "Member";
+                        if (visibleColumns.Contains("Status")) worksheet.Cell(row, col++).Value = student.Classification ?? "";
 
-                        // Add borders to data cells
                         for (int c = 1; c < col; c++)
                         {
                             worksheet.Cell(row, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         }
-
                         row++;
                     }
 
-                    // Auto-fit columns
                     worksheet.Columns().AdjustToContents();
 
-                    // Add summary row
+                    // Add summary
                     row++;
                     worksheet.Cell(row, 1).Value = $"Total Records: {students.Count}";
                     worksheet.Cell(row, 1).Style.Font.Bold = true;
-                    worksheet.Range(row, 1, row, 3).Merge();
-
-                    row++;
-                    worksheet.Cell(row, 1).Value = $"Export Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-                    worksheet.Cell(row, 1).Style.Font.Italic = true;
                     worksheet.Range(row, 1, row, 3).Merge();
 
                     // Generate file
@@ -3432,16 +3405,9 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-
                         string fileName = $"iBITS_StudentRecords_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-
-                        await LogAction("Export Excel", $"Exported {students.Count} student records to Excel (Columns: {columns ?? "All"}).");
-
-                        return File(
-                            stream.ToArray(),
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            fileName
-                        );
+                        await LogAction("Export Excel", $"Exported {students.Count} student records to Excel.");
+                        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
                 }
             }
@@ -4085,6 +4051,9 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction(nameof(Payments));
             }
         }
+
+
+
 
 
     }

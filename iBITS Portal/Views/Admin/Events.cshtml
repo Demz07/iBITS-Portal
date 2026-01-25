@@ -42,12 +42,40 @@
         {
             string statusClass = "badge-completed";
             string statusText = "Completed";
-            var today = DateOnly.FromDateTime(DateTime.Now);
 
-            if (item.EventDate.HasValue)
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            var timeNow = TimeOnly.FromDateTime(now);
+
+            // Determine Effective End Date (use EventDate if EndDate is null)
+            DateOnly effectiveEndDate = item.EndDate ?? item.EventDate ?? DateOnly.MaxValue;
+
+            // Logic for "Automatically Closed":
+            // 1. Date has passed OR
+            // 2. Date is today AND EndTime exists AND current time is past EndTime
+            bool isPastDate = effectiveEndDate < today;
+            bool isPastTimeToday = effectiveEndDate == today && item.EndTime.HasValue && item.EndTime.Value < timeNow;
+            bool isAutomaticallyClosed = isPastDate || isPastTimeToday;
+
+            // STATUS LOGIC
+            if (item.IsClosed || isAutomaticallyClosed)
             {
-                if (item.EventDate.Value > today) { statusClass = "badge-upcoming"; statusText = "Upcoming"; }
-                else if (item.EventDate.Value == today) { statusClass = "badge-today"; statusText = "Happening Now"; }
+                statusClass = "badge-completed";
+                statusText = "Completed";
+            }
+            else if (item.EventDate.HasValue)
+            {
+                if (item.EventDate.Value > today)
+                {
+                    statusClass = "badge-upcoming";
+                    statusText = "Upcoming";
+                }
+                else if (item.EventDate.Value == today)
+                {
+                    // If it's today and NOT closed/past time, it's Happening Now
+                    statusClass = "badge-today";
+                    statusText = "Happening Now";
+                }
             }
 
             <div class="col-md-6 col-lg-4">
@@ -91,13 +119,17 @@
                             </div>
 
                             <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-glass text-danger"
-                                        title="Close Event & Assign Fines"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#closeEventModal"
-                                        onclick="setCloseEventModal('@item.EventId', '@item.EventName')">
-                                    <i class="bi bi-exclamation-triangle-fill"></i>
-                                </button>
+                                <!-- Only show Close button if not already completed -->
+                                @if (statusText != "Completed")
+                                {
+                                    <button class="btn btn-sm btn-glass text-danger"
+                                            title="Close Event & Assign Fines"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#closeEventModal"
+                                            onclick="setCloseEventModal('@item.EventId', '@item.EventName')">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </button>
+                                }
 
                                 <button class="btn btn-sm btn-manage-event"
                                         style="font-size: 0.75rem; padding: 5px 12px;"

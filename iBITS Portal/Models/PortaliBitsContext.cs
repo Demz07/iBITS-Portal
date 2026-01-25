@@ -49,6 +49,15 @@ public partial class PortaliBitsContext : DbContext
         modelBuilder.Entity<SystemSetting>().ToTable("SystemSettings");
         modelBuilder.Entity<Notification>().ToTable("Notification");
 
+        // === UPDATE STARTS HERE ===
+        modelBuilder.Entity<Event>(entity =>
+        {
+            // Configure Default Value for IsClosed
+            entity.Property(e => e.IsClosed)
+                  .HasDefaultValue(false);
+        });
+        // === UPDATE ENDS HERE ===
+
         modelBuilder.Entity<Attendance>(entity =>
         {
             entity.HasOne(d => d.Event)
@@ -82,8 +91,7 @@ public partial class PortaliBitsContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // REMOVED: ExcuseRequest configuration block
-
+        // ... rest of the existing configuration ...
         modelBuilder.Entity<Student>(entity =>
         {
             entity.HasOne(d => d.Officer)

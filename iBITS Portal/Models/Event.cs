@@ -129,6 +129,8 @@ public partial class Event
     [Column(TypeName = "decimal(18,2)")]
     public decimal? NonIbitsFineForOrgOfficer { get; set; }
 
+    public bool IsClosed { get; set; }
+
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
     [NotMapped]
