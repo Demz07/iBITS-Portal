@@ -1502,6 +1502,9 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // HELPER: Build Dashboard Data Object
         // =========================================================
+        // =========================================================
+        // HELPER: Build Dashboard Data Object (UPDATED FOR MANUAL FINES)
+        // =========================================================
         private async Task<DashboardDataModel> BuildDashboardData()
         {
             // Fetch all data from database - exclude archived students from active counts
@@ -1509,109 +1512,39 @@ namespace iBITS_Portal.Controllers
             var events = await _context.Events.ToListAsync();
             var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
 
-            // For Fines: Need to include Attendance AND its StudentNumNavigation
+            // UPDATED: Include Student for Manual Fines
             var fines = await _context.Fines
+                .Include(f => f.Student) // Manual Fines
                 .Include(f => f.Attendance)
-                    .ThenInclude(a => a.StudentNumNavigation)
+                    .ThenInclude(a => a.StudentNumNavigation) // Event Fines
                 .ToListAsync();
 
             // Filter: Only non-archived students for main dashboard stats
             var students = allStudents.Where(s => s.IsArchived != true).ToList();
 
-            // Log for debugging (can be removed in production)
-            _logger.LogInformation($"Dashboard Data: Total Students={allStudents.Count}, Non-Archived={students.Count}");
-            _logger.LogInformation($"Dashboard Data: Total Fees={fees.Count}, Total Fines={fines.Count}");
-
-            // Debug: Log sample YearLevelSection values to understand the format
-            var sampleYearLevels = students.Take(5).Select(s => s.YearLevelSection).ToList();
-            _logger.LogInformation($"Sample YearLevelSection values: {string.Join(", ", sampleYearLevels.Select(y => y ?? "null"))}");
-
-            // Debug: Log sample Course values
-            var sampleCourses = students.Take(5).Select(s => s.Course).ToList();
-            _logger.LogInformation($"Sample Course values: {string.Join(", ", sampleCourses.Select(c => c ?? "null"))}");
-
-            // =====================================================
-            // HELPER: Extract Year Level from YearLevelSection
-            // Handles formats like: "3-1", "1-A", "BSIT 1-A", "1A", "First Year", etc.
-            // =====================================================
+            // Helper to extract year level
             int ExtractYearLevel(string? yearLevelSection)
             {
-                if (string.IsNullOrWhiteSpace(yearLevelSection))
-                    return 0;
-
+                if (string.IsNullOrWhiteSpace(yearLevelSection)) return 0;
                 var input = yearLevelSection.Trim().ToUpper();
-
-                // Check for word-based year levels first
-                if (input.Contains("FIRST") || input.Contains("1ST"))
-                    return 1;
-                if (input.Contains("SECOND") || input.Contains("2ND"))
-                    return 2;
-                if (input.Contains("THIRD") || input.Contains("3RD"))
-                    return 3;
-                if (input.Contains("FOURTH") || input.Contains("4TH"))
-                    return 4;
-
-                // Extract first digit found in the string (handles "3-1", "1-A", etc.)
-                foreach (char c in input)
-                {
-                    if (char.IsDigit(c))
-                    {
-                        int year = c - '0';
-                        if (year >= 1 && year <= 4)
-                            return year;
-                    }
-                }
-
-                return 0; // Unknown year level
+                if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
+                if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
+                if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
+                if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
+                foreach (char c in input) { if (char.IsDigit(c)) { int year = c - '0'; if (year >= 1 && year <= 4) return year; } }
+                return 0;
             }
 
-            // =====================================================
-            // HELPER: Check if student is considered "Active"
-            // Handles null, empty, or various classification values
-            // =====================================================
-            bool IsActiveStudent(Student s)
-            {
-                // If Classification is null or empty, consider student as active (default)
-                if (string.IsNullOrWhiteSpace(s.Classification))
-                    return true;
-
-                var classification = s.Classification.Trim().ToUpper();
-                // Student is active if not explicitly marked as inactive/archived
-                return classification != "INACTIVE" &&
-                       classification != "ARCHIVED" &&
-                       classification != "DROPPED" &&
-                       classification != "GRADUATED";
-            }
-
-            // =====================================================
-            // HELPER: Check if student belongs to a course/program
-            // Case-insensitive matching
-            // =====================================================
+            // Helpers for Course
             bool IsBSIT(Student s) => !string.IsNullOrWhiteSpace(s.Course) && s.Course.ToUpper().Contains("BSIT");
             bool IsDIT(Student s) => !string.IsNullOrWhiteSpace(s.Course) && s.Course.ToUpper().Contains("DIT");
 
-            // =====================================================
-            // Students per Program (BSIT vs DIT ONLY)
-            // Filter to only include BSIT and DIT students
-            // =====================================================
+            // 1. Student Counts
             var bsitDitStudents = students.Where(s => IsBSIT(s) || IsDIT(s)).ToList();
             var bsitCount = bsitDitStudents.Count(IsBSIT);
             var ditCount = bsitDitStudents.Count(IsDIT);
             var totalStudents = bsitCount + ditCount;
 
-            _logger.LogInformation($"Program Counts: BSIT={bsitCount}, DIT={ditCount}, Total (BSIT+DIT only)={totalStudents}");
-
-            // Debug: Log year level extraction results
-            foreach (var s in students.Take(5))
-            {
-                var extractedYear = ExtractYearLevel(s.YearLevelSection);
-                _logger.LogInformation($"Student {s.StudentNum}: Course={s.Course}, YearLevelSection={s.YearLevelSection}, ExtractedYear={extractedYear}");
-            }
-
-            // =====================================================
-            // Year Level Counts by Program
-            // Using Dictionary for consistent JSON property names
-            // =====================================================
             var yearLevelCounts = new Dictionary<string, int>
             {
                 { "BSIT1", students.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 1) },
@@ -1623,186 +1556,72 @@ namespace iBITS_Portal.Controllers
                 { "DIT3", students.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 3) }
             };
 
-            _logger.LogInformation($"Year Level Counts: BSIT1={yearLevelCounts["BSIT1"]}, BSIT2={yearLevelCounts["BSIT2"]}, BSIT3={yearLevelCounts["BSIT3"]}, BSIT4={yearLevelCounts["BSIT4"]}");
-            _logger.LogInformation($"Year Level Counts: DIT1={yearLevelCounts["DIT1"]}, DIT2={yearLevelCounts["DIT2"]}, DIT3={yearLevelCounts["DIT3"]}");
-
-            // =====================================================
-            // Monthly Active Students (for line chart)
-            // Shows active student count - same for all months (current snapshot)
-            // =====================================================
-            var currentYear = DateTime.Now.Year;
+            // 2. Monthly Active Students
             var monthlyActiveStudents = new int[12];
-            var activeStudentCount = students.Count(IsActiveStudent);
+            var activeStudentCount = students.Count(s => string.IsNullOrWhiteSpace(s.Classification) || s.Classification.ToUpper() != "ARCHIVED" && s.Classification.ToUpper() != "INACTIVE");
+            for (int i = 0; i < 12; i++) monthlyActiveStudents[i] = activeStudentCount;
 
-            // Fill all months with current active count
-            for (int i = 0; i < 12; i++)
+            // 3. Archive & Active/Inactive
+            var archiveCount = allStudents.Count(s => s.IsArchived == true || (!string.IsNullOrWhiteSpace(s.Classification) && (s.Classification.ToUpper() == "ARCHIVED" || s.Classification.ToUpper() == "INACTIVE")));
+            var activeInactive = new Dictionary<string, int> { { "Active", activeStudentCount }, { "Inactive", allStudents.Count - activeStudentCount } };
+
+            // 4. Financials (Fees)
+            decimal GetFees(Func<Student, bool> programCheck, int yearLevel, bool paid)
             {
-                monthlyActiveStudents[i] = activeStudentCount;
-            }
-
-            // =====================================================
-            // Archive Count - students marked as archived OR inactive
-            // =====================================================
-            var archiveCount = allStudents.Count(s =>
-                s.IsArchived == true ||
-                (!string.IsNullOrWhiteSpace(s.Classification) &&
-                 (s.Classification.ToUpper() == "ARCHIVED" ||
-                  s.Classification.ToUpper() == "INACTIVE" ||
-                  s.Classification.ToUpper() == "GRADUATED")));
-
-            // =====================================================
-            // Active vs Inactive Distribution (for pie chart)
-            // Using Dictionary for consistent JSON property names
-            // =====================================================
-            var activeCount = students.Count(IsActiveStudent);
-            var inactiveCount = allStudents.Count - activeCount;
-
-            var activeInactive = new Dictionary<string, int>
-            {
-                { "Active", activeCount },
-                { "Inactive", inactiveCount }
-            };
-
-            _logger.LogInformation($"Status: Active={activeCount}, Inactive={inactiveCount}, Archived={archiveCount}");
-
-            // =====================================================
-            // Payments by Program (sum of PAID fees)
-            // =====================================================
-            decimal GetPaidFees(Func<Student, bool> programCheck, int yearLevel)
-            {
-                return fees
-                    .Where(f => f.StudentNumNavigation != null &&
-                                programCheck(f.StudentNumNavigation) &&
-                                ExtractYearLevel(f.StudentNumNavigation.YearLevelSection) == yearLevel &&
-                                !string.IsNullOrWhiteSpace(f.FeeStatus) &&
-                                f.FeeStatus.ToUpper() == "PAID")
+                return fees.Where(f => f.StudentNumNavigation != null && programCheck(f.StudentNumNavigation) &&
+                    ExtractYearLevel(f.StudentNumNavigation.YearLevelSection) == yearLevel &&
+                    (paid ? (f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID") : (f.FeeStatus == null || f.FeeStatus.ToUpper() != "PAID")))
                     .Sum(f => f.Amount ?? 0);
             }
 
             var paymentsByProgram = new Dictionary<string, decimal>
             {
-                { "BSIT1", GetPaidFees(IsBSIT, 1) },
-                { "BSIT2", GetPaidFees(IsBSIT, 2) },
-                { "BSIT3", GetPaidFees(IsBSIT, 3) },
-                { "BSIT4", GetPaidFees(IsBSIT, 4) },
-                { "DIT1", GetPaidFees(IsDIT, 1) },
-                { "DIT2", GetPaidFees(IsDIT, 2) },
-                { "DIT3", GetPaidFees(IsDIT, 3) }
+                { "BSIT1", GetFees(IsBSIT, 1, true) }, { "BSIT2", GetFees(IsBSIT, 2, true) }, { "BSIT3", GetFees(IsBSIT, 3, true) }, { "BSIT4", GetFees(IsBSIT, 4, true) },
+                { "DIT1", GetFees(IsDIT, 1, true) }, { "DIT2", GetFees(IsDIT, 2, true) }, { "DIT3", GetFees(IsDIT, 3, true) }
             };
-
-            // =====================================================
-            // Pending Payments by Program (sum of PENDING/UNPAID fees)
-            // =====================================================
-            decimal GetPendingFees(Func<Student, bool> programCheck, int yearLevel)
-            {
-                return fees
-                    .Where(f => f.StudentNumNavigation != null &&
-                                programCheck(f.StudentNumNavigation) &&
-                                ExtractYearLevel(f.StudentNumNavigation.YearLevelSection) == yearLevel &&
-                                (string.IsNullOrWhiteSpace(f.FeeStatus) ||
-                                 f.FeeStatus.ToUpper() == "PENDING" ||
-                                 f.FeeStatus.ToUpper() == "UNPAID"))
-                    .Sum(f => f.Amount ?? 0);
-            }
 
             var pendingByProgram = new Dictionary<string, decimal>
             {
-                { "BSIT1", GetPendingFees(IsBSIT, 1) },
-                { "BSIT2", GetPendingFees(IsBSIT, 2) },
-                { "BSIT3", GetPendingFees(IsBSIT, 3) },
-                { "BSIT4", GetPendingFees(IsBSIT, 4) },
-                { "DIT1", GetPendingFees(IsDIT, 1) },
-                { "DIT2", GetPendingFees(IsDIT, 2) },
-                { "DIT3", GetPendingFees(IsDIT, 3) }
+                { "BSIT1", GetFees(IsBSIT, 1, false) }, { "BSIT2", GetFees(IsBSIT, 2, false) }, { "BSIT3", GetFees(IsBSIT, 3, false) }, { "BSIT4", GetFees(IsBSIT, 4, false) },
+                { "DIT1", GetFees(IsDIT, 1, false) }, { "DIT2", GetFees(IsDIT, 2, false) }, { "DIT3", GetFees(IsDIT, 3, false) }
             };
 
-            // =====================================================
-            // Financial Summary Calculations
-            // =====================================================
+            // 5. Financial Summary
             var totalExpected = fees.Sum(f => f.Amount ?? 0);
-            var totalCollected = fees
-                .Where(f => !string.IsNullOrWhiteSpace(f.FeeStatus) && f.FeeStatus.ToUpper() == "PAID")
-                .Sum(f => f.Amount ?? 0);
-            var totalPending = fees
-                .Where(f => string.IsNullOrWhiteSpace(f.FeeStatus) ||
-                           f.FeeStatus.ToUpper() == "PENDING" ||
-                           f.FeeStatus.ToUpper() == "UNPAID")
-                .Sum(f => f.Amount ?? 0);
+            var totalCollected = fees.Where(f => f.FeeStatus == "Paid").Sum(f => f.Amount ?? 0);
+            var totalPending = totalExpected - totalCollected;
             var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
 
-            // =====================================================
-            // Fines by Program (sum of fines)
-            // =====================================================
-
-            // Debug: Log fines data to check if Attendance and Student are loaded
-            var finesWithStudent = fines.Where(f => f.Attendance?.StudentNumNavigation != null).ToList();
-            var finesWithoutStudent = fines.Where(f => f.Attendance?.StudentNumNavigation == null).ToList();
-            _logger.LogInformation($"Fines with Student loaded: {finesWithStudent.Count}, without Student: {finesWithoutStudent.Count}");
-
-            // Debug: Log sample fine details
-            foreach (var f in finesWithStudent.Take(3))
-            {
-                var student = f.Attendance!.StudentNumNavigation!;
-                _logger.LogInformation($"Fine ID={f.FineId}, Amount={f.Amount}, Student={student.StudentNum}, Course={student.Course}, YearLevel={student.YearLevelSection}");
-            }
-
-            // Calculate total fines regardless of program/year for debugging
-            var totalFinesAmount = fines.Sum(f => f.Amount ?? 0);
-            _logger.LogInformation($"Total Fines Amount (all): {totalFinesAmount}");
-
+            // 6. Fines Calculation (UPDATED)
             decimal GetFines(Func<Student, bool> programCheck, int yearLevel)
             {
                 return fines
-                    .Where(f => f.Attendance?.StudentNumNavigation != null &&
-                                programCheck(f.Attendance.StudentNumNavigation) &&
-                                ExtractYearLevel(f.Attendance.StudentNumNavigation.YearLevelSection) == yearLevel)
+                    .Where(f => {
+                        // Check Manual Student OR Event Student
+                        var s = f.Student ?? f.Attendance?.StudentNumNavigation;
+                        return s != null && programCheck(s) && ExtractYearLevel(s.YearLevelSection) == yearLevel;
+                    })
                     .Sum(f => f.Amount ?? 0);
             }
 
             var finesByProgram = new Dictionary<string, decimal>
             {
-                { "BSIT1", GetFines(IsBSIT, 1) },
-                { "BSIT2", GetFines(IsBSIT, 2) },
-                { "BSIT3", GetFines(IsBSIT, 3) },
-                { "BSIT4", GetFines(IsBSIT, 4) },
-                { "DIT1", GetFines(IsDIT, 1) },
-                { "DIT2", GetFines(IsDIT, 2) },
-                { "DIT3", GetFines(IsDIT, 3) }
+                { "BSIT1", GetFines(IsBSIT, 1) }, { "BSIT2", GetFines(IsBSIT, 2) }, { "BSIT3", GetFines(IsBSIT, 3) }, { "BSIT4", GetFines(IsBSIT, 4) },
+                { "DIT1", GetFines(IsDIT, 1) }, { "DIT2", GetFines(IsDIT, 2) }, { "DIT3", GetFines(IsDIT, 3) }
             };
 
-            _logger.LogInformation($"Fines by Program: BSIT1={finesByProgram["BSIT1"]}, BSIT2={finesByProgram["BSIT2"]}, BSIT3={finesByProgram["BSIT3"]}, BSIT4={finesByProgram["BSIT4"]}");
-            _logger.LogInformation($"Fines by Program: DIT1={finesByProgram["DIT1"]}, DIT2={finesByProgram["DIT2"]}, DIT3={finesByProgram["DIT3"]}");
-
-            // =====================================================
-            // Monthly Events (for line chart)
-            // =====================================================
+            // 7. Events
+            var currentYear = DateTime.Now.Year;
             var monthlyEvents = new int[12];
-            foreach (var evt in events)
-            {
-                if (evt.EventDate.HasValue && evt.EventDate.Value.Year == currentYear)
-                {
-                    var month = evt.EventDate.Value.Month - 1;
-                    if (month >= 0 && month < 12)
-                    {
-                        monthlyEvents[month]++;
-                    }
-                }
-            }
+            foreach (var evt in events.Where(e => e.EventDate.HasValue && e.EventDate.Value.Year == currentYear))
+                monthlyEvents[evt.EventDate.Value.Month - 1]++;
 
-            // =====================================================
-            // Event Status (Completed vs Upcoming)
-            // Using Dictionary for consistent JSON property names
-            // =====================================================
             var today = DateOnly.FromDateTime(DateTime.Now);
             var eventStatus = new Dictionary<string, int>
             {
-                { "Completed", events.Count(e => e.EventDate.HasValue && e.EventDate.Value < today) },
-                { "Upcoming", events.Count(e => e.EventDate.HasValue && e.EventDate.Value >= today) }
+                { "Completed", events.Count(e => e.IsClosed || (e.EventDate.HasValue && e.EventDate.Value < today)) },
+                { "Upcoming", events.Count(e => !e.IsClosed && e.EventDate.HasValue && e.EventDate.Value >= today) }
             };
-
-            // Calculate totals for payments and fines
-            var totalPayments = paymentsByProgram.Values.Sum();
-            var totalFinesSum = finesByProgram.Values.Sum();
 
             return new DashboardDataModel
             {
@@ -1812,20 +1631,15 @@ namespace iBITS_Portal.Controllers
                 MonthlyActiveStudents = monthlyActiveStudents,
                 ArchiveCount = archiveCount,
                 ActiveInactive = activeInactive,
-                // Payments (Paid)
                 PaymentsByProgram = paymentsByProgram,
-                TotalPayments = totalPayments,
-                // Pending Payments (Unpaid)
+                TotalPayments = paymentsByProgram.Values.Sum(),
                 PendingByProgram = pendingByProgram,
                 TotalPending = totalPending,
-                // Financial Summary
                 TotalExpected = totalExpected,
                 TotalCollected = totalCollected,
                 CollectionRate = collectionRate,
-                // Fines
                 FinesByProgram = finesByProgram,
-                TotalFines = totalFinesSum,
-                // Events
+                TotalFines = finesByProgram.Values.Sum(), // Uses the updated logic
                 MonthlyEvents = monthlyEvents,
                 EventStatus = eventStatus
             };
@@ -2959,84 +2773,208 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // FINES MANAGEMENT PAGE (OPTIMIZED)
+        // FINES MANAGEMENT PAGE (FIXED SEARCH & FILTERING)
         // =========================================================
-        public async Task<IActionResult> Fines()
+        public async Task<IActionResult> Fines(string searchString, string fineType, int? eventId, string manualFineReason, string statusFilter, string programFilter, string overdueFilter)
         {
-            // Fetch all fines with related data for the main table view
-            var allFines = await _context.Fines
-                .Include(f => f.Attendance)
-                    .ThenInclude(a => a.StudentNumNavigation)
-                .Include(f => f.Attendance)
-                    .ThenInclude(a => a.Event)
-                .OrderByDescending(f => f.FineId)
-                .ToListAsync();
+            // --- 1. Pass filters to the View ---
+            ViewData["SearchFilter"] = searchString;
+            ViewData["FineTypeFilter"] = fineType;
+            ViewData["EventFilter"] = eventId;
+            ViewData["ReasonFilter"] = manualFineReason;
+            ViewData["StatusFilter"] = statusFilter;
+            ViewData["ProgramFilter"] = programFilter;
+            ViewData["OverdueFilter"] = overdueFilter;
 
-            // --- OPTIMIZED CHART DATA & SUMMARY CALCULATION ---
-            var fineStats = await _context.Fines
-                .Where(f => f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.Course != null)
-                .GroupBy(f => new
-                {
-                    Course = f.Attendance.StudentNumNavigation.Course,
-                    YearLevelSection = f.Attendance.StudentNumNavigation.YearLevelSection,
-                    IsPaid = f.FinesStatus == "Paid"
-                })
-                .Select(g => new
-                {
-                    g.Key.Course,
-                    g.Key.YearLevelSection,
-                    g.Key.IsPaid,
-                    TotalAmount = g.Sum(f => f.Amount ?? 0)
-                })
-                .ToListAsync();
+            // --- 2. Build the base query ---
+            var query = _context.Fines
+                .Include(f => f.Student) // Manual Fines
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation) // Event Fines
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event) // Event Fines
+                .AsQueryable();
 
-            // Process the aggregated results in memory
+            // --- 3. Apply Fine Type & Logic-Based Filters ---
+            if (!string.IsNullOrEmpty(fineType))
+            {
+                if (fineType == "event")
+                {
+                    query = query.Where(f => f.AttendanceId != null);
+                    if (eventId.HasValue)
+                    {
+                        query = query.Where(f => f.Attendance.EventId == eventId);
+                    }
+                }
+                else if (fineType == "manual")
+                {
+                    query = query.Where(f => f.AttendanceId == null);
+                    if (!string.IsNullOrEmpty(manualFineReason))
+                    {
+                        query = query.Where(f => f.Description == manualFineReason);
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                query = query.Where(f => f.FinesStatus == statusFilter);
+            }
+
+            if (!string.IsNullOrEmpty(programFilter))
+            {
+                // Check program on either Manual Student link or Event Student link
+                query = query.Where(f =>
+                    (f.Student != null && f.Student.Course == programFilter) ||
+                    (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.Course == programFilter));
+            }
+
+            if (!string.IsNullOrEmpty(overdueFilter) && overdueFilter == "overdue")
+            {
+                var today = DateOnly.FromDateTime(DateTime.Now);
+                query = query.Where(f => f.FinesStatus == "Unpaid" && f.FinesDueDate.HasValue && f.FinesDueDate.Value < today);
+            }
+
+            // --- 4. FIXED SEARCH STRING LOGIC ---
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                searchString = searchString.Trim().ToLower();
+
+                query = query.Where(f =>
+                    // Search in Manual Fines
+                    (f.Student != null && (
+                        f.Student.StudentNum.Contains(searchString) ||
+                        f.Student.StudentFn.ToLower().Contains(searchString) ||
+                        f.Student.StudentLn.ToLower().Contains(searchString)
+                    )) ||
+                    // Search in Event Fines
+                    (f.Attendance != null && f.Attendance.StudentNumNavigation != null && (
+                        f.Attendance.StudentNumNavigation.StudentNum.Contains(searchString) ||
+                        f.Attendance.StudentNumNavigation.StudentFn.ToLower().Contains(searchString) ||
+                        f.Attendance.StudentNumNavigation.StudentLn.ToLower().Contains(searchString)
+                    )) ||
+                    // Search in Fine Description/Reason
+                    (f.Description != null && f.Description.ToLower().Contains(searchString))
+                );
+            }
+
+            var allFines = await query.OrderByDescending(f => f.FineId).ToListAsync();
+
+            // --- 5. Prepare chart data (Optimized) ---
             var paidBreakdown = new Dictionary<string, decimal>();
             var unpaidBreakdown = new Dictionary<string, decimal>();
 
-            foreach (var stat in fineStats)
+            foreach (var fine in allFines)
             {
-                string program = stat.Course.ToUpper().Contains("BSIT") ? "BSIT" :
-                                 stat.Course.ToUpper().Contains("DIT") ? "DIT" : "Other";
-                int year = StringHelper.ExtractYearLevel(stat.YearLevelSection);
+                var student = fine.Student ?? fine.Attendance?.StudentNumNavigation;
+                if (student == null) continue;
+
+                string program = !string.IsNullOrEmpty(student.Course) && student.Course.ToUpper().Contains("BSIT") ? "BSIT" : "DIT";
+                int year = StringHelper.ExtractYearLevel(student.YearLevelSection);
                 string key = $"{program}{year}";
 
                 if (year > 0)
                 {
-                    if (stat.IsPaid)
+                    decimal amount = fine.Amount ?? 0;
+                    if (fine.FinesStatus?.ToLower() == "paid")
                     {
                         if (!paidBreakdown.ContainsKey(key)) paidBreakdown[key] = 0;
-                        paidBreakdown[key] += stat.TotalAmount;
+                        paidBreakdown[key] += amount;
                     }
-                    else
+                    else if (fine.FinesStatus?.ToLower() == "unpaid")
                     {
                         if (!unpaidBreakdown.ContainsKey(key)) unpaidBreakdown[key] = 0;
-                        unpaidBreakdown[key] += stat.TotalAmount;
+                        unpaidBreakdown[key] += amount;
                     }
                 }
             }
 
             ViewBag.PaidBreakdown = paidBreakdown;
             ViewBag.UnpaidBreakdown = unpaidBreakdown;
-            var totalExpected = fineStats.Sum(s => s.TotalAmount);
-            var totalCollected = fineStats.Where(s => s.IsPaid).Sum(s => s.TotalAmount);
+
+            decimal totalExpected = allFines.Sum(f => f.Amount ?? 0);
+            decimal totalCollected = allFines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
             ViewBag.CollectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
 
-            // For Filter Dropdown
             ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
+            ViewBag.ManualFineReasons = await _context.Fines
+                .Where(f => f.AttendanceId == null && f.Description != null)
+                .Select(f => f.Description)
+                .Distinct()
+                .ToListAsync();
 
             return View(allFines);
         }
 
+
+        // =========================================================
+        // DEDICATED VIEW FOR MANUAL FINES LOG
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> ManualFines(string searchString)
+        {
+            ViewData["CurrentSearch"] = searchString;
+
+            var manualFinesQuery = _context.Fines
+                .Include(f => f.Student)
+                .Where(f => f.AttendanceId == null); // The key filter for manual fines
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                manualFinesQuery = manualFinesQuery.Where(f => (f.Student != null && (f.Student.FullName.Contains(searchString) || f.Student.StudentNum.Contains(searchString))) || (f.Description != null && f.Description.Contains(searchString)));
+            }
+
+            var fines = await manualFinesQuery.OrderByDescending(f => f.FineId).ToListAsync();
+            return View(fines);
+        }
+
+        // =========================================================
+        // SECURE DELETE FOR A SINGLE MANUAL FINE
+        // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkFineAsPaidAdmin(int fineId)
+        public async Task<IActionResult> DeleteManualFine(int fineId, string adminPassword)
+        {
+            var adminUser = await _userManager.GetUserAsync(User);
+            if (string.IsNullOrEmpty(adminPassword) || !await _userManager.CheckPasswordAsync(adminUser, adminPassword))
+            {
+                TempData["Error"] = "Invalid password. Deletion cancelled.";
+                return RedirectToAction("ManualFines");
+            }
+
+            var fineToDelete = await _context.Fines.FindAsync(fineId);
+
+            if (fineToDelete == null)
+            {
+                TempData["Error"] = "Fine record not found.";
+                return RedirectToAction("ManualFines");
+            }
+
+            if (fineToDelete.AttendanceId != null)
+            {
+                TempData["Error"] = "Error: This fine is linked to an event and cannot be deleted from this page.";
+                return RedirectToAction("ManualFines");
+            }
+
+            _context.Fines.Remove(fineToDelete);
+            await _context.SaveChangesAsync();
+
+            await LogAction("Delete Manual Fine", $"Permanently deleted manual fine ID {fineToDelete.FineId}.");
+            TempData["Message"] = $"Manual fine #{fineToDelete.FineId} has been permanently deleted.";
+
+            return RedirectToAction("ManualFines");
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkFineAsPaidAdmin(int fineId, string returnUrl)
         {
             var fine = await _context.Fines.FindAsync(fineId);
             if (fine == null)
             {
                 TempData["Error"] = "Fine not found.";
-                return RedirectToAction(nameof(Fines));
+                return LocalRedirect(returnUrl ?? "/Admin/Fines");
             }
 
             fine.FinesStatus = "Paid";
@@ -3044,18 +2982,18 @@ namespace iBITS_Portal.Controllers
             await LogAction("Mark Fine Paid", $"Marked fine ID {fineId} as Paid.");
             TempData["Message"] = "Fine has been marked as Paid.";
 
-            return RedirectToAction(nameof(Fines));
+            return LocalRedirect(returnUrl ?? "/Admin/Fines");
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> WaiveFine(int fineId, string reason)
+        public async Task<IActionResult> WaiveFine(int fineId, string reason, string returnUrl)
         {
             var fine = await _context.Fines.FindAsync(fineId);
             if (fine == null)
             {
                 TempData["Error"] = "Fine not found.";
-                return RedirectToAction(nameof(Fines));
+                return LocalRedirect(returnUrl ?? "/Admin/Fines");
             }
 
             fine.FinesStatus = "Waived";
@@ -3063,18 +3001,18 @@ namespace iBITS_Portal.Controllers
             await LogAction("Waive Fine", $"Waived fine ID {fineId}. Reason: {reason}");
             TempData["Message"] = "Fine has been waived.";
 
-            return RedirectToAction(nameof(Fines));
+            return LocalRedirect(returnUrl ?? "/Admin/Fines");
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AdjustFineAmount(int fineId, decimal newAmount, string reason)
+        public async Task<IActionResult> AdjustFineAmount(int fineId, decimal newAmount, string reason, string returnUrl)
         {
             var fine = await _context.Fines.FindAsync(fineId);
             if (fine == null)
             {
                 TempData["Error"] = "Fine not found.";
-                return RedirectToAction(nameof(Fines));
+                return LocalRedirect(returnUrl ?? "/Admin/Fines");
             }
 
             fine.Amount = newAmount;
@@ -3082,7 +3020,7 @@ namespace iBITS_Portal.Controllers
             await LogAction("Adjust Fine", $"Adjusted fine ID {fineId} to {newAmount:C}. Reason: {reason}");
             TempData["Message"] = "Fine amount has been adjusted.";
 
-            return RedirectToAction(nameof(Fines));
+            return LocalRedirect(returnUrl ?? "/Admin/Fines");
         }
 
         [HttpPost]
@@ -3103,6 +3041,153 @@ namespace iBITS_Portal.Controllers
 
             return RedirectToAction(nameof(Fines));
         }
+        // =========================================================
+        // ACTION: CREATE MANUAL FINE (UPDATED with BatchId)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateFine(string FineReason, decimal Amount, DateOnly? FinesDueDate, string programFilter, string yearFilter)
+        {
+            try
+            {
+                var students = await GetFilteredStudentsForFee(programFilter, yearFilter);
+
+                if (!students.Any())
+                {
+                    TempData["Error"] = "No students found matching the selected criteria.";
+                    return RedirectToAction("Fines");
+                }
+
+                int count = 0;
+                var dueDate = FinesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15));
+
+                // Generate a single, unique ID for this entire batch
+                var batchId = Guid.NewGuid().ToString();
+
+                foreach (var student in students)
+                {
+                    var fine = new Fine
+                    {
+                        Amount = Amount,
+                        Description = FineReason,
+                        StudentNum = student.StudentNum,
+                        FinesStatus = "Unpaid",
+                        FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                        FinesDueDate = dueDate,
+                        AttendanceId = null,
+                        BatchId = batchId // Assign the same BatchId to all fines in this group
+                    };
+                    _context.Fines.Add(fine);
+
+                    var notification = new Notification
+                    {
+                        StudentNum = student.StudentNum,
+                        Title = "New Fine Issued",
+                        Message = $"You have been issued a fine of ₱{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
+                        NotificationType = "Fine",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = "Admin"
+                    };
+                    _context.Notifications.Add(notification);
+                    count++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                await LogAction("Create Manual Fine Batch", $"Created fine batch '{FineReason}' ({batchId}) for {count} students.");
+                TempData["Message"] = $"Successfully assigned fine to {count} students.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating manual fine batch");
+                TempData["Error"] = "An error occurred while creating the fine.";
+            }
+
+            return RedirectToAction("Fines");
+        }
+
+        // =========================================================
+        // NEW PAGE: VIEW AND MANAGE MANUAL FINE BATCHES
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> ManualFineBatches()
+        {
+            // Fetch only manual fines that have a BatchId
+            var manualFines = await _context.Fines
+                .Where(f => f.AttendanceId == null && f.BatchId != null)
+                .ToListAsync();
+
+            // Group the fines by their BatchId to create a summary view
+            var fineBatches = manualFines
+                .GroupBy(f => f.BatchId)
+                .Select(g => new ManualFineBatchViewModel
+                {
+                    BatchId = g.Key,
+                    Reason = g.First().Description,
+                    Amount = g.First().Amount ?? 0,
+                    DateCreated = g.First().FinesStartDate,
+                    StudentCount = g.Count()
+                })
+                .OrderByDescending(b => b.DateCreated)
+                .ToList();
+
+            return View(fineBatches);
+        }
+
+        // =========================================================
+        // NEW ACTION: SECURELY DELETE AN ENTIRE FINE BATCH
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFineBatch(string batchId, string adminPassword)
+        {
+            var adminUser = await _userManager.GetUserAsync(User);
+            if (string.IsNullOrEmpty(adminPassword) || !await _userManager.CheckPasswordAsync(adminUser, adminPassword))
+            {
+                TempData["Error"] = "Invalid password. Deletion cancelled.";
+                return RedirectToAction("ManualFineBatches");
+            }
+
+            if (string.IsNullOrEmpty(batchId))
+            {
+                TempData["Error"] = "Batch ID was not provided.";
+                return RedirectToAction("ManualFineBatches");
+            }
+
+            // Find all fines associated with this batch
+            var finesToDelete = await _context.Fines
+                .Where(f => f.BatchId == batchId)
+                .ToListAsync();
+
+            if (!finesToDelete.Any())
+            {
+                TempData["Warning"] = "This batch may have already been deleted.";
+                return RedirectToAction("ManualFineBatches");
+            }
+
+            var reason = finesToDelete.First().Description;
+            var count = finesToDelete.Count;
+
+            _context.Fines.RemoveRange(finesToDelete);
+            await _context.SaveChangesAsync();
+
+            await LogAction("Delete Fine Batch", $"Deleted manual fine batch '{reason}' ({batchId}), affecting {count} records.");
+            TempData["Message"] = $"Successfully deleted the entire '{reason}' fine batch ({count} records).";
+
+            return RedirectToAction("ManualFineBatches");
+        }
+
+        // =========================================================
+        // AJAX: Preview Fine Student Count
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> PreviewFineStudentCount(string programFilter, string yearFilter)
+        {
+            // Reuse logic from Fee Preview since the filtering logic is identical
+            return await PreviewFeeStudentCount(programFilter, yearFilter);
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> ExportFinesToExcel()
@@ -4056,5 +4141,14 @@ namespace iBITS_Portal.Controllers
 
 
 
+    }
+
+    public class ManualFineBatchViewModel
+    {
+        public string BatchId { get; set; }
+        public string Reason { get; set; }
+        public decimal Amount { get; set; }
+        public DateOnly? DateCreated { get; set; }
+        public int StudentCount { get; set; }
     }
 }

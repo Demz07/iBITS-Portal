@@ -15,12 +15,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const noDataEl = document.getElementById(noDataId);
 
         if (total === 0) {
-            noDataEl.style.display = 'flex';
-            ctx.style.display = 'none';
+            if (noDataEl) noDataEl.style.display = 'flex';
+            if (ctx) ctx.style.display = 'none';
             return;
         } else {
-            noDataEl.style.display = 'none';
-            ctx.style.display = 'block';
+            if (noDataEl) noDataEl.style.display = 'none';
+            if (ctx) ctx.style.display = 'block';
         }
 
         new Chart(ctx, {
@@ -38,114 +38,162 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#94a3b8',
-                            font: { size: 12 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.label}: ₱${context.raw.toFixed(2)}`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 12 } } }, tooltip: { callbacks: { label: (c) => `${c.label}: ₱${c.raw.toFixed(2)}` } } },
                 cutout: '70%'
             }
         });
     };
 
-    createDoughnutChart('paidChart', 'paidNoData', 'paid', 'Paid Fines');
-    createDoughnutChart('unpaidChart', 'unpaidNoData', 'unpaid', 'Unpaid Fines');
-
+    if (window.finesChartsData) {
+        createDoughnutChart('paidChart', 'paidNoData', 'paid', 'Paid Fines');
+        createDoughnutChart('unpaidChart', 'unpaidNoData', 'unpaid', 'Unpaid Fines');
+    }
 
     // =========================================================
-    // TABLE FILTERING
+    // DYNAMIC & TABLE FILTERING
     // =========================================================
-    const filterInputs = document.querySelectorAll('#filterSearch, #filterEvent, #filterStatus, #filterProgram, #filterOverdue');
-    const finesTable = document.getElementById('finesTable').getElementsByTagName('tbody')[0];
+    const filterFineType = document.getElementById('filterFineType');
+    const eventFilterContainer = document.getElementById('eventFilterContainer');
+    const reasonFilterContainer = document.getElementById('reasonFilterContainer');
+    const filterEvent = document.getElementById('filterEvent');
+    const filterReason = document.getElementById('filterReason');
+    const finesTableBody = document.getElementById('finesTable')?.getElementsByTagName('tbody')[0];
 
-    const applyFilters = () => {
+    const toggleDynamicFilters = () => {
+        if (!filterFineType) return;
+        const selectedType = filterFineType.value;
+
+        eventFilterContainer.style.display = (selectedType === 'event') ? 'block' : 'none';
+        reasonFilterContainer.style.display = (selectedType === 'manual') ? 'block' : 'none';
+
+        if (selectedType !== 'event') filterEvent.value = '';
+        if (selectedType !== 'manual') filterReason.value = '';
+    };
+
+    const applyClientSideFilters = () => {
+        if (!finesTableBody) return;
+
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();
-        const eventVal = document.getElementById('filterEvent').value;
-        const statusVal = document.getElementById('filterStatus').value.toLowerCase();
-        const programVal = document.getElementById('filterProgram').value.toUpperCase();
-        const overdueVal = document.getElementById('filterOverdue').value;
+        const statusVal = document.getElementById('filterStatus').value;
+        const programVal = document.getElementById('filterProgram').value;
+        const fineTypeVal = filterFineType.value;
+        const eventVal = filterEvent.value;
+        const reasonVal = filterReason.value;
 
-        for (let row of finesTable.rows) {
+        for (let row of finesTableBody.rows) {
             const student = row.dataset.student || '';
             const studentNum = row.dataset.studentnum || '';
-            const eventId = row.dataset.event || '';
             const status = row.dataset.status || '';
             const program = row.dataset.program || '';
-            const isOverdue = row.dataset.overdue || '';
+            const fineType = row.dataset.finetype || '';
+            const eventId = row.dataset.event || '';
+            const reason = row.dataset.reason || '';
 
             const searchMatch = student.includes(searchVal) || studentNum.includes(searchVal);
-            const eventMatch = !eventVal || eventVal === eventId;
             const statusMatch = !statusVal || statusVal === status;
-            const programMatch = !programVal || (program && program.includes(programVal));
-            const overdueMatch = !overdueVal || overdueVal === isOverdue;
+            const programMatch = !programVal || program === programVal;
+            const fineTypeMatch = !fineTypeVal || fineTypeVal === fineType;
+            const eventMatch = !eventVal || eventVal === eventId;
+            const reasonMatch = !reasonVal || reasonVal === reason;
 
-            if (searchMatch && eventMatch && statusMatch && programMatch && overdueMatch) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            row.style.display = (searchMatch && statusMatch && programMatch && fineTypeMatch && eventMatch && reasonMatch) ? '' : 'none';
         }
     };
 
-    filterInputs.forEach(input => {
-        input.addEventListener('keyup', applyFilters);
-        input.addEventListener('change', applyFilters);
+    if (filterFineType) {
+        filterFineType.addEventListener('change', () => {
+            toggleDynamicFilters();
+            // Do not submit form, just apply client-side filter
+            applyClientSideFilters();
+        });
+        toggleDynamicFilters(); // Run on page load
+    }
+
+    // Attach live client-side filtering to all inputs
+    const allFilterInputs = document.querySelectorAll('#filterSearch, #filterFineType, #filterEvent, #filterReason, #filterStatus, #filterProgram');
+    allFilterInputs.forEach(input => {
+        const eventType = input.tagName === 'INPUT' ? 'input' : 'change';
+        input.addEventListener(eventType, applyClientSideFilters);
     });
 
-    window.clearFilters = () => {
-        document.getElementById('filterSearch').value = '';
-        document.getElementById('filterEvent').value = '';
-        document.getElementById('filterStatus').value = '';
-        document.getElementById('filterProgram').value = '';
-        document.getElementById('filterOverdue').value = '';
-        applyFilters();
-    };
-
+    // Note: The "Clear Filters" button is now an <a> tag that reloads the page, so no JS is needed for it.
+    // The "Apply Filters" button submits the form to the server.
 
     // =========================================================
     // MODAL TRIGGER FUNCTIONS
     // =========================================================
-    const markPaidModal = new bootstrap.Modal(document.getElementById('markPaidModal'));
-    const waiveFineModal = new bootstrap.Modal(document.getElementById('waiveFineModal'));
-    const adjustFineModal = new bootstrap.Modal(document.getElementById('adjustFineModal'));
-    const deleteFineModal = new bootstrap.Modal(document.getElementById('deleteFineModal'));
+    function openMarkPaidModal(id) {
+        document.getElementById('markPaidFineId').value = id;
+        document.getElementById('markPaidFineIdDisplay').innerText = id;
+        new bootstrap.Modal(document.getElementById('markPaidModal')).show();
+    }
 
-    window.markAsPaid = (fineId) => {
-        document.getElementById('markPaidFineId').value = fineId;
-        document.getElementById('markPaidFineIdDisplay').textContent = fineId;
-        markPaidModal.show();
-    };
+    function openWaiveModal(id, name, amount) {
+        document.getElementById('waiveFineId').value = id;
+        document.getElementById('waiveStudentName').innerText = name;
+        document.getElementById('waiveFineAmount').innerText = parseFloat(amount).toFixed(2);
+        new bootstrap.Modal(document.getElementById('waiveFineModal')).show();
+    }
 
-    window.waiveFine = (fineId, studentName, amount) => {
-        document.getElementById('waiveFineId').value = fineId;
-        document.getElementById('waiveStudentName').textContent = studentName;
-        document.getElementById('waiveFineAmount').textContent = parseFloat(amount).toFixed(2);
-        waiveFineModal.show();
-    };
+    function openAdjustModal(id, name, amount) {
+        document.getElementById('adjustFineId').value = id;
+        document.getElementById('adjustStudentName').innerText = name;
+        document.getElementById('adjustCurrentAmount').innerText = parseFloat(amount).toFixed(2);
+        document.getElementById('newAmount').value = parseFloat(amount).toFixed(2);
+        new bootstrap.Modal(document.getElementById('adjustFineModal')).show();
+    }
 
-    window.adjustFine = (fineId, studentName, currentAmount) => {
-        document.getElementById('adjustFineId').value = fineId;
-        document.getElementById('adjustStudentName').textContent = studentName;
-        document.getElementById('adjustCurrentAmount').textContent = parseFloat(currentAmount).toFixed(2);
-        document.getElementById('newAmount').value = parseFloat(currentAmount).toFixed(2);
-        adjustFineModal.show();
-    };
+    function openDeleteModal(id, name, amount) {
+        document.getElementById('deleteFineId').value = id;
+        document.getElementById('deleteStudentName').innerText = name;
+        document.getElementById('deleteFineAmount').innerText = parseFloat(amount).toFixed(2);
+        new bootstrap.Modal(document.getElementById('deleteFineModal')).show();
+    }
 
-    window.deleteFine = (fineId, studentName, amount) => {
-        document.getElementById('deleteFineId').value = fineId;
-        document.getElementById('deleteStudentName').textContent = studentName;
-        document.getElementById('deleteFineAmount').textContent = parseFloat(amount).toFixed(2);
-        deleteFineModal.show();
-    };
+    // Make modal functions globally accessible
+    window.openMarkPaidModal = openMarkPaidModal;
+    window.openWaiveModal = openWaiveModal;
+    window.openAdjustModal = openAdjustModal;
+    window.openDeleteModal = openDeleteModal;
+
+
+    // =========================================================
+    // CREATE FINE PREVIEW LOGIC
+    // =========================================================
+    const createFineForm = document.getElementById('createFineForm');
+    if (createFineForm) {
+        const programFilters = createFineForm.querySelectorAll('input[name="programFilter"]');
+        const yearFilters = createFineForm.querySelectorAll('input[name="yearFilter"]');
+        const previewTotal = document.getElementById('previewTotal');
+        const previewBSIT = document.getElementById('previewBSIT');
+        const previewDIT = document.getElementById('previewDIT');
+        const previewLoading = document.getElementById('previewLoading');
+
+        const updatePreview = () => {
+            const selectedProgram = createFineForm.querySelector('input[name="programFilter"]:checked').value;
+            const selectedYear = createFineForm.querySelector('input[name="yearFilter"]:checked').value;
+
+            previewLoading.style.display = 'flex';
+
+            fetch(`/Admin/PreviewFineStudentCount?programFilter=${selectedProgram}&yearFilter=${selectedYear}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        previewTotal.textContent = data.total;
+                        previewBSIT.textContent = data.bsit;
+                        previewDIT.textContent = data.dit;
+                    }
+                })
+                .catch(error => console.error('Error fetching preview:', error))
+                .finally(() => {
+                    previewLoading.style.display = 'none';
+                });
+        };
+
+        if (programFilters.length > 0) {
+            programFilters.forEach(radio => radio.addEventListener('change', updatePreview));
+            yearFilters.forEach(radio => radio.addEventListener('change', updatePreview));
+            updatePreview(); // Initial check
+        }
+    }
 });

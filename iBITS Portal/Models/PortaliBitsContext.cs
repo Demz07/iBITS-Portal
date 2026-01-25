@@ -89,9 +89,17 @@ public partial class PortaliBitsContext : DbContext
                 .HasForeignKey(d => d.AttendanceId)
                 .HasConstraintName("FK_Fines_Attendance")
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Student)
+               .WithMany(p => p.Fines)
+               .HasForeignKey(d => d.StudentNum)
+               .HasConstraintName("FK_Fines_Student")
+               .OnDelete(DeleteBehavior.NoAction);
+
         });
 
-        // ... rest of the existing configuration ...
+
+
         modelBuilder.Entity<Student>(entity =>
         {
             entity.HasOne(d => d.Officer)

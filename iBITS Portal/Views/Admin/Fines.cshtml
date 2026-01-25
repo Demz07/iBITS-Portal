@@ -140,61 +140,77 @@
     </div>
 </div>
 
-<!-- FILTERS SECTION -->
+<!-- FILTERS SECTION (UPDATED FOR DYNAMIC FILTERS) -->
 <div class="glass-panel p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); font-weight: 700; margin: 0;">
             <i class="bi bi-funnel me-2"></i> Filters
         </h5>
-        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+        <a asp-action="Fines" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-x-circle me-1"></i> Clear Filters
-        </button>
+        </a>
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label small text-muted">Search</label>
-            <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Search student name or ID...">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small text-muted">Event</label>
-            <select id="filterEvent" class="form-select form-select-sm">
-                <option value="">All Events</option>
-                @if (ViewBag.Events != null)
-                {
-                    foreach (var evt in ViewBag.Events)
+    <form asp-action="Fines" method="get" id="filterForm">
+        <div class="row g-3">
+            <!-- Search -->
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Search Student</label>
+                <input type="text" id="filterSearch" name="searchString" class="form-control form-control-sm" placeholder="Name or ID..." value="@ViewData["SearchFilter"]">
+            </div>
+
+            <!-- Fine Type -->
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Fine Type</label>
+                <select id="filterFineType" name="fineType" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    <option value="event" selected="@("event".Equals(ViewData["FineTypeFilter"]))">Event Fines</option>
+                    <option value="manual" selected="@("manual".Equals(ViewData["FineTypeFilter"]))">Manual Fines</option>
+                </select>
+            </div>
+
+            <!-- Dynamic Event Filter -->
+            <div class="col-md-3" id="eventFilterContainer" style="display:none;">
+                <label class="form-label small text-muted">Event</label>
+                <select id="filterEvent" name="eventId" class="form-select form-select-sm">
+                    <option value="">All Events</option>
+                    @foreach (var evt in ViewBag.Events)
                     {
-                        <option value="@evt.EventId">@evt.EventName</option>
+                        <option value="@evt.EventId" selected="@(evt.EventId == (int?)ViewData["EventFilter"])">@evt.EventName</option>
                     }
-                }
-            </select>
+                </select>
+            </div>
+
+            <!-- Dynamic Reason Filter -->
+            <div class="col-md-3" id="reasonFilterContainer" style="display:none;">
+                <label class="form-label small text-muted">Fine Reason</label>
+                <select id="filterReason" name="manualFineReason" class="form-select form-select-sm">
+                    <option value="">All Reasons</option>
+                    @foreach (var reason in ViewBag.ManualFineReasons)
+                    {
+                        <option value="@reason" selected="@(reason.Equals(ViewData["ReasonFilter"]))">@reason</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Status -->
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Status</label>
+                <select id="filterStatus" name="statusFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "Unpaid", "Paid", "Waived" }, (string)ViewData["StatusFilter"]))">
+                    <option value="">All Statuses</option>
+                </select>
+            </div>
+
+            <!-- Program -->
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Program</label>
+                <select id="filterProgram" name="programFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "BSIT", "DIT" }, (string)ViewData["ProgramFilter"]))">
+                    <option value="">All Programs</option>
+                </select>
+            </div>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Status</label>
-            <select id="filterStatus" class="form-select form-select-sm">
-                <option value="">All Status</option>
-                <option value="Unpaid">Unpaid</option>
-                <option value="Paid">Paid</option>
-                <option value="Waived">Waived</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Program</label>
-            <select id="filterProgram" class="form-select form-select-sm">
-                <option value="">All Programs</option>
-                <option value="BSIT">BSIT</option>
-                <option value="DIT">DIT</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Due Status</label>
-            <select id="filterOverdue" class="form-select form-select-sm">
-                <option value="">All Fines</option>
-                <option value="overdue">Overdue Only</option>
-                <option value="upcoming">Due Soon</option>
-            </select>
-        </div>
-    </div>
+        <button type="submit" class="btn btn-gold btn-sm mt-3"><i class="bi bi-search me-1"></i> Apply Filters</button>
+    </form>
 </div>
 
 <!-- FINES TABLE -->
@@ -230,8 +246,18 @@
             <tbody>
                 @foreach (var fine in Model)
                 {
-                    var student = fine.Attendance?.StudentNumNavigation;
+                    // UPDATED: Logic to handle both Manual Fines (fine.Student) and Event Fines (fine.Attendance)
+                    var student = fine.Student ?? fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
+
+                    // Determine Description: Use Manual Description OR Event Name
+                    var description = !string.IsNullOrEmpty(fine.Description)
+                    ? fine.Description
+                    : (eventRecord?.EventName ?? "Unknown");
+
+                    // Determine Acad Year: Use Event's AcadYear OR N/A for manual
+                    var acadYear = eventRecord?.AcadYear ?? "-";
+
                     var isOverdue = fine.FinesStatus?.ToLower() == "unpaid" &&
                     fine.FinesDueDate.HasValue &&
                     fine.FinesDueDate.Value < DateOnly.FromDateTime(DateTime.Now);
@@ -245,11 +271,12 @@
 
                     <tr data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
-                        data-event="@fine.Attendance?.EventId"
                         data-status="@fine.FinesStatus"
                         data-program="@student?.Course"
                         data-overdue="@(isOverdue ? "true" : "false")"
-                        data-daysoverdue="@daysOverdue">
+                        data-finetype="@(fine.AttendanceId == null ? "manual" : "event")"
+                        data-event="@fine.Attendance?.EventId"
+                        data-reason="@fine.Description">
 
                         <td class="font-monospace text-muted">#@fine.FineId</td>
                         <td>
@@ -260,21 +287,30 @@
                             }
                             else
                             {
-                                <span class="text-danger">ID: @fine.Attendance?.StudentNum</span>
+                                <span class="text-danger">Unknown Student</span>
                             }
                         </td>
-                        <!-- PROGRAM BADGE (Consistent with Payments) -->
+                        <!-- PROGRAM BADGE -->
                         <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
-                        <!-- YEAR BADGE (Consistent with Payments) -->
+                        <!-- YEAR BADGE -->
                         <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
 
-                        <!-- DESCRIPTION (Event Name) -->
-                        <td>@(eventRecord?.EventName ?? "Unknown")</td>
+                        <!-- DESCRIPTION (Updated to show Description or Event Name) -->
+                        <td>
+                            @if (fine.AttendanceId == null)
+                            {
+                                <span class="text-gold"><i class="bi bi-pencil-fill me-1" style="font-size: 0.7rem;"></i> @description</span>
+                            }
+                            else
+                            {
+                                <span>@description</span>
+                            }
+                        </td>
 
-                        <!-- ACAD YEAR (New Column) -->
-                        <td><span class="text-muted small">@(eventRecord?.AcadYear ?? "N/A")</span></td>
+                        <!-- ACAD YEAR -->
+                        <td><span class="text-muted small">@acadYear</span></td>
 
-                        <!-- AMOUNT (Gold & Bold) -->
+                        <!-- AMOUNT -->
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
 
                         <!-- DUE DATE -->
@@ -662,6 +698,33 @@
         function exportFines() {
             window.location.href = '/Admin/ExportFinesToExcel';
         }
+
+                // ============================================================
+        // DYNAMIC FILTER TOGGLE
+        // ============================================================
+        $(document).ready(function () {
+            const fineTypeSelect = $('#filterFineType');
+            const eventContainer = $('#eventFilterContainer');
+            const reasonContainer = $('#reasonFilterContainer');
+
+            function toggleFilters() {
+                const selected = fineTypeSelect.val();
+                if (selected === 'event') {
+                    eventContainer.show();
+                    reasonContainer.hide();
+                } else if (selected === 'manual') {
+                    eventContainer.hide();
+                    reasonContainer.show();
+                } else {
+                    eventContainer.hide();
+                    reasonContainer.hide();
+                }
+            }
+
+            fineTypeSelect.on('change', toggleFilters);
+            toggleFilters(); // Run on page load to maintain state
+        });
+
     </script>
     <script src="~/js/fines.js" asp-append-version="true"></script>
 }

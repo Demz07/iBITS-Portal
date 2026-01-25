@@ -1,10 +1,3 @@
-// ============================================================
-// FILE PATH: Models/Student.cs
-// ============================================================
-// UPDATED: Added SchoolYearEnrolled property for tracking
-// the academic year when the student was enrolled.
-// ============================================================
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -43,11 +36,10 @@ public partial class Student
 
     public bool? IsArchived { get; set; }
 
-    public string? ArchiveStatus { get; set; } // "Graduated", "Continuing"
+    public string? ArchiveStatus { get; set; }
 
     public DateOnly? ArchiveDate { get; set; }
 
-    // NEW: School Year Enrolled - tracks when the student enrolled (e.g., "A.Y. 2025-2026")
     [MaxLength(20)]
     public string? SchoolYearEnrolled { get; set; }
 
@@ -55,19 +47,19 @@ public partial class Student
 
     public virtual ICollection<Fee> Fees { get; set; } = new List<Fee>();
 
+    // NEW: Direct collection of fines
+    public virtual ICollection<Fine> Fines { get; set; } = new List<Fine>();
+
     public virtual Officer? Officer { get; set; }
 
-    // This property is for UI calculation and is not mapped to the database
     [NotMapped]
     public decimal Balance { get; set; }
 
-    // NEW HELPER PROPERTY: FullName (Not Mapped to DB)
     [NotMapped]
     public string FullName
     {
         get
         {
-            // Handles cases where middle name might be null or empty
             return string.IsNullOrWhiteSpace(StudentMn)
                 ? $"{StudentFn} {StudentLn}"
                 : $"{StudentFn} {StudentMn} {StudentLn}";

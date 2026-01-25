@@ -17,7 +17,19 @@ public partial class Fine
 
     public string? FinesStatus { get; set; }
 
+    // Link to Attendance (for Event-based fines)
     public int? AttendanceId { get; set; }
 
     public virtual Attendance? Attendance { get; set; }
+
+    // Properties for Manual Fines
+    public string? Description { get; set; }
+
+    public string? StudentNum { get; set; }
+
+    [ForeignKey("StudentNum")]
+    public virtual Student? Student { get; set; }
+
+    // NEW: Property to group manually created fines together
+    public string? BatchId { get; set; }
 }

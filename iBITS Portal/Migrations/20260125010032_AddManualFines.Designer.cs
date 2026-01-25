@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using iBITS_Portal.Models;
 
@@ -11,9 +12,11 @@ using iBITS_Portal.Models;
 namespace iBITS_Portal.Migrations
 {
     [DbContext(typeof(PortaliBitsContext))]
-    partial class PortaliBitsContextModelSnapshot : ModelSnapshot
+    [Migration("20260125010032_AddManualFines")]
+    partial class AddManualFines
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -359,9 +362,6 @@ namespace iBITS_Portal.Migrations
 
                     b.Property<int?>("AttendanceId")
                         .HasColumnType("int");
-
-                    b.Property<string>("BatchId")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");

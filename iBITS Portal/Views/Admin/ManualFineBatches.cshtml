@@ -1,0 +1,107 @@
+﻿@model IEnumerable<iBITS_Portal.Controllers.ManualFineBatchViewModel>
+@{
+    ViewData["Title"] = "Manual Fine Batches";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin:0;"><i class="bi bi-journal-album me-2"></i> Manual Fine Batches</h3>
+        <p class="text-muted small mb-0">Manage the batches of manual fines you have created.</p>
+    </div>
+</div>
+
+<!-- ALERTS -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show glass-alert" role="alert">@TempData["Message"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show glass-alert" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<!-- MANUAL FINE BATCHES TABLE -->
+<div class="glass-panel p-4">
+    <div class="table-responsive">
+        <table class="table table-glass">
+            <thead>
+                <tr>
+                    <th>REASON / DESCRIPTION</th>
+                    <th>DEFAULT AMOUNT</th>
+                    <th>DATE CREATED</th>
+                    <th>STUDENTS AFFECTED</th>
+                    <th class="text-end">ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted p-4">No manual fine batches have been created yet.</td>
+                    </tr>
+                }
+                @foreach (var batch in Model)
+                {
+                    <tr>
+                        <td><span class="text-gold fw-bold">@batch.Reason</span></td>
+                        <td style="color: var(--gold-primary);">₱@batch.Amount.ToString("N2")</td>
+                        <td class="text-muted">@batch.DateCreated?.ToString("MMM dd, yyyy")</td>
+                        <td>@batch.StudentCount student(s)</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger"
+                                    onclick="openSecureDeleteModal('@batch.BatchId', '@batch.Reason', @batch.StudentCount)">
+                                <i class="bi bi-trash me-1"></i> Delete Batch
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SECURE DELETE BATCH MODAL -->
+<div class="modal fade" id="secureDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <form asp-action="DeleteFineBatch" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="batchId" id="deleteBatchId" />
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-trash me-2"></i> Delete Fine Batch</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">Warning: This will permanently delete ALL fines associated with this batch. This action cannot be undone.</p>
+                    <div class="fee-section p-3 mb-3">
+                        <div><strong>Reason:</strong> <span id="deleteBatchReason"></span></div>
+                        <div><strong>Students Affected:</strong> <span id="deleteBatchCount"></span></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm with your Admin Password</label>
+                        <input type="password" name="adminPassword" class="form-control" required placeholder="Enter your password" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Batch Permanently</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openSecureDeleteModal(batchId, reason, count) {
+            document.getElementById('deleteBatchId').value = batchId;
+            document.getElementById('deleteBatchReason').innerText = reason;
+            document.getElementById('deleteBatchCount').innerText = count;
+            new bootstrap.Modal(document.getElementById('secureDeleteModal')).show();
+        }
+    </script>
+}

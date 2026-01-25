@@ -141,6 +141,13 @@
                     </a>
                 </li>
 
+                <li class="@(action == "ManualFineBatches" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="ManualFineBatches">
+                        <i class="bi bi-journal-album"></i> Manual Fine Batches
+                    </a>
+                </li>
+
+
                 <!-- Year-End Archiving Link -->
                 <!-- Archive Link (Renamed from Year-End Archiving) -->
                 <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Archive" ? "active" : "")">
