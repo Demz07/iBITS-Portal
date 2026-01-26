@@ -572,6 +572,72 @@
 }
 
 /* ============================================================ */
+/* STATUS UPDATE DROPDOWN STYLING                               */
+/* ============================================================ */
+
+.status-select {
+    font-size: 0.8rem !important;
+    padding: 6px 30px 6px 10px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.status-select.status-paid {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+
+.status-select.status-unpaid {
+    background-color: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+.status-select.status-excused {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+
+.status-select:focus {
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2) !important;
+}
+
+.status-select option {
+    background-color: #0b1a33 !important;
+    color: #ffffff !important;
+    padding: 10px !important;
+}
+
+.status-update-form {
+    display: inline-block;
+}
+
+/* Light theme status select */
+[data-theme="light"] .status-select.status-paid {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #059669 !important;
+}
+
+[data-theme="light"] .status-select.status-unpaid {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: #dc2626 !important;
+}
+
+[data-theme="light"] .status-select.status-excused {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #2563eb !important;
+}
+
+[data-theme="light"] .status-select option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+/* ============================================================ */
 /* RESPONSIVE ADJUSTMENTS                                       */
 /* ============================================================ */
 

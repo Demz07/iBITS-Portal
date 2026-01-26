@@ -110,7 +110,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const fineTypeMatch = !fineTypeVal || fineType === fineTypeVal;
             const sectionMatch = !sectionVal || section === sectionVal;
-            const statusMatch = !statusVal || status === statusVal;
+            // Handle excused/waived interchangeably
+            let statusMatch = !statusVal;
+            if (statusVal === 'excused') {
+                statusMatch = status === 'excused' || status === 'waived';
+            } else if (statusVal) {
+                statusMatch = status === statusVal;
+            }
             const programMatch = !programVal || program.toUpperCase().includes(programVal);
             const reasonMatch = !reasonVal || reason.includes(reasonVal);
 

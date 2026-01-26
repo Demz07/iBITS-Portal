@@ -237,7 +237,7 @@
                 <option value="">All Statuses</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
-                <option value="waived">Waived</option>
+                <option value="excused">Excused</option>
             </select>
         </div>
 
@@ -285,6 +285,7 @@
                     <th>AMOUNT</th>
                     <th>DUE DATE</th>
                     <th>STATUS</th>
+                    <th class="text-center">ACTION</th>
                 </tr>
             </thead>
             <tbody>
@@ -344,20 +345,57 @@
                         <td>
                             @if (fine.FinesStatus?.ToLower() == "paid")
                             {
-                                <span class="badge-paid">Paid</span>
+                                <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
                             }
-                            else if (fine.FinesStatus?.ToLower() == "waived")
+                            else if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
                             {
-                                <span class="badge-info-custom">Waived</span>
-                            }
-                            else if (isOverdue)
-                            {
-                                <span class="badge-danger-custom">Overdue</span>
+                                <span class="badge-info-custom"><i class="bi bi-shield-check me-1"></i>Excused</span>
                             }
                             else
                             {
-                                <span class="badge-pending">Pending</span>
+                                <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
                             }
+                        </td>
+                        <td class="text-center">
+                            @{
+                                var isEventFine = fine.AttendanceId != null;
+                                var currentStatus = fine.FinesStatus?.ToLower() ?? "unpaid";
+                                var selectClass = currentStatus == "paid" ? "status-paid" : (currentStatus == "excused" || currentStatus == "waived") ? "status-excused" : "status-unpaid";
+                            }
+                            <form asp-action="UpdateFineStatus" asp-controller="Officer" method="post" class="d-inline status-update-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="fineId" value="@fine.FineId" />
+                                <input type="hidden" name="returnUrl" value="@Url.Action("OrgFines", "Officer")" />
+                                <select name="newStatus" class="form-select form-select-sm status-select @selectClass" onchange="this.form.submit()" style="min-width: 120px;">
+                                    @if (currentStatus == "unpaid")
+                                    {
+                                        <option value="Unpaid" selected>🔴 Unpaid</option>
+                                        <option value="Paid">🟢 Paid</option>
+                                        @if (isEventFine)
+                                        {
+                                            <option value="Excused">🔵 Excused</option>
+                                        }
+                                    }
+                                    else if (currentStatus == "paid")
+                                    {
+                                        <option value="Unpaid">🔴 Unpaid</option>
+                                        <option value="Paid" selected>🟢 Paid</option>
+                                        @if (isEventFine)
+                                        {
+                                            <option value="Excused">🔵 Excused</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="Unpaid">🔴 Unpaid</option>
+                                        <option value="Paid">🟢 Paid</option>
+                                        @if (isEventFine)
+                                        {
+                                            <option value="Excused" selected>🔵 Excused</option>
+                                        }
+                                    }
+                                </select>
+                            </form>
                         </td>
                     </tr>
                 }

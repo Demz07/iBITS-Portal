@@ -135,7 +135,7 @@
         <div class="stats-card">
             <i class="bi bi-hourglass-split stats-icon text-danger"></i>
             <h6 class="text-muted mb-1">Total Pending</h6>
-            <h2 class="fw-bold text-danger mb-0">₱@(pendingFees + pendingFines).ToString("N2")</h2>
+            <h2 class="fw-bold text-danger mb-0">₱@((pendingFees + pendingFines).ToString("N2"))</h2>
             <small class="text-muted">Outstanding balance</small>
         </div>
     </div>
@@ -167,11 +167,11 @@
                         </tr>
                         <tr>
                             <td><i class="bi bi-hourglass-split text-warning me-2"></i> Total Pending</td>
-                            <td class="text-end fw-bold text-warning">₱@(pendingFees + pendingFines).ToString("N2")</td>
+                            <td class="text-end fw-bold text-warning">₱@((pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
                         <tr class="table-active">
                             <td><i class="bi bi-calculator me-2"></i> Grand Total</td>
-                            <td class="text-end fw-bold">₱@(totalCollections + pendingFees + pendingFines).ToString("N2")</td>
+                            <td class="text-end fw-bold text-white">₱@((totalCollections + pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
                     </tbody>
                 </table>

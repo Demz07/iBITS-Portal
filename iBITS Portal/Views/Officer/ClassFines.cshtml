@@ -275,7 +275,7 @@
                 <option value="">All Statuses</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
-                <option value="waived">Waived</option>
+                <option value="excused">Excused</option>
             </select>
         </div>
     </div>
@@ -365,19 +365,19 @@
                             <td>
                                 @if (isPaid)
                                 {
-                                    <span class="badge-paid">Paid</span>
+                                    <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
                                 }
                                 else if (isWaived)
                                 {
-                                    <span class="badge-info-custom">Waived</span>
+                                    <span class="badge-info-custom"><i class="bi bi-shield-check me-1"></i>Excused</span>
                                 }
                                 else if (isOverdue)
                                 {
-                                    <span class="badge-danger-custom">Overdue</span>
+                                    <span class="badge-danger-custom"><i class="bi bi-exclamation-circle-fill me-1"></i>Overdue</span>
                                 }
                                 else
                                 {
-                                    <span class="badge-pending">Pending</span>
+                                    <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
                                 }
                             </td>
                             <td class="text-end">

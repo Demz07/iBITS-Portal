@@ -875,6 +875,171 @@ namespace iBITS_Portal.Controllers
         }
 
         // ============================================================
+        // UPDATE FEE STATUS (Org Treasurer Only)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateFeeStatus(int feeId, string newStatus, string? returnUrl)
+        {
+            try
+            {
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    TempData["Error"] = $"Fee with ID {feeId} not found.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFees"));
+                }
+
+                // Validate status (Fees can only be Paid or Unpaid)
+                if (newStatus != "Paid" && newStatus != "Unpaid")
+                {
+                    TempData["Error"] = "Invalid status. Fees can only be 'Paid' or 'Unpaid'.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFees"));
+                }
+
+                var oldStatus = fee.FeeStatus;
+                fee.FeeStatus = newStatus;
+                _context.Fees.Update(fee);
+
+                // If marking as Paid, create a transaction record
+                if (newStatus == "Paid" && oldStatus?.ToLower() != "paid")
+                {
+                    var user = await _userManager.GetUserAsync(User);
+                    var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                    var transaction = new PaymentTransaction
+                    {
+                        FeeId = feeId,
+                        StudentNum = fee.StudentNum ?? "",
+                        Amount = fee.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Status Update",
+                        ProcessedBy = treasurer?.StudentNum ?? "",
+                        Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
+                    };
+                    _context.PaymentTransactions.Add(transaction);
+
+                    // Notify student
+                    if (!string.IsNullOrEmpty(fee.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fee.StudentNum,
+                            Title = "Fee Status Updated",
+                            Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as {newStatus}.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = treasurer?.StudentNum
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Message"] = $"Fee status for {fee.StudentNumNavigation?.FullName ?? fee.StudentNum} updated to '{newStatus}'.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error updating fee status: {ex.Message}";
+            }
+
+            return Redirect(returnUrl ?? Url.Action("OrgFees"));
+        }
+
+        // ============================================================
+        // UPDATE FINE STATUS (Org Treasurer Only)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateFineStatus(int fineId, string newStatus, string? returnUrl)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    TempData["Error"] = $"Fine with ID {fineId} not found.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFines"));
+                }
+
+                // Validate status
+                // Excused is only valid for event-based fines (those with AttendanceId)
+                bool isEventFine = fine.AttendanceId != null;
+                
+                if (newStatus == "Excused" && !isEventFine)
+                {
+                    TempData["Error"] = "Only event-based fines can be marked as 'Excused'. Manual fines can only be 'Paid' or 'Unpaid'.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFines"));
+                }
+
+                if (newStatus != "Paid" && newStatus != "Unpaid" && newStatus != "Excused")
+                {
+                    TempData["Error"] = "Invalid status. Valid options are 'Paid', 'Unpaid', or 'Excused' (event fines only).";
+                    return Redirect(returnUrl ?? Url.Action("OrgFines"));
+                }
+
+                var oldStatus = fine.FinesStatus;
+                fine.FinesStatus = newStatus;
+                _context.Fines.Update(fine);
+
+                // If marking as Paid, create a transaction record
+                if (newStatus == "Paid" && oldStatus?.ToLower() != "paid")
+                {
+                    var user = await _userManager.GetUserAsync(User);
+                    var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                    var transaction = new FinePaymentTransaction
+                    {
+                        FineId = fineId,
+                        StudentNum = fine.StudentNum ?? "",
+                        Amount = fine.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Status Update",
+                        ProcessedBy = treasurer?.StudentNum ?? "",
+                        Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
+                    };
+                    _context.FinePaymentTransactions.Add(transaction);
+                }
+
+                // Notify student
+                var currentUser = await _userManager.GetUserAsync(User);
+                var currentTreasurer = await _context.Students.FindAsync(currentUser.UserName);
+                
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Status Updated",
+                        Message = $"Your fine '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been marked as {newStatus}.",
+                        NotificationType = newStatus == "Excused" ? "Excuse" : "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = currentTreasurer?.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Message"] = $"Fine status for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} updated to '{newStatus}'.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error updating fine status: {ex.Message}";
+            }
+
+            return Redirect(returnUrl ?? Url.Action("OrgFines"));
+        }
+
+        // ============================================================
         // ORG TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]

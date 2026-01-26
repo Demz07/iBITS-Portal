@@ -289,6 +289,7 @@
                     <th>Amount</th>
                     <th>Due Date</th>
                     <th>Status</th>
+                    <th class="text-center">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -327,19 +328,38 @@
                             <td>
                                 @if (isPaid)
                                 {
-                                    <span class="badge-paid">Paid</span>
+                                    <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
                                 }
                                 else
                                 {
-                                    <span class="badge-pending">Unpaid</span>
+                                    <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
                                 }
+                            </td>
+                            <td class="text-center">
+                                <form asp-action="UpdateFeeStatus" asp-controller="Officer" method="post" class="d-inline status-update-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
+                                    <input type="hidden" name="returnUrl" value="@Url.Action("OrgFees", "Officer")" />
+                                    <select name="newStatus" class="form-select form-select-sm status-select @(isPaid ? "status-paid" : "status-unpaid")" onchange="this.form.submit()" style="min-width: 110px;">
+                                        @if (fee.FeeStatus?.ToLower() != "paid")
+                                        {
+                                            <option value="Unpaid" selected>🔴 Unpaid</option>
+                                            <option value="Paid">🟢 Paid</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="Unpaid">🔴 Unpaid</option>
+                                            <option value="Paid" selected>🟢 Paid</option>
+                                        }
+                                    </select>
+                                </form>
                             </td>
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>
