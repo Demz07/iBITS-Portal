@@ -334,6 +334,7 @@ namespace iBITS_Portal.Controllers
 
         // ============================================================
         // REALTIME STATUS UPDATE (Replaces Remittance Logic)
+        // FIXED: Better error handling and logging for debugging
         // ============================================================
         [HttpPost]
         [Authorize(Roles = "Class Treasurer, Org Treasurer")]
@@ -342,7 +343,16 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
+                // Debug logging - remove in production
+                System.Diagnostics.Debug.WriteLine($"[MarkFeeAsPaid] Starting - FeeId: {feeId}, PaymentMethod: {paymentMethod}");
+
                 var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    TempData["Error"] = "User session expired. Please login again.";
+                    return RedirectToAction("Payments");
+                }
+
                 var treasurer = await _context.Students.FindAsync(user.UserName);
                 var fee = await _context.Fees
                     .Include(f => f.StudentNumNavigation)
@@ -350,13 +360,13 @@ namespace iBITS_Portal.Controllers
 
                 if (fee == null)
                 {
-                    TempData["Error"] = "Fee not found.";
+                    TempData["Error"] = $"Fee with ID {feeId} not found.";
                     return RedirectToAction("Payments");
                 }
 
                 if (treasurer == null)
                 {
-                    TempData["Error"] = "Treasurer profile not found.";
+                    TempData["Error"] = "Treasurer profile not found. Please contact administrator.";
                     return RedirectToAction("Payments");
                 }
 
@@ -383,9 +393,9 @@ namespace iBITS_Portal.Controllers
                     .Select(s => s.SettingValue)
                     .FirstOrDefaultAsync();
 
-                // Update fee status
+                // Update fee status - use explicit "Paid" with capital P for consistency
                 fee.FeeStatus = "Paid";
-                _context.Update(fee);
+                _context.Fees.Update(fee);
 
                 // Create payment transaction record for audit trail
                 var transaction = new PaymentTransaction
@@ -394,38 +404,45 @@ namespace iBITS_Portal.Controllers
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
                     PaymentDate = DateTime.Now,
-                    PaymentMethod = paymentMethod ?? "Cash",
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
-                    TransactionReference = transactionRef,
-                    Notes = notes,
-                    // AcademicYear not in FinePaymentTransaction model
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()
                 };
 
                 _context.PaymentTransactions.Add(transaction);
 
                 // Send notification to student
-                _context.Notifications.Add(new Notification
+                if (!string.IsNullOrEmpty(fee.StudentNum))
                 {
-                    StudentNum = fee.StudentNum,
-                    Title = "Payment Confirmed",
-                    Message = $"Your payment of Ã¢â€šÂ±{fee.Amount} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}. " +
-                             $"Payment method: {paymentMethod ?? "Cash"}. " +
-                             (string.IsNullOrEmpty(transactionRef) ? "" : $"Reference: {transactionRef}."),
-                    NotificationType = "Payment",
-                    NotificationDate = DateTime.Now,
-                    IsRead = false,
-                    SentBy = treasurer.StudentNum
-                });
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fee.StudentNum,
+                        Title = "Payment Confirmed",
+                        Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}. " +
+                                 $"Payment method: {transaction.PaymentMethod}. " +
+                                 (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
 
-                await _context.SaveChangesAsync();
+                // Save all changes in a single transaction
+                var savedCount = await _context.SaveChangesAsync();
+                System.Diagnostics.Debug.WriteLine($"[MarkFeeAsPaid] SaveChanges result: {savedCount} entities saved");
 
-                TempData["Message"] = $"Payment of Ã¢â€šÂ±{fee.Amount} marked as PAID successfully.";
+                TempData["Message"] = $"Payment of ₱{fee.Amount:N2} for {fee.StudentNumNavigation?.FullName ?? fee.StudentNum} marked as PAID successfully.";
                 return RedirectToAction("Payments");
             }
             catch (Exception ex)
             {
-                // Log the exception
-                TempData["Error"] = "An error occurred while processing the payment.";
+                // Log the full exception for debugging
+                System.Diagnostics.Debug.WriteLine($"[MarkFeeAsPaid] ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MarkFeeAsPaid] Stack: {ex.StackTrace}");
+
+                TempData["Error"] = $"An error occurred while processing the payment: {ex.Message}";
                 return RedirectToAction("Payments");
             }
         }
@@ -452,6 +469,7 @@ namespace iBITS_Portal.Controllers
 
         // ============================================================
         // MARK FINE AS PAID (New Feature)
+        // FIXED: Better error handling and logging for debugging
         // ============================================================
         [HttpPost]
         [Authorize(Roles = "Class Treasurer, Org Treasurer")]
@@ -460,7 +478,16 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
+                // Debug logging - remove in production
+                System.Diagnostics.Debug.WriteLine($"[MarkFineAsPaid] Starting - FineId: {fineId}, PaymentMethod: {paymentMethod}");
+
                 var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    TempData["Error"] = "User session expired. Please login again.";
+                    return RedirectToAction("Payments");
+                }
+
                 var treasurer = await _context.Students.FindAsync(user.UserName);
                 var fine = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
@@ -468,13 +495,13 @@ namespace iBITS_Portal.Controllers
 
                 if (fine == null)
                 {
-                    TempData["Error"] = "Fine not found.";
+                    TempData["Error"] = $"Fine with ID {fineId} not found.";
                     return RedirectToAction("Payments");
                 }
 
                 if (treasurer == null)
                 {
-                    TempData["Error"] = "Treasurer profile not found.";
+                    TempData["Error"] = "Treasurer profile not found. Please contact administrator.";
                     return RedirectToAction("Payments");
                 }
 
@@ -501,9 +528,9 @@ namespace iBITS_Portal.Controllers
                     .Select(s => s.SettingValue)
                     .FirstOrDefaultAsync();
 
-                // Update fine status
+                // Update fine status - use explicit "Paid" with capital P for consistency
                 fine.FinesStatus = "Paid";
-                _context.Update(fine);
+                _context.Fines.Update(fine);
 
                 // Create fine payment transaction record
                 var transaction = new FinePaymentTransaction
@@ -512,37 +539,45 @@ namespace iBITS_Portal.Controllers
                     StudentNum = fine.StudentNum ?? "",
                     Amount = fine.Amount ?? 0,
                     PaymentDate = DateTime.Now,
-                    PaymentMethod = paymentMethod ?? "Cash",
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
-                    TransactionReference = transactionRef,
-                    Notes = notes,
-                    // AcademicYear not in FinePaymentTransaction model
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()
                 };
 
                 _context.FinePaymentTransactions.Add(transaction);
 
                 // Send notification to student
-                _context.Notifications.Add(new Notification
+                if (!string.IsNullOrEmpty(fine.StudentNum))
                 {
-                    StudentNum = fine.StudentNum,
-                    Title = "Fine Payment Confirmed",
-                    Message = $"Your payment of Ã¢â€šÂ±{fine.Amount} for fine has been confirmed by {treasurer.FullName}. " +
-                             $"Payment method: {paymentMethod ?? "Cash"}. " +
-                             (string.IsNullOrEmpty(transactionRef) ? "" : $"Reference: {transactionRef}."),
-                    NotificationType = "Payment",
-                    NotificationDate = DateTime.Now,
-                    IsRead = false,
-                    SentBy = treasurer.StudentNum
-                });
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Payment Confirmed",
+                        Message = $"Your payment of ₱{fine.Amount:N2} for '{fine.Description ?? "Fine"}' has been confirmed by {treasurer.FullName}. " +
+                                 $"Payment method: {transaction.PaymentMethod}. " +
+                                 (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
 
-                await _context.SaveChangesAsync();
+                // Save all changes in a single transaction
+                var savedCount = await _context.SaveChangesAsync();
+                System.Diagnostics.Debug.WriteLine($"[MarkFineAsPaid] SaveChanges result: {savedCount} entities saved");
 
-                TempData["Message"] = $"Fine payment of Ã¢â€šÂ±{fine.Amount} marked as PAID successfully.";
+                TempData["Message"] = $"Fine payment of ₱{fine.Amount:N2} for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} marked as PAID successfully.";
                 return RedirectToAction("Payments");
             }
             catch (Exception ex)
             {
-                TempData["Error"] = "An error occurred while processing the fine payment.";
+                // Log the full exception for debugging
+                System.Diagnostics.Debug.WriteLine($"[MarkFineAsPaid] ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MarkFineAsPaid] Stack: {ex.StackTrace}");
+
+                TempData["Error"] = $"An error occurred while processing the fine payment: {ex.Message}";
                 return RedirectToAction("Payments");
             }
         }

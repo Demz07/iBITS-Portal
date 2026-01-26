@@ -336,16 +336,20 @@
 
 @section Scripts {
     <script>
-        // Open payment modal with data
+        // FIXED: Enhanced payment modal with better form handling and validation
         function openPaymentModal(id, type, description, amount, studentName) {
+            // Reset form first
+            const form = document.getElementById('paymentForm');
+            form.reset();
+
+            // Set the payment ID value
             document.getElementById('paymentId').value = id;
             document.getElementById('paymentType').value = type;
-            document.getElementById('studentName').textContent = studentName;
-            document.getElementById('itemDescription').textContent = description;
-            document.getElementById('itemAmount').textContent = '₱' + parseFloat(amount).toFixed(2);
+            document.getElementById('studentName').textContent = studentName || 'Unknown';
+            document.getElementById('itemDescription').textContent = description || 'Payment';
+            document.getElementById('itemAmount').textContent = '₱' + parseFloat(amount || 0).toFixed(2);
 
-            // Set form action based on type
-            const form = document.getElementById('paymentForm');
+            // Set form action and input name based on type
             if (type === 'fee') {
                 form.action = '@Url.Action("MarkFeeAsPaid", "Officer")';
                 document.getElementById('paymentId').name = 'feeId';
@@ -354,10 +358,56 @@
                 document.getElementById('paymentId').name = 'fineId';
             }
 
+            // Debug: Log form details
+            console.log('[Payment Modal] Opening for:', { id, type, description, amount, studentName });
+            console.log('[Payment Modal] Form action:', form.action);
+            console.log('[Payment Modal] Input name:', document.getElementById('paymentId').name);
+
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
             modal.show();
         }
+
+        // FIXED: Add form submission validation and debugging
+        document.addEventListener('DOMContentLoaded', function() {
+            const paymentForm = document.getElementById('paymentForm');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', function(e) {
+                    const paymentId = document.getElementById('paymentId').value;
+                    const paymentMethod = document.getElementById('paymentMethod').value;
+
+                    console.log('[Payment Form] Submitting:', {
+                        action: this.action,
+                        paymentId: paymentId,
+                        paymentIdName: document.getElementById('paymentId').name,
+                        paymentMethod: paymentMethod
+                    });
+
+                    // Validate required fields
+                    if (!paymentId || paymentId === '0') {
+                        e.preventDefault();
+                        alert('Error: Invalid payment ID. Please close this modal and try again.');
+                        return false;
+                    }
+
+                    if (!paymentMethod) {
+                        e.preventDefault();
+                        alert('Please select a payment method.');
+                        document.getElementById('paymentMethod').focus();
+                        return false;
+                    }
+
+                    // Show loading state on button
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+                    }
+
+                    return true;
+                });
+            }
+        });
 
         // Load fines data when tab is clicked
         document.getElementById('fines-tab').addEventListener('click', function() {
@@ -383,10 +433,15 @@
             fetch('@Url.Action("GetFinesData", "Officer")')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('[Fines Data] Received:', data);
                     if (data.success && data.fines && data.fines.length > 0) {
                         let html = '';
                         data.fines.forEach(fine => {
                             const isPaid = fine.finesStatus?.toUpperCase() === 'PAID';
+                            // Escape special characters in strings for onclick
+                            const safeReason = (fine.fineReason || 'Fine').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            const safeName = (fine.studentName || 'N/A').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                             html += `
                                 <tr class="${isPaid ? 'table-success' : ''}">
                                     <td class="fw-bold">${fine.studentName || 'N/A'}</td>
@@ -401,7 +456,7 @@
                                     </td>
                                     <td class="text-end">
                                         ${!isPaid
-                                            ? `<button class="btn btn-sm btn-success" onclick="openPaymentModal(${fine.fineId}, 'fine', '${fine.fineReason || 'Fine'}', ${fine.amount || 0}, '${fine.studentName || 'N/A'}')">
+                                            ? `<button class="btn btn-sm btn-success" onclick="openPaymentModal(${fine.fineId}, 'fine', '${safeReason}', ${fine.amount || 0}, '${safeName}')">
                                                 <i class="bi bi-check-circle me-1"></i> Mark as Paid
                                                </button>`
                                             : '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Completed</span>'}
@@ -422,7 +477,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading fines:', error);
+                    console.error('[Fines Data] Error loading fines:', error);
                     tbody.innerHTML = `
                         <tr>
                             <td colspan="7" class="text-center py-4 text-danger">

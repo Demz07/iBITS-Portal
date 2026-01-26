@@ -4148,24 +4148,76 @@ namespace iBITS_Portal.Controllers
 
         // =========================================================
         // ACTION: UPDATE FEE STATUS (Mark as Paid/Unpaid)
+        // FIXED: Now creates PaymentTransaction record for audit trail
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateFeeStatus(int feeId, string status)
         {
-            var fee = await _context.Fees.FindAsync(feeId);
+            var fee = await _context.Fees.Include(f => f.StudentNumNavigation).FirstOrDefaultAsync(f => f.FeeId == feeId);
             if (fee == null)
             {
                 TempData["Error"] = "Fee record not found.";
                 return RedirectToAction(nameof(Payments));
             }
 
-            fee.FeeStatus = status;
+            // Normalize status to proper casing
+            var normalizedStatus = status?.Trim();
+            if (string.Equals(normalizedStatus, "paid", StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedStatus = "Paid";
+            }
+            else if (string.Equals(normalizedStatus, "unpaid", StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedStatus = "Unpaid";
+            }
+
+            var previousStatus = fee.FeeStatus;
+            fee.FeeStatus = normalizedStatus;
             _context.Fees.Update(fee);
+
+            // If marking as Paid, create a PaymentTransaction record for audit trail
+            if (normalizedStatus == "Paid" && previousStatus?.ToLower() != "paid")
+            {
+                // Get the current admin user
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
+
+                // Create payment transaction record
+                var transaction = new PaymentTransaction
+                {
+                    FeeId = feeId,
+                    StudentNum = fee.StudentNum ?? "",
+                    Amount = fee.Amount ?? 0,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = "Admin Override",
+                    ProcessedBy = adminName,
+                    TransactionReference = $"ADMIN-{DateTime.Now:yyyyMMddHHmmss}",
+                    Notes = $"Payment confirmed by Admin ({adminName})"
+                };
+
+                _context.PaymentTransactions.Add(transaction);
+
+                // Send notification to student
+                if (!string.IsNullOrEmpty(fee.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fee.StudentNum,
+                        Title = "Payment Confirmed",
+                        Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = adminName
+                    });
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            await LogAction("Update Fee Status", $"Updated fee ID {feeId} status to {status}");
-            TempData["Message"] = "Fee status updated successfully.";
+            await LogAction("Update Fee Status", $"Updated fee ID {feeId} status from '{previousStatus}' to '{normalizedStatus}'");
+            TempData["Message"] = $"Fee status updated to '{normalizedStatus}' successfully.";
 
             return RedirectToAction(nameof(Payments));
         }

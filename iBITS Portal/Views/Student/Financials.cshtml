@@ -1,16 +1,24 @@
 ﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\Financials.cshtml *@
 @* FILE PATH: Views/Student/Financials.cshtml *@
+@* FIXED: Improved payment status display and calculations *@
 @{
     ViewData["Title"] = "My Financials";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     var fees = ViewBag.Fees as List<iBITS_Portal.Models.Fee> ?? new List<iBITS_Portal.Models.Fee>();
     var fines = ViewBag.Fines as List<iBITS_Portal.Models.Fine> ?? new List<iBITS_Portal.Models.Fine>();
 
+    // FIXED: Use case-insensitive comparison for status checks
     var totalFees = fees.Sum(f => f.Amount ?? 0);
     var totalFines = fines.Sum(f => f.Amount ?? 0);
-    var paidFees = fees.Where(f => f.FeeStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
-    var paidFines = fines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+    var paidFees = fees.Where(f => string.Equals(f.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase)).Sum(f => f.Amount ?? 0);
+    var paidFines = fines.Where(f => string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase)).Sum(f => f.Amount ?? 0);
     var totalDue = (totalFees + totalFines) - (paidFees + paidFines);
+
+    // Count paid/unpaid items for summary
+    var paidFeesCount = fees.Count(f => string.Equals(f.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase));
+    var unpaidFeesCount = fees.Count - paidFeesCount;
+    var paidFinesCount = fines.Count(f => string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase));
+    var unpaidFinesCount = fines.Count - paidFinesCount;
 }
 
 @section Styles {
@@ -126,7 +134,8 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fee.Amount?.ToString("N2")</span>
-                                    @if (fee.FeeStatus?.ToLower() == "paid")
+                                    @* FIXED: Use case-insensitive comparison *@
+                                    @if (string.Equals(fee.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                     }
@@ -165,7 +174,8 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fine.Amount?.ToString("N2")</span>
-                                    @if (fine.FinesStatus?.ToLower() == "paid")
+                                    @* FIXED: Use case-insensitive comparison *@
+                                    @if (string.Equals(fine.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                     }
