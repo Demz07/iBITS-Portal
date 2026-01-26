@@ -1944,6 +1944,284 @@ namespace iBITS_Portal.Controllers
             TempData["Message"] = $"Fine '{fineReason}' created for {students.Count} students.";
             return RedirectToAction("OrgFines");
         }
+
+        // ============================================================
+        // AJAX: TOGGLE FEE PAYMENT (Class/Org Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer, Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFeePayment(int feeId, bool markAsPaid, string? returnUrl)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found." });
+                }
+
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee record not found." });
+                }
+
+                // Security: Class Treasurer can only manage their section
+                bool isOrgTreasurer = User.IsInRole("Org Treasurer");
+                if (!isOrgTreasurer && User.IsInRole("Class Treasurer"))
+                {
+                    if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = "Unauthorized: Student belongs to a different section." });
+                    }
+                }
+
+                if (markAsPaid)
+                {
+                    var remainingBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                    
+                    if (remainingBalance <= 0)
+                    {
+                        return Json(new { success = false, message = "This fee is already fully paid." });
+                    }
+
+                    fee.AmountPaid = fee.Amount ?? 0;
+                    fee.FeeStatus = "Paid";
+                    _context.Fees.Update(fee);
+
+                    var transaction = new PaymentTransaction
+                    {
+                        FeeId = feeId,
+                        StudentNum = fee.StudentNum ?? "",
+                        Amount = remainingBalance,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        Notes = "Payment marked via checkbox"
+                    };
+                    _context.PaymentTransactions.Add(transaction);
+
+                    if (!string.IsNullOrEmpty(fee.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fee.StudentNum,
+                            Title = "Payment Confirmed",
+                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = treasurer.StudentNum
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    return Json(new { 
+                        success = true, 
+                        message = "Payment confirmed successfully.",
+                        newStatus = "Paid",
+                        amountPaid = fee.AmountPaid,
+                        balance = 0
+                    });
+                }
+                else
+                {
+                    // Officers cannot revoke payments - only Admin can
+                    return Json(new { success = false, message = "Officers cannot revoke payments. Please contact an administrator." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // AJAX: TOGGLE FINE PAYMENT (Class/Org Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer, Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFinePayment(int fineId, bool markAsPaid, string? returnUrl)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found." });
+                }
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine record not found." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    return Json(new { success = false, message = "Cannot modify an excused fine." });
+                }
+
+                // Security: Class Treasurer can only manage their section
+                bool isOrgTreasurer = User.IsInRole("Org Treasurer");
+                if (!isOrgTreasurer && User.IsInRole("Class Treasurer"))
+                {
+                    if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = "Unauthorized: Student belongs to a different section." });
+                    }
+                }
+
+                if (markAsPaid)
+                {
+                    var remainingBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                    
+                    if (remainingBalance <= 0)
+                    {
+                        return Json(new { success = false, message = "This fine is already fully paid." });
+                    }
+
+                    fine.AmountPaid = fine.Amount ?? 0;
+                    fine.FinesStatus = "Paid";
+                    _context.Fines.Update(fine);
+
+                    var transaction = new FinePaymentTransaction
+                    {
+                        FineId = fineId,
+                        StudentNum = fine.StudentNum ?? "",
+                        Amount = remainingBalance,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        Notes = "Payment marked via checkbox"
+                    };
+                    _context.FinePaymentTransactions.Add(transaction);
+
+                    if (!string.IsNullOrEmpty(fine.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fine.StudentNum,
+                            Title = "Fine Payment Confirmed",
+                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed by {treasurer.FullName}.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = treasurer.StudentNum
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    return Json(new { 
+                        success = true, 
+                        message = "Fine payment confirmed successfully.",
+                        newStatus = "Paid",
+                        amountPaid = fine.AmountPaid,
+                        balance = 0
+                    });
+                }
+                else
+                {
+                    // Officers cannot revoke payments - only Admin can
+                    return Json(new { success = false, message = "Officers cannot revoke payments. Please contact an administrator." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // AJAX: MARK FINE AS EXCUSED (Org Treasurer Only)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkFineExcusedAjax(int fineId, string? reason)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine record not found." });
+                }
+
+                // Only event fines can be excused
+                if (fine.AttendanceId == null)
+                {
+                    return Json(new { success = false, message = "Only event-based fines can be excused." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "paid")
+                {
+                    return Json(new { success = false, message = "Cannot excuse a paid fine." });
+                }
+
+                fine.FinesStatus = "Excused";
+                fine.AmountPaid = 0;
+                _context.Fines.Update(fine);
+
+                // Delete any partial payments
+                var transactions = await _context.FinePaymentTransactions
+                    .Where(t => t.FineId == fineId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.FinePaymentTransactions.RemoveRange(transactions);
+                }
+
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Excused",
+                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused by {treasurer?.FullName ?? "Org Treasurer"}. Reason: {reason ?? "Not specified"}",
+                        NotificationType = "Fine",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer?.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = "Fine has been marked as excused.",
+                    newStatus = "Excused"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
     }
 }
 

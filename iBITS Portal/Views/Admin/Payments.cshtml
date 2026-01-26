@@ -274,11 +274,12 @@
         </div>
     </div>
 
-    <!-- Standard Fees Table -->
+    <!-- Standard Fees Table with Checkbox UI -->
     <div class="table-responsive">
         <table class="table table-glass" id="feesTable">
             <thead>
                 <tr>
+                    <th class="text-center" style="width: 50px;">☐</th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
                     <th>Section</th>
@@ -287,7 +288,7 @@
                     <th>Paid</th>
                     <th>Balance</th>
                     <th>Status</th>
-                    <th class="text-end">Actions</th>
+                    <th class="text-center" style="width: 60px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -300,14 +301,37 @@
                         var isPaid = paymentStatus == "Paid";
                         var isPartial = paymentStatus == "Partial";
                         var remainingBalance = fee.RemainingBalance;
+                        var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : "");
+                        var checkboxClass = isPaid ? "status-paid" : (isPartial ? "status-partial" : "status-unpaid");
 
-                        <tr class="fee-row"
+                        <tr class="fee-row @statusClass"
+                            data-fee-id="@fee.FeeId"
                             data-ref-id="@fee.FeeId"
                             data-student-name="@(fee.StudentNumNavigation?.FullName?.ToLower() ?? "")"
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
                             data-section="@(student?.YearLevelSection ?? "")"
-                            data-status="@paymentStatus.ToLower()">
+                            data-status="@paymentStatus.ToLower()"
+                            data-amount="@(fee.Amount ?? 0)"
+                            data-paid="@fee.AmountPaid"
+                            data-balance="@remainingBalance">
+                            
+                            <!-- Checkbox Column -->
+                            <td class="text-center">
+                                <div class="payment-checkbox-wrapper">
+                                    <div class="payment-checkbox @checkboxClass" 
+                                         data-fee-id="@fee.FeeId"
+                                         data-student-name="@(student?.FullName ?? "Unknown")"
+                                         data-fee-name="@fee.FeeName"
+                                         data-amount="@(fee.Amount ?? 0)"
+                                         data-balance="@remainingBalance"
+                                         data-status="@paymentStatus.ToLower()"
+                                         onclick="handleFeeCheckboxClick(this)"
+                                         title="@(isPaid ? "Click to revoke payment" : (isPartial ? "Click to complete payment" : "Click to mark as paid"))">
+                                    </div>
+                                </div>
+                            </td>
+                            
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
                             <td>
                                 @if (student != null)
@@ -323,60 +347,53 @@
                             <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
-                            <td style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
-                            <td style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
+                            <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                            
+                            <!-- Status Badge -->
                             <td>
                                 @if (isPaid)
                                 {
-                                    <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                 }
                                 else if (isPartial)
                                 {
-                                    <span class="badge-partial"><i class="bi bi-pie-chart-fill me-1"></i>Partial</span>
+                                    <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
                                 }
                                 else
                                 {
-                                    <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
+                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                                 }
                             </td>
-                            <td class="text-end">
+                            
+                            <!-- Actions Dropdown -->
+                            <td class="text-center">
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                    <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
                                     <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
                                         @if (!isPaid)
                                         {
                                             <li>
-                                                <a href="#" class="dropdown-item text-success" onclick="openAdminFeePaymentModal(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance); return false;">
-                                                    <i class="bi bi-cash-coin me-2"></i> Record Payment
+                                                <a href="#" class="dropdown-item" onclick="openAdminFeePaymentModal(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance); return false;">
+                                                    <i class="bi bi-cash-coin me-2 text-success"></i> Record Partial Payment
                                                 </a>
                                             </li>
-                                            <li>
-                                                <form asp-action="UpdateFeeStatus" method="post">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                    <input type="hidden" name="status" value="Paid" />
-                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark Fully Paid</button>
-                                                </form>
-                                            </li>
                                         }
-                                        else
+                                        @if (isPaid || isPartial)
                                         {
                                             <li>
-                                                <form asp-action="UpdateFeeStatus" method="post">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                    <input type="hidden" name="status" value="Unpaid" />
-                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Reset to Unpaid</button>
-                                                </form>
+                                                <a href="#" class="dropdown-item" onclick="confirmRevokeFeePayment(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @fee.AmountPaid); return false;">
+                                                    <i class="bi bi-arrow-counterclockwise me-2 text-warning"></i> Revoke Payment
+                                                </a>
                                             </li>
                                         }
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <form asp-action="DeleteFee" method="post" onsubmit="return confirm('Delete this fee record?');">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="feeId" value="@fee.FeeId" />
-                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete Record</button>
-                                            </form>
+                                            <a href="#" class="dropdown-item text-danger" onclick="confirmDeleteFee(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @(fee.Amount ?? 0)); return false;">
+                                                <i class="bi bi-trash me-2"></i> Delete Record
+                                            </a>
                                         </li>
                                     </ul>
                                 </div>
@@ -386,10 +403,122 @@
                 }
                 else
                 {
-                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- CONFIRM PAYMENT MODAL -->
+<div class="modal fade" id="confirmPaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-check-circle text-success me-2"></i> Confirm Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="confirm-modal-icon success">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <p class="mb-3">Mark this fee as <strong>PAID</strong>?</p>
+                <div class="confirm-modal-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Student</span>
+                        <span class="detail-value" id="confirmPayStudentName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fee</span>
+                        <span class="detail-value" id="confirmPayFeeName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount</span>
+                        <span class="detail-value text-gold">₱<span id="confirmPayAmount"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmPaymentBtn" onclick="executeToggleFeePayment()">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- REVOKE PAYMENT MODAL -->
+<div class="modal fade" id="revokePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i> Revoke Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="confirm-modal-icon warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <p class="mb-2 text-warning fw-bold">Warning: This will delete all payment transactions!</p>
+                <p class="mb-3">Are you sure you want to revoke this payment?</p>
+                <div class="confirm-modal-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Student</span>
+                        <span class="detail-value" id="revokeStudentName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount Paid</span>
+                        <span class="detail-value text-success">₱<span id="revokeAmountPaid"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="revokePaymentBtn" onclick="executeRevokeFeePayment()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE FEE MODAL -->
+<div class="modal fade" id="deleteFeeModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <form asp-action="DeleteFee" method="post" id="deleteFeeForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="feeId" id="deleteFeeId" />
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="bi bi-trash text-danger me-2"></i> Delete Fee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="confirm-modal-icon danger">
+                        <i class="bi bi-trash-fill"></i>
+                    </div>
+                    <p class="mb-2 text-danger fw-bold">This action cannot be undone!</p>
+                    <p class="mb-3">Delete this fee record permanently?</p>
+                    <div class="confirm-modal-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Student</span>
+                            <span class="detail-value" id="deleteStudentName"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Amount</span>
+                            <span class="detail-value text-gold">₱<span id="deleteAmount"></span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> Delete Permanently
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -656,25 +785,222 @@
         }
 
         // Export Function
-         function exportPayments() {
-             const search = document.getElementById('filterSearch').value;
-             const feeName = document.getElementById('filterFeeName').value;
-             const program = document.getElementById('filterProgram').value;
-             const year = document.getElementById('filterYear').value;
-             const status = document.getElementById('filterStatus').value;
-             const acadYear = document.getElementById('filterAcadYear').value;
+        function exportPayments() {
+            const search = document.getElementById('filterSearch').value;
+            const feeName = document.getElementById('filterFeeName').value;
+            const program = document.getElementById('filterProgram').value;
+            const year = document.getElementById('filterYear').value;
+            const status = document.getElementById('filterStatus').value;
+            const acadYear = document.getElementById('filterAcadYear').value;
 
-             const params = new URLSearchParams({
-                 searchString: search,
-                 feeNameFilter: feeName,
-                 programFilter: program,
-                 yearFilter: year,
-                 statusFilter: status,
-                 acadYearFilter: acadYear
-             });
+            const params = new URLSearchParams({
+                searchString: search,
+                feeNameFilter: feeName,
+                programFilter: program,
+                yearFilter: year,
+                statusFilter: status,
+                acadYearFilter: acadYear
+            });
 
-             window.location.href = '/Admin/ExportPayments?' + params.toString();
-         }
+            window.location.href = '/Admin/ExportPayments?' + params.toString();
+        }
+
+        // ============================================================
+        // CHECKBOX-BASED PAYMENT SYSTEM
+        // ============================================================
+        var currentFeeData = {};
+
+        // Handle checkbox click
+        function handleFeeCheckboxClick(checkbox) {
+            const feeId = checkbox.dataset.feeId;
+            const status = checkbox.dataset.status;
+            const studentName = checkbox.dataset.studentName;
+            const feeName = checkbox.dataset.feeName;
+            const amount = parseFloat(checkbox.dataset.amount);
+            const balance = parseFloat(checkbox.dataset.balance);
+
+            currentFeeData = { feeId, studentName, feeName, amount, balance, checkbox };
+
+            if (status === 'paid') {
+                // Already paid - show revoke confirmation
+                confirmRevokeFeePayment(feeId, studentName, amount);
+            } else {
+                // Unpaid or Partial - show payment confirmation
+                document.getElementById('confirmPayStudentName').textContent = studentName;
+                document.getElementById('confirmPayFeeName').textContent = feeName;
+                document.getElementById('confirmPayAmount').textContent = balance.toFixed(2);
+                new bootstrap.Modal(document.getElementById('confirmPaymentModal')).show();
+            }
+        }
+
+        // Execute toggle fee payment (mark as paid)
+        async function executeToggleFeePayment() {
+            const btn = document.getElementById('confirmPaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Admin/ToggleFeePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `feeId=${currentFeeData.feeId}&markAsPaid=true`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update UI
+                    updateFeeRowUI(currentFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
+                    bootstrap.Modal.getInstance(document.getElementById('confirmPaymentModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+            }
+        }
+
+        // Confirm revoke payment
+        function confirmRevokeFeePayment(feeId, studentName, amountPaid) {
+            currentFeeData.feeId = feeId;
+            document.getElementById('revokeStudentName').textContent = studentName;
+            document.getElementById('revokeAmountPaid').textContent = amountPaid.toFixed(2);
+            new bootstrap.Modal(document.getElementById('revokePaymentModal')).show();
+        }
+
+        // Execute revoke fee payment
+        async function executeRevokeFeePayment() {
+            const btn = document.getElementById('revokePaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Admin/RevokeFeePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `feeId=${currentFeeData.feeId}`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateFeeRowUI(currentFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
+                    bootstrap.Modal.getInstance(document.getElementById('revokePaymentModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment';
+            }
+        }
+
+        // Confirm delete fee
+        function confirmDeleteFee(feeId, studentName, amount) {
+            document.getElementById('deleteFeeId').value = feeId;
+            document.getElementById('deleteStudentName').textContent = studentName;
+            document.getElementById('deleteAmount').textContent = amount.toFixed(2);
+            new bootstrap.Modal(document.getElementById('deleteFeeModal')).show();
+        }
+
+        // Update fee row UI after status change
+        function updateFeeRowUI(feeId, newStatus, amountPaid, balance) {
+            const row = document.querySelector(`tr[data-fee-id="${feeId}"]`);
+            if (!row) return;
+
+            const checkbox = row.querySelector('.payment-checkbox');
+            const statusBadge = row.querySelector('.status-badge');
+            const amountPaidCell = row.querySelector('.amount-paid');
+            const balanceCell = row.querySelector('.balance');
+            const amount = parseFloat(row.dataset.amount);
+
+            // Update row class
+            row.classList.remove('row-paid', 'row-partial');
+            if (newStatus === 'Paid') row.classList.add('row-paid');
+            else if (newStatus === 'Partial') row.classList.add('row-partial');
+
+            // Update checkbox
+            checkbox.classList.remove('status-paid', 'status-partial', 'status-unpaid');
+            checkbox.dataset.status = newStatus.toLowerCase();
+            if (newStatus === 'Paid') {
+                checkbox.classList.add('status-paid');
+                checkbox.title = 'Click to revoke payment';
+            } else if (newStatus === 'Partial') {
+                checkbox.classList.add('status-partial');
+                checkbox.title = 'Click to complete payment';
+            } else {
+                checkbox.classList.add('status-unpaid');
+                checkbox.title = 'Click to mark as paid';
+            }
+            checkbox.dataset.balance = balance;
+
+            // Update status badge
+            if (newStatus === 'Paid') {
+                statusBadge.className = 'status-badge status-paid';
+                statusBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Paid';
+            } else if (newStatus === 'Partial') {
+                statusBadge.className = 'status-badge status-partial';
+                statusBadge.innerHTML = '<i class="bi bi-pie-chart-fill"></i> Partial';
+            } else {
+                statusBadge.className = 'status-badge status-unpaid';
+                statusBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Unpaid';
+            }
+
+            // Update amounts
+            amountPaidCell.textContent = '₱' + amountPaid.toFixed(2);
+            balanceCell.textContent = '₱' + balance.toFixed(2);
+            balanceCell.style.color = balance > 0 ? '#ef4444' : '#10b981';
+
+            // Update data attributes
+            row.dataset.status = newStatus.toLowerCase();
+            row.dataset.paid = amountPaid;
+            row.dataset.balance = balance;
+        }
+
+        // Toast notification
+        function showToast(type, message) {
+            // Create toast element
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = container.lastElementChild;
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
     </script>
     <script src="~/js/payments.js" asp-append-version="true"></script>
 }

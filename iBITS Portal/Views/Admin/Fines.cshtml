@@ -236,6 +236,7 @@
         <table class="table table-glass" id="finesTable">
             <thead>
                 <tr>
+                    <th class="text-center" style="width: 50px;">☐</th>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
                     <th>SECTION</th>
@@ -244,7 +245,7 @@
                     <th>PAID</th>
                     <th>BALANCE</th>
                     <th>STATUS</th>
-                    <th class="text-end">ACTIONS</th>
+                    <th class="text-center" style="width: 60px;">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
@@ -259,12 +260,36 @@
                     var isExcused = paymentStatus == "Excused";
                     var remainingBalance = fine.RemainingBalance;
                     var isEventFine = fine.AttendanceId != null;
+                    var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : (isExcused ? "row-excused" : ""));
+                    var checkboxClass = isPaid ? "status-paid" : (isPartial ? "status-partial" : (isExcused ? "status-excused" : "status-unpaid"));
 
-                    <tr data-student="@student?.FullName?.ToLower()"
+                    <tr class="fine-row @statusClass"
+                        data-fine-id="@fine.FineId"
+                        data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
                         data-status="@paymentStatus.ToLower()"
                         data-section="@student?.YearLevelSection"
-                        data-finetype="@(isEventFine ? "event" : "manual")">
+                        data-finetype="@(isEventFine ? "event" : "manual")"
+                        data-amount="@(fine.Amount ?? 0)"
+                        data-paid="@fine.AmountPaid"
+                        data-balance="@remainingBalance">
+
+                        <!-- Checkbox Column -->
+                        <td class="text-center">
+                            <div class="payment-checkbox-wrapper">
+                                <div class="payment-checkbox @checkboxClass @(isExcused ? "" : "")" 
+                                     data-fine-id="@fine.FineId"
+                                     data-student-name="@(student?.FullName ?? "Unknown")"
+                                     data-description="@description"
+                                     data-amount="@(fine.Amount ?? 0)"
+                                     data-balance="@remainingBalance"
+                                     data-status="@paymentStatus.ToLower()"
+                                     data-is-event="@isEventFine.ToString().ToLower()"
+                                     onclick="@(isExcused ? "" : "handleFineCheckboxClick(this)")"
+                                     title="@(isExcused ? "This fine is excused" : (isPaid ? "Click to revoke payment" : (isPartial ? "Click to complete payment" : "Click to mark as paid")))">
+                                </div>
+                            </div>
+                        </td>
 
                         <td class="font-monospace text-muted">#@fine.FineId</td>
                         <td>
@@ -290,48 +315,57 @@
                             }
                         </td>
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-                        <td style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
-                        <td style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                        <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
+                        <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                        
+                        <!-- Status Badge -->
                         <td>
                             @if (isPaid)
                             {
-                                <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                                <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                             }
                             else if (isExcused)
                             {
-                                <span class="badge-info-custom"><i class="bi bi-shield-check me-1"></i>Excused</span>
+                                <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
                             }
                             else if (isPartial)
                             {
-                                <span class="badge-partial"><i class="bi bi-pie-chart-fill me-1"></i>Partial</span>
+                                <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
                             }
                             else
                             {
-                                <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
+                                <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                             }
                         </td>
-                        <td class="text-end">
+                        
+                        <!-- Actions Dropdown -->
+                        <td class="text-center">
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
                                 <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
                                     @if (!isPaid && !isExcused)
                                     {
                                         <li>
-                                            <a href="#" class="dropdown-item text-success" onclick="openAdminFinePaymentModal(@fine.FineId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0), @fine.AmountPaid, @remainingBalance); return false;">
-                                                <i class="bi bi-cash-coin me-2"></i> Record Payment
+                                            <a href="#" class="dropdown-item" onclick="openAdminFinePaymentModal(@fine.FineId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0), @fine.AmountPaid, @remainingBalance); return false;">
+                                                <i class="bi bi-cash-coin me-2 text-success"></i> Record Partial Payment
                                             </a>
                                         </li>
                                         @if (isEventFine)
                                         {
                                             <li>
-                                                <a href="#" class="dropdown-item text-info" onclick="openWaiveModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
-                                                    <i class="bi bi-shield-check me-2"></i> Mark as Excused
+                                                <a href="#" class="dropdown-item" onclick="openExcuseModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0)); return false;">
+                                                    <i class="bi bi-shield-check me-2 text-info"></i> Mark as Excused
                                                 </a>
                                             </li>
                                         }
+                                    }
+                                    @if (isPaid || isPartial)
+                                    {
                                         <li>
-                                            <a href="#" class="dropdown-item text-warning" onclick="openAdjustModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
-                                                <i class="bi bi-pencil me-2"></i> Adjust Amount
+                                            <a href="#" class="dropdown-item" onclick="confirmRevokeFinePayment(@fine.FineId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @fine.AmountPaid); return false;">
+                                                <i class="bi bi-arrow-counterclockwise me-2 text-warning"></i> Revoke Payment
                                             </a>
                                         </li>
                                     }
@@ -348,6 +382,118 @@
                 }
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- CONFIRM FINE PAYMENT MODAL -->
+<div class="modal fade" id="confirmFinePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-check-circle text-success me-2"></i> Confirm Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="confirm-modal-icon success">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <p class="mb-3">Mark this fine as <strong>PAID</strong>?</p>
+                <div class="confirm-modal-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Student</span>
+                        <span class="detail-value" id="confirmFinePayStudentName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fine</span>
+                        <span class="detail-value" id="confirmFinePayDescription"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount</span>
+                        <span class="detail-value text-gold">₱<span id="confirmFinePayAmount"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmFinePaymentBtn" onclick="executeToggleFinePayment()">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- REVOKE FINE PAYMENT MODAL -->
+<div class="modal fade" id="revokeFinePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i> Revoke Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="confirm-modal-icon warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <p class="mb-2 text-warning fw-bold">Warning: This will delete all payment transactions!</p>
+                <p class="mb-3">Are you sure you want to revoke this payment?</p>
+                <div class="confirm-modal-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Student</span>
+                        <span class="detail-value" id="revokeFineStudentName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount Paid</span>
+                        <span class="detail-value text-success">₱<span id="revokeFineAmountPaid"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="revokeFinePaymentBtn" onclick="executeRevokeFinePayment()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- EXCUSE FINE MODAL -->
+<div class="modal fade" id="excuseFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-shield-check text-info me-2"></i> Mark as Excused</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="confirm-modal-icon info">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                </div>
+                <div class="confirm-modal-details mb-3">
+                    <div class="detail-row">
+                        <span class="detail-label">Student</span>
+                        <span class="detail-value" id="excuseStudentName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount</span>
+                        <span class="detail-value text-gold">₱<span id="excuseFineAmount"></span></span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Reason for Excusing <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="excuseReason" rows="3" placeholder="e.g., Valid medical certificate submitted..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" id="excuseFineBtn" onclick="executeExcuseFine()">
+                    <i class="bi bi-shield-check me-1"></i> Mark as Excused
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -769,7 +915,7 @@
             window.location.href = '/Admin/ExportFinesToExcel';
         }
 
-                // ============================================================
+        // ============================================================
         // DYNAMIC FILTER TOGGLE
         // ============================================================
         $(document).ready(function () {
@@ -792,8 +938,257 @@
             }
 
             fineTypeSelect.on('change', toggleFilters);
-            toggleFilters(); // Run on page load to maintain state
+            toggleFilters();
         });
+
+        // ============================================================
+        // CHECKBOX-BASED FINE PAYMENT SYSTEM
+        // ============================================================
+        var currentFineData = {};
+
+        // Handle checkbox click
+        function handleFineCheckboxClick(checkbox) {
+            const fineId = checkbox.dataset.fineId;
+            const status = checkbox.dataset.status;
+            const studentName = checkbox.dataset.studentName;
+            const description = checkbox.dataset.description;
+            const amount = parseFloat(checkbox.dataset.amount);
+            const balance = parseFloat(checkbox.dataset.balance);
+
+            currentFineData = { fineId, studentName, description, amount, balance, checkbox };
+
+            if (status === 'paid') {
+                confirmRevokeFinePayment(fineId, studentName, amount);
+            } else if (status === 'excused') {
+                return; // Cannot modify excused fines via checkbox
+            } else {
+                document.getElementById('confirmFinePayStudentName').textContent = studentName;
+                document.getElementById('confirmFinePayDescription').textContent = description;
+                document.getElementById('confirmFinePayAmount').textContent = balance.toFixed(2);
+                new bootstrap.Modal(document.getElementById('confirmFinePaymentModal')).show();
+            }
+        }
+
+        // Execute toggle fine payment
+        async function executeToggleFinePayment() {
+            const btn = document.getElementById('confirmFinePaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Admin/ToggleFinePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `fineId=${currentFineData.fineId}&markAsPaid=true`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateFineRowUI(currentFineData.fineId, result.newStatus, result.amountPaid, result.balance);
+                    bootstrap.Modal.getInstance(document.getElementById('confirmFinePaymentModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+            }
+        }
+
+        // Confirm revoke fine payment
+        function confirmRevokeFinePayment(fineId, studentName, amountPaid) {
+            currentFineData.fineId = fineId;
+            document.getElementById('revokeFineStudentName').textContent = studentName;
+            document.getElementById('revokeFineAmountPaid').textContent = amountPaid.toFixed(2);
+            new bootstrap.Modal(document.getElementById('revokeFinePaymentModal')).show();
+        }
+
+        // Execute revoke fine payment
+        async function executeRevokeFinePayment() {
+            const btn = document.getElementById('revokeFinePaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Admin/RevokeFinePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `fineId=${currentFineData.fineId}`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateFineRowUI(currentFineData.fineId, result.newStatus, result.amountPaid, result.balance);
+                    bootstrap.Modal.getInstance(document.getElementById('revokeFinePaymentModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment';
+            }
+        }
+
+        // Open excuse modal
+        function openExcuseModal(fineId, studentName, amount) {
+            currentFineData.fineId = fineId;
+            document.getElementById('excuseStudentName').textContent = studentName;
+            document.getElementById('excuseFineAmount').textContent = amount.toFixed(2);
+            document.getElementById('excuseReason').value = '';
+            new bootstrap.Modal(document.getElementById('excuseFineModal')).show();
+        }
+
+        // Execute excuse fine
+        async function executeExcuseFine() {
+            const reason = document.getElementById('excuseReason').value.trim();
+            if (!reason) {
+                showToast('error', 'Please provide a reason for excusing this fine.');
+                return;
+            }
+
+            const btn = document.getElementById('excuseFineBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Admin/MarkFineExcused', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `fineId=${currentFineData.fineId}&reason=${encodeURIComponent(reason)}`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateFineRowUI(currentFineData.fineId, result.newStatus, 0, 0);
+                    bootstrap.Modal.getInstance(document.getElementById('excuseFineModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Mark as Excused';
+            }
+        }
+
+        // Update fine row UI after status change
+        function updateFineRowUI(fineId, newStatus, amountPaid, balance) {
+            const row = document.querySelector(`tr[data-fine-id="${fineId}"]`);
+            if (!row) return;
+
+            const checkbox = row.querySelector('.payment-checkbox');
+            const statusBadge = row.querySelector('.status-badge');
+            const amountPaidCell = row.querySelector('.amount-paid');
+            const balanceCell = row.querySelector('.balance');
+
+            // Update row class
+            row.classList.remove('row-paid', 'row-partial', 'row-excused');
+            if (newStatus === 'Paid') row.classList.add('row-paid');
+            else if (newStatus === 'Partial') row.classList.add('row-partial');
+            else if (newStatus === 'Excused') row.classList.add('row-excused');
+
+            // Update checkbox
+            checkbox.classList.remove('status-paid', 'status-partial', 'status-unpaid', 'status-excused');
+            checkbox.dataset.status = newStatus.toLowerCase();
+            
+            if (newStatus === 'Paid') {
+                checkbox.classList.add('status-paid');
+                checkbox.title = 'Click to revoke payment';
+                checkbox.onclick = function() { handleFineCheckboxClick(this); };
+            } else if (newStatus === 'Partial') {
+                checkbox.classList.add('status-partial');
+                checkbox.title = 'Click to complete payment';
+                checkbox.onclick = function() { handleFineCheckboxClick(this); };
+            } else if (newStatus === 'Excused') {
+                checkbox.classList.add('status-excused');
+                checkbox.title = 'This fine is excused';
+                checkbox.onclick = null;
+            } else {
+                checkbox.classList.add('status-unpaid');
+                checkbox.title = 'Click to mark as paid';
+                checkbox.onclick = function() { handleFineCheckboxClick(this); };
+            }
+            checkbox.dataset.balance = balance;
+
+            // Update status badge
+            if (newStatus === 'Paid') {
+                statusBadge.className = 'status-badge status-paid';
+                statusBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Paid';
+            } else if (newStatus === 'Partial') {
+                statusBadge.className = 'status-badge status-partial';
+                statusBadge.innerHTML = '<i class="bi bi-pie-chart-fill"></i> Partial';
+            } else if (newStatus === 'Excused') {
+                statusBadge.className = 'status-badge status-excused';
+                statusBadge.innerHTML = '<i class="bi bi-shield-check"></i> Excused';
+            } else {
+                statusBadge.className = 'status-badge status-unpaid';
+                statusBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Unpaid';
+            }
+
+            // Update amounts
+            if (amountPaidCell) amountPaidCell.textContent = '₱' + amountPaid.toFixed(2);
+            if (balanceCell) {
+                balanceCell.textContent = '₱' + balance.toFixed(2);
+                balanceCell.style.color = balance > 0 ? '#ef4444' : '#10b981';
+            }
+
+            // Update data attributes
+            row.dataset.status = newStatus.toLowerCase();
+            row.dataset.paid = amountPaid;
+            row.dataset.balance = balance;
+        }
+
+        // Toast notification
+        function showToast(type, message) {
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = container.lastElementChild;
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
 
     </script>
     <script src="~/js/fines.js" asp-append-version="true"></script>

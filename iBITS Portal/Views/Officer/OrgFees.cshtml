@@ -281,6 +281,7 @@
         <table class="table table-glass" id="feesTable">
             <thead>
                 <tr>
+                    <th class="text-center" style="width: 50px;">☐</th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
                     <th>Section</th>
@@ -289,7 +290,7 @@
                     <th>Paid</th>
                     <th>Balance</th>
                     <th>Status</th>
-                    <th class="text-center">Action</th>
+                    <th class="text-center" style="width: 80px;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -302,14 +303,37 @@
                         var isPaid = paymentStatus == "Paid";
                         var isPartial = paymentStatus == "Partial";
                         var remainingBalance = fee.RemainingBalance;
+                        var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : "");
+                        var checkboxClass = isPaid ? "status-paid no-revoke" : (isPartial ? "status-partial" : "status-unpaid");
 
-                        <tr class="fee-row"
+                        <tr class="fee-row @statusClass"
+                            data-fee-id="@fee.FeeId"
                             data-ref-id="@fee.FeeId"
                             data-student-name="@(student?.FullName?.ToLower() ?? "")"
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
                             data-section="@(student?.YearLevelSection ?? "")"
-                            data-status="@paymentStatus.ToLower()">
+                            data-status="@paymentStatus.ToLower()"
+                            data-amount="@(fee.Amount ?? 0)"
+                            data-paid="@fee.AmountPaid"
+                            data-balance="@remainingBalance">
+                            
+                            <!-- Checkbox Column -->
+                            <td class="text-center">
+                                <div class="payment-checkbox-wrapper">
+                                    <div class="payment-checkbox @checkboxClass" 
+                                         data-fee-id="@fee.FeeId"
+                                         data-student-name="@(student?.FullName ?? "Unknown")"
+                                         data-fee-name="@fee.FeeName"
+                                         data-amount="@(fee.Amount ?? 0)"
+                                         data-balance="@remainingBalance"
+                                         data-status="@paymentStatus.ToLower()"
+                                         onclick="@(isPaid ? "" : "handleOrgFeeCheckbox(this)")"
+                                         title="@(isPaid ? "Payment completed" : (isPartial ? "Click to complete payment" : "Click to mark as paid"))">
+                                    </div>
+                                </div>
+                            </td>
+                            
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
                             <td>
                                 @if (student != null)
@@ -325,32 +349,36 @@
                             <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
-                            <td style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
-                            <td style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
+                            <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
+                            
+                            <!-- Status Badge -->
                             <td>
                                 @if (isPaid)
                                 {
-                                    <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                 }
                                 else if (isPartial)
                                 {
-                                    <span class="badge-partial"><i class="bi bi-pie-chart-fill me-1"></i>Partial</span>
+                                    <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
                                 }
                                 else
                                 {
-                                    <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
+                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                                 }
                             </td>
+                            
+                            <!-- Actions -->
                             <td class="text-center">
                                 @if (!isPaid)
                                 {
-                                    <button type="button" class="btn btn-sm btn-success" onclick="openFeePaymentModal(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance)">
-                                        <i class="bi bi-cash-coin me-1"></i> Record Payment
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="openFeePaymentModal(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance)" title="Record partial payment">
+                                        <i class="bi bi-cash-coin"></i>
                                     </button>
                                 }
                                 else
                                 {
-                                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Completed</span>
+                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
                                 }
                             </td>
                         </tr>
@@ -358,7 +386,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>
@@ -499,6 +527,44 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM PAYMENT MODAL (Org Treasurer Checkbox) -->
+<div class="modal fade" id="confirmOrgFeePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-check-circle text-success me-2"></i> Confirm Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="confirm-modal-icon success" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                    <i class="bi bi-check-circle-fill" style="font-size: 2.5rem; color: #10b981;"></i>
+                </div>
+                <p class="mb-3">Mark this fee as <strong>PAID</strong>?</p>
+                <div class="confirm-modal-details" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; text-align: left;">
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Student</span>
+                        <span class="detail-value fw-bold" id="confirmOrgFeeStudentName"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Fee</span>
+                        <span class="detail-value fw-bold" id="confirmOrgFeeFeeName"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between">
+                        <span class="detail-label text-muted">Amount</span>
+                        <span class="detail-value text-gold fw-bold">₱<span id="confirmOrgFeeAmount"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmOrgFeePaymentBtn" onclick="executeOrgFeePayment()">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -663,6 +729,142 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
         });
+
+        // ============================================================
+        // CHECKBOX-BASED PAYMENT (Org Treasurer - No Revoke)
+        // ============================================================
+        var currentOrgFeeData = {};
+
+        function handleOrgFeeCheckbox(checkbox) {
+            const feeId = checkbox.dataset.feeId;
+            const status = checkbox.dataset.status;
+            const studentName = checkbox.dataset.studentName;
+            const feeName = checkbox.dataset.feeName;
+            const amount = parseFloat(checkbox.dataset.amount);
+            const balance = parseFloat(checkbox.dataset.balance);
+
+            if (status === 'paid') {
+                showToast('info', 'This fee is already paid. Contact admin to revoke.');
+                return;
+            }
+
+            currentOrgFeeData = { feeId, studentName, feeName, amount, balance };
+            document.getElementById('confirmOrgFeeStudentName').textContent = studentName;
+            document.getElementById('confirmOrgFeeFeeName').textContent = feeName;
+            document.getElementById('confirmOrgFeeAmount').textContent = balance.toFixed(2);
+            new bootstrap.Modal(document.getElementById('confirmOrgFeePaymentModal')).show();
+        }
+
+        async function executeOrgFeePayment() {
+            const btn = document.getElementById('confirmOrgFeePaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Officer/ToggleFeePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `feeId=${currentOrgFeeData.feeId}&markAsPaid=true`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateOrgFeeRowUI(currentOrgFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
+                    bootstrap.Modal.getInstance(document.getElementById('confirmOrgFeePaymentModal')).hide();
+                    showToast('success', result.message);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                showToast('error', 'An error occurred. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+            }
+        }
+
+        function updateOrgFeeRowUI(feeId, newStatus, amountPaid, balance) {
+            const row = document.querySelector(`tr[data-fee-id="${feeId}"]`);
+            if (!row) return;
+
+            const checkbox = row.querySelector('.payment-checkbox');
+            const statusBadge = row.querySelector('.status-badge');
+            const amountPaidCell = row.querySelector('.amount-paid');
+            const balanceCell = row.querySelector('.balance');
+
+            row.classList.remove('row-paid', 'row-partial');
+            if (newStatus === 'Paid') row.classList.add('row-paid');
+            else if (newStatus === 'Partial') row.classList.add('row-partial');
+
+            checkbox.classList.remove('status-paid', 'status-partial', 'status-unpaid', 'no-revoke');
+            checkbox.dataset.status = newStatus.toLowerCase();
+            
+            if (newStatus === 'Paid') {
+                checkbox.classList.add('status-paid', 'no-revoke');
+                checkbox.title = 'Payment completed';
+                checkbox.onclick = null;
+            } else if (newStatus === 'Partial') {
+                checkbox.classList.add('status-partial');
+                checkbox.title = 'Click to complete payment';
+            } else {
+                checkbox.classList.add('status-unpaid');
+                checkbox.title = 'Click to mark as paid';
+            }
+            checkbox.dataset.balance = balance;
+
+            if (newStatus === 'Paid') {
+                statusBadge.className = 'status-badge status-paid';
+                statusBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Paid';
+            } else if (newStatus === 'Partial') {
+                statusBadge.className = 'status-badge status-partial';
+                statusBadge.innerHTML = '<i class="bi bi-pie-chart-fill"></i> Partial';
+            } else {
+                statusBadge.className = 'status-badge status-unpaid';
+                statusBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Unpaid';
+            }
+
+            amountPaidCell.textContent = '₱' + amountPaid.toFixed(2);
+            balanceCell.textContent = '₱' + balance.toFixed(2);
+            balanceCell.style.color = balance > 0 ? '#ef4444' : '#10b981';
+            row.dataset.status = newStatus.toLowerCase();
+            row.dataset.paid = amountPaid;
+            row.dataset.balance = balance;
+
+            // Update action button
+            const actionCell = row.querySelector('td:last-child');
+            if (newStatus === 'Paid') {
+                actionCell.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i></span>';
+            }
+        }
+
+        function showToast(type, message) {
+            const bgClass = type === 'success' ? 'success' : (type === 'info' ? 'info' : 'danger');
+            const icon = type === 'success' ? 'check-circle' : (type === 'info' ? 'info-circle' : 'exclamation-circle');
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${bgClass} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="bi bi-${icon} me-2"></i>${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = container.lastElementChild;
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
     </script>
     <script src="~/js/officer-fees.js" asp-append-version="true"></script>
 }

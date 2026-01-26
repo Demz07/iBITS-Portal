@@ -3024,24 +3024,6 @@ namespace iBITS_Portal.Controllers
             return LocalRedirect(returnUrl ?? "/Admin/Fines");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteFine(int fineId)
-        {
-            var fine = await _context.Fines.FindAsync(fineId);
-            if (fine == null)
-            {
-                TempData["Error"] = "Fine not found.";
-                return RedirectToAction(nameof(Fines));
-            }
-
-            _context.Fines.Remove(fine);
-            await _context.SaveChangesAsync();
-            await LogAction("Delete Fine", $"Permanently deleted fine ID {fineId}.");
-            TempData["Warning"] = "Fine has been permanently deleted.";
-
-            return RedirectToAction(nameof(Fines));
-        }
         // =========================================================
         // ACTION: CREATE MANUAL FINE (UPDATED with BatchId)
         // =========================================================
@@ -4507,9 +4489,468 @@ namespace iBITS_Portal.Controllers
             }
         }
 
+        // =========================================================
+        // AJAX: TOGGLE FEE PAYMENT STATUS (Checkbox)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFeePayment(int feeId, bool markAsPaid)
+        {
+            try
+            {
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
 
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee record not found." });
+                }
 
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
 
+                if (markAsPaid)
+                {
+                    var remainingBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                    
+                    if (remainingBalance <= 0)
+                    {
+                        return Json(new { success = false, message = "This fee is already fully paid." });
+                    }
+
+                    fee.AmountPaid = fee.Amount ?? 0;
+                    fee.FeeStatus = "Paid";
+                    _context.Fees.Update(fee);
+
+                    var transaction = new PaymentTransaction
+                    {
+                        FeeId = feeId,
+                        StudentNum = fee.StudentNum ?? "",
+                        Amount = remainingBalance,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = adminName,
+                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        Notes = "Payment marked via checkbox"
+                    };
+                    _context.PaymentTransactions.Add(transaction);
+
+                    if (!string.IsNullOrEmpty(fee.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fee.StudentNum,
+                            Title = "Payment Confirmed",
+                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = adminName
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await LogAction("Toggle Fee Payment", $"Marked fee ID {feeId} as Paid via checkbox");
+
+                    return Json(new { 
+                        success = true, 
+                        message = "Payment confirmed successfully.",
+                        newStatus = "Paid",
+                        amountPaid = fee.AmountPaid,
+                        balance = 0
+                    });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Use the Revoke function to undo payments." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling fee payment");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // AJAX: REVOKE FEE PAYMENT (Admin Only)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokeFeePayment(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee record not found." });
+                }
+
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
+
+                var previousAmountPaid = fee.AmountPaid;
+
+                var transactions = await _context.PaymentTransactions
+                    .Where(t => t.FeeId == feeId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.PaymentTransactions.RemoveRange(transactions);
+                }
+
+                fee.AmountPaid = 0;
+                fee.FeeStatus = "Unpaid";
+                _context.Fees.Update(fee);
+
+                if (!string.IsNullOrEmpty(fee.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fee.StudentNum,
+                        Title = "Payment Revoked",
+                        Message = $"Your payment record for '{fee.FeeName}' (₱{previousAmountPaid:N2}) has been revoked by the administrator.",
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = adminName
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Revoke Fee Payment", $"Revoked payment for fee ID {feeId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Payment revoked. {transactions.Count} transaction(s) deleted.",
+                    newStatus = "Unpaid",
+                    amountPaid = 0,
+                    balance = fee.Amount ?? 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error revoking fee payment");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // AJAX: TOGGLE FINE PAYMENT STATUS (Checkbox)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFinePayment(int fineId, bool markAsPaid)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine record not found." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    return Json(new { success = false, message = "Cannot modify an excused fine." });
+                }
+
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
+
+                if (markAsPaid)
+                {
+                    var remainingBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                    
+                    if (remainingBalance <= 0)
+                    {
+                        return Json(new { success = false, message = "This fine is already fully paid." });
+                    }
+
+                    fine.AmountPaid = fine.Amount ?? 0;
+                    fine.FinesStatus = "Paid";
+                    _context.Fines.Update(fine);
+
+                    var transaction = new FinePaymentTransaction
+                    {
+                        FineId = fineId,
+                        StudentNum = fine.StudentNum ?? "",
+                        Amount = remainingBalance,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = adminName,
+                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        Notes = "Payment marked via checkbox"
+                    };
+                    _context.FinePaymentTransactions.Add(transaction);
+
+                    if (!string.IsNullOrEmpty(fine.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fine.StudentNum,
+                            Title = "Fine Payment Confirmed",
+                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = adminName
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await LogAction("Toggle Fine Payment", $"Marked fine ID {fineId} as Paid via checkbox");
+
+                    return Json(new { 
+                        success = true, 
+                        message = "Fine payment confirmed successfully.",
+                        newStatus = "Paid",
+                        amountPaid = fine.AmountPaid,
+                        balance = 0
+                    });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Use the Revoke function to undo payments." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling fine payment");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // AJAX: REVOKE FINE PAYMENT (Admin Only)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokeFinePayment(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine record not found." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    return Json(new { success = false, message = "Cannot revoke an excused fine." });
+                }
+
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
+
+                var previousAmountPaid = fine.AmountPaid;
+
+                var transactions = await _context.FinePaymentTransactions
+                    .Where(t => t.FineId == fineId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.FinePaymentTransactions.RemoveRange(transactions);
+                }
+
+                fine.AmountPaid = 0;
+                fine.FinesStatus = "Unpaid";
+                _context.Fines.Update(fine);
+
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Payment Revoked",
+                        Message = $"Your payment record for '{fine.Description ?? "Fine"}' (₱{previousAmountPaid:N2}) has been revoked.",
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = adminName
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Revoke Fine Payment", $"Revoked payment for fine ID {fineId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Fine payment revoked. {transactions.Count} transaction(s) deleted.",
+                    newStatus = "Unpaid",
+                    amountPaid = 0,
+                    balance = fine.Amount ?? 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error revoking fine payment");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // AJAX: MARK FINE AS EXCUSED (Admin)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkFineExcused(int fineId, string? reason)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine record not found." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "paid")
+                {
+                    return Json(new { success = false, message = "Cannot excuse a paid fine. Revoke payment first." });
+                }
+
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminName = adminUser?.UserName ?? "Admin";
+
+                fine.FinesStatus = "Excused";
+                fine.AmountPaid = 0;
+                _context.Fines.Update(fine);
+
+                var transactions = await _context.FinePaymentTransactions
+                    .Where(t => t.FineId == fineId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.FinePaymentTransactions.RemoveRange(transactions);
+                }
+
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Excused",
+                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
+                        NotificationType = "Fine",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = adminName
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Mark Fine Excused", $"Marked fine ID {fineId} as Excused. Reason: {reason ?? "Not specified"}");
+
+                return Json(new { 
+                    success = true, 
+                    message = "Fine has been marked as excused.",
+                    newStatus = "Excused"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking fine as excused");
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // ACTION: DELETE FEE RECORD (Admin Only)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFee(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees.FindAsync(feeId);
+                if (fee == null)
+                {
+                    TempData["Error"] = "Fee record not found.";
+                    return RedirectToAction(nameof(Payments));
+                }
+
+                var transactions = await _context.PaymentTransactions
+                    .Where(t => t.FeeId == feeId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.PaymentTransactions.RemoveRange(transactions);
+                }
+
+                _context.Fees.Remove(fee);
+                await _context.SaveChangesAsync();
+
+                await LogAction("Delete Fee", $"Deleted fee ID {feeId} ({fee.FeeName}) and {transactions.Count} transaction(s)");
+                TempData["Message"] = "Fee record deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting fee");
+                TempData["Error"] = $"Error deleting fee: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Payments));
+        }
+
+        // =========================================================
+        // ACTION: DELETE FINE RECORD (Admin Only)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFine(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines.FindAsync(fineId);
+                if (fine == null)
+                {
+                    TempData["Error"] = "Fine record not found.";
+                    return RedirectToAction(nameof(Fines));
+                }
+
+                var transactions = await _context.FinePaymentTransactions
+                    .Where(t => t.FineId == fineId)
+                    .ToListAsync();
+
+                if (transactions.Any())
+                {
+                    _context.FinePaymentTransactions.RemoveRange(transactions);
+                }
+
+                _context.Fines.Remove(fine);
+                await _context.SaveChangesAsync();
+
+                await LogAction("Delete Fine", $"Deleted fine ID {fineId} ({fine.Description}) and {transactions.Count} transaction(s)");
+                TempData["Message"] = "Fine record deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting fine");
+                TempData["Error"] = $"Error deleting fine: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Fines));
+        }
 
     }
 

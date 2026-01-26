@@ -484,3 +484,348 @@ body {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* ======================================================= */
+/*        SECTION 3: CHECKBOX-BASED PAYMENT SYSTEM         */
+/* ======================================================= */
+
+/* --- PAYMENT CHECKBOX WRAPPER --- */
+.payment-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- CUSTOM PAYMENT CHECKBOX --- */
+.payment-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+}
+
+    .payment-checkbox:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+    }
+
+    .payment-checkbox:active {
+        transform: scale(0.95);
+    }
+
+/* Unpaid State - Empty Red Border */
+.payment-checkbox.status-unpaid {
+    border: 2px solid #ef4444;
+    background: transparent;
+    color: transparent;
+}
+
+    .payment-checkbox.status-unpaid:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: #f87171;
+    }
+
+/* Partial State - Half Filled Yellow */
+.payment-checkbox.status-partial {
+    border: 2px solid #fbbf24;
+    background: linear-gradient(to top, rgba(251, 191, 36, 0.5) 50%, transparent 50%);
+    color: #fbbf24;
+}
+
+    .payment-checkbox.status-partial:hover {
+        background: linear-gradient(to top, rgba(251, 191, 36, 0.7) 50%, rgba(251, 191, 36, 0.1) 50%);
+    }
+
+    .payment-checkbox.status-partial::after {
+        content: "◐";
+        font-size: 12px;
+    }
+
+/* Paid State - Green Checked */
+.payment-checkbox.status-paid {
+    border: 2px solid #10b981;
+    background: #10b981;
+    color: white;
+}
+
+    .payment-checkbox.status-paid:hover {
+        background: #059669;
+        border-color: #059669;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    }
+
+    .payment-checkbox.status-paid::after {
+        content: "✓";
+        font-weight: bold;
+    }
+
+/* Excused State - Blue Shield (Disabled) */
+.payment-checkbox.status-excused {
+    border: 2px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    cursor: not-allowed;
+}
+
+    .payment-checkbox.status-excused:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .payment-checkbox.status-excused::after {
+        content: "🛡";
+        font-size: 12px;
+    }
+
+/* Checkbox disabled for non-admin (cannot revoke) */
+.payment-checkbox.no-revoke {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+    .payment-checkbox.no-revoke:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+/* --- STATUS BADGES WITH ICON + TEXT --- */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+    .status-badge i {
+        font-size: 0.85rem;
+    }
+
+/* Unpaid Status - Red */
+.status-badge.status-unpaid {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Partial Status - Yellow/Amber */
+.status-badge.status-partial {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Paid Status - Green */
+.status-badge.status-paid {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Excused Status - Blue */
+.status-badge.status-excused {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* --- BADGE VARIANTS (Keep existing badge-* for backwards compatibility) --- */
+.badge-partial {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* --- ACTION DROPDOWN STYLES --- */
+.action-dropdown-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+    .action-dropdown-btn:hover {
+        background: var(--gold-dim);
+        border-color: var(--gold-primary);
+        color: var(--gold-primary);
+    }
+
+.glass-dropdown {
+    background: var(--bg-glass) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+    padding: 8px !important;
+    min-width: 180px;
+}
+
+    .glass-dropdown .dropdown-item {
+        color: var(--text-main);
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+        .glass-dropdown .dropdown-item:hover {
+            background: var(--gold-dim);
+            color: var(--gold-primary);
+        }
+
+        .glass-dropdown .dropdown-item i {
+            width: 18px;
+        }
+
+    .glass-dropdown .dropdown-divider {
+        border-color: var(--border-color);
+        margin: 6px 0;
+    }
+
+/* --- CONFIRMATION MODAL STYLES --- */
+.confirm-modal-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2.5rem;
+}
+
+    .confirm-modal-icon.success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+
+    .confirm-modal-icon.warning {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+    }
+
+    .confirm-modal-icon.danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+    }
+
+    .confirm-modal-icon.info {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+.confirm-modal-details {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+    .confirm-modal-details .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+        .confirm-modal-details .detail-row:last-child {
+            border-bottom: none;
+        }
+
+    .confirm-modal-details .detail-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .confirm-modal-details .detail-value {
+        color: var(--text-strong);
+        font-weight: 600;
+    }
+
+/* --- ROW HIGHLIGHTING --- */
+.table-glass tbody tr.row-paid {
+    background: rgba(16, 185, 129, 0.05);
+}
+
+    .table-glass tbody tr.row-paid:hover {
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+.table-glass tbody tr.row-partial {
+    background: rgba(251, 191, 36, 0.05);
+}
+
+    .table-glass tbody tr.row-partial:hover {
+        background: rgba(251, 191, 36, 0.1);
+    }
+
+.table-glass tbody tr.row-excused {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+    .table-glass tbody tr.row-excused:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+/* --- LOADING SPINNER FOR CHECKBOX --- */
+.payment-checkbox.loading {
+    pointer-events: none;
+    position: relative;
+}
+
+    .payment-checkbox.loading::after {
+        content: "";
+        width: 14px;
+        height: 14px;
+        border: 2px solid transparent;
+        border-top-color: var(--gold-primary);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- RESPONSIVE ADJUSTMENTS FOR CHECKBOX UI --- */
+@media (max-width: 768px) {
+    .payment-checkbox {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+
+    .action-dropdown-btn {
+        width: 28px;
+        height: 28px;
+    }
+}
