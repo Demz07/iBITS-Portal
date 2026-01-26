@@ -5,7 +5,7 @@
     ViewData["Title"] = "Section Fee Collection";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     
-    var section = ViewBag.Section as string ?? "N/A";
+    var treasurerSection = ViewBag.Section as string ?? "N/A";
     var totalFeesCollected = ViewBag.TotalFeesCollected ?? 0m;
     var totalFinesCollected = ViewBag.TotalFinesCollected ?? 0m;
     var pendingFees = ViewBag.PendingFees ?? 0m;
@@ -158,7 +158,7 @@
         <div class="stats-card">
             <i class="bi bi-hourglass-split stats-icon text-danger"></i>
             <h6 class="text-muted mb-1">Pending Payments</h6>
-            <h3 class="fw-bold text-danger mb-0">₱@(pendingFees + pendingFines).ToString("N2")</h3>
+            <h3 class="fw-bold text-danger mb-0">₱@((pendingFees + pendingFines).ToString("N2"))</h3>
             <small class="text-muted">Outstanding balance</small>
         </div>
     </div>
