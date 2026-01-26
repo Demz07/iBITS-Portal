@@ -68,6 +68,33 @@
         [data-theme="light"] .academic-year-text {
             color: #b8860b;
         }
+
+        /* Navigation Section Headers */
+        .nav-section-header {
+            padding: 15px 20px 8px 20px !important;
+            margin-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+            .nav-section-header:first-of-type {
+                border-top: none;
+                margin-top: 5px;
+            }
+
+            .nav-section-header span {
+                font-size: 0.7rem;
+                letter-spacing: 1px;
+                opacity: 0.8;
+            }
+
+                .nav-section-header span i {
+                    font-size: 0.65rem;
+                }
+
+        /* Light theme for nav section headers */
+        [data-theme="light"] .nav-section-header {
+            border-top-color: rgba(0, 0, 0, 0.08);
+        }
     </style>
 
     @await RenderSectionAsync("Styles", required: false)
@@ -103,19 +130,52 @@
 
 
                 <!-- ================== ROLE-BASED OFFICER LINKS (Dynamically Shown) ================== -->
-                <!-- TREASURER FEATURES (Updated) -->
-                @if (User.IsInRole("Class Treasurer") || User.IsInRole("Org Treasurer"))
+                <!-- ORG TREASURER FEATURES -->
+                @if (User.IsInRole("Org Treasurer"))
                 {
-                    <li class="@(controller == "Officer" && action == "Payments" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="Payments"><i class="bi bi-cash-stack"></i> Payments & Fees</a>
+                    <li class="nav-section-header">
+                        <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-bank me-1"></i> Org Treasury</span>
                     </li>
-                   
+                    <li class="@(controller == "Officer" && action == "OrgTreasurerDashboard" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="OrgTreasurerDashboard"><i class="bi bi-speedometer2"></i> Treasury Dashboard</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "OrgFees" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="OrgFees"><i class="bi bi-cash-stack"></i> Fees Management</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "OrgFines" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="OrgFines"><i class="bi bi-exclamation-triangle"></i> Fines Management</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "PaymentReminders" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="PaymentReminders"><i class="bi bi-megaphone"></i> Payment Reminders</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "PaymentRecords" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="PaymentRecords"><i class="bi bi-journal-text"></i> Payment Records</a>
+                    </li>
                 }
 
+                <!-- CLASS TREASURER FEATURES (Only show if NOT Org Treasurer to avoid duplicate) -->
+                @if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
+                {
+                    <li class="nav-section-header">
+                        <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-people me-1"></i> Section Treasury</span>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "ClassTreasuryDashboard" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="ClassTreasuryDashboard"><i class="bi bi-speedometer2"></i> Treasury Dashboard</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "ClassFees" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="ClassFees"><i class="bi bi-cash-stack"></i> Manage Fees</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "ClassFines" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="ClassFines"><i class="bi bi-exclamation-triangle"></i> Manage Fines</a>
+                    </li>
+                }
 
                 <!-- SECRETARY FEATURES -->
                 @if (User.IsInRole("Class Secretary") || User.IsInRole("Org Secretary"))
                 {
+                    <li class="nav-section-header">
+                        <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-clipboard-check me-1"></i> Attendance</span>
+                    </li>
                     <li class="@(controller == "Officer" && action == "Scanner" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="Scanner"><i class="bi bi-qr-code-scan"></i> QR Attendance Scanner</a>
                     </li>
@@ -124,21 +184,23 @@
                 <!-- ORG SECRETARY ONLY FEATURES -->
                 @if (User.IsInRole("Org Secretary"))
                 {
+                    <li class="@(controller == "Officer" && action == "AttendanceRecords" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="AttendanceRecords"><i class="bi bi-list-check"></i> Attendance Records</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "CreateManualFee" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="CreateManualFee"><i class="bi bi-plus-circle"></i> Create Manual Fee</a>
+                    </li>
+                    <li class="@(controller == "Officer" && action == "CreateManualFine" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="CreateManualFine"><i class="bi bi-plus-circle"></i> Create Manual Fine</a>
+                    </li>
+                    <li class="nav-section-header mt-2">
+                        <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-file-earmark-medical me-1"></i> Excuses</span>
+                    </li>
                     <li class="@(controller == "Excuse" && action == "ManageExcuses" ? "active" : "")">
                         <a asp-controller="Excuse" asp-action="ManageExcuses"><i class="bi bi-file-earmark-medical"></i> Manage Excuses</a>
                     </li>
                     <li class="@(controller == "Excuse" && action == "AllExcuses" ? "active" : "")">
                         <a asp-controller="Excuse" asp-action="AllExcuses"><i class="bi bi-list-ul"></i> All Excuses</a>
-                    </li>
-                }
-
-
-
-                <!-- ORGANIZATION TREASURER ONLY FEATURES -->
-                @if (User.IsInRole("Org Treasurer"))
-                {
-                    <li class="@(controller == "Officer" && action == "FeeManagement" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="FeeManagement"><i class="bi bi-sliders"></i> Fee Management</a>
                     </li>
                 }
 

@@ -1,0 +1,457 @@
+@* FILE PATH: Views/Officer/ClassFees.cshtml *@
+@* CLASS TREASURER - FEES MANAGEMENT (Admin-style UI with Mark as Paid) *@
+@model IEnumerable<iBITS_Portal.Models.Fee>
+@{
+    ViewData["Title"] = $"Section {ViewBag.Section} Fees Management";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+
+    var sectionName = ViewBag.Section as string ?? "N/A";
+    var allFees = Model?.ToList() ?? new List<iBITS_Portal.Models.Fee>();
+    var totalExp = ViewBag.TotalExpected ?? 0m;
+    var totalCol = ViewBag.TotalCollected ?? 0m;
+    var totalPending = ViewBag.TotalPending ?? 0m;
+    var collectionRate = ViewBag.CollectionRate ?? 0m;
+}
+
+<link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
+
+@section Styles {
+<style>
+    .chart-no-data {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 250px;
+        color: rgba(255, 255, 255, 0.4);
+        text-align: center;
+    }
+    .chart-no-data i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: rgba(212, 175, 55, 0.2);
+    }
+    .chart-no-data p {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .summary-card {
+        height: 100%;
+        min-height: 110px;
+    }
+    .section-badge {
+        background: linear-gradient(135deg, var(--gold-primary), #b8860b);
+        color: #000;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .btn-mark-paid {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .btn-mark-paid:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+    .completed-badge {
+        color: #10b981;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin:0;">
+            <i class="bi bi-cash-stack me-2"></i> Section Fees Management
+            <span class="section-badge ms-2">@sectionName</span>
+        </h3>
+        <p class="text-muted small mb-0">Manage fee payments for your section classmates</p>
+    </div>
+    <div>
+        <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- ALERT MESSAGES -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show glass-alert" role="alert" style="border-left: 5px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #34d399;">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show glass-alert" role="alert" style="border-left: 5px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #f87171;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show glass-alert" role="alert" style="border-left: 5px solid #f59e0b; background: rgba(245, 158, 11, 0.2); color: #fbbf24;">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- FINANCIAL OVERVIEW -->
+<div class="glass-panel p-4 mb-4">
+    <h5 style="color: var(--text-strong); font-weight: 700; margin-bottom: 1.5rem;">
+        <i class="bi bi-graph-up me-2"></i> Section @sectionName - Financial Overview
+    </h5>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Total Expected -->
+        <div class="col-md-3">
+            <div class="summary-card total">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-wallet2 fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Total Expected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collected -->
+        <div class="col-md-3">
+            <div class="summary-card collected">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-check-circle-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outstanding -->
+        <div class="col-md-3">
+            <div class="summary-card pending">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-clock-history fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collection Rate -->
+        <div class="col-md-3">
+            <div class="summary-card rate">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="bi bi-percent fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRateDisplay">@collectionRate</span>%</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie Charts -->
+    <div class="row g-4">
+        <!-- Collected Chart -->
+        <div class="col-md-6">
+            <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Collected by Fee Type</h6>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="collectedChart"></canvas>
+                    <div id="collectedNoData" class="chart-no-data">
+                        <i class="bi bi-inbox-fill"></i>
+                        <p>No Payments Collected Yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Pending Chart -->
+        <div class="col-md-6">
+            <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Pending by Fee Type</h6>
+                <div style="height: 250px; position: relative;">
+                    <canvas id="pendingChart"></canvas>
+                    <div id="pendingNoData" class="chart-no-data">
+                        <i class="bi bi-check2-all"></i>
+                        <p>No Pending Fees</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTERS SECTION -->
+<div class="glass-panel p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-funnel me-2"></i> Filters
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn">
+            <i class="bi bi-x-circle me-1"></i> Clear Filters
+        </button>
+    </div>
+
+    <div class="row g-3">
+        <!-- Search Filter -->
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Search Student</label>
+            <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Student Name or ID...">
+        </div>
+
+        <!-- Fee Name Filter -->
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Fee Name</label>
+            <select id="filterFeeName" class="form-select form-select-sm">
+                <option value="">All Fees</option>
+                @if (ViewBag.FeeNames != null)
+                {
+                    foreach (var name in ViewBag.FeeNames)
+                    {
+                        <option value="@name">@name</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Status</label>
+            <select id="filterStatus" class="form-select form-select-sm">
+                <option value="">All Status</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Pending/Unpaid</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- FEE RECORDS TABLE -->
+<div class="glass-panel p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">
+            Fee Records - Section @sectionName
+        </h5>
+        <div>
+            <a asp-action="ExportClassFees" class="btn-gold-outline btn-sm">
+                <i class="bi bi-download me-1"></i> Export Fees
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-glass" id="feesTable">
+            <thead>
+                <tr>
+                    <th>Ref ID</th>
+                    <th>Student Name</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var fee in Model)
+                    {
+                        var student = fee.StudentNumNavigation;
+                        var isPaid = fee.FeeStatus?.ToLower() == "paid";
+                        var isOverdue = !isPaid && fee.FeesDueDate.HasValue && fee.FeesDueDate.Value < DateOnly.FromDateTime(DateTime.Now);
+
+                        <tr class="fee-row @(isPaid ? "table-success-subtle" : "")"
+                            data-ref-id="@fee.FeeId"
+                            data-student-name="@(student?.FullName?.ToLower() ?? "")"
+                            data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
+                            data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
+                            data-status="@(fee.FeeStatus?.ToLower() ?? "")">
+                            <td class="font-monospace text-muted">#@fee.FeeId</td>
+                            <td>
+                                @if (student != null)
+                                {
+                                    <div style="color: var(--text-strong); font-weight: 600;">@student.StudentFn @student.StudentLn</div>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">@fee.StudentNum</div>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">ID: @fee.StudentNum</span>
+                                }
+                            </td>
+                            <td>@fee.FeeName</td>
+                            <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
+                            <td>
+                                <div>@(fee.FeesDueDate?.ToString("MMM dd, yyyy") ?? "-")</div>
+                                @if (isOverdue)
+                                {
+                                    <div class="text-danger small fw-bold">Overdue</div>
+                                }
+                            </td>
+                            <td>
+                                @if (isPaid)
+                                {
+                                    <span class="badge-paid">Paid</span>
+                                }
+                                else if (isOverdue)
+                                {
+                                    <span class="badge-danger-custom">Overdue</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-pending">Unpaid</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (!isPaid)
+                                {
+                                    <button class="btn-mark-paid" onclick="openPaymentModal(@fee.FeeId, 'fee', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), '@student?.FullName?.Replace("'", "\\'")')">
+                                        <i class="bi bi-check-circle me-1"></i> Mark Paid
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="completed-badge"><i class="bi bi-check-circle-fill me-1"></i> Completed</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found for this section.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <h5 class="modal-title text-white"><i class="bi bi-cash-coin me-2"></i> Process Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentForm" method="post" asp-action="MarkFeeAsPaid" asp-controller="Officer">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="paymentId" name="feeId" />
+                <input type="hidden" id="paymentType" name="paymentType" />
+                <div class="modal-body">
+                    <div class="alert" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;">
+                        <strong>Student:</strong> <span id="studentName"></span><br>
+                        <strong>Item:</strong> <span id="itemDescription"></span><br>
+                        <strong>Amount:</strong> <span id="itemAmount" class="text-gold fw-bold"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-select" id="paymentMethod" name="paymentMethod" required>
+                            <option value="">-- Select Payment Method --</option>
+                            <option value="Cash">Cash</option>
+                            <option value="GCash">GCash</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Online Banking">Online Banking</option>
+                            <option value="Check">Check</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="transactionRef" class="form-label">Transaction Reference</label>
+                        <input type="text" class="form-control" id="transactionRef" name="transactionRef" placeholder="e.g., GCash Ref #, Check #">
+                        <small class="form-text text-muted">Optional: Enter reference number if applicable</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Additional notes (optional)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        // Chart data from server
+        window.feesChartsData = {
+            collected: @Html.Raw(Json.Serialize(ViewBag.CollectedBreakdown ?? new Dictionary<string, decimal>())),
+            pending: @Html.Raw(Json.Serialize(ViewBag.PendingBreakdown ?? new Dictionary<string, decimal>()))
+        };
+
+        // Payment Modal Handler
+        function openPaymentModal(id, type, description, amount, studentName) {
+            const form = document.getElementById('paymentForm');
+            form.reset();
+
+            document.getElementById('paymentId').value = id;
+            document.getElementById('paymentType').value = type;
+            document.getElementById('studentName').textContent = studentName || 'Unknown';
+            document.getElementById('itemDescription').textContent = description || 'Payment';
+            document.getElementById('itemAmount').textContent = '₱' + parseFloat(amount || 0).toFixed(2);
+
+            // Set form action based on type
+            if (type === 'fee') {
+                form.action = '@Url.Action("MarkFeeAsPaid", "Officer")';
+                document.getElementById('paymentId').name = 'feeId';
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            modal.show();
+        }
+
+        // Form validation
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            if (!paymentMethod) {
+                e.preventDefault();
+                alert('Please select a payment method.');
+                return false;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+        });
+    </script>
+    <script src="~/js/officer-fees.js" asp-append-version="true"></script>
+}

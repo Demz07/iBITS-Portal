@@ -873,6 +873,487 @@ namespace iBITS_Portal.Controllers
 
             return View(fees);
         }
+
+        // ============================================================
+        // ORG TREASURER - FEES MANAGEMENT (Admin-style UI)
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> OrgFees()
+        {
+            var fees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .OrderByDescending(f => f.FeeId)
+                .ToListAsync();
+
+            // Calculate statistics
+            var totalExpected = fees.Sum(f => f.Amount ?? 0);
+            var totalCollected = fees.Where(f => f.FeeStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+            var totalPending = totalExpected - totalCollected;
+            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+
+            ViewBag.TotalExpected = totalExpected;
+            ViewBag.TotalCollected = totalCollected;
+            ViewBag.TotalPending = totalPending;
+            ViewBag.CollectionRate = collectionRate;
+
+            // Get unique fee names for filter dropdown
+            ViewBag.FeeNames = fees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
+
+            // Get unique sections for filter dropdown
+            ViewBag.Sections = await _context.Students
+                .Where(s => !string.IsNullOrEmpty(s.YearLevelSection))
+                .Select(s => s.YearLevelSection)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
+
+            // Chart Data - Collected by Section
+            var collectedBreakdown = fees
+                .Where(f => f.FeeStatus?.ToLower() == "paid" && f.StudentNumNavigation != null)
+                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            // Chart Data - Pending by Section
+            var pendingBreakdown = fees
+                .Where(f => f.FeeStatus?.ToLower() != "paid" && f.StudentNumNavigation != null)
+                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            ViewBag.CollectedBreakdown = collectedBreakdown;
+            ViewBag.PendingBreakdown = pendingBreakdown;
+
+            return View(fees);
+        }
+
+        // ============================================================
+        // ORG TREASURER - FINES MANAGEMENT (Admin-style UI)
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> OrgFines()
+        {
+            var fines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .OrderByDescending(f => f.FineId)
+                .ToListAsync();
+
+            // Calculate statistics (exclude waived from expected)
+            var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);
+            var totalCollected = fines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+            var totalPending = totalExpected - totalCollected;
+            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+
+            ViewBag.TotalExpected = totalExpected;
+            ViewBag.TotalCollected = totalCollected;
+            ViewBag.TotalPending = totalPending;
+            ViewBag.CollectionRate = collectionRate;
+
+            // Get unique sections for filter dropdown
+            ViewBag.Sections = await _context.Students
+                .Where(s => !string.IsNullOrEmpty(s.YearLevelSection))
+                .Select(s => s.YearLevelSection)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
+
+            // Get events for filter
+            ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
+
+            // Get unique manual fine reasons
+            ViewBag.ManualFineReasons = fines
+                .Where(f => f.AttendanceId == null && !string.IsNullOrEmpty(f.Description))
+                .Select(f => f.Description)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToList();
+
+            // Chart Data - Paid by Section
+            var paidBreakdown = fines
+                .Where(f => f.FinesStatus?.ToLower() == "paid" && f.StudentNumNavigation != null)
+                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            // Chart Data - Unpaid by Section
+            var unpaidBreakdown = fines
+                .Where(f => f.FinesStatus?.ToLower() == "unpaid" && f.StudentNumNavigation != null)
+                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            ViewBag.PaidBreakdown = paidBreakdown;
+            ViewBag.UnpaidBreakdown = unpaidBreakdown;
+
+            return View(fines);
+        }
+
+        // ============================================================
+        // CLASS TREASURER - FEES MANAGEMENT (Admin-style UI)
+        // ============================================================
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> ClassFees()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned to your account.";
+                return RedirectToAction("ClassTreasuryDashboard");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            var fees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .OrderByDescending(f => f.FeeId)
+                .ToListAsync();
+
+            // Calculate statistics
+            var totalExpected = fees.Sum(f => f.Amount ?? 0);
+            var totalCollected = fees.Where(f => f.FeeStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+            var totalPending = totalExpected - totalCollected;
+            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+
+            ViewBag.TotalExpected = totalExpected;
+            ViewBag.TotalCollected = totalCollected;
+            ViewBag.TotalPending = totalPending;
+            ViewBag.CollectionRate = collectionRate;
+            ViewBag.Section = section;
+
+            // Get unique fee names for filter dropdown
+            ViewBag.FeeNames = fees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
+
+            // Chart Data - Collected by Fee Type
+            var collectedBreakdown = fees
+                .Where(f => f.FeeStatus?.ToLower() == "paid")
+                .GroupBy(f => f.FeeName ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            // Chart Data - Pending by Fee Type
+            var pendingBreakdown = fees
+                .Where(f => f.FeeStatus?.ToLower() != "paid")
+                .GroupBy(f => f.FeeName ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            ViewBag.CollectedBreakdown = collectedBreakdown;
+            ViewBag.PendingBreakdown = pendingBreakdown;
+
+            return View(fees);
+        }
+
+        // ============================================================
+        // CLASS TREASURER - FINES MANAGEMENT (Admin-style UI)
+        // ============================================================
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> ClassFines()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned to your account.";
+                return RedirectToAction("ClassTreasuryDashboard");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            var fines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .OrderByDescending(f => f.FineId)
+                .ToListAsync();
+
+            // Calculate statistics (exclude waived from expected)
+            var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);
+            var totalCollected = fines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
+            var totalPending = totalExpected - totalCollected;
+            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
+
+            ViewBag.TotalExpected = totalExpected;
+            ViewBag.TotalCollected = totalCollected;
+            ViewBag.TotalPending = totalPending;
+            ViewBag.CollectionRate = collectionRate;
+            ViewBag.Section = section;
+
+            // Get events for filter
+            ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
+
+            // Get unique manual fine reasons for this section
+            ViewBag.ManualFineReasons = fines
+                .Where(f => f.AttendanceId == null && !string.IsNullOrEmpty(f.Description))
+                .Select(f => f.Description)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToList();
+
+            // Chart Data - Paid by Fine Type/Event
+            var paidBreakdown = fines
+                .Where(f => f.FinesStatus?.ToLower() == "paid")
+                .GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            // Chart Data - Unpaid by Fine Type/Event
+            var unpaidBreakdown = fines
+                .Where(f => f.FinesStatus?.ToLower() == "unpaid")
+                .GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
+
+            ViewBag.PaidBreakdown = paidBreakdown;
+            ViewBag.UnpaidBreakdown = unpaidBreakdown;
+
+            return View(fines);
+        }
+
+        // ============================================================
+        // EXPORT FEES FOR ORG TREASURER
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> ExportOrgFees()
+        {
+            var fees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .OrderBy(f => f.StudentNumNavigation.YearLevelSection)
+                .ThenBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
+
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("Fee ID,Student ID,Student Name,Section,Program,Fee Name,Amount,Due Date,Status");
+
+            foreach (var fee in fees)
+            {
+                var student = fee.StudentNumNavigation;
+                csv.AppendLine($"{fee.FeeId},{fee.StudentNum},\"{student?.FullName ?? "N/A"}\",{student?.YearLevelSection ?? "N/A"},{student?.Course ?? "N/A"},\"{fee.FeeName}\",{fee.Amount:F2},{fee.FeesDueDate?.ToString("yyyy-MM-dd") ?? "N/A"},{fee.FeeStatus}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"OrgFees_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // ============================================================
+        // EXPORT FINES FOR ORG TREASURER
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> ExportOrgFines()
+        {
+            var fines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .OrderBy(f => f.StudentNumNavigation.YearLevelSection)
+                .ThenBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
+
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("Fine ID,Student ID,Student Name,Section,Program,Description,Amount,Due Date,Status");
+
+            foreach (var fine in fines)
+            {
+                var student = fine.StudentNumNavigation;
+                var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (fine.Attendance?.Event?.EventName ?? "Unknown");
+                csv.AppendLine($"{fine.FineId},{fine.StudentNum},\"{student?.FullName ?? "N/A"}\",{student?.YearLevelSection ?? "N/A"},{student?.Course ?? "N/A"},\"{description}\",{fine.Amount:F2},{fine.FinesDueDate?.ToString("yyyy-MM-dd") ?? "N/A"},{fine.FinesStatus}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"OrgFines_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // ============================================================
+        // EXPORT FEES FOR CLASS TREASURER
+        // ============================================================
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> ExportClassFees()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned.";
+                return RedirectToAction("ClassFees");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            var fees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
+
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("Fee ID,Student ID,Student Name,Fee Name,Amount,Due Date,Status");
+
+            foreach (var fee in fees)
+            {
+                var student = fee.StudentNumNavigation;
+                csv.AppendLine($"{fee.FeeId},{fee.StudentNum},\"{student?.FullName ?? "N/A"}\",\"{fee.FeeName}\",{fee.Amount:F2},{fee.FeesDueDate?.ToString("yyyy-MM-dd") ?? "N/A"},{fee.FeeStatus}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"Section_{section}_Fees_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // ============================================================
+        // EXPORT FINES FOR CLASS TREASURER
+        // ============================================================
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> ExportClassFines()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned.";
+                return RedirectToAction("ClassFines");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            var fines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
+
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("Fine ID,Student ID,Student Name,Description,Amount,Due Date,Status");
+
+            foreach (var fine in fines)
+            {
+                var student = fine.StudentNumNavigation;
+                var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (fine.Attendance?.Event?.EventName ?? "Unknown");
+                csv.AppendLine($"{fine.FineId},{fine.StudentNum},\"{student?.FullName ?? "N/A"}\",\"{description}\",{fine.Amount:F2},{fine.FinesDueDate?.ToString("yyyy-MM-dd") ?? "N/A"},{fine.FinesStatus}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"Section_{section}_Fines_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // ============================================================
+        // PREVIEW STUDENT COUNT FOR CREATE FEE/FINE (Org Treasurer)
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<JsonResult> PreviewStudentCount(string programFilter, string yearFilter)
+        {
+            var query = _context.Students.Where(s => s.Classification == "Active");
+
+            if (programFilter != "all" && !string.IsNullOrEmpty(programFilter))
+            {
+                query = query.Where(s => s.Course.ToLower().Contains(programFilter.ToLower()));
+            }
+
+            if (yearFilter != "all" && !string.IsNullOrEmpty(yearFilter))
+            {
+                query = query.Where(s => s.YearLevelSection.Contains(yearFilter));
+            }
+
+            var students = await query.ToListAsync();
+            var bsitCount = students.Count(s => s.Course?.ToUpper().Contains("BSIT") == true);
+            var ditCount = students.Count(s => s.Course?.ToUpper().Contains("DIT") == true);
+
+            return Json(new { success = true, total = students.Count, bsit = bsitCount, dit = ditCount });
+        }
+
+        // ============================================================
+        // CREATE FEE FOR ORG TREASURER (with filters)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateOrgFee(string feeName, decimal amount, DateOnly? feesDueDate, string programFilter, string yearFilter)
+        {
+            if (string.IsNullOrWhiteSpace(feeName) || amount <= 0)
+            {
+                TempData["Error"] = "Invalid fee details.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var query = _context.Students.Where(s => s.Classification == "Active");
+
+            if (programFilter != "all" && !string.IsNullOrEmpty(programFilter))
+            {
+                query = query.Where(s => s.Course.ToLower().Contains(programFilter.ToLower()));
+            }
+
+            if (yearFilter != "all" && !string.IsNullOrEmpty(yearFilter))
+            {
+                query = query.Where(s => s.YearLevelSection.Contains(yearFilter));
+            }
+
+            var students = await query.ToListAsync();
+            var batchId = Guid.NewGuid().ToString();
+
+            foreach (var student in students)
+            {
+                _context.Fees.Add(new Fee
+                {
+                    FeeName = feeName,
+                    Amount = amount,
+                    FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+                    FeeStatus = "Unpaid",
+                    StudentNum = student.StudentNum,
+                    BatchId = batchId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Message"] = $"Fee '{feeName}' created for {students.Count} students.";
+            return RedirectToAction("OrgFees");
+        }
+
+        // ============================================================
+        // CREATE FINE FOR ORG TREASURER (with filters)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateOrgFine(string fineReason, decimal amount, DateOnly? finesDueDate, string programFilter, string yearFilter)
+        {
+            if (string.IsNullOrWhiteSpace(fineReason) || amount <= 0)
+            {
+                TempData["Error"] = "Invalid fine details.";
+                return RedirectToAction("OrgFines");
+            }
+
+            var query = _context.Students.Where(s => s.Classification == "Active");
+
+            if (programFilter != "all" && !string.IsNullOrEmpty(programFilter))
+            {
+                query = query.Where(s => s.Course.ToLower().Contains(programFilter.ToLower()));
+            }
+
+            if (yearFilter != "all" && !string.IsNullOrEmpty(yearFilter))
+            {
+                query = query.Where(s => s.YearLevelSection.Contains(yearFilter));
+            }
+
+            var students = await query.ToListAsync();
+            var batchId = Guid.NewGuid().ToString();
+
+            foreach (var student in students)
+            {
+                _context.Fines.Add(new Fine
+                {
+                    Description = fineReason,
+                    Amount = amount,
+                    FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15)),
+                    FinesStatus = "Unpaid",
+                    StudentNum = student.StudentNum,
+                    BatchId = batchId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Message"] = $"Fine '{fineReason}' created for {students.Count} students.";
+            return RedirectToAction("OrgFines");
+        }
     }
 }
 
