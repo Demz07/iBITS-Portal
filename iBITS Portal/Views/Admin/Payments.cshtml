@@ -281,12 +281,11 @@
                 <tr>
                     <th>Ref ID</th>
                     <th>Student Name</th>
-                    <th>Program</th>
-                    <th>Year</th>
+                    <th>Section</th>
                     <th>Description</th>
-                    <th>Acad Year</th>
                     <th>Amount</th>
-                    <th>Due Date</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
                     <th>Status</th>
                     <th class="text-end">Actions</th>
                 </tr>
@@ -297,17 +296,18 @@
                     foreach (var fee in Model)
                     {
                         var student = fee.StudentNumNavigation;
-                        var isPaid = fee.FeeStatus?.ToLower() == "paid" || fee.FeeStatus?.ToLower() == "completed";
+                        var paymentStatus = fee.PaymentStatus;
+                        var isPaid = paymentStatus == "Paid";
+                        var isPartial = paymentStatus == "Partial";
+                        var remainingBalance = fee.RemainingBalance;
 
                         <tr class="fee-row"
                             data-ref-id="@fee.FeeId"
                             data-student-name="@(fee.StudentNumNavigation?.FullName?.ToLower() ?? "")"
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
-                            data-program="@(student?.Course ?? "")"
-                            data-year="@(student?.YearLevelSection ?? "")"
-                            data-status="@(fee.FeeStatus?.ToLower() ?? "")"
-                            data-acad-year="@(fee.AcadYear ?? "")">
+                            data-section="@(student?.YearLevelSection ?? "")"
+                            data-status="@paymentStatus.ToLower()">
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
                             <td>
                                 @if (student != null)
@@ -317,33 +317,26 @@
                                 }
                                 else
                                 {
-
                                     <span class="text-danger">ID: @fee.StudentNum</span>
                                 }
                             </td>
-                            <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
                             <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                             <td>@fee.FeeName</td>
-                            <td><span class="text-muted small">@(fee.AcadYear ?? "N/A")</span></td>
-                            <td style="color: var(--gold-primary); font-weight: bold;">₱ @(fee.Amount.HasValue? fee.Amount.Value.ToString("N2") : "0.00")</td>
-                            <td>@(fee.FeesDueDate.HasValue? fee.FeesDueDate.Value.ToString("MMM dd, yyyy") : "-")</td>
+                            <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
+                            <td style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
+                            <td style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
                             <td>
-                                @{
-                                    var status = fee.FeeStatus?.ToLower() ?? "";
-                                    if (status == "paid" || status == "completed")
-                                    {
-                                        <span class="badge-paid">@fee.FeeStatus</span>
-                                    }
-                                    else if (status == "pending" || status == "unpaid")
-                                    {
-
-                                        <span class="badge-pending">@fee.FeeStatus</span>
-                                    }
-                                    else
-                                    {
-
-                                        <span class="badge-gray">@fee.FeeStatus</span>
-                                    }
+                                @if (isPaid)
+                                {
+                                    <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                                }
+                                else if (isPartial)
+                                {
+                                    <span class="badge-partial"><i class="bi bi-pie-chart-fill me-1"></i>Partial</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
                                 }
                             </td>
                             <td class="text-end">
@@ -353,10 +346,16 @@
                                         @if (!isPaid)
                                         {
                                             <li>
+                                                <a href="#" class="dropdown-item text-success" onclick="openAdminFeePaymentModal(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance); return false;">
+                                                    <i class="bi bi-cash-coin me-2"></i> Record Payment
+                                                </a>
+                                            </li>
+                                            <li>
                                                 <form asp-action="UpdateFeeStatus" method="post">
+                                                    @Html.AntiForgeryToken()
                                                     <input type="hidden" name="feeId" value="@fee.FeeId" />
                                                     <input type="hidden" name="status" value="Paid" />
-                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark as Paid</button>
+                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i> Mark Fully Paid</button>
                                                 </form>
                                             </li>
                                         }
@@ -364,15 +363,17 @@
                                         {
                                             <li>
                                                 <form asp-action="UpdateFeeStatus" method="post">
+                                                    @Html.AntiForgeryToken()
                                                     <input type="hidden" name="feeId" value="@fee.FeeId" />
                                                     <input type="hidden" name="status" value="Unpaid" />
-                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Mark as Unpaid</button>
+                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-arrow-counterclockwise me-2"></i> Reset to Unpaid</button>
                                                 </form>
                                             </li>
                                         }
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <form asp-action="DeleteFee" method="post" onsubmit="return confirm('Delete this fee record?');">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="feeId" value="@fee.FeeId" />
                                                 <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete Record</button>
                                             </form>
@@ -385,7 +386,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>
@@ -543,6 +544,86 @@
     </div>
 </div>
 
+<!-- RECORD FEE PAYMENT MODAL (Admin) -->
+<div class="modal fade" id="adminFeePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <h5 class="modal-title text-white"><i class="bi bi-cash-coin me-2"></i> Record Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="RecordFeePayment" asp-controller="Admin" method="post" id="adminFeePaymentForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="adminPaymentFeeId" name="feeId" />
+                <div class="modal-body">
+                    <div class="fee-section p-3 mb-4">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <small class="text-muted">Student</small>
+                                <div id="adminPaymentStudentName" class="fw-bold text-white"></div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <small class="text-muted">Fee</small>
+                                <div id="adminPaymentFeeName" class="fw-bold text-gold"></div>
+                            </div>
+                        </div>
+                        <hr class="my-2" style="border-color: rgba(255,255,255,0.1);" />
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Total</small>
+                                <div class="fw-bold text-white">₱<span id="adminPaymentTotal">0.00</span></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Paid</small>
+                                <div class="fw-bold text-success">₱<span id="adminPaymentPaid">0.00</span></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Balance</small>
+                                <div class="fw-bold text-danger">₱<span id="adminPaymentBalance">0.00</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Amount (₱) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" min="0.01" class="form-control" id="adminPaymentAmount" name="paymentAmount" required />
+                        <small class="text-muted">Max: ₱<span id="adminMaxAmount">0.00</span></small>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">Quick Select:</small>
+                        <div class="btn-group w-100">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.25)">25%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.5)">50%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.75)">75%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(1)">Full</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-select" id="adminFeePaymentMethod" name="paymentMethod" required>
+                            <option value="">-- Select --</option>
+                            <option value="Cash">Cash</option>
+                            <option value="GCash">GCash</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference #</label>
+                        <input type="text" class="form-control" name="transactionRef" placeholder="Optional" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-1"></i> Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -553,6 +634,26 @@
             collected: @Html.Raw(Json.Serialize(ViewBag.CollectedBreakdown ?? new Dictionary<string, decimal>())),
             pending: @Html.Raw(Json.Serialize(ViewBag.PendingBreakdown ?? new Dictionary<string, decimal>()))
         };
+
+        // Admin Fee Payment Modal
+        var adminFeeBalance = 0;
+        function openAdminFeePaymentModal(feeId, studentName, feeName, total, paid, balance) {
+            document.getElementById('adminPaymentFeeId').value = feeId;
+            document.getElementById('adminPaymentStudentName').textContent = studentName;
+            document.getElementById('adminPaymentFeeName').textContent = feeName;
+            document.getElementById('adminPaymentTotal').textContent = total.toFixed(2);
+            document.getElementById('adminPaymentPaid').textContent = paid.toFixed(2);
+            document.getElementById('adminPaymentBalance').textContent = balance.toFixed(2);
+            document.getElementById('adminMaxAmount').textContent = balance.toFixed(2);
+            document.getElementById('adminPaymentAmount').max = balance;
+            document.getElementById('adminPaymentAmount').value = balance.toFixed(2);
+            document.getElementById('adminFeePaymentMethod').value = '';
+            adminFeeBalance = balance;
+            new bootstrap.Modal(document.getElementById('adminFeePaymentModal')).show();
+        }
+        function setAdminFeeAmount(pct) {
+            document.getElementById('adminPaymentAmount').value = (adminFeeBalance * pct).toFixed(2);
+        }
 
         // Export Function
          function exportPayments() {

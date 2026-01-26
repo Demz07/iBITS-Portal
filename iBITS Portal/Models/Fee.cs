@@ -14,6 +14,26 @@ public partial class Fee
     [Column(TypeName = "decimal(18,2)")]
     public decimal? Amount { get; set; }
 
+    // Amount paid so far (for partial payments)
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal AmountPaid { get; set; } = 0;
+
+    // Calculated property for remaining balance
+    [NotMapped]
+    public decimal RemainingBalance => (Amount ?? 0) - AmountPaid;
+
+    // Calculated property for payment status
+    [NotMapped]
+    public string PaymentStatus
+    {
+        get
+        {
+            if (AmountPaid <= 0) return "Unpaid";
+            if (AmountPaid >= (Amount ?? 0)) return "Paid";
+            return "Partial";
+        }
+    }
+
     public DateOnly? FeesStartDate { get; set; }
 
     public DateOnly? FeesDueDate { get; set; }

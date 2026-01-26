@@ -238,12 +238,11 @@
                 <tr>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
-                    <th>PROGRAM</th>
-                    <th>YEAR</th>
+                    <th>SECTION</th>
                     <th>DESCRIPTION</th>
-                    <th>ACAD YEAR</th>
                     <th>AMOUNT</th>
-                    <th>DUE DATE</th>
+                    <th>PAID</th>
+                    <th>BALANCE</th>
                     <th>STATUS</th>
                     <th class="text-end">ACTIONS</th>
                 </tr>
@@ -251,37 +250,21 @@
             <tbody>
                 @foreach (var fine in Model)
                 {
-                    // UPDATED: Logic to handle both Manual Fines (fine.StudentNumNavigation) and Event Fines (fine.Attendance)
                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
-
-                    // Determine Description: Use Manual Description OR Event Name
-                    var description = !string.IsNullOrEmpty(fine.Description)
-                    ? fine.Description
-                    : (eventRecord?.EventName ?? "Unknown");
-
-                    // Determine Acad Year: Use Event's AcadYear OR N/A for manual
-                    var acadYear = eventRecord?.AcadYear ?? "-";
-
-                    var isOverdue = fine.FinesStatus?.ToLower() == "unpaid" &&
-                    fine.FinesDueDate.HasValue &&
-                    fine.FinesDueDate.Value < DateOnly.FromDateTime(DateTime.Now);
-
-                    var daysOverdue = 0;
-                    if (isOverdue)
-                    {
-                        var today = DateOnly.FromDateTime(DateTime.Now);
-                        daysOverdue = today.DayNumber - fine.FinesDueDate!.Value.DayNumber;
-                    }
+                    var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
+                    var paymentStatus = fine.PaymentStatus;
+                    var isPaid = paymentStatus == "Paid";
+                    var isPartial = paymentStatus == "Partial";
+                    var isExcused = paymentStatus == "Excused";
+                    var remainingBalance = fine.RemainingBalance;
+                    var isEventFine = fine.AttendanceId != null;
 
                     <tr data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
-                        data-status="@fine.FinesStatus"
-                        data-program="@student?.Course"
-                        data-overdue="@(isOverdue ? "true" : "false")"
-                        data-finetype="@(fine.AttendanceId == null ? "manual" : "event")"
-                        data-event="@fine.Attendance?.EventId"
-                        data-reason="@fine.Description">
+                        data-status="@paymentStatus.ToLower()"
+                        data-section="@student?.YearLevelSection"
+                        data-finetype="@(isEventFine ? "event" : "manual")">
 
                         <td class="font-monospace text-muted">#@fine.FineId</td>
                         <td>
@@ -295,14 +278,9 @@
                                 <span class="text-danger">Unknown Student</span>
                             }
                         </td>
-                        <!-- PROGRAM BADGE -->
-                        <td><span class="badge bg-info">@(student?.Course ?? "-")</span></td>
-                        <!-- YEAR BADGE -->
                         <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
-
-                        <!-- DESCRIPTION (Updated to show Description or Event Name) -->
                         <td>
-                            @if (fine.AttendanceId == null)
+                            @if (!isEventFine)
                             {
                                 <span class="text-gold"><i class="bi bi-pencil-fill me-1" style="font-size: 0.7rem;"></i> @description</span>
                             }
@@ -311,68 +289,55 @@
                                 <span>@description</span>
                             }
                         </td>
-
-                        <!-- ACAD YEAR -->
-                        <td><span class="text-muted small">@acadYear</span></td>
-
-                        <!-- AMOUNT -->
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-
-                        <!-- DUE DATE -->
+                        <td style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
+                        <td style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
                         <td>
-                            <div>@(fine.FinesDueDate?.ToString("MMM dd, yyyy") ?? "-")</div>
-                            @if (isOverdue)
+                            @if (isPaid)
                             {
-                                <div class="text-danger small fw-bold">(@daysOverdue days overdue)</div>
+                                <span class="badge-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
                             }
-                        </td>
-
-                        <!-- STATUS BADGE -->
-                        <td>
-                            @if (fine.FinesStatus?.ToLower() == "paid")
+                            else if (isExcused)
                             {
-                                <span class="badge-paid">Paid</span>
+                                <span class="badge-info-custom"><i class="bi bi-shield-check me-1"></i>Excused</span>
                             }
-                            else if (fine.FinesStatus?.ToLower() == "waived")
+                            else if (isPartial)
                             {
-                                <span class="badge-info-custom">Waived</span>
-                            }
-                            else if (isOverdue)
-                            {
-                                <span class="badge-danger-custom">Overdue</span>
+                                <span class="badge-partial"><i class="bi bi-pie-chart-fill me-1"></i>Partial</span>
                             }
                             else
                             {
-                                <span class="badge-pending">Pending</span>
+                                <span class="badge-danger-custom"><i class="bi bi-x-circle-fill me-1"></i>Unpaid</span>
                             }
                         </td>
-
-                        <!-- ACTIONS DROPDOWN -->
                         <td class="text-end">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                    @if (fine.FinesStatus?.ToLower() == "unpaid")
+                                    @if (!isPaid && !isExcused)
                                     {
                                         <li>
-                                            <a href="#" class="dropdown-item text-success" onclick="openMarkPaidModal(@fine.FineId)">
-                                                <i class="bi bi-check-circle me-2"></i> Mark as Paid
+                                            <a href="#" class="dropdown-item text-success" onclick="openAdminFinePaymentModal(@fine.FineId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0), @fine.AmountPaid, @remainingBalance); return false;">
+                                                <i class="bi bi-cash-coin me-2"></i> Record Payment
                                             </a>
                                         </li>
+                                        @if (isEventFine)
+                                        {
+                                            <li>
+                                                <a href="#" class="dropdown-item text-info" onclick="openWaiveModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
+                                                    <i class="bi bi-shield-check me-2"></i> Mark as Excused
+                                                </a>
+                                            </li>
+                                        }
                                         <li>
-                                            <a href="#" class="dropdown-item text-info" onclick="openWaiveModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
-                                                <i class="bi bi-hand-thumbs-up me-2"></i> Waive Fine
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" class="dropdown-item text-warning" onclick="openAdjustModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
+                                            <a href="#" class="dropdown-item text-warning" onclick="openAdjustModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
                                                 <i class="bi bi-pencil me-2"></i> Adjust Amount
                                             </a>
                                         </li>
                                     }
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a href="#" class="dropdown-item text-danger" onclick="openDeleteModal(@fine.FineId, '@student?.FullName', @fine.Amount)">
+                                        <a href="#" class="dropdown-item text-danger" onclick="openDeleteModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
                                             <i class="bi bi-trash me-2"></i> Delete Fine
                                         </a>
                                     </li>
@@ -659,6 +624,86 @@
     </div>
 </div>
 
+<!-- RECORD FINE PAYMENT MODAL (Admin) -->
+<div class="modal fade" id="adminFinePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <h5 class="modal-title text-white"><i class="bi bi-cash-coin me-2"></i> Record Fine Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="RecordFinePayment" asp-controller="Admin" method="post" id="adminFinePaymentForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="adminFineFineId" name="fineId" />
+                <div class="modal-body">
+                    <div class="fee-section p-3 mb-4">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <small class="text-muted">Student</small>
+                                <div id="adminFineStudentName" class="fw-bold text-white"></div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <small class="text-muted">Fine</small>
+                                <div id="adminFineDescription" class="fw-bold text-gold"></div>
+                            </div>
+                        </div>
+                        <hr class="my-2" style="border-color: rgba(255,255,255,0.1);" />
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Total</small>
+                                <div class="fw-bold text-white">₱<span id="adminFineTotal">0.00</span></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Paid</small>
+                                <div class="fw-bold text-success">₱<span id="adminFinePaid">0.00</span></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Balance</small>
+                                <div class="fw-bold text-danger">₱<span id="adminFineBalance">0.00</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Amount (₱) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" min="0.01" class="form-control" id="adminFinePaymentAmount" name="paymentAmount" required />
+                        <small class="text-muted">Max: ₱<span id="adminFineMaxAmount">0.00</span></small>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">Quick Select:</small>
+                        <div class="btn-group w-100">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFineAmount(0.25)">25%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFineAmount(0.5)">50%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFineAmount(0.75)">75%</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFineAmount(1)">Full</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-select" id="adminFinePaymentMethod" name="paymentMethod" required>
+                            <option value="">-- Select --</option>
+                            <option value="Cash">Cash</option>
+                            <option value="GCash">GCash</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference #</label>
+                        <input type="text" class="form-control" name="transactionRef" placeholder="Optional" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-1"></i> Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -669,6 +714,26 @@
             paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown ?? new { })),
             unpaid: @Html.Raw(Json.Serialize(ViewBag.UnpaidBreakdown ?? new { }))
         };
+
+        // Admin Fine Payment Modal
+        var adminFineBalance = 0;
+        function openAdminFinePaymentModal(fineId, studentName, description, total, paid, balance) {
+            document.getElementById('adminFineFineId').value = fineId;
+            document.getElementById('adminFineStudentName').textContent = studentName;
+            document.getElementById('adminFineDescription').textContent = description;
+            document.getElementById('adminFineTotal').textContent = total.toFixed(2);
+            document.getElementById('adminFinePaid').textContent = paid.toFixed(2);
+            document.getElementById('adminFineBalance').textContent = balance.toFixed(2);
+            document.getElementById('adminFineMaxAmount').textContent = balance.toFixed(2);
+            document.getElementById('adminFinePaymentAmount').max = balance;
+            document.getElementById('adminFinePaymentAmount').value = balance.toFixed(2);
+            document.getElementById('adminFinePaymentMethod').value = '';
+            adminFineBalance = balance;
+            new bootstrap.Modal(document.getElementById('adminFinePaymentModal')).show();
+        }
+        function setAdminFineAmount(pct) {
+            document.getElementById('adminFinePaymentAmount').value = (adminFineBalance * pct).toFixed(2);
+        }
 
         // Modal Helpers
         function openMarkPaidModal(id) {

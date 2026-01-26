@@ -1040,6 +1040,211 @@ namespace iBITS_Portal.Controllers
         }
 
         // ============================================================
+        // RECORD PARTIAL FEE PAYMENT (Org Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordFeePayment(int feeId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
+        {
+            try
+            {
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    TempData["Error"] = $"Fee with ID {feeId} not found.";
+                    return RedirectToAction("OrgFees");
+                }
+
+                // Validate payment amount
+                var remainingBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                if (paymentAmount <= 0)
+                {
+                    TempData["Error"] = "Payment amount must be greater than zero.";
+                    return RedirectToAction("OrgFees");
+                }
+
+                if (paymentAmount > remainingBalance)
+                {
+                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    return RedirectToAction("OrgFees");
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                // Update the fee's AmountPaid
+                fee.AmountPaid += paymentAmount;
+
+                // Update status based on payment
+                if (fee.AmountPaid >= (fee.Amount ?? 0))
+                {
+                    fee.FeeStatus = "Paid";
+                }
+                else if (fee.AmountPaid > 0)
+                {
+                    fee.FeeStatus = "Partial";
+                }
+
+                _context.Fees.Update(fee);
+
+                // Create payment transaction record
+                var transaction = new PaymentTransaction
+                {
+                    FeeId = feeId,
+                    StudentNum = fee.StudentNum ?? "",
+                    Amount = paymentAmount,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
+                    ProcessedBy = treasurer?.StudentNum ?? "",
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? $"Partial payment recorded" : notes.Trim()
+                };
+                _context.PaymentTransactions.Add(transaction);
+
+                // Notify student
+                if (!string.IsNullOrEmpty(fee.StudentNum))
+                {
+                    var newBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                    var message = newBalance <= 0
+                        ? $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
+                        : $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fee.StudentNum,
+                        Title = "Payment Recorded",
+                        Message = message,
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer?.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial payment recorded (Balance: ₱{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} for {fee.StudentNumNavigation?.FullName ?? fee.StudentNum} recorded successfully. Status: {statusMsg}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error recording payment: {ex.Message}";
+            }
+
+            return RedirectToAction("OrgFees");
+        }
+
+        // ============================================================
+        // RECORD PARTIAL FINE PAYMENT (Org Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordFinePayment(int fineId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    TempData["Error"] = $"Fine with ID {fineId} not found.";
+                    return RedirectToAction("OrgFines");
+                }
+
+                // Check if already excused
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    TempData["Error"] = "Cannot record payment for an excused fine.";
+                    return RedirectToAction("OrgFines");
+                }
+
+                // Validate payment amount
+                var remainingBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                if (paymentAmount <= 0)
+                {
+                    TempData["Error"] = "Payment amount must be greater than zero.";
+                    return RedirectToAction("OrgFines");
+                }
+
+                if (paymentAmount > remainingBalance)
+                {
+                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    return RedirectToAction("OrgFines");
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                // Update the fine's AmountPaid
+                fine.AmountPaid += paymentAmount;
+
+                // Update status based on payment
+                if (fine.AmountPaid >= (fine.Amount ?? 0))
+                {
+                    fine.FinesStatus = "Paid";
+                }
+                else if (fine.AmountPaid > 0)
+                {
+                    fine.FinesStatus = "Partial";
+                }
+
+                _context.Fines.Update(fine);
+
+                // Create fine payment transaction record
+                var transaction = new FinePaymentTransaction
+                {
+                    FineId = fineId,
+                    StudentNum = fine.StudentNum ?? "",
+                    Amount = paymentAmount,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
+                    ProcessedBy = treasurer?.StudentNum ?? "",
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? $"Partial payment recorded" : notes.Trim()
+                };
+                _context.FinePaymentTransactions.Add(transaction);
+
+                // Notify student
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    var newBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                    var message = newBalance <= 0
+                        ? $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
+                        : $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Payment Recorded",
+                        Message = message,
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer?.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial payment recorded (Balance: ₱{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} recorded successfully. Status: {statusMsg}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error recording payment: {ex.Message}";
+            }
+
+            return RedirectToAction("OrgFines");
+        }
+
+        // ============================================================
         // ORG TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
@@ -1149,6 +1354,226 @@ namespace iBITS_Portal.Controllers
             ViewBag.UnpaidBreakdown = unpaidBreakdown;
 
             return View(fines);
+        }
+
+        // ============================================================
+        // RECORD PARTIAL FEE PAYMENT (Class Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordClassFeePayment(int feeId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+                {
+                    TempData["Error"] = "No section assigned to your account.";
+                    return RedirectToAction("ClassFees");
+                }
+
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    TempData["Error"] = $"Fee with ID {feeId} not found.";
+                    return RedirectToAction("ClassFees");
+                }
+
+                // Verify the fee belongs to a student in the treasurer's section
+                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    TempData["Error"] = "You can only process payments for students in your section.";
+                    return RedirectToAction("ClassFees");
+                }
+
+                var remainingBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                if (paymentAmount <= 0)
+                {
+                    TempData["Error"] = "Payment amount must be greater than zero.";
+                    return RedirectToAction("ClassFees");
+                }
+
+                if (paymentAmount > remainingBalance)
+                {
+                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    return RedirectToAction("ClassFees");
+                }
+
+                fee.AmountPaid += paymentAmount;
+
+                if (fee.AmountPaid >= (fee.Amount ?? 0))
+                {
+                    fee.FeeStatus = "Paid";
+                }
+                else if (fee.AmountPaid > 0)
+                {
+                    fee.FeeStatus = "Partial";
+                }
+
+                _context.Fees.Update(fee);
+
+                var transaction = new PaymentTransaction
+                {
+                    FeeId = feeId,
+                    StudentNum = fee.StudentNum ?? "",
+                    Amount = paymentAmount,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
+                    ProcessedBy = treasurer.StudentNum ?? "",
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? "Partial payment recorded by Class Treasurer" : notes.Trim()
+                };
+                _context.PaymentTransactions.Add(transaction);
+
+                if (!string.IsNullOrEmpty(fee.StudentNum))
+                {
+                    var newBalance = (fee.Amount ?? 0) - fee.AmountPaid;
+                    var message = newBalance <= 0
+                        ? $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
+                        : $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fee.StudentNum,
+                        Title = "Payment Recorded",
+                        Message = message,
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} for {fee.StudentNumNavigation?.FullName ?? fee.StudentNum} recorded. Status: {statusMsg}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error recording payment: {ex.Message}";
+            }
+
+            return RedirectToAction("ClassFees");
+        }
+
+        // ============================================================
+        // RECORD PARTIAL FINE PAYMENT (Class Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecordClassFinePayment(int fineId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+                {
+                    TempData["Error"] = "No section assigned to your account.";
+                    return RedirectToAction("ClassFines");
+                }
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    TempData["Error"] = $"Fine with ID {fineId} not found.";
+                    return RedirectToAction("ClassFines");
+                }
+
+                // Verify the fine belongs to a student in the treasurer's section
+                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    TempData["Error"] = "You can only process payments for students in your section.";
+                    return RedirectToAction("ClassFines");
+                }
+
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    TempData["Error"] = "Cannot record payment for an excused fine.";
+                    return RedirectToAction("ClassFines");
+                }
+
+                var remainingBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                if (paymentAmount <= 0)
+                {
+                    TempData["Error"] = "Payment amount must be greater than zero.";
+                    return RedirectToAction("ClassFines");
+                }
+
+                if (paymentAmount > remainingBalance)
+                {
+                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    return RedirectToAction("ClassFines");
+                }
+
+                fine.AmountPaid += paymentAmount;
+
+                if (fine.AmountPaid >= (fine.Amount ?? 0))
+                {
+                    fine.FinesStatus = "Paid";
+                }
+                else if (fine.AmountPaid > 0)
+                {
+                    fine.FinesStatus = "Partial";
+                }
+
+                _context.Fines.Update(fine);
+
+                var transaction = new FinePaymentTransaction
+                {
+                    FineId = fineId,
+                    StudentNum = fine.StudentNum ?? "",
+                    Amount = paymentAmount,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
+                    ProcessedBy = treasurer.StudentNum ?? "",
+                    TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(notes) ? "Partial payment recorded by Class Treasurer" : notes.Trim()
+                };
+                _context.FinePaymentTransactions.Add(transaction);
+
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    var newBalance = (fine.Amount ?? 0) - fine.AmountPaid;
+                    var message = newBalance <= 0
+                        ? $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
+                        : $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Payment Recorded",
+                        Message = message,
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} recorded. Status: {statusMsg}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error recording payment: {ex.Message}";
+            }
+
+            return RedirectToAction("ClassFines");
         }
 
         // ============================================================
