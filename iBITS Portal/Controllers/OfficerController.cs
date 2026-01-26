@@ -378,6 +378,19 @@ namespace iBITS_Portal.Controllers
                         TempData["Error"] = "Unauthorized: Student belongs to a different section.";
                         return RedirectToAction("Payments");
                     }
+
+                    // CATEGORY CLOSURE CHECK: If this fee category has been validated, Class Treasurer cannot edit anymore
+                    var validatedRemittance = await _context.Remittances
+                        .FirstOrDefaultAsync(r => r.Section == treasurer.YearLevelSection
+                            && r.FeeName == fee.FeeName
+                            && r.RemittanceType == RemittanceType.Fee
+                            && r.Status == RemittanceStatus.Validated);
+
+                    if (validatedRemittance != null)
+                    {
+                        TempData["Error"] = $"This fee category '{fee.FeeName}' has been validated and is now closed. Only the Org Treasurer can update remaining unpaid items. Batch: {validatedRemittance.BatchCode}";
+                        return RedirectToAction("ClassFees");
+                    }
                 }
 
                 // Check if already paid
@@ -512,6 +525,21 @@ namespace iBITS_Portal.Controllers
                     {
                         TempData["Error"] = "Unauthorized: Student belongs to a different section.";
                         return RedirectToAction("Payments");
+                    }
+
+                    // CATEGORY CLOSURE CHECK: If this fine category has been validated, Class Treasurer cannot edit anymore
+                    // Fine category is determined by Description (or Event name)
+                    var fineCategory = fine.Description ?? fine.Attendance?.Event?.EventName ?? "Other";
+                    var validatedRemittance = await _context.Remittances
+                        .FirstOrDefaultAsync(r => r.Section == treasurer.YearLevelSection
+                            && r.FeeName == fineCategory
+                            && r.RemittanceType == RemittanceType.Fine
+                            && r.Status == RemittanceStatus.Validated);
+
+                    if (validatedRemittance != null)
+                    {
+                        TempData["Error"] = $"This fine category '{fineCategory}' has been validated and is now closed. Only the Org Treasurer can update remaining unpaid items. Batch: {validatedRemittance.BatchCode}";
+                        return RedirectToAction("ClassFines");
                     }
                 }
 
@@ -1631,6 +1659,16 @@ namespace iBITS_Portal.Controllers
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
+            // Get validated remittances for this section to determine which categories are closed
+            var validatedCategories = await _context.Remittances
+                .Where(r => r.Section == section 
+                    && r.RemittanceType == RemittanceType.Fee
+                    && r.Status == RemittanceStatus.Validated)
+                .Select(r => r.FeeName)
+                .ToListAsync();
+
+            ViewBag.ValidatedCategories = validatedCategories;
+
             // Calculate statistics
             var totalExpected = fees.Sum(f => f.Amount ?? 0);
             var totalCollected = fees.Where(f => f.FeeStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
@@ -1688,6 +1726,16 @@ namespace iBITS_Portal.Controllers
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section)
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
+
+            // Get validated remittances for this section to determine which categories are closed
+            var validatedCategories = await _context.Remittances
+                .Where(r => r.Section == section 
+                    && r.RemittanceType == RemittanceType.Fine
+                    && r.Status == RemittanceStatus.Validated)
+                .Select(r => r.FeeName)
+                .ToListAsync();
+
+            ViewBag.ValidatedCategories = validatedCategories;
 
             // Calculate statistics (exclude waived from expected)
             var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);

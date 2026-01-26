@@ -323,11 +323,21 @@
             var categoryRemitted = categoryFines.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
             var canRemit = categoryCollectedNotRemitted > 0;
 
+            // Check if this category is validated (closed)
+            var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
+            var isClosed = validatedCategories.Contains(categoryName);
+
             <div class="fine-category-card mb-4" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden;">
                 <!-- Category Header -->
                 <div class="fine-category-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem;">
                     <div>
-                        <h6 class="text-white mb-1 fw-bold">@categoryName</h6>
+                        <h6 class="text-white mb-1 fw-bold">
+                            @categoryName
+                            @if (isClosed)
+                            {
+                                <span class="badge bg-purple ms-2"><i class="bi bi-lock-fill me-1"></i> CLOSED - Validated</span>
+                            }
+                        </h6>
                         <small class="text-muted">
                             @categoryFines.Count students • ₱@((categoryFines.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
                             <span class="mx-2">|</span>
@@ -346,7 +356,11 @@
                         </small>
                     </div>
                     <div>
-                        @if (canRemit)
+                        @if (isClosed)
+                        {
+                            <span class="badge bg-purple"><i class="bi bi-lock-fill me-1"></i> Category Closed</span>
+                        }
+                        else if (canRemit)
                         {
                             <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit btn-sm">
                                 <i class="bi bi-send me-1"></i> Remit @categoryCollectedNotRemitted to Org
@@ -380,7 +394,7 @@
                                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                                     var isPaid = fine.FinesStatus?.ToUpper() == "PAID";
                                     var isExcused = fine.FinesStatus?.ToUpper() == "EXCUSED";
-                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted;
+                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed;
                                     var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
                                     var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
