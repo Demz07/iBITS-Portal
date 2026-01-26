@@ -121,6 +121,46 @@
     </div>
 </div>
 
+<!-- ======================= REMITTANCE SECTION ======================= -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <a href="@Url.Action("PendingCollections", "Officer")" class="text-decoration-none">
+            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.3);">
+                <div class="d-flex align-items-center">
+                    <div class="me-4" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
+                        <i class="bi bi-collection fs-1"></i>
+                    </div>
+                    <div>
+                        <h5 class="text-white mb-1 fw-bold">Pending Collections</h5>
+                        <p class="text-muted mb-0 small">Review collected payments ready to remit to Org Treasurer</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-chevron-right fs-4" style="color: #a78bfa;"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="@Url.Action("RemittanceHistory", "Officer")" class="text-decoration-none">
+            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.3);">
+                <div class="d-flex align-items-center">
+                    <div class="me-4" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
+                        <i class="bi bi-clock-history fs-1"></i>
+                    </div>
+                    <div>
+                        <h5 class="text-white mb-1 fw-bold">Remittance History</h5>
+                        <p class="text-muted mb-0 small">Track your submitted remittances and validation status</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-chevron-right fs-4" style="color: #60a5fa;"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <!-- ======================= STATISTICS CARDS ======================= -->
 <div class="row mb-4">
     <!-- Total Collections -->

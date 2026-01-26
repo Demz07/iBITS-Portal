@@ -1,0 +1,220 @@
+@* FILE PATH: Views/Officer/PendingCollections.cshtml *@
+@* CLASS TREASURER - View payments ready for remittance *@
+@model IEnumerable<iBITS_Portal.Models.Fee>
+@{
+    ViewData["Title"] = "Pending Collections";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var currentSection = ViewBag.Section as string ?? "N/A";
+    var feeNames = ViewBag.FeeNames as List<string> ?? new List<string>();
+    var selectedFeeName = ViewBag.SelectedFeeName as string;
+    var totalAmount = ViewBag.TotalPendingAmount as decimal? ?? 0;
+    var totalCount = ViewBag.TotalPendingCount as int? ?? 0;
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .remittance-card {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    .fee-category-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .fee-category-card:hover {
+        border-color: var(--gold-primary);
+        transform: translateY(-2px);
+    }
+    .btn-remit {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-remit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+    .status-collected {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-collection me-2"></i> Pending Collections
+            <span class="badge bg-warning text-dark ms-2">@totalCount payments</span>
+        </h3>
+        <p class="text-muted small mb-0">Section @currentSection - Payments collected but not yet remitted to Org Treasurer</p>
+    </div>
+    <div>
+        <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <a asp-action="RemittanceHistory" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-clock-history me-1"></i> Remittance History
+        </a>
+    </div>
+</div>
+
+<!-- ALERTS -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="background: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; color: #34d399;">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert" style="background: rgba(245, 158, 11, 0.2); border-left: 4px solid #f59e0b; color: #fbbf24;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; color: #f87171;">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- SUMMARY CARD -->
+<div class="remittance-card mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h5 class="text-white mb-2"><i class="bi bi-piggy-bank me-2"></i> Total Ready for Remittance</h5>
+            <p class="text-muted mb-0">These payments have been collected from students but are not yet visible to the Org Treasurer.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="fs-2 fw-bold" style="color: var(--gold-primary);">₱@totalAmount.ToString("N2")</div>
+            <small class="text-muted">from @totalCount students</small>
+        </div>
+    </div>
+</div>
+
+<!-- FILTER BY FEE CATEGORY -->
+@if (feeNames.Any())
+{
+    <div class="glass-panel p-3 mb-4">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label class="text-muted"><i class="bi bi-funnel me-1"></i> Filter by Fee:</label>
+            </div>
+            <div class="col-md-4">
+                <select name="feeName" class="form-select form-select-sm" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white;" onchange="this.form.submit()">
+                    <option value="">All Fee Categories</option>
+                    @foreach (var name in feeNames)
+                    {
+                        <option value="@name" selected="@(selectedFeeName == name)">@name</option>
+                    }
+                </select>
+            </div>
+            @if (!string.IsNullOrEmpty(selectedFeeName))
+            {
+                <div class="col-auto">
+                    <a asp-action="PendingCollections" class="btn btn-outline-secondary btn-sm">Clear Filter</a>
+                </div>
+            }
+        </form>
+    </div>
+}
+
+<!-- FEE CATEGORIES GROUPED -->
+@if (Model.Any())
+{
+    var groupedByFee = Model.GroupBy(f => f.FeeName).OrderBy(g => g.Key);
+    
+    <div class="row g-4">
+        @foreach (var group in groupedByFee)
+        {
+            var feeName = group.Key ?? "Unknown Fee";
+            var groupTotal = group.Sum(f => f.Amount ?? 0);
+            var groupCount = group.Count();
+            
+            <div class="col-12">
+                <div class="fee-category-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="text-white mb-1">@feeName</h5>
+                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                        </div>
+                        <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
+                            <i class="bi bi-send me-1"></i> Remit to Org Treasurer
+                        </a>
+                    </div>
+                    
+                    <!-- Student List -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="color: var(--gold-primary);">Student</th>
+                                    <th style="color: var(--gold-primary);">Student #</th>
+                                    <th style="color: var(--gold-primary);">Amount</th>
+                                    <th style="color: var(--gold-primary);">Collected</th>
+                                    <th style="color: var(--gold-primary);">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+                                {
+                                    <tr>
+                                        <td>@fee.StudentNumNavigation?.FullName</td>
+                                        <td><code>@fee.StudentNum</code></td>
+                                        <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                        <td>@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                        <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="glass-panel p-5 text-center">
+        <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+        <h5 class="text-white">No Pending Collections</h5>
+        <p class="text-muted mb-3">All collected payments have been remitted, or no payments have been collected yet.</p>
+        <a asp-action="ClassFees" class="btn btn-outline-warning">
+            <i class="bi bi-cash-stack me-1"></i> Collect Payments
+        </a>
+    </div>
+}
+
+@section Scripts{
+<script>
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+}

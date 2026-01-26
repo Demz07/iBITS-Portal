@@ -1,0 +1,154 @@
+@* FILE PATH: Views/Officer/InitiateRemittance.cshtml *@
+@* CLASS TREASURER - Confirm remittance submission *@
+@model IEnumerable<iBITS_Portal.Models.Fee>
+@{
+    ViewData["Title"] = "Initiate Remittance";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var feeName = ViewBag.FeeName as string ?? "Unknown";
+    var currentSection = ViewBag.Section as string ?? "N/A";
+    var totalAmount = ViewBag.TotalAmount as decimal? ?? 0;
+    var totalStudents = ViewBag.TotalStudents as int? ?? 0;
+    var treasurerName = ViewBag.TreasurerName as string ?? "Class Treasurer";
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .remittance-summary {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+        border: 2px solid rgba(16, 185, 129, 0.4);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+    .warning-box {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    .student-list-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .btn-confirm-remit {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+    .btn-confirm-remit:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        color: white;
+    }
+    .checkmark-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(16, 185, 129, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .checkmark-icon i {
+        font-size: 2.5rem;
+        color: #10b981;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-send-check me-2"></i> Confirm Remittance
+        </h3>
+        <p class="text-muted small mb-0">Review and submit this remittance to the Org Treasurer</p>
+    </div>
+    <a asp-action="PendingCollections" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<!-- REMITTANCE SUMMARY -->
+<div class="remittance-summary mb-4">
+    <div class="text-center mb-4">
+        <div class="checkmark-icon">
+            <i class="bi bi-send-check-fill"></i>
+        </div>
+        <h4 class="text-white mb-1">Ready to Remit</h4>
+        <p class="text-muted">Section @currentSection • @feeName</p>
+    </div>
+    
+    <div class="row text-center mb-4">
+        <div class="col-md-4">
+            <div class="fs-4 fw-bold" style="color: var(--gold-primary);">₱@totalAmount.ToString("N2")</div>
+            <small class="text-muted">Total Amount</small>
+        </div>
+        <div class="col-md-4">
+            <div class="fs-4 fw-bold text-white">@totalStudents</div>
+            <small class="text-muted">Students Paid</small>
+        </div>
+        <div class="col-md-4">
+            <div class="fs-4 fw-bold text-info">@DateTime.Now.ToString("MMM dd, yyyy")</div>
+            <small class="text-muted">Submission Date</small>
+        </div>
+    </div>
+    
+    <!-- Warning Box -->
+    <div class="warning-box mb-4">
+        <div class="d-flex">
+            <i class="bi bi-exclamation-triangle-fill text-warning me-3 fs-4"></i>
+            <div>
+                <strong class="text-warning">Important:</strong>
+                <p class="text-muted mb-0 small">
+                    Once submitted, you will <strong>no longer be able to edit or revoke</strong> these payments.
+                    The remittance will be sent to the Org Treasurer for validation. The official payment date
+                    will be set when the Org Treasurer validates this remittance.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Button -->
+    <form asp-action="ConfirmRemittance" method="post" class="text-center">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="feeName" value="@feeName" />
+        <button type="submit" class="btn btn-confirm-remit" onclick="return confirm('Are you sure you want to submit this remittance? This action cannot be undone.');">
+            <i class="bi bi-send-fill me-2"></i> Submit Remittance to Org Treasurer
+        </button>
+        <p class="text-muted small mt-2 mb-0">Submitted by: @treasurerName</p>
+    </form>
+</div>
+
+<!-- STUDENT LIST -->
+<div class="glass-panel p-4">
+    <h5 class="text-white mb-3"><i class="bi bi-people me-2"></i> Included Payments (@totalStudents)</h5>
+    
+    <div class="row">
+        @foreach (var fee in Model.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="student-list-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-white fw-semibold">@fee.StudentNumNavigation?.FullName</div>
+                        <small class="text-muted">@fee.StudentNum</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="color: var(--gold-primary);">₱@((fee.Amount ?? 0).ToString("N2"))</div>
+                        <small class="text-muted">@(fee.CollectionDate?.ToString("MM/dd") ?? "")</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

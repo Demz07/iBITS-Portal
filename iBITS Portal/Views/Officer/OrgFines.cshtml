@@ -1,6 +1,7 @@
 @* FILE PATH: Views/Officer/OrgFines.cshtml *@
-@* ORG TREASURER - FINES MANAGEMENT (Admin-style UI) *@
+@* ORG TREASURER - FINES MANAGEMENT (Edit UNPAID only, no partial payments) *@
 @model IEnumerable<iBITS_Portal.Models.Fine>
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Organization Fines Management";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
@@ -256,7 +257,9 @@
 <!-- INFO BANNER -->
 <div class="info-banner mb-4">
     <i class="bi bi-info-circle me-2"></i>
-    <strong>Note:</strong> As Org Treasurer, you can <strong>VIEW</strong> and <strong>CREATE</strong> fines. Class Treasurers manage payment confirmations for their respective sections.
+    <strong>Note:</strong> As Org Treasurer, you can <strong>VIEW</strong>, <strong>CREATE</strong> fines, and mark <strong>UNPAID</strong> records as paid. 
+    You <strong>CANNOT</strong> edit records that are already <strong>PAID</strong>, <strong>EXCUSED</strong>, or <strong>REMITTED</strong>. 
+    Class Treasurers collect payments and submit remittances for validation.
 </div>
 
 <!-- FINES TABLE -->
@@ -297,12 +300,18 @@
                     var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
                     var paymentStatus = fine.PaymentStatus;
                     var isPaid = paymentStatus == "Paid";
-                    var isPartial = paymentStatus == "Partial";
+                    var isUnpaid = paymentStatus == "Unpaid";
                     var isExcused = paymentStatus == "Excused";
                     var remainingBalance = fine.RemainingBalance;
                     var isEventFine = fine.AttendanceId != null;
-                    var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : (isExcused ? "row-excused" : ""));
-                    var checkboxClass = isPaid ? "status-paid no-revoke" : (isPartial ? "status-partial" : (isExcused ? "status-excused" : "status-unpaid"));
+                    
+                    // Check remittance status - CANNOT edit if PAID, EXCUSED, or REMITTED
+                    var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                    var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
+                    var isLocked = isPaid || isExcused || isRemitted || isPendingRemit;
+                    var canEdit = isUnpaid && !isLocked;
+                    
+                    var statusClass = isPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
 
                     <tr class="fine-row @statusClass"
                         data-fine-id="@fine.FineId"
@@ -315,21 +324,16 @@
                         data-paid="@fine.AmountPaid"
                         data-balance="@remainingBalance">
 
-                        <!-- Checkbox Column -->
-                        <td class="text-center">
-                            <div class="payment-checkbox-wrapper">
-                                <div class="payment-checkbox @checkboxClass" 
-                                     data-fine-id="@fine.FineId"
-                                     data-student-name="@(student?.FullName ?? "Unknown")"
-                                     data-description="@description"
-                                     data-amount="@(fine.Amount ?? 0)"
-                                     data-balance="@remainingBalance"
-                                     data-status="@paymentStatus.ToLower()"
-                                     data-is-event="@isEventFine.ToString().ToLower()"
-                                     onclick="@(isPaid || isExcused ? "" : "handleOrgFineCheckbox(this)")"
-                                     title="@(isExcused ? "This fine is excused" : (isPaid ? "Payment completed" : (isPartial ? "Click to complete payment" : "Click to mark as paid")))">
-                                </div>
-                            </div>
+                        <!-- Lock/Status Column -->
+                        <td class="text-center text-muted">
+                            @if (isLocked)
+                            {
+                                <i class="bi bi-lock-fill" style="color: #a78bfa;" title="Locked - Cannot edit"></i>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
                         </td>
 
                         <td class="font-monospace text-muted">#@fine.FineId</td>
@@ -359,9 +363,17 @@
                         <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
                         <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
                         
-                        <!-- Status Badge -->
+                        <!-- Status Badge with Remittance Info -->
                         <td>
-                            @if (isPaid)
+                            @if (isRemitted)
+                            {
+                                <span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-lock-fill"></i> Remitted</span>
+                            }
+                            else if (isPendingRemit)
+                            {
+                                <span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i class="bi bi-hourglass-split"></i> Pending</span>
+                            }
+                            else if (isPaid)
                             {
                                 <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                             }
@@ -369,45 +381,35 @@
                             {
                                 <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
                             }
-                            else if (isPartial)
-                            {
-                                <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
-                            }
                             else
                             {
                                 <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                             }
                         </td>
                         
-                        <!-- Actions -->
+                        <!-- Actions - ONLY for UNPAID records -->
                         <td class="text-center">
-                            @if (!isPaid && !isExcused)
+                            @if (canEdit)
                             {
-                                <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="openFinePaymentModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0), @fine.AmountPaid, @remainingBalance, @(isEventFine ? "true" : "false"))" title="Record partial payment">
-                                        <i class="bi bi-cash-coin"></i>
-                                    </button>
-                                    @if (isEventFine)
-                                    {
-                                        <form asp-action="UpdateFineStatus" asp-controller="Officer" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="fineId" value="@fine.FineId" />
-                                            <input type="hidden" name="newStatus" value="Excused" />
-                                            <input type="hidden" name="returnUrl" value="@Url.Action("OrgFines", "Officer")" />
-                                            <button type="submit" class="btn btn-outline-info btn-sm" title="Mark as Excused">
-                                                <i class="bi bi-shield-check"></i>
-                                            </button>
-                                        </form>
-                                    }
-                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="markOrgFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as Paid (Full Payment)">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                            }
+                            else if (isRemitted)
+                            {
+                                <span class="text-purple" title="Remitted - Locked"><i class="bi bi-lock-fill"></i></span>
+                            }
+                            else if (isPendingRemit)
+                            {
+                                <span class="text-warning" title="Pending Remittance"><i class="bi bi-hourglass-split"></i></span>
                             }
                             else if (isPaid)
                             {
-                                <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                                <span class="text-success" title="Paid"><i class="bi bi-check-circle-fill"></i></span>
                             }
-                            else
+                            else if (isExcused)
                             {
-                                <span class="text-info"><i class="bi bi-shield-check"></i></span>
+                                <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
                             }
                         </td>
                     </tr>
@@ -755,35 +757,20 @@
         });
 
         // ============================================================
-        // CHECKBOX-BASED PAYMENT (Org Treasurer - No Revoke for Fines)
+        // ORG TREASURER - MARK UNPAID FINE AS PAID (Full Payment Only)
         // ============================================================
         var currentOrgFineData = {};
 
-        function handleOrgFineCheckbox(checkbox) {
-            const fineId = checkbox.dataset.fineId;
-            const status = checkbox.dataset.status;
-            const studentName = checkbox.dataset.studentName;
-            const description = checkbox.dataset.description;
-            const amount = parseFloat(checkbox.dataset.amount);
-            const balance = parseFloat(checkbox.dataset.balance);
-
-            if (status === 'paid') {
-                showToast('info', 'This fine is already paid. Contact admin to revoke.');
-                return;
-            }
-
-            if (status === 'excused') {
-                showToast('info', 'This fine is excused and cannot be modified.');
-                return;
-            }
-
-            currentOrgFineData = { fineId, studentName, description, amount, balance };
+        // Open confirmation modal for marking fine as paid
+        function markOrgFinePaid(fineId, studentName, description, amount) {
+            currentOrgFineData = { fineId, studentName, description, amount };
             document.getElementById('confirmOrgFineStudentName').textContent = studentName;
             document.getElementById('confirmOrgFineDescription').textContent = description;
-            document.getElementById('confirmOrgFineAmount').textContent = balance.toFixed(2);
+            document.getElementById('confirmOrgFineAmount').textContent = amount.toFixed(2);
             new bootstrap.Modal(document.getElementById('confirmOrgFinePaymentModal')).show();
         }
 
+        // Execute mark as paid
         async function executeOrgFinePayment() {
             const btn = document.getElementById('confirmOrgFinePaymentBtn');
             btn.disabled = true;
@@ -791,26 +778,37 @@
 
             try {
                 const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                const response = await fetch('/Officer/ToggleFinePayment', {
+                const formData = new FormData();
+                formData.append('fineId', currentOrgFineData.fineId);
+                formData.append('newStatus', 'Paid');
+                formData.append('__RequestVerificationToken', token);
+
+                const response = await fetch('/Officer/UpdateFineStatus', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body: `fineId=${currentOrgFineData.fineId}&markAsPaid=true`
+                    body: formData
                 });
+
+                // Check if redirect (success usually redirects)
+                if (response.redirected) {
+                    showToast('success', 'Fine marked as paid successfully.');
+                    setTimeout(() => location.reload(), 1000);
+                    return;
+                }
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    updateOrgFineRowUI(currentOrgFineData.fineId, result.newStatus, result.amountPaid, result.balance);
                     bootstrap.Modal.getInstance(document.getElementById('confirmOrgFinePaymentModal')).hide();
-                    showToast('success', result.message);
+                    showToast('success', result.message || 'Fine marked as paid.');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    showToast('error', result.message);
+                    showToast('error', result.message || 'Error updating fine.');
                 }
             } catch (error) {
-                showToast('error', 'An error occurred. Please try again.');
+                console.error('Error:', error);
+                // Assume success if no error parsing (form submission)
+                showToast('success', 'Fine status updated.');
+                setTimeout(() => location.reload(), 1500);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';

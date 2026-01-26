@@ -59,6 +59,34 @@
     </div>
 </div>
 
+<!-- ADMIN INFO BANNER -->
+<div class="alert mb-4" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-left: 4px solid #3b82f6; color: #93c5fd;">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>View Only:</strong> Admin can view and create fees, but <strong>cannot change payment status</strong>. 
+    Payment collection is handled by <strong>Class Treasurers</strong> and validated by <strong>Org Treasurer</strong>.
+</div>
+
+<style>
+    /* Admin view-only status indicator styles */
+    .status-indicator {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+    .status-indicator.paid {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+    .status-indicator.unpaid {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+</style>
+
 <!-- ALERT MESSAGES -->
 @if (TempData["Message"] != null)
 {
@@ -274,12 +302,12 @@
         </div>
     </div>
 
-    <!-- Standard Fees Table with Checkbox UI -->
+    <!-- Standard Fees Table (View Only) -->
     <div class="table-responsive">
         <table class="table table-glass" id="feesTable">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 50px;">☐</th>
+                    <th class="text-center" style="width: 50px;"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i></th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
                     <th>Section</th>
@@ -299,10 +327,9 @@
                         var student = fee.StudentNumNavigation;
                         var paymentStatus = fee.PaymentStatus;
                         var isPaid = paymentStatus == "Paid";
-                        var isPartial = paymentStatus == "Partial";
                         var remainingBalance = fee.RemainingBalance;
-                        var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : "");
-                        var checkboxClass = isPaid ? "status-paid" : (isPartial ? "status-partial" : "status-unpaid");
+                        var statusClass = isPaid ? "row-paid" : "";
+                        var checkboxClass = isPaid ? "status-paid" : "status-unpaid";
 
                         <tr class="fee-row @statusClass"
                             data-fee-id="@fee.FeeId"
@@ -316,19 +343,10 @@
                             data-paid="@fee.AmountPaid"
                             data-balance="@remainingBalance">
                             
-                            <!-- Checkbox Column -->
+                            <!-- Status Icon Column (View Only) -->
                             <td class="text-center">
-                                <div class="payment-checkbox-wrapper">
-                                    <div class="payment-checkbox @checkboxClass" 
-                                         data-fee-id="@fee.FeeId"
-                                         data-student-name="@(student?.FullName ?? "Unknown")"
-                                         data-fee-name="@fee.FeeName"
-                                         data-amount="@(fee.Amount ?? 0)"
-                                         data-balance="@remainingBalance"
-                                         data-status="@paymentStatus.ToLower()"
-                                         onclick="handleFeeCheckboxClick(this)"
-                                         title="@(isPaid ? "Click to revoke payment" : (isPartial ? "Click to complete payment" : "Click to mark as paid"))">
-                                    </div>
+                                <div class="status-indicator @(isPaid ? "paid" : "unpaid")" title="@(isPaid ? "Paid" : "Unpaid")">
+                                    <i class="bi bi-@(isPaid ? "check" : "x")"></i>
                                 </div>
                             </td>
                             
@@ -350,15 +368,11 @@
                             <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
                             <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
                             
-                            <!-- Status Badge -->
+                            <!-- Status Badge (No Partial - Full Payment Only) -->
                             <td>
                                 @if (isPaid)
                                 {
                                     <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
-                                }
-                                else if (isPartial)
-                                {
-                                    <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
                                 }
                                 else
                                 {
@@ -366,37 +380,27 @@
                                 }
                             </td>
                             
-                            <!-- Actions Dropdown -->
+                            <!-- Actions Dropdown (Admin: No Payment Status Changes) -->
                             <td class="text-center">
-                                <div class="dropdown">
-                                    <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                        @if (!isPaid)
-                                        {
+                                @if (!isPaid)
+                                {
+                                    <div class="dropdown">
+                                        <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
                                             <li>
-                                                <a href="#" class="dropdown-item" onclick="openAdminFeePaymentModal(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance); return false;">
-                                                    <i class="bi bi-cash-coin me-2 text-success"></i> Record Partial Payment
+                                                <a href="#" class="dropdown-item text-danger" onclick="confirmDeleteFee(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @(fee.Amount ?? 0)); return false;">
+                                                    <i class="bi bi-trash me-2"></i> Delete Record
                                                 </a>
                                             </li>
-                                        }
-                                        @if (isPaid || isPartial)
-                                        {
-                                            <li>
-                                                <a href="#" class="dropdown-item" onclick="confirmRevokeFeePayment(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @fee.AmountPaid); return false;">
-                                                    <i class="bi bi-arrow-counterclockwise me-2 text-warning"></i> Revoke Payment
-                                                </a>
-                                            </li>
-                                        }
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <a href="#" class="dropdown-item text-danger" onclick="confirmDeleteFee(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @(fee.Amount ?? 0)); return false;">
-                                                <i class="bi bi-trash me-2"></i> Delete Record
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                        </ul>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-success" title="Paid - Cannot modify"><i class="bi bi-lock-fill"></i></span>
+                                }
                             </td>
                         </tr>
                     }
@@ -410,78 +414,8 @@
     </div>
 </div>
 
-<!-- CONFIRM PAYMENT MODAL -->
-<div class="modal fade" id="confirmPaymentModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="bi bi-check-circle text-success me-2"></i> Confirm Payment</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div class="confirm-modal-icon success">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <p class="mb-3">Mark this fee as <strong>PAID</strong>?</p>
-                <div class="confirm-modal-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Student</span>
-                        <span class="detail-value" id="confirmPayStudentName"></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Fee</span>
-                        <span class="detail-value" id="confirmPayFeeName"></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Amount</span>
-                        <span class="detail-value text-gold">₱<span id="confirmPayAmount"></span></span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmPaymentBtn" onclick="executeToggleFeePayment()">
-                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- REVOKE PAYMENT MODAL -->
-<div class="modal fade" id="revokePaymentModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i> Revoke Payment</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div class="confirm-modal-icon warning">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <p class="mb-2 text-warning fw-bold">Warning: This will delete all payment transactions!</p>
-                <p class="mb-3">Are you sure you want to revoke this payment?</p>
-                <div class="confirm-modal-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Student</span>
-                        <span class="detail-value" id="revokeStudentName"></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Amount Paid</span>
-                        <span class="detail-value text-success">₱<span id="revokeAmountPaid"></span></span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" id="revokePaymentBtn" onclick="executeRevokeFeePayment()">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- REMOVED: Payment status change modals - Admin cannot change payment status -->
+<!-- Payment status changes are handled by Treasurers only -->
 
 <!-- DELETE FEE MODAL -->
 <div class="modal fade" id="deleteFeeModal" tabindex="-1" data-bs-backdrop="static">
@@ -673,85 +607,7 @@
     </div>
 </div>
 
-<!-- RECORD FEE PAYMENT MODAL (Admin) -->
-<div class="modal fade" id="adminFeePaymentModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
-            <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669);">
-                <h5 class="modal-title text-white"><i class="bi bi-cash-coin me-2"></i> Record Payment</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form asp-action="RecordFeePayment" asp-controller="Admin" method="post" id="adminFeePaymentForm">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="adminPaymentFeeId" name="feeId" />
-                <div class="modal-body">
-                    <div class="fee-section p-3 mb-4">
-                        <div class="row mb-2">
-                            <div class="col-6">
-                                <small class="text-muted">Student</small>
-                                <div id="adminPaymentStudentName" class="fw-bold text-white"></div>
-                            </div>
-                            <div class="col-6 text-end">
-                                <small class="text-muted">Fee</small>
-                                <div id="adminPaymentFeeName" class="fw-bold text-gold"></div>
-                            </div>
-                        </div>
-                        <hr class="my-2" style="border-color: rgba(255,255,255,0.1);" />
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <small class="text-muted d-block">Total</small>
-                                <div class="fw-bold text-white">₱<span id="adminPaymentTotal">0.00</span></div>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted d-block">Paid</small>
-                                <div class="fw-bold text-success">₱<span id="adminPaymentPaid">0.00</span></div>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted d-block">Balance</small>
-                                <div class="fw-bold text-danger">₱<span id="adminPaymentBalance">0.00</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Payment Amount (₱) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" min="0.01" class="form-control" id="adminPaymentAmount" name="paymentAmount" required />
-                        <small class="text-muted">Max: ₱<span id="adminMaxAmount">0.00</span></small>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-2">Quick Select:</small>
-                        <div class="btn-group w-100">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.25)">25%</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.5)">50%</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(0.75)">75%</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAdminFeeAmount(1)">Full</button>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Payment Method <span class="text-danger">*</span></label>
-                        <select class="form-select" id="adminFeePaymentMethod" name="paymentMethod" required>
-                            <option value="">-- Select --</option>
-                            <option value="Cash">Cash</option>
-                            <option value="GCash">GCash</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reference #</label>
-                        <input type="text" class="form-control" name="transactionRef" placeholder="Optional" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" name="notes" rows="2" placeholder="Optional"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-1"></i> Record Payment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- REMOVED: Record Fee Payment Modal - Admin cannot change payment status -->
 
 @section Scripts {
     <!-- Include Chart.js -->
@@ -764,25 +620,7 @@
             pending: @Html.Raw(Json.Serialize(ViewBag.PendingBreakdown ?? new Dictionary<string, decimal>()))
         };
 
-        // Admin Fee Payment Modal
-        var adminFeeBalance = 0;
-        function openAdminFeePaymentModal(feeId, studentName, feeName, total, paid, balance) {
-            document.getElementById('adminPaymentFeeId').value = feeId;
-            document.getElementById('adminPaymentStudentName').textContent = studentName;
-            document.getElementById('adminPaymentFeeName').textContent = feeName;
-            document.getElementById('adminPaymentTotal').textContent = total.toFixed(2);
-            document.getElementById('adminPaymentPaid').textContent = paid.toFixed(2);
-            document.getElementById('adminPaymentBalance').textContent = balance.toFixed(2);
-            document.getElementById('adminMaxAmount').textContent = balance.toFixed(2);
-            document.getElementById('adminPaymentAmount').max = balance;
-            document.getElementById('adminPaymentAmount').value = balance.toFixed(2);
-            document.getElementById('adminFeePaymentMethod').value = '';
-            adminFeeBalance = balance;
-            new bootstrap.Modal(document.getElementById('adminFeePaymentModal')).show();
-        }
-        function setAdminFeeAmount(pct) {
-            document.getElementById('adminPaymentAmount').value = (adminFeeBalance * pct).toFixed(2);
-        }
+        // REMOVED: Admin Fee Payment Modal functions - Admin cannot change payment status
 
         // Export Function
         function exportPayments() {
@@ -806,109 +644,9 @@
         }
 
         // ============================================================
-        // CHECKBOX-BASED PAYMENT SYSTEM
+        // REMOVED: CHECKBOX-BASED PAYMENT SYSTEM - Admin cannot change payment status
+        // Payment status changes are handled by Treasurers only
         // ============================================================
-        var currentFeeData = {};
-
-        // Handle checkbox click
-        function handleFeeCheckboxClick(checkbox) {
-            const feeId = checkbox.dataset.feeId;
-            const status = checkbox.dataset.status;
-            const studentName = checkbox.dataset.studentName;
-            const feeName = checkbox.dataset.feeName;
-            const amount = parseFloat(checkbox.dataset.amount);
-            const balance = parseFloat(checkbox.dataset.balance);
-
-            currentFeeData = { feeId, studentName, feeName, amount, balance, checkbox };
-
-            if (status === 'paid') {
-                // Already paid - show revoke confirmation
-                confirmRevokeFeePayment(feeId, studentName, amount);
-            } else {
-                // Unpaid or Partial - show payment confirmation
-                document.getElementById('confirmPayStudentName').textContent = studentName;
-                document.getElementById('confirmPayFeeName').textContent = feeName;
-                document.getElementById('confirmPayAmount').textContent = balance.toFixed(2);
-                new bootstrap.Modal(document.getElementById('confirmPaymentModal')).show();
-            }
-        }
-
-        // Execute toggle fee payment (mark as paid)
-        async function executeToggleFeePayment() {
-            const btn = document.getElementById('confirmPaymentBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
-
-            try {
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                const response = await fetch('/Admin/ToggleFeePayment', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body: `feeId=${currentFeeData.feeId}&markAsPaid=true`
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Update UI
-                    updateFeeRowUI(currentFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
-                    bootstrap.Modal.getInstance(document.getElementById('confirmPaymentModal')).hide();
-                    showToast('success', result.message);
-                } else {
-                    showToast('error', result.message);
-                }
-            } catch (error) {
-                showToast('error', 'An error occurred. Please try again.');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
-            }
-        }
-
-        // Confirm revoke payment
-        function confirmRevokeFeePayment(feeId, studentName, amountPaid) {
-            currentFeeData.feeId = feeId;
-            document.getElementById('revokeStudentName').textContent = studentName;
-            document.getElementById('revokeAmountPaid').textContent = amountPaid.toFixed(2);
-            new bootstrap.Modal(document.getElementById('revokePaymentModal')).show();
-        }
-
-        // Execute revoke fee payment
-        async function executeRevokeFeePayment() {
-            const btn = document.getElementById('revokePaymentBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
-
-            try {
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                const response = await fetch('/Admin/RevokeFeePayment', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body: `feeId=${currentFeeData.feeId}`
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateFeeRowUI(currentFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
-                    bootstrap.Modal.getInstance(document.getElementById('revokePaymentModal')).hide();
-                    showToast('success', result.message);
-                } else {
-                    showToast('error', result.message);
-                }
-            } catch (error) {
-                showToast('error', 'An error occurred. Please try again.');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment';
-            }
-        }
 
         // Confirm delete fee
         function confirmDeleteFee(feeId, studentName, amount) {

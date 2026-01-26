@@ -2750,12 +2750,18 @@ namespace iBITS_Portal.Controllers
 
 
         // =========================================================
-        // ACTION: UPDATE FINE STATUS
+        // ACTION: UPDATE FINE STATUS - DISABLED FOR ADMIN
+        // Admin cannot change payment status - handled by Treasurers
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateFineStatus(int fineId, string status)
         {
+            // DISABLED: Admin cannot change payment status - Treasurers handle this
+            TempData["Error"] = "Admin cannot change payment status. Payment collection is handled by Class Treasurers and validated by Org Treasurer.";
+            return RedirectToAction(nameof(Fines));
+            
+            /* ORIGINAL CODE - DISABLED
             var fine = await _context.Fines.FindAsync(fineId);
             if (fine == null)
             {
@@ -2771,6 +2777,7 @@ namespace iBITS_Portal.Controllers
             TempData["Message"] = "Fine status updated successfully.";
 
             return RedirectToAction(nameof(Fines));
+            END OF DISABLED CODE */
         }
 
         // =========================================================
@@ -4129,13 +4136,18 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // ACTION: UPDATE FEE STATUS (Mark as Paid/Unpaid)
-        // FIXED: Now creates PaymentTransaction record for audit trail
+        // ACTION: UPDATE FEE STATUS - DISABLED FOR ADMIN
+        // Admin cannot change payment status - handled by Treasurers
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateFeeStatus(int feeId, string status)
         {
+            // DISABLED: Admin cannot change payment status - Treasurers handle this
+            TempData["Error"] = "Admin cannot change payment status. Payment collection is handled by Class Treasurers and validated by Org Treasurer.";
+            return RedirectToAction(nameof(Payments));
+            
+            /* ORIGINAL CODE - DISABLED
             var fee = await _context.Fees.Include(f => f.StudentNumNavigation).FirstOrDefaultAsync(f => f.FeeId == feeId);
             if (fee == null)
             {
@@ -4202,15 +4214,23 @@ namespace iBITS_Portal.Controllers
             TempData["Message"] = $"Fee status updated to '{normalizedStatus}' successfully.";
 
             return RedirectToAction(nameof(Payments));
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // ACTION: RECORD PARTIAL FEE PAYMENT (Admin)
+        // ACTION: RECORD PARTIAL FEE PAYMENT - DISABLED FOR ADMIN
+        // Admin cannot record payments - handled by Treasurers
+        // Partial payments have been removed per business requirements
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RecordFeePayment(int feeId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
         {
+            // DISABLED: Admin cannot record payments and partial payments are removed
+            TempData["Error"] = "Admin cannot record payments. Payment collection is handled by Class Treasurers (full payment only) and validated by Org Treasurer.";
+            return RedirectToAction(nameof(Payments));
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fee = await _context.Fees
@@ -4232,7 +4252,7 @@ namespace iBITS_Portal.Controllers
 
                 if (paymentAmount > remainingBalance)
                 {
-                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    TempData["Error"] = $"Payment amount (?{paymentAmount:N2}) cannot exceed the remaining balance (?{remainingBalance:N2}).";
                     return RedirectToAction(nameof(Payments));
                 }
 
@@ -4296,15 +4316,23 @@ namespace iBITS_Portal.Controllers
             }
 
             return RedirectToAction(nameof(Payments));
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // ACTION: RECORD PARTIAL FINE PAYMENT (Admin)
+        // ACTION: RECORD PARTIAL FINE PAYMENT - DISABLED FOR ADMIN
+        // Admin cannot record payments - handled by Treasurers
+        // Partial payments have been removed per business requirements
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RecordFinePayment(int fineId, decimal paymentAmount, string? paymentMethod, string? transactionRef, string? notes)
         {
+            // DISABLED: Admin cannot record payments and partial payments are removed
+            TempData["Error"] = "Admin cannot record payments. Payment collection is handled by Class Treasurers (full payment only) and validated by Org Treasurer.";
+            return RedirectToAction(nameof(Fines));
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fine = await _context.Fines
@@ -4396,6 +4424,7 @@ namespace iBITS_Portal.Controllers
             }
 
             return RedirectToAction(nameof(Fines));
+            END OF DISABLED CODE */
         }
 
         // =========================================================
@@ -4492,10 +4521,18 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // AJAX: TOGGLE FEE PAYMENT STATUS (Checkbox)
         // =========================================================
+        /// <summary>
+        /// DISABLED: Admin cannot change payment status.
+        /// Payment status changes are handled by Treasurers only.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleFeePayment(int feeId, bool markAsPaid)
         {
+            // DISABLED: Admin cannot change payment status - Treasurers handle this
+            return Json(new { success = false, message = "Admin cannot change payment status. Please contact the Org Treasurer." });
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fee = await _context.Fees
@@ -4571,15 +4608,24 @@ namespace iBITS_Portal.Controllers
                 _logger.LogError(ex, "Error toggling fee payment");
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // AJAX: REVOKE FEE PAYMENT (Admin Only)
+        // AJAX: REVOKE FEE PAYMENT - DISABLED FOR ADMIN
         // =========================================================
+        /// <summary>
+        /// DISABLED: Admin cannot revoke payment status.
+        /// Payment revocation is handled by Class Treasurers (before remittance only).
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RevokeFeePayment(int feeId)
         {
+            // DISABLED: Admin cannot revoke payments - Class Treasurers handle this
+            return Json(new { success = false, message = "Admin cannot revoke payments. Please contact the Class Treasurer." });
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fee = await _context.Fees
@@ -4639,15 +4685,24 @@ namespace iBITS_Portal.Controllers
                 _logger.LogError(ex, "Error revoking fee payment");
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // AJAX: TOGGLE FINE PAYMENT STATUS (Checkbox)
+        // AJAX: TOGGLE FINE PAYMENT STATUS - DISABLED FOR ADMIN
         // =========================================================
+        /// <summary>
+        /// DISABLED: Admin cannot change fine payment status.
+        /// Payment status changes are handled by Treasurers only.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleFinePayment(int fineId, bool markAsPaid)
         {
+            // DISABLED: Admin cannot change payment status - Treasurers handle this
+            return Json(new { success = false, message = "Admin cannot change payment status. Please contact the Org Treasurer." });
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fine = await _context.Fines
@@ -4728,15 +4783,24 @@ namespace iBITS_Portal.Controllers
                 _logger.LogError(ex, "Error toggling fine payment");
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // AJAX: REVOKE FINE PAYMENT (Admin Only)
+        // AJAX: REVOKE FINE PAYMENT - DISABLED FOR ADMIN
         // =========================================================
+        /// <summary>
+        /// DISABLED: Admin cannot revoke fine payment status.
+        /// Payment revocation is handled by Class Treasurers (before remittance only).
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RevokeFinePayment(int fineId)
         {
+            // DISABLED: Admin cannot revoke payments - Class Treasurers handle this
+            return Json(new { success = false, message = "Admin cannot revoke payments. Please contact the Class Treasurer." });
+            
+            /* ORIGINAL CODE - DISABLED
             try
             {
                 var fine = await _context.Fines
@@ -4801,10 +4865,12 @@ namespace iBITS_Portal.Controllers
                 _logger.LogError(ex, "Error revoking fine payment");
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+            END OF DISABLED CODE */
         }
 
         // =========================================================
-        // AJAX: MARK FINE AS EXCUSED (Admin)
+        // AJAX: MARK FINE AS EXCUSED - DISABLED FOR ADMIN
+        // Note: Excused status is now handled by Org Secretary only
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]

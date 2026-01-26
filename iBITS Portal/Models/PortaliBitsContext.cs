@@ -31,6 +31,12 @@ public partial class PortaliBitsContext : DbContext
     public virtual DbSet<Notification> Notifications { get; set; }
     public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
     public virtual DbSet<FinePaymentTransaction> FinePaymentTransactions { get; set; }
+    
+    // ============================================================
+    // REMITTANCE SYSTEM DbSets
+    // ============================================================
+    public virtual DbSet<Remittance> Remittances { get; set; }
+    public virtual DbSet<RemittanceItem> RemittanceItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,30 +79,7 @@ public partial class PortaliBitsContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Fee>(entity =>
-        {
-            entity.HasOne(d => d.StudentNumNavigation)
-                .WithMany(p => p.Fees)
-                .HasForeignKey(d => d.StudentNum)
-                .HasConstraintName("FK_Fees_Student")
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<Fine>(entity =>
-        {
-            entity.HasOne(d => d.Attendance)
-                .WithMany(p => p.Fines)
-                .HasForeignKey(d => d.AttendanceId)
-                .HasConstraintName("FK_Fines_Attendance")
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.StudentNumNavigation)
-               .WithMany(p => p.Fines)
-               .HasForeignKey(d => d.StudentNum)
-               .HasConstraintName("FK_Fines_Student")
-               .OnDelete(DeleteBehavior.NoAction);
-
-        });
+        // Fee and Fine configurations moved to Remittance System section below
 
 
 
@@ -190,6 +173,198 @@ public partial class PortaliBitsContext : DbContext
             entity.HasIndex(e => e.FineId);
             entity.HasIndex(e => e.StudentNum);
             entity.HasIndex(e => e.PaymentDate);
+        });
+
+        // ============================================================
+        // REMITTANCE SYSTEM Configuration
+        // ============================================================
+
+        // Remittance Configuration
+        modelBuilder.Entity<Remittance>(entity =>
+        {
+            entity.HasKey(e => e.RemittanceId);
+            entity.ToTable("Remittances");
+
+            entity.Property(e => e.BatchCode)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.FeeName)
+                .HasMaxLength(200);
+
+            entity.Property(e => e.FineCategory)
+                .HasMaxLength(200);
+
+            entity.Property(e => e.RemittanceType)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Section)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.TotalAmount)
+                .HasColumnType("decimal(18,2)");
+
+            entity.Property(e => e.SubmittedBy)
+                .IsRequired()
+                .HasMaxLength(450);
+
+            entity.Property(e => e.SubmittedDate)
+                .HasDefaultValueSql("GETDATE()");
+
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+
+            entity.Property(e => e.ValidatedBy)
+                .HasMaxLength(450);
+
+            entity.Property(e => e.ValidationNotes)
+                .HasMaxLength(1000);
+
+            entity.Property(e => e.RejectionReason)
+                .HasMaxLength(1000);
+
+            entity.Property(e => e.AcademicYear)
+                .HasMaxLength(20);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETDATE()");
+
+            // Unique constraint on BatchCode
+            entity.HasIndex(e => e.BatchCode)
+                .IsUnique();
+
+            // Index for filtering by status
+            entity.HasIndex(e => e.Status);
+
+            // Index for filtering by section
+            entity.HasIndex(e => e.Section);
+
+            // Navigation properties
+            entity.HasOne(d => d.SubmittedByNavigation)
+                .WithMany()
+                .HasForeignKey(d => d.SubmittedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.ValidatedByNavigation)
+                .WithMany()
+                .HasForeignKey(d => d.ValidatedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // RemittanceItem Configuration
+        modelBuilder.Entity<RemittanceItem>(entity =>
+        {
+            entity.HasKey(e => e.RemittanceItemId);
+            entity.ToTable("RemittanceItems");
+
+            entity.Property(e => e.StudentNum)
+                .IsRequired()
+                .HasMaxLength(450);
+
+            entity.Property(e => e.StudentName)
+                .HasMaxLength(300);
+
+            entity.Property(e => e.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            entity.Property(e => e.PaymentMethod)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.TransactionRef)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Notes)
+                .HasMaxLength(500);
+
+            // Index on RemittanceId
+            entity.HasIndex(e => e.RemittanceId);
+
+            // Navigation properties
+            entity.HasOne(d => d.Remittance)
+                .WithMany(p => p.RemittanceItems)
+                .HasForeignKey(d => d.RemittanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Fee)
+                .WithMany()
+                .HasForeignKey(d => d.FeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Fine)
+                .WithMany()
+                .HasForeignKey(d => d.FineId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // Update Fee entity with Remittance relationship
+        modelBuilder.Entity<Fee>(entity =>
+        {
+            // Existing configuration preserved...
+            entity.HasOne(d => d.StudentNumNavigation)
+                .WithMany(p => p.Fees)
+                .HasForeignKey(d => d.StudentNum)
+                .HasConstraintName("FK_Fees_Student")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Remittance relationship
+            entity.HasOne(d => d.Remittance)
+                .WithMany()
+                .HasForeignKey(d => d.RemittanceId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(d => d.CollectedByNavigation)
+                .WithMany()
+                .HasForeignKey(d => d.CollectedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.Property(e => e.RemittanceStatus)
+                .HasMaxLength(20)
+                .HasDefaultValue("NotRemitted");
+
+            entity.HasIndex(e => e.RemittanceStatus);
+        });
+
+        // Update Fine entity with Remittance relationship
+        modelBuilder.Entity<Fine>(entity =>
+        {
+            // Existing configuration preserved...
+            entity.HasOne(d => d.Attendance)
+                .WithMany(p => p.Fines)
+                .HasForeignKey(d => d.AttendanceId)
+                .HasConstraintName("FK_Fines_Attendance")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.StudentNumNavigation)
+               .WithMany(p => p.Fines)
+               .HasForeignKey(d => d.StudentNum)
+               .HasConstraintName("FK_Fines_Student")
+               .OnDelete(DeleteBehavior.NoAction);
+
+            // Remittance relationship
+            entity.HasOne(d => d.Remittance)
+                .WithMany()
+                .HasForeignKey(d => d.RemittanceId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(d => d.CollectedByNavigation)
+                .WithMany()
+                .HasForeignKey(d => d.CollectedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.Property(e => e.RemittanceStatus)
+                .HasMaxLength(20)
+                .HasDefaultValue("NotRemitted");
+
+            entity.HasIndex(e => e.RemittanceStatus);
         });
 
         OnModelCreatingPartial(modelBuilder);

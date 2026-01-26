@@ -1,6 +1,7 @@
 @* FILE PATH: Views/Officer/ClassFines.cshtml *@
-@* CLASS TREASURER - FINES MANAGEMENT (Admin-style UI with Mark as Paid) *@
+@* CLASS TREASURER - FINES MANAGEMENT (Full Payment Only + Remittance) *@
 @model IEnumerable<iBITS_Portal.Models.Fine>
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = $"Section {ViewBag.Section} Fines Management";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
@@ -11,72 +12,60 @@
     var totalCol = ViewBag.TotalCollected ?? 0m;
     var totalPending = ViewBag.TotalPending ?? 0m;
     var collectionRate = ViewBag.CollectionRate ?? 0m;
+    
+    // Group fines by description/event for remittance
+    var finesByCategory = allFines.GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Other").OrderBy(g => g.Key).ToList();
+    
+    // Count collected but not remitted
+    var pendingRemittanceCount = allFines.Count(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
+    var pendingRemittanceAmount = allFines.Where(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted).Sum(f => f.Amount ?? 0);
 }
 
 <link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
 
-@section Styles {
+@section Styles{
 <style>
-    .chart-no-data {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        min-height: 250px;
-        color: rgba(255, 255, 255, 0.4);
-        text-align: center;
-    }
-    .chart-no-data i {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        color: rgba(212, 175, 55, 0.2);
-    }
-    .chart-no-data p {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    .summary-card {
-        height: 100%;
-        min-height: 110px;
-    }
-    .section-badge {
-        background: linear-gradient(135deg, var(--gold-primary), #b8860b);
-        color: #000;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.85rem;
-    }
-    .btn-mark-paid {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    .btn-mark-paid:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-        color: white;
-    }
-    .completed-badge {
-        color: #10b981;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .waived-badge {
-        color: #3b82f6;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
+    .chart-no-data { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 250px; color: rgba(255, 255, 255, 0.4); text-align: center; }
+    .chart-no-data i { font-size: 4rem; margin-bottom: 1rem; color: rgba(212, 175, 55, 0.2); }
+    .chart-no-data p { font-size: 1.1rem; font-weight: 600; margin: 0; }
+    .summary-card { height: 100%; min-height: 110px; }
+    .section-badge { background: linear-gradient(135deg, var(--gold-primary), #b8860b); color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+    
+    /* Remittance Styles */
+    .btn-remit { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+    .btn-remit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); color: white; }
+    .btn-remit:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .btn-mark-paid { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; }
+    .btn-mark-paid:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); color: white; }
+    .btn-mark-paid:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; }
+    
+    .btn-revoke { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
+    .btn-revoke:hover { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); color: white; }
+    
+    /* Status badges */
+    .remittance-status { padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600; }
+    .remittance-status.not-remitted { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+    .remittance-status.collected { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .remittance-status.pending-remit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .remittance-status.remitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+    
+    /* Fine category card */
+    .fine-category-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
+    .fine-category-header { background: rgba(239, 68, 68, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem; }
+    .fine-category-body { padding: 0; }
+    
+    /* Lock indicator */
+    .lock-indicator { color: #a78bfa; font-size: 0.8rem; }
+    .row-locked { opacity: 0.7; background: rgba(139, 92, 246, 0.05); }
+    
+    /* Quick stats bar */
+    .quick-stats { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 1rem; }
 </style>
 }
+
+@Html.AntiForgeryToken()
 
 <!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
@@ -85,14 +74,40 @@
             <i class="bi bi-exclamation-triangle me-2"></i> Section Fines Management
             <span class="section-badge ms-2">@sectionName</span>
         </h3>
-        <p class="text-muted small mb-0">Manage fine payments for your section classmates</p>
+        <p class="text-muted small mb-0">Collect FULL fine payments from your section classmates (No partial payments)</p>
     </div>
     <div>
         <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
-            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <a asp-action="PendingCollections" asp-route-type="fines" class="btn btn-outline-warning btn-sm me-2">
+            <i class="bi bi-collection me-1"></i> Pending Collections
+            @if (pendingRemittanceCount > 0)
+            {
+                <span class="badge bg-warning text-dark ms-1">@pendingRemittanceCount</span>
+            }
+        </a>
+        <a asp-action="RemittanceHistory" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-clock-history me-1"></i> Remittance History
         </a>
     </div>
 </div>
+
+<!-- QUICK REMITTANCE STATS -->
+@if (pendingRemittanceCount > 0)
+{
+    <div class="quick-stats mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-piggy-bank me-2 text-purple"></i>
+            <strong class="text-white">@pendingRemittanceCount fine payment(s)</strong>
+            <span class="text-muted">ready for remittance</span>
+            <span class="text-white fw-bold ms-2">(₱@pendingRemittanceAmount.ToString("N2"))</span>
+        </div>
+        <a asp-action="PendingCollections" asp-route-type="fines" class="btn btn-remit btn-sm">
+            <i class="bi bi-send me-1"></i> Review & Remit to Org Treasurer
+        </a>
+    </div>
+}
 
 <!-- ALERT MESSAGES -->
 @if (TempData["Message"] != null)
@@ -281,151 +296,181 @@
     </div>
 </div>
 
-<!-- FINES TABLE -->
+<!-- FINE RECORDS BY CATEGORY (Remittance-Based UI) -->
 <div class="glass-panel p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">
-            Fine Records - Section @sectionName
+            <i class="bi bi-list-check me-2"></i> Fine Records - Section @sectionName
         </h5>
         <div>
             <a asp-action="ExportClassFines" class="btn-gold-outline btn-sm">
-                <i class="bi bi-download me-1"></i> Export Fines
+                <i class="bi bi-download me-1"></i> Export
             </a>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-glass" id="finesTable">
-            <thead>
-                <tr>
-                    <th class="text-center" style="width: 50px;">☐</th>
-                    <th>REF ID</th>
-                    <th>STUDENT NAME</th>
-                    <th>DESCRIPTION</th>
-                    <th>AMOUNT</th>
-                    <th>PAID</th>
-                    <th>BALANCE</th>
-                    <th>STATUS</th>
-                    <th class="text-center" style="width: 80px;">ACTION</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model != null && Model.Any())
-                {
-                    foreach (var fine in Model)
-                    {
-                        var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
-                        var eventRecord = fine.Attendance?.Event;
-                        var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
-                        var paymentStatus = fine.PaymentStatus;
-                        var isPaid = paymentStatus == "Paid";
-                        var isPartial = paymentStatus == "Partial";
-                        var isExcused = paymentStatus == "Excused";
-                        var remainingBalance = fine.RemainingBalance;
-                        var isEventFine = fine.AttendanceId != null;
-                        var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : (isExcused ? "row-excused" : ""));
-                        var checkboxClass = isPaid ? "status-paid no-revoke" : (isPartial ? "status-partial" : (isExcused ? "status-excused" : "status-unpaid"));
+    @if (finesByCategory.Any())
+    {
+        @foreach (var category in finesByCategory)
+        {
+            var categoryName = category.Key;
+            var categoryFines = category.ToList();
+            var categoryTotal = categoryFines.Sum(f => f.Amount ?? 0);
+            var categoryPaid = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "PAID");
+            var categoryUnpaid = categoryFines.Count(f => f.FinesStatus?.ToUpper() != "PAID" && f.FinesStatus?.ToUpper() != "EXCUSED");
+            var categoryExcused = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "EXCUSED");
+            var categoryCollectedNotRemitted = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
+            var categoryRemitted = categoryFines.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
+            var canRemit = categoryCollectedNotRemitted > 0;
 
-                        <tr class="fine-row @statusClass"
-                            data-fine-id="@fine.FineId"
-                            data-student="@student?.FullName?.ToLower()"
-                            data-studentnum="@student?.StudentNum?.ToLower()"
-                            data-status="@paymentStatus.ToLower()"
-                            data-finetype="@(isEventFine ? "event" : "manual")"
-                            data-reason="@description?.ToLower()"
-                            data-amount="@(fine.Amount ?? 0)"
-                            data-paid="@fine.AmountPaid"
-                            data-balance="@remainingBalance">
+            <div class="fine-category-card mb-4" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden;">
+                <!-- Category Header -->
+                <div class="fine-category-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem;">
+                    <div>
+                        <h6 class="text-white mb-1 fw-bold">@categoryName</h6>
+                        <small class="text-muted">
+                            @categoryFines.Count students • ₱@((categoryFines.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
+                            <span class="mx-2">|</span>
+                            <span class="text-success">@categoryPaid Paid</span> •
+                            <span class="text-warning">@categoryUnpaid Unpaid</span>
+                            @if (categoryExcused > 0)
+                            {
+                                <span class="mx-1">•</span>
+                                <span class="text-info">@categoryExcused Excused</span>
+                            }
+                            @if (categoryRemitted > 0)
+                            {
+                                <span class="mx-1">•</span>
+                                <span style="color: #a78bfa;">@categoryRemitted Remitted</span>
+                            }
+                        </small>
+                    </div>
+                    <div>
+                        @if (canRemit)
+                        {
+                            <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit btn-sm">
+                                <i class="bi bi-send me-1"></i> Remit @categoryCollectedNotRemitted to Org
+                            </a>
+                        }
+                        else if (categoryRemitted == categoryPaid && categoryPaid > 0)
+                        {
+                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-check-all me-1"></i> All Remitted</span>
+                        }
+                    </div>
+                </div>
 
-                            <!-- Checkbox Column -->
-                            <td class="text-center">
-                                <div class="payment-checkbox-wrapper">
-                                    <div class="payment-checkbox @checkboxClass" 
-                                         data-fine-id="@fine.FineId"
-                                         data-student-name="@(student?.FullName ?? "Unknown")"
-                                         data-description="@description"
-                                         data-amount="@(fine.Amount ?? 0)"
-                                         data-balance="@remainingBalance"
-                                         data-status="@paymentStatus.ToLower()"
-                                         onclick="@(isPaid || isExcused ? "" : "handleOfficerFineCheckbox(this)")"
-                                         title="@(isExcused ? "This fine is excused" : (isPaid ? "Payment completed" : (isPartial ? "Click to complete payment" : "Click to mark as paid")))">
-                                    </div>
-                                </div>
-                            </td>
+                <!-- Category Table -->
+                <div class="fine-category-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0" style="background: transparent;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="width: 40px; color: var(--gold-primary);">#</th>
+                                    <th style="color: var(--gold-primary);">Student</th>
+                                    <th style="color: var(--gold-primary);">Amount</th>
+                                    <th style="color: var(--gold-primary);">Payment Status</th>
+                                    <th style="color: var(--gold-primary);">Remittance</th>
+                                    <th style="color: var(--gold-primary); width: 150px;" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var rowNum = 1; }
+                                @foreach (var fine in categoryFines.OrderBy(f => f.StudentNumNavigation?.StudentLn ?? f.Attendance?.StudentNumNavigation?.StudentLn))
+                                {
+                                    var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+                                    var isPaid = fine.FinesStatus?.ToUpper() == "PAID";
+                                    var isExcused = fine.FinesStatus?.ToUpper() == "EXCUSED";
+                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted;
+                                    var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                                    var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
+                                    var rowClass = isLocked ? "row-locked" : "";
 
-                            <td class="font-monospace text-muted">#@fine.FineId</td>
-                            <td>
-                                @if (student != null)
-                                {
-                                    <div style="color: var(--text-strong); font-weight: 600;">@student.FullName</div>
-                                    <div class="small text-muted" style="font-size: 0.75rem;">@student.StudentNum</div>
+                                    <tr class="@rowClass fine-row" data-fine-id="@fine.FineId" data-student-name="@(student?.FullName ?? "")" data-student-id="@(student?.StudentNum ?? fine.StudentNum)" data-reason="@categoryName" data-fine-type="@(fine.AttendanceId != null ? "event" : "manual")" data-status="@(isPaid ? "paid" : (isExcused ? "excused" : "unpaid"))">
+                                        <td class="text-muted">@rowNum</td>
+                                        <td>
+                                            <div class="text-white fw-semibold">@(student?.FullName ?? "Unknown")</div>
+                                            <small class="text-muted">@(student?.StudentNum ?? fine.StudentNum)</small>
+                                        </td>
+                                        <td class="fw-bold" style="color: var(--gold-primary);">₱@((fine.Amount ?? 0).ToString("N2"))</td>
+                                        <td>
+                                            @if (isPaid)
+                                            {
+                                                <span class="status-badge status-paid"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                                            }
+                                            else if (isExcused)
+                                            {
+                                                <span class="status-badge status-excused"><i class="bi bi-shield-check me-1"></i>Excused</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-badge status-unpaid"><i class="bi bi-x-circle me-1"></i>Unpaid</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (isRemitted)
+                                            {
+                                                <span class="remittance-status remitted" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-lock-fill me-1"></i>Remitted</span>
+                                            }
+                                            else if (isPendingRemit)
+                                            {
+                                                <span class="remittance-status pending-remit" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                            }
+                                            else if (isPaid)
+                                            {
+                                                <span class="remittance-status collected" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-piggy-bank me-1"></i>Collected</span>
+                                            }
+                                            else if (isExcused)
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (isExcused)
+                                            {
+                                                <span class="text-info" title="Excused by Secretary"><i class="bi bi-shield-check"></i></span>
+                                            }
+                                            else if (isLocked)
+                                            {
+                                                <span class="lock-indicator" title="Locked - Already remitted or pending" style="color: #a78bfa; font-size: 0.8rem;">
+                                                    <i class="bi bi-lock-fill"></i> Locked
+                                                </span>
+                                            }
+                                            else if (isPaid)
+                                            {
+                                                <button type="button" class="btn btn-revoke btn-sm" onclick="revokeFinePayment(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")')" title="Revoke payment" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                                                    <i class="bi bi-x-circle me-1"></i> Revoke
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-mark-paid btn-sm" onclick="markFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as fully paid" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                                                    <i class="bi bi-check-circle me-1"></i> Mark Paid
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                    rowNum++;
                                 }
-                                else
-                                {
-                                    <span class="text-danger">Unknown Student</span>
-                                }
-                            </td>
-                            <td>
-                                @if (!isEventFine)
-                                {
-                                    <span class="text-gold"><i class="bi bi-pencil-fill me-1" style="font-size: 0.7rem;"></i> @description</span>
-                                }
-                                else
-                                {
-                                    <span>@description</span>
-                                }
-                            </td>
-                            <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
-                            <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
-                            
-                            <!-- Status Badge -->
-                            <td>
-                                @if (isPaid)
-                                {
-                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
-                                }
-                                else if (isExcused)
-                                {
-                                    <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
-                                }
-                                else if (isPartial)
-                                {
-                                    <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
-                                }
-                                else
-                                {
-                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
-                                }
-                            </td>
-                            
-                            <!-- Actions -->
-                            <td class="text-center">
-                                @if (!isPaid && !isExcused)
-                                {
-                                    <button class="btn btn-sm btn-outline-success" onclick="openClassFinePaymentModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0), @fine.AmountPaid, @remainingBalance)" title="Record partial payment">
-                                        <i class="bi bi-cash-coin"></i>
-                                    </button>
-                                }
-                                else if (isPaid)
-                                {
-                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
-                                }
-                                else
-                                {
-                                    <span class="text-info"><i class="bi bi-shield-check"></i></span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fine records found for this section.</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-white">No Fine Records</h5>
+            <p class="text-muted">No fine records found for this section.</p>
+        </div>
+    }
+</div>
 
 <!-- CONFIRM FINE PAYMENT MODAL (Class Treasurer) -->
 <div class="modal fade" id="confirmClassFinePaymentModal" tabindex="-1" data-bs-backdrop="static">
@@ -751,6 +796,80 @@
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
+
+        // ============================================================
+        // FILTER AND SEARCH FUNCTIONALITY
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterSearch = document.getElementById('filterSearch');
+            const filterFineType = document.getElementById('filterFineType');
+            const filterReason = document.getElementById('filterReason');
+            const filterStatus = document.getElementById('filterStatus');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+            function applyFilters() {
+                const searchTerm = filterSearch.value.toLowerCase().trim();
+                const selectedFineType = filterFineType.value.toLowerCase();
+                const selectedReason = filterReason.value.toLowerCase();
+                const selectedStatus = filterStatus.value.toLowerCase();
+
+                const rows = document.querySelectorAll('.fine-row');
+                const categoryCards = document.querySelectorAll('.fine-category-card');
+
+                rows.forEach(row => {
+                    const studentName = (row.getAttribute('data-student-name') || '').toLowerCase();
+                    const studentId = (row.getAttribute('data-student-id') || '').toLowerCase();
+                    const reason = (row.getAttribute('data-reason') || '').toLowerCase();
+                    const fineType = (row.getAttribute('data-fine-type') || '').toLowerCase();
+                    const status = (row.getAttribute('data-status') || '').toLowerCase();
+
+                    let show = true;
+
+                    // Search filter (student name or ID)
+                    if (searchTerm && !studentName.includes(searchTerm) && !studentId.includes(searchTerm)) {
+                        show = false;
+                    }
+
+                    // Fine type filter
+                    if (selectedFineType && fineType !== selectedFineType) {
+                        show = false;
+                    }
+
+                    // Reason/Event filter
+                    if (selectedReason && reason !== selectedReason) {
+                        show = false;
+                    }
+
+                    // Status filter
+                    if (selectedStatus && status !== selectedStatus) {
+                        show = false;
+                    }
+
+                    row.style.display = show ? '' : 'none';
+                });
+
+                // Hide empty category cards
+                categoryCards.forEach(card => {
+                    const visibleRows = card.querySelectorAll('.fine-row:not([style*="display: none"])');
+                    card.style.display = visibleRows.length > 0 ? '' : 'none';
+                });
+            }
+
+            // Event listeners
+            filterSearch.addEventListener('input', applyFilters);
+            filterFineType.addEventListener('change', applyFilters);
+            filterReason.addEventListener('change', applyFilters);
+            filterStatus.addEventListener('change', applyFilters);
+
+            // Clear filters
+            clearFiltersBtn.addEventListener('click', function() {
+                filterSearch.value = '';
+                filterFineType.value = '';
+                filterReason.value = '';
+                filterStatus.value = '';
+                applyFilters();
+            });
+        });
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
 }

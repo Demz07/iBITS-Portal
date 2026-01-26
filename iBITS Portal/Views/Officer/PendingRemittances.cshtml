@@ -1,0 +1,225 @@
+@* FILE PATH: Views/Officer/PendingRemittances.cshtml *@
+@* ORG TREASURER - View and validate pending remittances from all sections *@
+@model IEnumerable<iBITS_Portal.Models.Remittance>
+@{
+    ViewData["Title"] = "Pending Remittances";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var totalAmount = ViewBag.TotalPendingAmount as decimal? ?? 0;
+    var totalCount = ViewBag.TotalPendingCount as int? ?? 0;
+    var groupedRemittances = ViewBag.GroupedRemittances as List<IGrouping<string, iBITS_Portal.Models.Remittance>>;
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .pending-header {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+        border: 2px solid rgba(245, 158, 11, 0.4);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    .section-group {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .section-header {
+        background: rgba(212, 175, 55, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1rem 1.25rem;
+    }
+    .remittance-row {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.2s ease;
+    }
+    .remittance-row:last-child { border-bottom: none; }
+    .remittance-row:hover { background: rgba(255, 255, 255, 0.03); }
+    .batch-code {
+        font-family: 'Courier New', monospace;
+        background: rgba(212, 175, 55, 0.15);
+        color: var(--gold-primary);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .days-badge {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .days-badge.urgent {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+    }
+    .btn-quick-validate {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .btn-quick-validate:hover { color: white; transform: translateY(-1px); }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-hourglass-split me-2"></i> Pending Remittances
+            @if (totalCount > 0)
+            {
+                <span class="badge bg-warning text-dark ms-2">@totalCount awaiting</span>
+            }
+        </h3>
+        <p class="text-muted small mb-0">Review and validate remittances from Class Treasurers</p>
+    </div>
+    <div>
+        <a asp-action="OrgTreasurerDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <a asp-action="ValidatedRemittances" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-check-all me-1"></i> Validated History
+        </a>
+    </div>
+</div>
+
+<!-- ALERTS -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="background: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; color: #34d399;">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; color: #f87171;">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (Model.Any())
+{
+    <!-- SUMMARY -->
+    <div class="pending-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="text-warning mb-2"><i class="bi bi-exclamation-triangle me-2"></i> Action Required</h5>
+                <p class="text-muted mb-0">
+                    @totalCount remittance(s) from @(groupedRemittances?.Count ?? 0) section(s) are waiting for your validation. 
+                    The official payment dates will be set when you validate each remittance.
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="fs-2 fw-bold text-warning">₱@totalAmount.ToString("N2")</div>
+                <small class="text-muted">Total Pending Amount</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- GROUPED BY SECTION -->
+    @if (groupedRemittances != null)
+    {
+        @foreach (var sectionGroup in groupedRemittances)
+        {
+            var sectionTotal = sectionGroup.Sum(r => r.TotalAmount);
+            var sectionCount = sectionGroup.Count();
+            
+            <div class="section-group">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white mb-0">
+                            <i class="bi bi-people-fill me-2" style="color: var(--gold-primary);"></i>
+                            Section @sectionGroup.Key
+                        </h6>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted me-3">@sectionCount remittance(s)</span>
+                        <span class="fw-bold" style="color: var(--gold-primary);">₱@sectionTotal.ToString("N2")</span>
+                    </div>
+                </div>
+                
+                @foreach (var remittance in sectionGroup.OrderBy(r => r.SubmittedDate))
+                {
+                    var daysWaiting = remittance.DaysPending;
+                    var isUrgent = daysWaiting >= 3;
+                    
+                    <div class="remittance-row">
+                        <div class="row align-items-center">
+                            <div class="col-md-5">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="batch-code me-2">@remittance.BatchCode</span>
+                                    <span class="days-badge @(isUrgent ? "urgent" : "")">
+                                        @daysWaiting day(s) ago
+                                    </span>
+                                </div>
+                                <div class="text-white">@remittance.CategoryName</div>
+                                <small class="text-muted">
+                                    Remitted by: <span class="text-white fw-semibold">@(remittance.Section ?? "Unknown Section")</span> • 
+                                    @remittance.SubmittedDate.ToString("MMM dd, h:mm tt")
+                                </small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="fs-5 fw-bold" style="color: var(--gold-primary);">
+                                    ₱@remittance.TotalAmount.ToString("N2")
+                                </div>
+                                <small class="text-muted">@remittance.TotalStudents students</small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <a asp-action="RemittanceDetails" asp-route-id="@remittance.RemittanceId" 
+                                   class="btn btn-outline-light btn-sm me-2">
+                                    <i class="bi bi-eye me-1"></i> Review
+                                </a>
+                                <form asp-action="ValidateRemittance" method="post" style="display: inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="remittanceId" value="@remittance.RemittanceId" />
+                                    <button type="submit" class="btn btn-quick-validate"
+                                            onclick="return confirm('Quick validate @remittance.BatchCode for ₱@remittance.TotalAmount.ToString("N2")? The official payment date will be set to NOW.');">
+                                        <i class="bi bi-check-lg me-1"></i> Validate
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+else
+{
+    <!-- EMPTY STATE -->
+    <div class="glass-panel p-5 text-center">
+        <div style="width: 100px; height: 100px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <i class="bi bi-check-circle fs-1 text-success"></i>
+        </div>
+        <h4 class="text-white mb-2">All Caught Up!</h4>
+        <p class="text-muted mb-4">No pending remittances to validate. All submissions have been processed.</p>
+        <a asp-action="ValidatedRemittances" class="btn btn-outline-success">
+            <i class="bi bi-clock-history me-1"></i> View Validated History
+        </a>
+    </div>
+}
+
+@section Scripts{
+<script>
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+}

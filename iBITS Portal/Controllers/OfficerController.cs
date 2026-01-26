@@ -584,6 +584,7 @@ namespace iBITS_Portal.Controllers
 
         // ============================================================
         // ORG TREASURER DASHBOARD
+        // Only counts VALIDATED remittances (not just paid by Class Treasurer)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgTreasurerDashboard()
@@ -592,20 +593,36 @@ namespace iBITS_Portal.Controllers
             var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
             var fines = await _context.Fines.Include(f => f.StudentNumNavigation).ToListAsync();
 
-            // Calculate statistics
-            ViewBag.TotalFeesCollected = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.TotalFinesCollected = fines.Where(f => f.FinesStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.PendingFees = fees.Where(f => f.FeeStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
+            // Calculate statistics - ONLY count validated remittances (RemittanceStatus == "Remitted")
+            // This ensures only payments that have been validated by Org Treasurer are counted
+            ViewBag.TotalFeesCollected = fees
+                .Where(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                .Sum(f => f.Amount ?? 0);
+            ViewBag.TotalFinesCollected = fines
+                .Where(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                .Sum(f => f.Amount ?? 0);
+            
+            // Pending includes: unpaid + paid but not yet remitted/validated
+            ViewBag.PendingFees = fees
+                .Where(f => f.FeeStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
+                .Sum(f => f.Amount ?? 0);
+            ViewBag.PendingFines = fines
+                .Where(f => f.FinesStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
+                .Sum(f => f.Amount ?? 0);
+            
             ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
 
-            // Section breakdown
+            // Count pending remittances awaiting validation
+            ViewBag.PendingRemittanceCount = await _context.Remittances
+                .CountAsync(r => r.Status == RemittanceStatus.Pending);
+
+            // Section breakdown - only count validated remittances as "Paid"
             var sectionStats = fees.GroupBy(f => f.StudentNumNavigation?.YearLevelSection ?? "Unknown")
                 .Select(g => new
                 {
                     Section = g.Key,
                     TotalFees = g.Sum(f => f.Amount ?? 0),
-                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0)
+                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0)
                 }).ToList();
 
             ViewBag.SectionStats = sectionStats;
@@ -902,6 +919,14 @@ namespace iBITS_Portal.Controllers
                 }
 
                 var oldStatus = fee.FeeStatus;
+
+                // LOCK CHECK: Cannot revoke PAID items that are already remitted/validated
+                if (oldStatus?.ToUpper() == "PAID" && newStatus == "Unpaid" && fee.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                {
+                    TempData["Error"] = "Cannot revoke payment. This fee has already been validated through remittance and is locked.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFees"));
+                }
+
                 fee.FeeStatus = newStatus;
                 _context.Fees.Update(fee);
 
@@ -988,6 +1013,13 @@ namespace iBITS_Portal.Controllers
                 }
 
                 var oldStatus = fine.FinesStatus;
+
+                // LOCK CHECK: Cannot revoke PAID items that are already remitted/validated
+                if (oldStatus?.ToUpper() == "PAID" && newStatus == "Unpaid" && fine.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                {
+                    TempData["Error"] = "Cannot revoke payment. This fine has already been validated through remittance and is locked.";
+                    return Redirect(returnUrl ?? Url.Action("OrgFines"));
+                }
                 fine.FinesStatus = newStatus;
                 _context.Fines.Update(fine);
 
@@ -2222,6 +2254,881 @@ namespace iBITS_Portal.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
+
+        // ============================================================
+        // ============================================================
+        //          REMITTANCE SYSTEM - CLASS TREASURER METHODS
+        // ============================================================
+        // ============================================================
+
+        #region Class Treasurer - Remittance Methods
+
+        /// <summary>
+        /// Helper: Generate unique batch code for remittance
+        /// </summary>
+        private async Task<string> GenerateRemittanceBatchCode()
+        {
+            var year = DateTime.Now.Year.ToString();
+            var lastBatch = await _context.Remittances
+                .Where(r => r.BatchCode.StartsWith($"RMT-{year}-"))
+                .OrderByDescending(r => r.BatchCode)
+                .FirstOrDefaultAsync();
+
+            int nextNum = 1;
+            if (lastBatch != null)
+            {
+                var lastNumStr = lastBatch.BatchCode.Split('-').LastOrDefault();
+                if (int.TryParse(lastNumStr, out int lastNum))
+                {
+                    nextNum = lastNum + 1;
+                }
+            }
+
+            return $"RMT-{year}-{nextNum:D4}";
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: Mark fee as paid (with remittance tracking)
+        /// Only works if fee is NOT yet remitted
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CollectFeePayment(int feeId, string? paymentMethod, string? transactionRef, string? notes)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null) return Json(new { success = false, message = "Session expired." });
+
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+                if (treasurer == null) return Json(new { success = false, message = "Treasurer not found." });
+
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null) return Json(new { success = false, message = "Fee not found." });
+
+                // Security: Section check
+                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "Unauthorized: Student belongs to a different section." });
+                }
+
+                // Check if already remitted (locked)
+                if (fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "This fee has already been remitted and cannot be modified." });
+                }
+
+                // Check if already paid
+                if (fee.FeeStatus?.ToUpper() == "PAID")
+                {
+                    return Json(new { success = false, message = "This fee is already marked as paid." });
+                }
+
+                // Mark as paid with collection tracking
+                fee.FeeStatus = "Paid";
+                fee.AmountPaid = fee.Amount ?? 0;
+                fee.CollectedBy = treasurer.StudentNum;
+                fee.CollectionDate = DateTime.Now;
+                // RemittanceStatus stays "NotRemitted" until Class Treasurer initiates remittance
+
+                _context.Fees.Update(fee);
+
+                // Create transaction record
+                var transaction = new PaymentTransaction
+                {
+                    FeeId = feeId,
+                    StudentNum = fee.StudentNum,
+                    Amount = fee.Amount ?? 0,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
+                    ProcessedBy = treasurer.StudentNum,
+                    TransactionReference = transactionRef?.Trim(),
+                    Notes = notes?.Trim()
+                };
+                _context.PaymentTransactions.Add(transaction);
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Payment collected from {fee.StudentNumNavigation?.FullName}.",
+                    studentName = fee.StudentNumNavigation?.FullName,
+                    amount = fee.Amount
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: Unmark fee as paid (revoke collection)
+        /// Only works if fee is NOT yet remitted
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokeFeesCollection(int feeId)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+                if (treasurer == null) return Json(new { success = false, message = "Treasurer not found." });
+
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null) return Json(new { success = false, message = "Fee not found." });
+
+                // Security: Section check
+                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "Unauthorized." });
+                }
+
+                // Check if already remitted (locked)
+                if (fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot revoke: This fee has already been remitted." });
+                }
+
+                // Revoke payment
+                fee.FeeStatus = "Unpaid";
+                fee.AmountPaid = 0;
+                fee.CollectedBy = null;
+                fee.CollectionDate = null;
+
+                _context.Fees.Update(fee);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Payment revoked successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: Get pending collections ready for remittance
+        /// Shows all paid fees that haven't been remitted yet
+        /// </summary>
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> PendingCollections(string? feeName)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned.";
+                return RedirectToAction("ClassTreasuryDashboard");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            // Get paid fees that are NOT yet remitted
+            var query = _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.FeeStatus.ToUpper() == "PAID")
+                .Where(f => f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
+
+            // Filter by fee name if specified
+            if (!string.IsNullOrEmpty(feeName))
+            {
+                query = query.Where(f => f.FeeName == feeName);
+            }
+
+            var pendingFees = await query.OrderBy(f => f.FeeName).ThenBy(f => f.StudentNumNavigation.StudentLn).ToListAsync();
+
+            // Get distinct fee names for filter dropdown
+            var feeNames = await _context.Fees
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.FeeStatus.ToUpper() == "PAID")
+                .Where(f => f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                .Select(f => f.FeeName)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToListAsync();
+
+            ViewBag.Section = section;
+            ViewBag.FeeNames = feeNames;
+            ViewBag.SelectedFeeName = feeName;
+            ViewBag.TotalPendingAmount = pendingFees.Sum(f => f.Amount ?? 0);
+            ViewBag.TotalPendingCount = pendingFees.Count;
+
+            return View(pendingFees);
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: Initiate remittance for a specific fee category
+        /// GET - Shows confirmation page
+        /// </summary>
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> InitiateRemittance(string feeName)
+        {
+            if (string.IsNullOrEmpty(feeName))
+            {
+                TempData["Error"] = "Please select a fee category to remit.";
+                return RedirectToAction("PendingCollections");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned.";
+                return RedirectToAction("ClassTreasuryDashboard");
+            }
+
+            var section = treasurer.YearLevelSection;
+
+            // Get all paid, not-remitted fees for this category
+            var feesToRemit = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.FeeName == feeName)
+                .Where(f => f.FeeStatus.ToUpper() == "PAID")
+                .Where(f => f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
+
+            if (!feesToRemit.Any())
+            {
+                TempData["Warning"] = "No payments to remit for this fee category.";
+                return RedirectToAction("PendingCollections");
+            }
+
+            ViewBag.FeeName = feeName;
+            ViewBag.Section = section;
+            ViewBag.TotalAmount = feesToRemit.Sum(f => f.Amount ?? 0);
+            ViewBag.TotalStudents = feesToRemit.Count;
+            ViewBag.TreasurerName = treasurer.FullName;
+
+            return View(feesToRemit);
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: Confirm and submit remittance
+        /// POST - Creates remittance batch and locks the fees
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmRemittance(string feeName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(feeName))
+                {
+                    TempData["Error"] = "Invalid fee category.";
+                    return RedirectToAction("PendingCollections");
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+                {
+                    TempData["Error"] = "No section assigned.";
+                    return RedirectToAction("ClassTreasuryDashboard");
+                }
+
+                var section = treasurer.YearLevelSection;
+
+                // CHECK FOR DUPLICATE REMITTANCE: One remittance per category per section
+                var existingRemittance = await _context.Remittances
+                    .FirstOrDefaultAsync(r => r.Section == section 
+                        && r.FeeName == feeName 
+                        && r.RemittanceType == RemittanceType.Fee
+                        && (r.Status == RemittanceStatus.Pending || r.Status == RemittanceStatus.Validated));
+
+                if (existingRemittance != null)
+                {
+                    var statusText = existingRemittance.Status == RemittanceStatus.Pending ? "pending validation" : "already validated";
+                    TempData["Error"] = $"This fee category '{feeName}' has already been remitted for your section ({section}). Status: {statusText}. Batch: {existingRemittance.BatchCode}";
+                    return RedirectToAction("PendingCollections");
+                }
+
+                // Get fees to remit
+                var feesToRemit = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                    .Where(f => f.FeeName == feeName)
+                    .Where(f => f.FeeStatus.ToUpper() == "PAID")
+                    .Where(f => f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                    .ToListAsync();
+
+                if (!feesToRemit.Any())
+                {
+                    TempData["Warning"] = "No payments to remit.";
+                    return RedirectToAction("PendingCollections");
+                }
+
+                // Get academic year
+                var acadYear = await _context.SystemSettings
+                    .Where(s => s.SettingKey == "CurrentAcademicYear")
+                    .Select(s => s.SettingValue)
+                    .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+
+                // Generate batch code
+                var batchCode = await GenerateRemittanceBatchCode();
+
+                // Create remittance record
+                var remittance = new Remittance
+                {
+                    BatchCode = batchCode,
+                    FeeName = feeName,
+                    RemittanceType = RemittanceType.Fee,
+                    Section = section,
+                    TotalAmount = feesToRemit.Sum(f => f.Amount ?? 0),
+                    TotalStudents = feesToRemit.Count,
+                    SubmittedBy = treasurer.StudentNum,
+                    SubmittedDate = DateTime.Now,
+                    Status = RemittanceStatus.Pending,
+                    AcademicYear = acadYear
+                };
+
+                _context.Remittances.Add(remittance);
+                await _context.SaveChangesAsync(); // Save to get RemittanceId
+
+                // Create remittance items and update fee statuses
+                foreach (var fee in feesToRemit)
+                {
+                    // Create remittance item
+                    var item = new RemittanceItem
+                    {
+                        RemittanceId = remittance.RemittanceId,
+                        FeeId = fee.FeeId,
+                        StudentNum = fee.StudentNum,
+                        StudentName = fee.StudentNumNavigation?.FullName,
+                        Amount = fee.Amount ?? 0,
+                        CollectionDate = fee.CollectionDate ?? DateTime.Now,
+                        PaymentMethod = "Cash" // Default, could be enhanced
+                    };
+                    _context.RemittanceItems.Add(item);
+
+                    // Update fee - mark as pending remittance (LOCKED)
+                    fee.RemittanceStatus = FeeRemittanceStatus.PendingRemittance;
+                    fee.RemittanceId = remittance.RemittanceId;
+                    _context.Fees.Update(fee);
+                }
+
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = $"Remittance {batchCode} submitted successfully! Total: ₱{remittance.TotalAmount:N2} from {remittance.TotalStudents} students. Awaiting Org Treasurer validation.";
+                return RedirectToAction("RemittanceHistory");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error creating remittance: {ex.Message}";
+                return RedirectToAction("PendingCollections");
+            }
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: View remittance history
+        /// </summary>
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> RemittanceHistory()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+            if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+            {
+                TempData["Error"] = "No section assigned.";
+                return RedirectToAction("ClassTreasuryDashboard");
+            }
+
+            var remittances = await _context.Remittances
+                .Include(r => r.ValidatedByNavigation)
+                .Where(r => r.Section == treasurer.YearLevelSection)
+                .OrderByDescending(r => r.SubmittedDate)
+                .ToListAsync();
+
+            ViewBag.Section = treasurer.YearLevelSection;
+
+            return View(remittances);
+        }
+
+        /// <summary>
+        /// CLASS TREASURER: View details of a specific remittance
+        /// </summary>
+        [Authorize(Roles = "Class Treasurer, Org Treasurer")]
+        public async Task<IActionResult> RemittanceDetails(int id)
+        {
+            var remittance = await _context.Remittances
+                .Include(r => r.SubmittedByNavigation)
+                .Include(r => r.ValidatedByNavigation)
+                .Include(r => r.RemittanceItems)
+                    .ThenInclude(i => i.Student)
+                .FirstOrDefaultAsync(r => r.RemittanceId == id);
+
+            if (remittance == null)
+            {
+                TempData["Error"] = "Remittance not found.";
+                return RedirectToAction("RemittanceHistory");
+            }
+
+            // Security check for Class Treasurer
+            if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+                if (treasurer?.YearLevelSection != remittance.Section)
+                {
+                    TempData["Error"] = "Unauthorized access.";
+                    return RedirectToAction("RemittanceHistory");
+                }
+            }
+
+            return View(remittance);
+        }
+
+        #endregion
+
+
+
+        // ============================================================
+        // ============================================================
+        //          REMITTANCE SYSTEM - ORG TREASURER METHODS
+        // ============================================================
+        // ============================================================
+
+        #region Org Treasurer - Remittance Methods
+
+        /// <summary>
+        /// ORG TREASURER: View all pending remittances from all sections
+        /// </summary>
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> PendingRemittances()
+        {
+            var pendingRemittances = await _context.Remittances
+                .Include(r => r.SubmittedByNavigation)
+                .Where(r => r.Status == RemittanceStatus.Pending)
+                .OrderBy(r => r.SubmittedDate)
+                .ToListAsync();
+
+            // Group by section for better organization
+            var groupedBySection = pendingRemittances
+                .GroupBy(r => r.Section)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            ViewBag.TotalPendingAmount = pendingRemittances.Sum(r => r.TotalAmount);
+            ViewBag.TotalPendingCount = pendingRemittances.Count;
+            ViewBag.GroupedRemittances = groupedBySection;
+
+            return View(pendingRemittances);
+        }
+
+        /// <summary>
+        /// ORG TREASURER: Validate (Accept) a remittance
+        /// Sets the official payment date and syncs to all student records
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ValidateRemittance(int remittanceId, string? validationNotes)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var orgTreasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (orgTreasurer == null)
+                {
+                    TempData["Error"] = "Org Treasurer profile not found.";
+                    return RedirectToAction("PendingRemittances");
+                }
+
+                var remittance = await _context.Remittances
+                    .Include(r => r.RemittanceItems)
+                    .FirstOrDefaultAsync(r => r.RemittanceId == remittanceId);
+
+                if (remittance == null)
+                {
+                    TempData["Error"] = "Remittance not found.";
+                    return RedirectToAction("PendingRemittances");
+                }
+
+                if (remittance.Status != RemittanceStatus.Pending)
+                {
+                    TempData["Warning"] = "This remittance has already been processed.";
+                    return RedirectToAction("PendingRemittances");
+                }
+
+                // THE OFFICIAL VALIDATION DATE IS NOW
+                var validationDate = DateTime.Now;
+
+                // Update remittance status
+                remittance.Status = RemittanceStatus.Validated;
+                remittance.ValidatedBy = orgTreasurer.StudentNum;
+                remittance.ValidationDate = validationDate;
+                remittance.ValidationNotes = validationNotes?.Trim();
+                remittance.UpdatedAt = DateTime.Now;
+
+                _context.Remittances.Update(remittance);
+
+                // Update all associated fees - set official payment date and mark as Remitted
+                if (remittance.RemittanceType == RemittanceType.Fee)
+                {
+                    var feeIds = remittance.RemittanceItems.Where(i => i.FeeId.HasValue).Select(i => i.FeeId.Value).ToList();
+                    var fees = await _context.Fees
+                        .Include(f => f.StudentNumNavigation)
+                        .Where(f => feeIds.Contains(f.FeeId))
+                        .ToListAsync();
+
+                    foreach (var fee in fees)
+                    {
+                        fee.RemittanceStatus = FeeRemittanceStatus.Remitted;
+                        fee.OfficialPaymentDate = validationDate; // THE OFFICIAL DATE
+                        _context.Fees.Update(fee);
+
+                        // Notify student
+                        if (!string.IsNullOrEmpty(fee.StudentNum))
+                        {
+                            _context.Notifications.Add(new Notification
+                            {
+                                StudentNum = fee.StudentNum,
+                                Title = "Payment Officially Validated",
+                                Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been officially validated by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
+                                NotificationType = "Payment",
+                                NotificationDate = DateTime.Now,
+                                IsRead = false,
+                                SentBy = orgTreasurer.StudentNum
+                            });
+                        }
+                    }
+                }
+                else if (remittance.RemittanceType == RemittanceType.Fine)
+                {
+                    var fineIds = remittance.RemittanceItems.Where(i => i.FineId.HasValue).Select(i => i.FineId.Value).ToList();
+                    var fines = await _context.Fines
+                        .Include(f => f.StudentNumNavigation)
+                        .Where(f => fineIds.Contains(f.FineId))
+                        .ToListAsync();
+
+                    foreach (var fine in fines)
+                    {
+                        fine.RemittanceStatus = FeeRemittanceStatus.Remitted;
+                        fine.OfficialPaymentDate = validationDate;
+                        _context.Fines.Update(fine);
+
+                        // Notify student
+                        if (!string.IsNullOrEmpty(fine.StudentNum))
+                        {
+                            _context.Notifications.Add(new Notification
+                            {
+                                StudentNum = fine.StudentNum,
+                                Title = "Fine Payment Officially Validated",
+                                Message = $"Your fine payment of ₱{fine.Amount:N2} for '{fine.Description}' has been officially validated.",
+                                NotificationType = "Payment",
+                                NotificationDate = DateTime.Now,
+                                IsRead = false,
+                                SentBy = orgTreasurer.StudentNum
+                            });
+                        }
+                    }
+                }
+
+                // Notify the Class Treasurer
+                _context.Notifications.Add(new Notification
+                {
+                    StudentNum = remittance.SubmittedBy,
+                    Title = "Remittance Validated",
+                    Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' (₱{remittance.TotalAmount:N2}) has been validated by {orgTreasurer.FullName}.",
+                    NotificationType = "Remittance",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = orgTreasurer.StudentNum
+                });
+
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = $"Remittance {remittance.BatchCode} validated successfully! ₱{remittance.TotalAmount:N2} from {remittance.Section}.";
+                return RedirectToAction("PendingRemittances");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error validating remittance: {ex.Message}";
+                return RedirectToAction("PendingRemittances");
+            }
+        }
+
+        /// <summary>
+        /// ORG TREASURER: Reject a remittance
+        /// Returns control back to Class Treasurer for corrections
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectRemittance(int remittanceId, string rejectionReason)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(rejectionReason))
+                {
+                    TempData["Error"] = "Please provide a reason for rejection.";
+                    return RedirectToAction("RemittanceDetails", new { id = remittanceId });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var orgTreasurer = await _context.Students.FindAsync(user?.UserName);
+
+                var remittance = await _context.Remittances
+                    .Include(r => r.RemittanceItems)
+                    .FirstOrDefaultAsync(r => r.RemittanceId == remittanceId);
+
+                if (remittance == null)
+                {
+                    TempData["Error"] = "Remittance not found.";
+                    return RedirectToAction("PendingRemittances");
+                }
+
+                if (remittance.Status != RemittanceStatus.Pending)
+                {
+                    TempData["Warning"] = "This remittance has already been processed.";
+                    return RedirectToAction("PendingRemittances");
+                }
+
+                // Update remittance status to Rejected
+                remittance.Status = RemittanceStatus.Rejected;
+                remittance.ValidatedBy = orgTreasurer?.StudentNum;
+                remittance.ValidationDate = DateTime.Now;
+                remittance.RejectionReason = rejectionReason.Trim();
+                remittance.UpdatedAt = DateTime.Now;
+
+                _context.Remittances.Update(remittance);
+
+                // Unlock the fees - return them to NotRemitted so Class Treasurer can edit
+                if (remittance.RemittanceType == RemittanceType.Fee)
+                {
+                    var feeIds = remittance.RemittanceItems.Where(i => i.FeeId.HasValue).Select(i => i.FeeId.Value).ToList();
+                    var fees = await _context.Fees.Where(f => feeIds.Contains(f.FeeId)).ToListAsync();
+
+                    foreach (var fee in fees)
+                    {
+                        fee.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+                        fee.RemittanceId = null;
+                        _context.Fees.Update(fee);
+                    }
+                }
+                else if (remittance.RemittanceType == RemittanceType.Fine)
+                {
+                    var fineIds = remittance.RemittanceItems.Where(i => i.FineId.HasValue).Select(i => i.FineId.Value).ToList();
+                    var fines = await _context.Fines.Where(f => fineIds.Contains(f.FineId)).ToListAsync();
+
+                    foreach (var fine in fines)
+                    {
+                        fine.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+                        fine.RemittanceId = null;
+                        _context.Fines.Update(fine);
+                    }
+                }
+
+                // Notify the Class Treasurer
+                _context.Notifications.Add(new Notification
+                {
+                    StudentNum = remittance.SubmittedBy,
+                    Title = "Remittance Rejected",
+                    Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' has been rejected. Reason: {rejectionReason}. Please review and re-submit.",
+                    NotificationType = "Remittance",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = orgTreasurer?.StudentNum
+                });
+
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = $"Remittance {remittance.BatchCode} has been rejected. The Class Treasurer has been notified.";
+                return RedirectToAction("PendingRemittances");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error rejecting remittance: {ex.Message}";
+                return RedirectToAction("PendingRemittances");
+            }
+        }
+
+        /// <summary>
+        /// ORG TREASURER: View all validated remittances (history)
+        /// </summary>
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> ValidatedRemittances(string? section, DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.Remittances
+                .Include(r => r.SubmittedByNavigation)
+                .Include(r => r.ValidatedByNavigation)
+                .Where(r => r.Status == RemittanceStatus.Validated)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(section))
+            {
+                query = query.Where(r => r.Section == section);
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(r => r.ValidationDate >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(r => r.ValidationDate <= endDate.Value.AddDays(1));
+            }
+
+            var remittances = await query.OrderByDescending(r => r.ValidationDate).ToListAsync();
+
+            ViewBag.Sections = await _context.Remittances.Select(r => r.Section).Distinct().OrderBy(s => s).ToListAsync();
+            ViewBag.TotalValidatedAmount = remittances.Sum(r => r.TotalAmount);
+
+            return View(remittances);
+        }
+
+        /// <summary>
+        /// ORG TREASURER: Edit unpaid fee records (Administrative Override)
+        /// Can ONLY edit UNPAID and NOT REMITTED records
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AdminEditFee(int feeId, string newStatus)
+        {
+            try
+            {
+                var fee = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee not found." });
+                }
+
+                // CRITICAL: Cannot edit PAID or REMITTED records
+                if (fee.FeeStatus?.ToUpper() == "PAID")
+                {
+                    return Json(new { success = false, message = "Cannot edit: This fee is already marked as PAID. Only UNPAID records can be modified." });
+                }
+
+                if (fee.RemittanceStatus == FeeRemittanceStatus.Remitted || 
+                    fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance)
+                {
+                    return Json(new { success = false, message = "Cannot edit: This fee has been remitted or is pending remittance." });
+                }
+
+                // Allow status update for unpaid records
+                var user = await _userManager.GetUserAsync(User);
+                var orgTreasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (newStatus == "Paid")
+                {
+                    fee.FeeStatus = "Paid";
+                    fee.AmountPaid = fee.Amount ?? 0;
+                    fee.CollectedBy = orgTreasurer?.StudentNum;
+                    fee.CollectionDate = DateTime.Now;
+                    fee.OfficialPaymentDate = DateTime.Now; // Direct payment by Org Treasurer
+                    fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Mark as remitted directly
+
+                    // Create transaction
+                    _context.PaymentTransactions.Add(new PaymentTransaction
+                    {
+                        FeeId = feeId,
+                        StudentNum = fee.StudentNum,
+                        Amount = fee.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Admin Override",
+                        ProcessedBy = orgTreasurer?.StudentNum ?? "",
+                        Notes = "Payment recorded directly by Org Treasurer (Admin Override)"
+                    });
+
+                    // Notify student
+                    if (!string.IsNullOrEmpty(fee.StudentNum))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            StudentNum = fee.StudentNum,
+                            Title = "Fee Payment Recorded",
+                            Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as paid by the Organization Treasurer.",
+                            NotificationType = "Payment",
+                            NotificationDate = DateTime.Now,
+                            IsRead = false,
+                            SentBy = orgTreasurer?.StudentNum
+                        });
+                    }
+                }
+
+                _context.Fees.Update(fee);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fee updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ORG TREASURER DASHBOARD - Updated with remittance stats
+        /// </summary>
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> OrgTreasurerDashboardWithRemittance()
+        {
+            // Get all fees and fines
+            var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
+            var fines = await _context.Fines.Include(f => f.StudentNumNavigation).ToListAsync();
+
+            // Basic statistics
+            ViewBag.TotalFeesCollected = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
+            ViewBag.TotalFinesCollected = fines.Where(f => f.FinesStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
+            ViewBag.PendingFees = fees.Where(f => f.FeeStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
+            ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
+            ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
+
+            // Remittance statistics
+            var pendingRemittances = await _context.Remittances
+                .Where(r => r.Status == RemittanceStatus.Pending)
+                .ToListAsync();
+
+            ViewBag.PendingRemittanceCount = pendingRemittances.Count;
+            ViewBag.PendingRemittanceAmount = pendingRemittances.Sum(r => r.TotalAmount);
+
+            var validatedThisMonth = await _context.Remittances
+                .Where(r => r.Status == RemittanceStatus.Validated)
+                .Where(r => r.ValidationDate.HasValue && r.ValidationDate.Value.Month == DateTime.Now.Month)
+                .ToListAsync();
+
+            ViewBag.ValidatedThisMonthCount = validatedThisMonth.Count;
+            ViewBag.ValidatedThisMonthAmount = validatedThisMonth.Sum(r => r.TotalAmount);
+
+            // Section breakdown
+            var sectionStats = fees.GroupBy(f => f.StudentNumNavigation?.YearLevelSection ?? "Unknown")
+                .Select(g => new
+                {
+                    Section = g.Key,
+                    TotalFees = g.Sum(f => f.Amount ?? 0),
+                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0),
+                    RemittedFees = g.Where(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0)
+                }).ToList();
+
+            ViewBag.SectionStats = sectionStats;
+
+            return View("OrgTreasurerDashboard");
+        }
+
+        #endregion
+
     }
 }
-

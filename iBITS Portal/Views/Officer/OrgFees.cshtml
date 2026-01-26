@@ -1,6 +1,7 @@
 @* FILE PATH: Views/Officer/OrgFees.cshtml *@
-@* ORG TREASURER - FEES MANAGEMENT (Admin-style UI) *@
+@* ORG TREASURER - FEES MANAGEMENT (Edit UNPAID only, no partial payments) *@
 @model IEnumerable<iBITS_Portal.Models.Fee>
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Organization Fees Management";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
@@ -260,7 +261,9 @@
 <!-- INFO BANNER -->
 <div class="info-banner mb-4">
     <i class="bi bi-info-circle me-2"></i>
-    <strong>Note:</strong> As Org Treasurer, you can <strong>VIEW</strong> and <strong>CREATE</strong> fees. Class Treasurers manage payment confirmations for their respective sections.
+    <strong>Note:</strong> As Org Treasurer, you can <strong>VIEW</strong>, <strong>CREATE</strong> fees, and mark <strong>UNPAID</strong> records as paid. 
+    You <strong>CANNOT</strong> edit records that are already <strong>PAID</strong> or <strong>REMITTED</strong>. 
+    Class Treasurers collect payments and submit remittances for validation.
 </div>
 
 <!-- FEE RECORDS TABLE -->
@@ -301,10 +304,16 @@
                         var student = fee.StudentNumNavigation;
                         var paymentStatus = fee.PaymentStatus;
                         var isPaid = paymentStatus == "Paid";
-                        var isPartial = paymentStatus == "Partial";
+                        var isUnpaid = paymentStatus == "Unpaid";
                         var remainingBalance = fee.RemainingBalance;
-                        var statusClass = isPaid ? "row-paid" : (isPartial ? "row-partial" : "");
-                        var checkboxClass = isPaid ? "status-paid no-revoke" : (isPartial ? "status-partial" : "status-unpaid");
+                        
+                        // Check remittance status - CANNOT edit if PAID or REMITTED
+                        var isRemitted = fee.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                        var isPendingRemit = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
+                        var isLocked = isPaid || isRemitted || isPendingRemit;
+                        var canEdit = isUnpaid && !isLocked;
+                        
+                        var statusClass = isPaid ? "row-paid" : (isLocked ? "row-locked" : "");
 
                         <tr class="fee-row @statusClass"
                             data-fee-id="@fee.FeeId"
@@ -318,20 +327,16 @@
                             data-paid="@fee.AmountPaid"
                             data-balance="@remainingBalance">
                             
-                            <!-- Checkbox Column -->
-                            <td class="text-center">
-                                <div class="payment-checkbox-wrapper">
-                                    <div class="payment-checkbox @checkboxClass" 
-                                         data-fee-id="@fee.FeeId"
-                                         data-student-name="@(student?.FullName ?? "Unknown")"
-                                         data-fee-name="@fee.FeeName"
-                                         data-amount="@(fee.Amount ?? 0)"
-                                         data-balance="@remainingBalance"
-                                         data-status="@paymentStatus.ToLower()"
-                                         onclick="@(isPaid ? "" : "handleOrgFeeCheckbox(this)")"
-                                         title="@(isPaid ? "Payment completed" : (isPartial ? "Click to complete payment" : "Click to mark as paid"))">
-                                    </div>
-                                </div>
+                            <!-- Row Number -->
+                            <td class="text-center text-muted">
+                                @if (isLocked)
+                                {
+                                    <i class="bi bi-lock-fill" style="color: #a78bfa;" title="Locked - Cannot edit"></i>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
                             </td>
                             
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
@@ -352,15 +357,19 @@
                             <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
                             <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
                             
-                            <!-- Status Badge -->
+                            <!-- Status Badge with Remittance Info -->
                             <td>
-                                @if (isPaid)
+                                @if (isRemitted)
+                                {
+                                    <span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-lock-fill"></i> Remitted</span>
+                                }
+                                else if (isPendingRemit)
+                                {
+                                    <span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                }
+                                else if (isPaid)
                                 {
                                     <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
-                                }
-                                else if (isPartial)
-                                {
-                                    <span class="status-badge status-partial"><i class="bi bi-pie-chart-fill"></i> Partial</span>
                                 }
                                 else
                                 {
@@ -368,17 +377,25 @@
                                 }
                             </td>
                             
-                            <!-- Actions -->
+                            <!-- Actions - ONLY for UNPAID records -->
                             <td class="text-center">
-                                @if (!isPaid)
+                                @if (canEdit)
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="openFeePaymentModal(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0), @fee.AmountPaid, @remainingBalance)" title="Record partial payment">
-                                        <i class="bi bi-cash-coin"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="markOrgFeePaid(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0))" title="Mark as Paid (Full Payment)">
+                                        <i class="bi bi-check-circle"></i>
                                     </button>
+                                }
+                                else if (isRemitted)
+                                {
+                                    <span class="text-purple" title="Remitted - Locked"><i class="bi bi-lock-fill"></i></span>
+                                }
+                                else if (isPendingRemit)
+                                {
+                                    <span class="text-warning" title="Pending Remittance"><i class="bi bi-hourglass-split"></i></span>
                                 }
                                 else
                                 {
-                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                                    <span class="text-success" title="Paid"><i class="bi bi-check-circle-fill"></i></span>
                                 }
                             </td>
                         </tr>
@@ -731,30 +748,20 @@
         });
 
         // ============================================================
-        // CHECKBOX-BASED PAYMENT (Org Treasurer - No Revoke)
+        // ORG TREASURER - MARK UNPAID AS PAID (Full Payment Only)
         // ============================================================
         var currentOrgFeeData = {};
 
-        function handleOrgFeeCheckbox(checkbox) {
-            const feeId = checkbox.dataset.feeId;
-            const status = checkbox.dataset.status;
-            const studentName = checkbox.dataset.studentName;
-            const feeName = checkbox.dataset.feeName;
-            const amount = parseFloat(checkbox.dataset.amount);
-            const balance = parseFloat(checkbox.dataset.balance);
-
-            if (status === 'paid') {
-                showToast('info', 'This fee is already paid. Contact admin to revoke.');
-                return;
-            }
-
-            currentOrgFeeData = { feeId, studentName, feeName, amount, balance };
+        // Open confirmation modal for marking as paid
+        function markOrgFeePaid(feeId, studentName, feeName, amount) {
+            currentOrgFeeData = { feeId, studentName, feeName, amount };
             document.getElementById('confirmOrgFeeStudentName').textContent = studentName;
             document.getElementById('confirmOrgFeeFeeName').textContent = feeName;
-            document.getElementById('confirmOrgFeeAmount').textContent = balance.toFixed(2);
+            document.getElementById('confirmOrgFeeAmount').textContent = amount.toFixed(2);
             new bootstrap.Modal(document.getElementById('confirmOrgFeePaymentModal')).show();
         }
 
+        // Execute mark as paid via AdminEditFee
         async function executeOrgFeePayment() {
             const btn = document.getElementById('confirmOrgFeePaymentBtn');
             btn.disabled = true;
@@ -762,25 +769,28 @@
 
             try {
                 const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-                const response = await fetch('/Officer/ToggleFeePayment', {
+                const formData = new FormData();
+                formData.append('feeId', currentOrgFeeData.feeId);
+                formData.append('newStatus', 'Paid');
+                formData.append('__RequestVerificationToken', token);
+
+                const response = await fetch('/Officer/AdminEditFee', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': token
-                    },
-                    body: `feeId=${currentOrgFeeData.feeId}&markAsPaid=true`
+                    body: formData
                 });
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    updateOrgFeeRowUI(currentOrgFeeData.feeId, result.newStatus, result.amountPaid, result.balance);
                     bootstrap.Modal.getInstance(document.getElementById('confirmOrgFeePaymentModal')).hide();
                     showToast('success', result.message);
+                    // Reload to reflect changes
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     showToast('error', result.message);
                 }
             } catch (error) {
+                console.error('Error:', error);
                 showToast('error', 'An error occurred. Please try again.');
             } finally {
                 btn.disabled = false;

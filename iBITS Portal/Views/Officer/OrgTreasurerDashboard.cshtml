@@ -105,6 +105,46 @@
     </div>
 </div>
 
+<!-- REMITTANCE MANAGEMENT CARDS -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <a href="@Url.Action("PendingRemittances", "Officer")" class="text-decoration-none">
+            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.4);">
+                <div class="d-flex align-items-center">
+                    <div class="me-4" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
+                        <i class="bi bi-hourglass-split fs-1"></i>
+                    </div>
+                    <div>
+                        <h5 class="text-white mb-1 fw-bold">Pending Remittances</h5>
+                        <p class="text-muted mb-0 small">Review and validate remittances from Class Treasurers</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-chevron-right fs-4" style="color: #fbbf24;"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="@Url.Action("ValidatedRemittances", "Officer")" class="text-decoration-none">
+            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.3);">
+                <div class="d-flex align-items-center">
+                    <div class="me-4" style="background: rgba(16, 185, 129, 0.2); color: #34d399; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
+                        <i class="bi bi-check-all fs-1"></i>
+                    </div>
+                    <div>
+                        <h5 class="text-white mb-1 fw-bold">Validated Remittances</h5>
+                        <p class="text-muted mb-0 small">View history of all validated remittances</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="bi bi-chevron-right fs-4" style="color: #34d399;"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <!-- STATISTICS CARDS -->
 <div class="row mb-4">
     <div class="col-md-3">

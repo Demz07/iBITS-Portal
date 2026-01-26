@@ -1,0 +1,373 @@
+/* ============================================================
+   FILE: wwwroot/css/remittance.css
+   PURPOSE: Styles for the Remittance System UI
+   ============================================================ */
+
+/* ============================================================
+   REMITTANCE STATUS BADGES
+   ============================================================ */
+.remittance-status {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.remittance-status.not-remitted {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.remittance-status.pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.remittance-status.remitted {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.remittance-status.rejected {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ============================================================
+   COLLECTION STATUS INDICATORS
+   ============================================================ */
+.collection-status {
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.collection-status.collected {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+.collection-status.not-collected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+.collection-status.locked {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+/* ============================================================
+   REMITTANCE CARDS
+   ============================================================ */
+.remittance-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.remittance-card:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.remittance-card.pending {
+    border-left: 4px solid #f59e0b;
+}
+
+.remittance-card.validated {
+    border-left: 4px solid #10b981;
+}
+
+.remittance-card.rejected {
+    border-left: 4px solid #ef4444;
+}
+
+/* ============================================================
+   BATCH CODE STYLING
+   ============================================================ */
+.batch-code {
+    font-family: 'Courier New', Consolas, monospace;
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--gold-primary, #d4af37);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.batch-code.validated {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+/* ============================================================
+   ACTION BUTTONS
+   ============================================================ */
+.btn-collect {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-collect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    color: white;
+}
+
+.btn-collect:disabled {
+    background: rgba(107, 114, 128, 0.3);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-revoke {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-revoke:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    color: white;
+}
+
+.btn-remit {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-remit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    color: white;
+}
+
+.btn-validate {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-validate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    color: white;
+}
+
+.btn-reject {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-reject:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    color: white;
+}
+
+/* ============================================================
+   SUMMARY PANELS
+   ============================================================ */
+.remittance-summary-panel {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.pending-summary-panel {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.validated-summary-panel {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+/* ============================================================
+   LOCK INDICATOR (for remitted items)
+   ============================================================ */
+.lock-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #a78bfa;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.lock-indicator i {
+    font-size: 0.9rem;
+}
+
+/* ============================================================
+   DAYS PENDING BADGE
+   ============================================================ */
+.days-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.days-badge.urgent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    animation: pulse-urgent 2s infinite;
+}
+
+@keyframes pulse-urgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ============================================================
+   STUDENT LIST IN REMITTANCE
+   ============================================================ */
+.student-payment-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.student-payment-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.student-payment-item.collected {
+    border-left: 3px solid #10b981;
+}
+
+.student-payment-item.locked {
+    border-left: 3px solid #8b5cf6;
+    opacity: 0.8;
+}
+
+/* ============================================================
+   SECTION GROUP STYLING
+   ============================================================ */
+.section-group {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.section-group-header {
+    background: rgba(212, 175, 55, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-group-body {
+    padding: 0;
+}
+
+/* ============================================================
+   TOOLTIP FOR LOCKED ITEMS
+   ============================================================ */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 100;
+    margin-bottom: 5px;
+}
+
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+@media (max-width: 768px) {
+    .remittance-card {
+        padding: 1rem;
+    }
+    
+    .batch-code {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    
+    .remittance-status {
+        font-size: 0.65rem;
+        padding: 4px 10px;
+    }
+    
+    .btn-collect, .btn-revoke, .btn-remit {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+}

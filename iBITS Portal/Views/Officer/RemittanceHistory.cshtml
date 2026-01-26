@@ -1,0 +1,211 @@
+@* FILE PATH: Views/Officer/RemittanceHistory.cshtml *@
+@* CLASS TREASURER - View remittance history *@
+@model IEnumerable<iBITS_Portal.Models.Remittance>
+@{
+    ViewData["Title"] = "Remittance History";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var currentSection = ViewBag.Section as string ?? "N/A";
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .status-pending {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .status-validated {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .status-rejected {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    .remittance-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .remittance-card:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        transform: translateX(5px);
+    }
+    .batch-code {
+        font-family: 'Courier New', monospace;
+        background: rgba(212, 175, 55, 0.15);
+        color: var(--gold-primary);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-clock-history me-2"></i> Remittance History
+        </h3>
+        <p class="text-muted small mb-0">Section @currentSection - Track your submitted remittances</p>
+    </div>
+    <div>
+        <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <a asp-action="PendingCollections" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-collection me-1"></i> Pending Collections
+        </a>
+    </div>
+</div>
+
+<!-- ALERTS -->
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="background: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; color: #34d399;">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- STATISTICS -->
+@if (Model.Any())
+{
+    var totalValidated = Model.Where(r => r.Status == "Validated").Sum(r => r.TotalAmount);
+    var totalPending = Model.Where(r => r.Status == "Pending").Sum(r => r.TotalAmount);
+    var pendingCount = Model.Count(r => r.Status == "Pending");
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="glass-panel p-3 text-center">
+                <div class="fs-4 fw-bold text-success">₱@totalValidated.ToString("N2")</div>
+                <small class="text-muted">Total Validated</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-panel p-3 text-center">
+                <div class="fs-4 fw-bold text-warning">₱@totalPending.ToString("N2")</div>
+                <small class="text-muted">Pending Validation</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-panel p-3 text-center">
+                <div class="fs-4 fw-bold text-info">@Model.Count()</div>
+                <small class="text-muted">Total Remittances</small>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- REMITTANCE LIST -->
+<div class="glass-panel p-4">
+    @if (Model.Any())
+    {
+        @foreach (var remittance in Model)
+        {
+            var statusClass = remittance.Status switch
+            {
+                "Validated" => "status-validated",
+                "Rejected" => "status-rejected",
+                _ => "status-pending"
+            };
+            var statusIcon = remittance.Status switch
+            {
+                "Validated" => "bi-check-circle-fill",
+                "Rejected" => "bi-x-circle-fill",
+                _ => "bi-hourglass-split"
+            };
+            
+            <div class="remittance-card">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="batch-code me-3">@remittance.BatchCode</span>
+                            <span class="status-badge @statusClass">
+                                <i class="bi @statusIcon me-1"></i> @remittance.Status
+                            </span>
+                        </div>
+                        <h6 class="text-white mb-1">@remittance.CategoryName</h6>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i> Submitted: @remittance.SubmittedDate.ToString("MMM dd, yyyy h:mm tt")
+                        </small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="fs-5 fw-bold" style="color: var(--gold-primary);">₱@remittance.TotalAmount.ToString("N2")</div>
+                        <small class="text-muted">@remittance.TotalStudents students</small>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        @if (remittance.Status == "Validated" && remittance.ValidationDate.HasValue)
+                        {
+                            <small class="text-success d-block">
+                                <i class="bi bi-check2-all me-1"></i> Validated
+                            </small>
+                            <small class="text-muted">@remittance.ValidationDate?.ToString("MMM dd, yyyy")</small>
+                            <small class="text-muted d-block">by @(remittance.ValidatedByNavigation?.FullName ?? "Org Treasurer")</small>
+                        }
+                        else if (remittance.Status == "Rejected")
+                        {
+                            <small class="text-danger d-block mb-1">
+                                <i class="bi bi-x-circle me-1"></i> Rejected
+                            </small>
+                            @if (!string.IsNullOrEmpty(remittance.RejectionReason))
+                            {
+                                <small class="text-muted" title="@remittance.RejectionReason">
+                                    Reason: @(remittance.RejectionReason.Length > 30 ? remittance.RejectionReason.Substring(0, 30) + "..." : remittance.RejectionReason)
+                                </small>
+                            }
+                        }
+                        else
+                        {
+                            <small class="text-warning">
+                                <i class="bi bi-hourglass-split me-1"></i> Awaiting validation
+                            </small>
+                            <small class="text-muted d-block">@remittance.DaysPending day(s) pending</small>
+                        }
+                        
+                        <a asp-action="RemittanceDetails" asp-route-id="@remittance.RemittanceId" class="btn btn-outline-light btn-sm mt-2">
+                            <i class="bi bi-eye me-1"></i> Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-white">No Remittances Yet</h5>
+            <p class="text-muted mb-3">You haven't submitted any remittances yet.</p>
+            <a asp-action="PendingCollections" class="btn btn-outline-warning">
+                <i class="bi bi-collection me-1"></i> View Pending Collections
+            </a>
+        </div>
+    }
+</div>
+
+@section Scripts{
+<script>
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+}

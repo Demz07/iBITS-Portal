@@ -1,0 +1,258 @@
+@* FILE PATH: Views/Officer/RemittanceDetails.cshtml *@
+@* CLASS TREASURER & ORG TREASURER - View remittance details *@
+@model iBITS_Portal.Models.Remittance
+@{
+    ViewData["Title"] = $"Remittance {Model.BatchCode}";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var isOrgTreasurer = User.IsInRole("Org Treasurer");
+    var isPending = Model.Status == "Pending";
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .detail-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    .status-large {
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 2px solid rgba(245, 158, 11, 0.5); }
+    .status-validated { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 2px solid rgba(16, 185, 129, 0.5); }
+    .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 2px solid rgba(239, 68, 68, 0.5); }
+    .info-row { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 0.75rem 0; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; }
+    .info-value { color: white; font-weight: 600; }
+    .btn-validate { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
+    .btn-validate:hover { background: linear-gradient(135deg, #059669, #047857); color: white; }
+    .btn-reject { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; }
+    .btn-reject:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+    .student-item {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-file-earmark-text me-2"></i> Remittance Details
+        </h3>
+        <p class="text-muted small mb-0">
+            <span class="badge" style="background: rgba(212, 175, 55, 0.2); color: var(--gold-primary);">@Model.BatchCode</span>
+        </p>
+    </div>
+    <div>
+        @if (isOrgTreasurer)
+        {
+            <a asp-action="PendingRemittances" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Pending
+            </a>
+        }
+        else
+        {
+            <a asp-action="RemittanceHistory" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to History
+            </a>
+        }
+    </div>
+</div>
+
+<!-- ALERTS -->
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- LEFT: Remittance Info -->
+    <div class="col-lg-5">
+        <div class="detail-card h-100">
+            <!-- Status Badge -->
+            <div class="text-center mb-4">
+                @{
+                    var statusClass = Model.Status switch
+                    {
+                        "Validated" => "status-validated",
+                        "Rejected" => "status-rejected",
+                        _ => "status-pending"
+                    };
+                    var statusIcon = Model.Status switch
+                    {
+                        "Validated" => "bi-check-circle-fill",
+                        "Rejected" => "bi-x-circle-fill",
+                        _ => "bi-hourglass-split"
+                    };
+                }
+                <span class="status-large @statusClass">
+                    <i class="bi @statusIcon me-2"></i> @Model.Status
+                </span>
+            </div>
+            
+            <!-- Info Rows -->
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Batch Code</span>
+                <span class="info-value" style="font-family: monospace; color: var(--gold-primary);">@Model.BatchCode</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Category</span>
+                <span class="info-value">@Model.CategoryName</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Section</span>
+                <span class="info-value">@Model.Section</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Total Amount</span>
+                <span class="info-value fs-5" style="color: var(--gold-primary);">₱@Model.TotalAmount.ToString("N2")</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Total Students</span>
+                <span class="info-value">@Model.TotalStudents</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Submitted By</span>
+                <span class="info-value">@(Model.SubmittedByNavigation?.FullName ?? Model.SubmittedBy)</span>
+            </div>
+            <div class="info-row d-flex justify-content-between">
+                <span class="info-label">Submitted Date</span>
+                <span class="info-value">@Model.SubmittedDate.ToString("MMM dd, yyyy h:mm tt")</span>
+            </div>
+            
+            @if (Model.Status == "Validated" && Model.ValidationDate.HasValue)
+            {
+                <div class="info-row d-flex justify-content-between">
+                    <span class="info-label">Validated By</span>
+                    <span class="info-value text-success">@(Model.ValidatedByNavigation?.FullName ?? "Org Treasurer")</span>
+                </div>
+                <div class="info-row d-flex justify-content-between">
+                    <span class="info-label">Official Date</span>
+                    <span class="info-value text-success">@Model.ValidationDate?.ToString("MMM dd, yyyy h:mm tt")</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.ValidationNotes))
+                {
+                    <div class="info-row">
+                        <span class="info-label d-block mb-1">Notes</span>
+                        <span class="info-value small">@Model.ValidationNotes</span>
+                    </div>
+                }
+            }
+            
+            @if (Model.Status == "Rejected")
+            {
+                <div class="info-row">
+                    <span class="info-label d-block mb-1 text-danger">Rejection Reason</span>
+                    <span class="info-value text-danger">@Model.RejectionReason</span>
+                </div>
+            }
+            
+            <!-- ORG TREASURER ACTIONS -->
+            @if (isOrgTreasurer && isPending)
+            {
+                <hr style="border-color: rgba(255,255,255,0.1);" />
+                <h6 class="text-white mb-3"><i class="bi bi-shield-check me-2"></i> Validation Actions</h6>
+                
+                <!-- Validate Form -->
+                <form asp-action="ValidateRemittance" method="post" class="mb-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="remittanceId" value="@Model.RemittanceId" />
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Validation Notes (optional)</label>
+                        <textarea name="validationNotes" class="form-control form-control-sm" rows="2" 
+                                  style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;"
+                                  placeholder="Add any notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-validate w-100" 
+                            onclick="return confirm('Validate this remittance? This will set the official payment date for all @Model.TotalStudents students.');">
+                        <i class="bi bi-check-circle me-2"></i> Validate Remittance
+                    </button>
+                </form>
+                
+                <!-- Reject Form -->
+                <form asp-action="RejectRemittance" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="remittanceId" value="@Model.RemittanceId" />
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Rejection Reason (required)</label>
+                        <textarea name="rejectionReason" class="form-control form-control-sm" rows="2" required
+                                  style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;"
+                                  placeholder="Explain why this remittance is being rejected..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-reject w-100"
+                            onclick="return confirm('Reject this remittance? The Class Treasurer will be notified and can make corrections.');">
+                        <i class="bi bi-x-circle me-2"></i> Reject Remittance
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+    
+    <!-- RIGHT: Payment List -->
+    <div class="col-lg-7">
+        <div class="detail-card">
+            <h5 class="text-white mb-3">
+                <i class="bi bi-people me-2"></i> Included Payments (@Model.TotalStudents)
+            </h5>
+            
+            @if (Model.RemittanceItems?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark mb-0" style="background: transparent;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="color: var(--gold-primary);">#</th>
+                                <th style="color: var(--gold-primary);">Student</th>
+                                <th style="color: var(--gold-primary);">Amount</th>
+                                <th style="color: var(--gold-primary);">Collected</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var index = 1; }
+                            @foreach (var item in Model.RemittanceItems.OrderBy(i => i.StudentName))
+                            {
+                                <tr>
+                                    <td class="text-muted">@index</td>
+                                    <td>
+                                        <div class="text-white">@(item.StudentName ?? item.Student?.FullName ?? "N/A")</div>
+                                        <small class="text-muted">@item.StudentNum</small>
+                                    </td>
+                                    <td class="fw-bold" style="color: var(--gold-primary);">₱@item.Amount.ToString("N2")</td>
+                                    <td class="text-muted small">@item.CollectionDate.ToString("MM/dd/yy")</td>
+                                </tr>
+                                index++;
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr style="border-top: 2px solid rgba(212, 175, 55, 0.3);">
+                                <td colspan="2" class="text-end fw-bold text-white">Total:</td>
+                                <td class="fw-bold fs-5" style="color: var(--gold-primary);">₱@Model.TotalAmount.ToString("N2")</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">No payment details available.</p>
+            }
+        </div>
+    </div>
+</div>

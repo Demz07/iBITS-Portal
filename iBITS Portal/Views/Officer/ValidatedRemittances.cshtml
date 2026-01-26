@@ -1,0 +1,160 @@
+@* FILE PATH: Views/Officer/ValidatedRemittances.cshtml *@
+@* ORG TREASURER - View validated remittances history *@
+@model IEnumerable<iBITS_Portal.Models.Remittance>
+@{
+    ViewData["Title"] = "Validated Remittances";
+    Layout = "~/Views/Shared/_StudentLayout.cshtml";
+    var sectionList = ViewBag.Sections as List<string> ?? new List<string>();
+    var totalAmount = ViewBag.TotalValidatedAmount as decimal? ?? 0;
+}
+
+<link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
+
+@section Styles{
+<style>
+    .validated-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    .validated-card:hover {
+        border-color: rgba(16, 185, 129, 0.4);
+        transform: translateX(3px);
+    }
+    .batch-code {
+        font-family: 'Courier New', monospace;
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .filter-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+</style>
+}
+
+<!-- HEADER -->
+<div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
+    <div>
+        <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
+            <i class="bi bi-check-all me-2 text-success"></i> Validated Remittances
+        </h3>
+        <p class="text-muted small mb-0">History of all validated remittances</p>
+    </div>
+    <div>
+        <a asp-action="OrgTreasurerDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <a asp-action="PendingRemittances" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-hourglass-split me-1"></i> Pending
+        </a>
+    </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-muted small">Section</label>
+            <select name="section" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;">
+                <option value="">All Sections</option>
+                @foreach (var sec in sectionList)
+                {
+                    <option value="@sec">@sec</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small">From Date</label>
+            <input type="date" name="startDate" class="form-control form-control-sm" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small">To Date</label>
+            <input type="date" name="endDate" class="form-control form-control-sm" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;" />
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-outline-warning btn-sm w-100">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- SUMMARY -->
+@if (Model.Any())
+{
+    <div class="glass-panel p-3 mb-4">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="fs-4 fw-bold text-success">₱@totalAmount.ToString("N2")</div>
+                <small class="text-muted">Total Validated</small>
+            </div>
+            <div class="col-md-4">
+                <div class="fs-4 fw-bold text-white">@Model.Count()</div>
+                <small class="text-muted">Remittances</small>
+            </div>
+            <div class="col-md-4">
+                <div class="fs-4 fw-bold text-info">@Model.Sum(r => r.TotalStudents)</div>
+                <small class="text-muted">Total Students</small>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- REMITTANCE LIST -->
+<div class="glass-panel p-4">
+    @if (Model.Any())
+    {
+        @foreach (var remittance in Model)
+        {
+            <div class="validated-card">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="batch-code me-2">@remittance.BatchCode</span>
+                            <span class="badge bg-success"><i class="bi bi-check me-1"></i>Validated</span>
+                        </div>
+                        <h6 class="text-white mb-1">@remittance.CategoryName</h6>
+                        <small class="text-muted">
+                            Section @remittance.Section • 
+                            By @(remittance.SubmittedByNavigation?.FullName ?? "Class Treasurer")
+                        </small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="fs-5 fw-bold" style="color: var(--gold-primary);">₱@remittance.TotalAmount.ToString("N2")</div>
+                        <small class="text-muted">@remittance.TotalStudents students</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <small class="text-success d-block">
+                            <i class="bi bi-calendar-check me-1"></i>
+                            @remittance.ValidationDate?.ToString("MMM dd, yyyy")
+                        </small>
+                        <small class="text-muted d-block">
+                            by @(remittance.ValidatedByNavigation?.FullName ?? "Org Treasurer")
+                        </small>
+                        <a asp-action="RemittanceDetails" asp-route-id="@remittance.RemittanceId" class="btn btn-outline-light btn-sm mt-2">
+                            <i class="bi bi-eye me-1"></i> Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-white">No Validated Remittances</h5>
+            <p class="text-muted">No remittances match your filter criteria.</p>
+        </div>
+    }
+</div>
