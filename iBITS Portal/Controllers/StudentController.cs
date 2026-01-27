@@ -178,6 +178,7 @@ namespace iBITS_Portal.Controllers
                     endTime = e.EndTime.HasValue ? e.EndTime.Value.ToString(@"hh\:mm tt") : null,
                     eventLocation = e.EventLocation,
                     eventDesc = e.EventDesc,
+                    isClosed = e.IsClosed,
                     attendanceStatus = userAttendance.ContainsKey(e.EventId) ? userAttendance[e.EventId] : "Not Registered"
                 });
 

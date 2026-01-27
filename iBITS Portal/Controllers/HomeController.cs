@@ -93,12 +93,12 @@ namespace iBITS_Portal.Controllers
             // All checks passed, proceed to the dashboard
             var today = DateOnly.FromDateTime(DateTime.Now);
             var nextEvent = await _context.Events
-                .Where(e => e.EventDate >= today)
+                .Where(e => e.EventDate >= today && !e.IsClosed)
                 .OrderBy(e => e.EventDate)
                 .FirstOrDefaultAsync();
 
             var upcomingEvents = await _context.Events
-                .Where(e => e.EventDate >= today)
+                .Where(e => e.EventDate >= today && !e.IsClosed)
                 .OrderBy(e => e.EventDate)
                 .Take(3)
                 .ToListAsync();

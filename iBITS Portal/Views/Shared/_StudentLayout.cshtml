@@ -10,7 +10,35 @@
 @inject SignInManager<IdentityUser> SignInManager
 @{
     Layout = null;
+    string displayRole = "Member";
+    
+    // Priority order: Most specific roles first
+    if (User.IsInRole("Admin"))
+    {
+        displayRole = "Admin";
+    }
+    else if (User.IsInRole("Org Treasurer"))
+    {
+        displayRole = "Org Treasurer";
+    }
+    else if (User.IsInRole("Class Treasurer"))
+    {
+        displayRole = "Class Treasurer";
+    }
+    else if (User.IsInRole("Org Secretary"))
+    {
+        displayRole = "Org Secretary";
+    }
+    else if (User.IsInRole("Class Secretary"))
+    {
+        displayRole = "Class Secretary";
+    }
+    else if (User.IsInRole("Officer"))
+    {
+        displayRole = "Officer";
+    }
 }
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -106,7 +134,7 @@
             <div class="sidebar-header">
                 <img src="~/images/logo.png" alt="iBITS Logo" class="sidebar-logo-img">
                 <div class="sidebar-brand">iBITS <span>PORTAL</span></div>
-                <div class="sidebar-role">Student Command Center</div>
+                <div class="sidebar-role">@displayRole</div>
             </div>
 
             <ul class="list-unstyled components">
@@ -117,9 +145,6 @@
                 <!-- ================== BASE STUDENT LINKS (Always Visible) ================== -->
                 <li class="@(controller == "Home" && action == "Index" ? "active" : "")">
                     <a asp-controller="Home" asp-action="Index"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-                </li>
-                <li class="@(controller == "Student" && action == "Events" ? "active" : "")">
-                    <a asp-controller="Student" asp-action="Events"><i class="bi bi-calendar-event-fill"></i> Events</a>
                 </li>
                 <li class="@(controller == "Student" && action == "Timeline" ? "active" : "")">
                     <a asp-controller="Student" asp-action="Timeline"><i class="bi bi-calendar-check-fill"></i> Participation Timeline</a>
@@ -251,7 +276,7 @@
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
                         <div style="font-weight:bold; color:var(--text-strong);">@User.Identity?.Name</div>
-                        <div style="font-size:0.75rem; color:var(--gold-text);">Member Access</div>
+                        <div style="font-size:0.75rem; color:var(--gold-text);">@displayRole</div>
                     </div>
                     <button type="button" id="themeToggle" class="btn-toggle theme-btn" title="Toggle Theme">
                         <i class="bi bi-sun-fill" id="themeIcon"></i>
