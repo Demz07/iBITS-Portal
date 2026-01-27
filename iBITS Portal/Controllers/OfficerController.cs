@@ -2558,52 +2558,6 @@ namespace iBITS_Portal.Controllers
         /// CLASS TREASURER: Unmark fee as paid (revoke collection)
         /// Only works if fee is NOT yet remitted
         /// </summary>
-        [HttpPost]
-        [Authorize(Roles = "Class Treasurer")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RevokeFeesCollection(int feeId)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                var treasurer = await _context.Students.FindAsync(user?.UserName);
-                if (treasurer == null) return Json(new { success = false, message = "Treasurer not found." });
-
-                var fee = await _context.Fees
-                    .Include(f => f.StudentNumNavigation)
-                    .FirstOrDefaultAsync(f => f.FeeId == feeId);
-
-                if (fee == null) return Json(new { success = false, message = "Fee not found." });
-
-                // Security: Section check
-                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
-                {
-                    return Json(new { success = false, message = "Unauthorized." });
-                }
-
-                // Check if already remitted (locked)
-                if (fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
-                {
-                    return Json(new { success = false, message = "Cannot revoke: This fee has already been remitted." });
-                }
-
-                // Revoke payment
-                fee.FeeStatus = "Unpaid";
-                fee.AmountPaid = 0;
-                fee.CollectedBy = null;
-                fee.CollectionDate = null;
-
-                _context.Fees.Update(fee);
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true, message = "Payment revoked successfully." });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"Error: {ex.Message}" });
-            }
-        }
-
         /// <summary>
         /// CLASS TREASURER: Get pending collections ready for remittance
         /// Shows all paid fees that haven't been remitted yet
@@ -3317,6 +3271,240 @@ namespace iBITS_Portal.Controllers
         }
 
         #endregion
+
+        // ============================================================
+        // CLASS TREASURER - FEE PAYMENT COLLECTION
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<JsonResult> CollectFeePayment(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees.FindAsync(feeId);
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee not found." });
+                }
+
+                // Security: Verify the class treasurer can only collect from their section
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+                var student = await _context.Students.FindAsync(fee.StudentNum);
+
+                if (treasurer?.YearLevelSection != student?.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only collect fees from your own section." });
+                }
+
+                // Check if already paid
+                if (fee.FeeStatus?.ToUpper() == "PAID")
+                {
+                    return Json(new { success = false, message = "This fee is already marked as paid." });
+                }
+
+                // Check if locked (remitted or pending remittance)
+                if (fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot modify - fee is locked for remittance." });
+                }
+
+                // Mark as PAID
+                fee.FeeStatus = "PAID";
+                fee.CollectionDate = DateTime.Now;
+                fee.CollectedBy = treasurer?.StudentNum;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fee marked as PAID successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while processing the payment." });
+            }
+        }
+
+        // ============================================================
+        // CLASS TREASURER - FEE PAYMENT REVOCATION
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<JsonResult> RevokeFeesCollection(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees.FindAsync(feeId);
+                if (fee == null)
+                {
+                    return Json(new { success = false, message = "Fee not found." });
+                }
+
+                // Security: Verify the class treasurer can only revoke from their section
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+                var student = await _context.Students.FindAsync(fee.StudentNum);
+
+                if (treasurer?.YearLevelSection != student?.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only revoke fees from your own section." });
+                }
+
+                // Check if not paid
+                if (fee.FeeStatus?.ToUpper() != "PAID")
+                {
+                    return Json(new { success = false, message = "This fee is not marked as paid." });
+                }
+
+                // Check if locked (remitted or pending remittance)
+                if (fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot revoke - fee has been remitted or is pending remittance." });
+                }
+
+                // Revoke payment
+                fee.FeeStatus = "UNPAID";
+                fee.CollectionDate = null;
+                fee.CollectedBy = null;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fee payment revoked successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while revoking the payment." });
+            }
+        }
+
+        // ============================================================
+        // CLASS TREASURER - FINE PAYMENT COLLECTION
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<JsonResult> CollectFinePayment(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found." });
+                }
+
+                // Get the student (could be from fine.StudentNumNavigation or fine.Attendance.StudentNumNavigation)
+                var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+
+                // Security: Verify the class treasurer can only collect from their section
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer?.YearLevelSection != student?.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only collect fines from your own section." });
+                }
+
+                // Check if already paid
+                if (fine.FinesStatus?.ToUpper() == "PAID")
+                {
+                    return Json(new { success = false, message = "This fine is already marked as paid." });
+                }
+
+                // Check if excused
+                if (fine.FinesStatus?.ToUpper() == "EXCUSED")
+                {
+                    return Json(new { success = false, message = "This fine is excused and cannot be modified." });
+                }
+
+                // Check if locked (remitted or pending remittance)
+                if (fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot modify - fine is locked for remittance." });
+                }
+
+                // Mark as PAID
+                fine.FinesStatus = "PAID";
+                fine.CollectionDate = DateTime.Now;
+                fine.CollectedBy = treasurer?.StudentNum;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fine marked as PAID successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while processing the payment." });
+            }
+        }
+
+        // ============================================================
+        // CLASS TREASURER - FINE PAYMENT REVOCATION
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<JsonResult> RevokeFinesCollection(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found." });
+                }
+
+                // Get the student (could be from fine.StudentNumNavigation or fine.Attendance.StudentNumNavigation)
+                var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+
+                // Security: Verify the class treasurer can only revoke from their section
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user.UserName);
+
+                if (treasurer?.YearLevelSection != student?.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only revoke fines from your own section." });
+                }
+
+                // Check if not paid
+                if (fine.FinesStatus?.ToUpper() != "PAID")
+                {
+                    return Json(new { success = false, message = "This fine is not marked as paid." });
+                }
+
+                // Check if excused
+                if (fine.FinesStatus?.ToUpper() == "EXCUSED")
+                {
+                    return Json(new { success = false, message = "This fine is excused and cannot be modified." });
+                }
+
+                // Check if locked (remitted or pending remittance)
+                if (fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot revoke - fine has been remitted or is pending remittance." });
+                }
+
+                // Revoke payment
+                fine.FinesStatus = "UNPAID";
+                fine.CollectionDate = null;
+                fine.CollectedBy = null;
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fine payment revoked successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while revoking the payment." });
+            }
+        }
 
     }
 }
