@@ -24,75 +24,138 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/student-features.css" asp-append-version="true" />
     <style>
+        /* Existing styles for tabs etc. */
         .nav-tabs .nav-link {
-            color: #9ca3af;
             border: none;
             border-bottom: 3px solid transparent;
+            color: #9ca3af;
             font-weight: 600;
-            padding: 12px 24px;
         }
 
             .nav-tabs .nav-link.active {
                 color: var(--gold-primary);
-                border-bottom: 3px solid var(--gold-primary);
+                border-bottom-color: var(--gold-primary);
                 background: transparent;
             }
 
             .nav-tabs .nav-link:hover {
-                border-bottom: 3px solid var(--gold-primary);
+                border-bottom-color: var(--gold-primary);
                 opacity: 0.8;
             }
 
-        .transaction-card {
+        /* ========================================================= */
+        /* Updated STYLES for short vertical border strip */
+        /* ========================================================= */
+        .financial-item {
+            display: grid;
+            grid-template-columns: 3fr 2fr 1fr 1fr;
+            align-items: center;
+            gap: 1rem;
             background: rgba(255, 255, 255, 0.05);
-            border-left: 4px solid var(--gold-primary);
-            padding: 16px;
-            border-radius: 8px;
+            padding: 16px 20px;
+            border-radius: 12px;
             margin-bottom: 12px;
-            transition: transform 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-            .transaction-card:hover {
-                transform: translateX(5px);
-                background: rgba(255, 255, 255, 0.08);
+            .financial-item::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 0;
+                width: 4px;
+                height: 50%;
+                transform: translateY(-50%);
+                border-radius: 0 4px 4px 0;
             }
 
-        .badge-fee {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .item-fee::before {
+            background-color: #3b82f6;
         }
 
-        .badge-fine {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
+        .item-fine::before {
+            background-color: var(--gold-primary);
+        }
+
+        /* Existing Column and Header Styles */
+        .financial-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-header {
             font-size: 0.75rem;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .col-value {
             font-weight: 600;
+            color: var(--text-strong);
+        }
+
+        .col-amount .col-value {
+            font-size: 1.2rem;
+        }
+
+        /* Column-specific alignment */
+        .col-description {
+            text-align: left;
+        }
+
+        .col-processedby, .col-status {
+            text-align: center;
+        }
+
+        .col-amount {
+            text-align: right;
+        }
+
+        /* ========================================================= */
+        /* UPDATED: BADGE STYLES (Shortened Padding)                 */
+        /* ========================================================= */
+        .badge-type {
+            padding: 2px 6px; /* REDUCED horizontal padding (from 4px 10px to 2px 6px) */
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .badge-type-fee {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge-type-fine {
+            background: var(--gold-primary);
+            color: black;
+        }
+
+        .status-paid {
+            background: #10b981;
+            color: white;
+            padding: 5px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-block;
         }
     </style>
 }
-
+}
 <!-- Balance Summary -->
 <div class="row">
     <div class="col-12">
         <div class="glass-panel text-center">
             <p class="text-uppercase small text-muted mb-2">Current Balance Due</p>
             <h1 class="display-4 fw-bold" style="color: @(totalDue > 0 ? "#f87171" : "#34d399")">₱@totalDue.ToString("N2")</h1>
-            <p class="text-muted mb-0">
-                @if (totalDue > 0)
-                {
-                    <span><i class="bi bi-exclamation-triangle me-1"></i> Outstanding balance</span>
-                }
-                else
-                {
-                    <span><i class="bi bi-check-circle me-1"></i> All payments up to date</span>
-                }
-            </p>
+
         </div>
     </div>
 </div>
@@ -130,7 +193,7 @@
                             <div class="d-flex w-100 justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1">@fee.FeeName</h6>
-                                    <small class="text-muted">Due: @fee.FeesDueDate?.ToString("MMM dd, yyyy")</small>
+
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fee.Amount?.ToString("N2")</span>
@@ -170,11 +233,13 @@
                             <div class="d-flex w-100 justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1">@(fine.Description ?? $"Fine for {fine.Attendance?.Event?.EventName}")</h6>
-                                    <small class="text-muted">Due: @fine.FinesDueDate?.ToString("MMM dd, yyyy")</small>
+
+                                    @* --- THIS LINE HAS BEEN REMOVED ---
+                            <small class="text-muted">Due: @fine.FinesDueDate?.ToString("MMM dd, yyyy")</small>
+                            --- END OF REMOVED CODE --- *@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fine.Amount?.ToString("N2")</span>
-                                    @* FIXED: Use case-insensitive comparison *@
                                     @if (string.Equals(fine.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Paid</span>
@@ -196,6 +261,7 @@
                     </li>
                 }
             </ul>
+
         </div>
 
         <!-- PAYMENT HISTORY TAB -->
@@ -215,90 +281,61 @@
 
 @section Scripts {
     <script>
-        // Load payment history when tab is clicked
-        document.getElementById('history-tab').addEventListener('click', function() {
+        document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
             loadPaymentHistory();
         });
+        if(document.getElementById('history-tab').classList.contains('active')){
+            loadPaymentHistory();
+        }
 
         function loadPaymentHistory() {
             const container = document.getElementById('transactionsList');
+            if(container.dataset.loaded === 'true') return;
 
-            // Show loading spinner
-            container.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Loading payment history...</p>
-                </div>
-            `;
+            container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading...</p></div>`;
 
-            // Fetch payment history
             fetch('@Url.Action("GetPaymentHistory", "Student")')
                 .then(response => response.json())
                 .then(data => {
+                    container.dataset.loaded = 'true';
                     if (data.success && data.transactions && data.transactions.length > 0) {
                         let html = '';
                         data.transactions.forEach(tx => {
-                            const date = new Date(tx.paymentDate);
-                            const badgeClass = tx.type === 'Fee' ? 'badge-fee' : 'badge-fine';
-                            const icon = tx.type === 'Fee' ? 'bi-receipt' : 'bi-exclamation-octagon';
+                            const isFine = tx.type === 'Fine';
 
+                            // UPDATED HTML TEMPLATE: Removed all date columns and subtitles
                             html += `
-                                <div class="transaction-card">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
-                                            <span class="badge ${badgeClass}">
-                                                <i class="bi ${icon} me-1"></i>${tx.type}
-                                            </span>
-                                            <h6 class="mt-2 mb-1">${tx.description}</h6>
-                                        </div>
-                                        <div class="text-end">
-                                            <h5 class="mb-0 text-success">₱${parseFloat(tx.amount).toFixed(2)}</h5>
-                                            <small class="text-muted">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</small>
-                                        </div>
+                                <div class="financial-item ${isFine ? 'item-fine' : 'item-fee'}">
+                                    <!-- Column 1: Description -->
+                                    <div class="financial-col col-description">
+                                        <span class="badge-type ${isFine ? 'badge-type-fine' : 'badge-type-fee'}"><i class="bi ${isFine ? 'bi-exclamation-octagon' : 'bi-receipt'}"></i> ${tx.type}</span>
+                                        <span class="col-value">${tx.description}</span>
                                     </div>
-                                    <div class="row mt-3">
-                                        <div class="col-md-4">
-                                            <small class="text-muted d-block">Payment Method</small>
-                                            <span><i class="bi bi-credit-card me-1"></i>${tx.paymentMethod || 'Cash'}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <small class="text-muted d-block">Processed By</small>
-                                            <span><i class="bi bi-person-check me-1"></i>${tx.processedBy || 'System'}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <small class="text-muted d-block">Reference</small>
-                                            <span class="font-monospace">${tx.transactionReference || 'N/A'}</span>
-                                        </div>
+                                    <!-- Column 2: Processed By -->
+                                    <div class="financial-col col-processedby">
+                                        <span class="col-header">Processed By</span>
+                                        <span class="col-value"><i class="bi bi-person-check me-1"></i> ${tx.processedBy || 'System'}</span>
                                     </div>
-                                    ${tx.notes ? `
-                                        <div class="mt-2">
-                                            <small class="text-muted d-block">Notes</small>
-                                            <span>${tx.notes}</span>
-                                        </div>
-                                    ` : ''}
+                                    <!-- Column 3: Status -->
+                                    <div class="financial-col col-status">
+                                        <span class="col-header">Status</span>
+                                        <span class="status-paid">Paid</span>
+                                    </div>
+                                    <!-- Column 4: Amount -->
+                                    <div class="financial-col col-amount">
+                                        <span class="col-header">Amount</span>
+                                        <span class="col-value" style="color:#34d399;">₱${parseFloat(tx.amount).toFixed(2)}</span>
+                                    </div>
                                 </div>
                             `;
                         });
                         container.innerHTML = html;
                     } else {
-                        container.innerHTML = `
-                            <div class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2"></i>
-                                <p class="mt-2 mb-0">No payment transactions yet.</p>
-                            </div>
-                        `;
+                        container.innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2"></i><p class="mt-2 mb-0">No payment history.</p></div>`;
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading payment history:', error);
-                    container.innerHTML = `
-                        <div class="text-center py-4 text-danger">
-                            <i class="bi bi-exclamation-triangle fs-2"></i>
-                            <p class="mt-2 mb-0">Error loading payment history.</p>
-                        </div>
-                    `;
+                    container.innerHTML = `<div class="text-center py-4 text-danger"><p>Error loading payment history.</p></div>`;
                 });
         }
     </script>

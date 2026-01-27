@@ -11,6 +11,21 @@
     var pendingFees = ViewBag.PendingFees ?? 0m;
     var pendingFines = ViewBag.PendingFines ?? 0m;
     var totalCollections = ViewBag.TotalCollections ?? 0m;
+    
+    // Remittance status breakdown
+    var feesNotRemitted = ViewBag.FeesNotRemitted ?? 0m;
+    var feesNotRemittedCount = ViewBag.FeesNotRemittedCount ?? 0;
+    var feesPendingValidation = ViewBag.FeesPendingValidation ?? 0m;
+    var feesPendingValidationCount = ViewBag.FeesPendingValidationCount ?? 0;
+    var feesValidated = ViewBag.FeesValidated ?? 0m;
+    var feesValidatedCount = ViewBag.FeesValidatedCount ?? 0;
+    
+    var finesNotRemitted = ViewBag.FinesNotRemitted ?? 0m;
+    var finesNotRemittedCount = ViewBag.FinesNotRemittedCount ?? 0;
+    var finesPendingValidation = ViewBag.FinesPendingValidation ?? 0m;
+    var finesPendingValidationCount = ViewBag.FinesPendingValidationCount ?? 0;
+    var finesValidated = ViewBag.FinesValidated ?? 0m;
+    var finesValidatedCount = ViewBag.FinesValidatedCount ?? 0;
 }
 
 @section Styles {
@@ -200,6 +215,115 @@
             <h6 class="text-muted mb-1">Pending Payments</h6>
             <h3 class="fw-bold text-danger mb-0">₱@((pendingFees + pendingFines).ToString("N2"))</h3>
             <small class="text-muted">Outstanding balance</small>
+        </div>
+    </div>
+</div>
+
+<!-- ======================= REMITTANCE STATUS BREAKDOWN ======================= -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-cash-coin me-2 text-gold"></i> Remittance Status Tracking
+            </h5>
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i> 
+                Track the status of collected payments from your section. Items must be remitted and validated by the Org Treasurer before they appear in organizational records.
+            </p>
+            
+            <div class="row">
+                <!-- FEES Remittance Status -->
+                <div class="col-md-6 mb-3">
+                    <div class="card bg-dark border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <i class="bi bi-receipt me-2"></i> Fees Remittance Status
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <i class="bi bi-hourglass-split text-warning me-2"></i>
+                                    <span class="text-muted">Ready to Remit</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-warning text-dark">@feesNotRemittedCount items</span>
+                                    <div class="fw-bold text-warning">₱@feesNotRemitted.ToString("N2")</div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <i class="bi bi-clock-history text-info me-2"></i>
+                                    <span class="text-muted">Pending Validation</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-info">@feesPendingValidationCount items</span>
+                                    <div class="fw-bold text-info">₱@feesPendingValidation.ToString("N2")</div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <span class="text-muted">Validated</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success">@feesValidatedCount items</span>
+                                    <div class="fw-bold text-success">₱@feesValidated.ToString("N2")</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FINES Remittance Status -->
+                <div class="col-md-6 mb-3">
+                    <div class="card bg-dark border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <i class="bi bi-exclamation-triangle me-2"></i> Fines Remittance Status
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <i class="bi bi-hourglass-split text-warning me-2"></i>
+                                    <span class="text-muted">Ready to Remit</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-warning text-dark">@finesNotRemittedCount items</span>
+                                    <div class="fw-bold text-warning">₱@finesNotRemitted.ToString("N2")</div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <i class="bi bi-clock-history text-info me-2"></i>
+                                    <span class="text-muted">Pending Validation</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-info">@finesPendingValidationCount items</span>
+                                    <div class="fw-bold text-info">₱@finesPendingValidation.ToString("N2")</div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    <span class="text-muted">Validated</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success">@finesValidatedCount items</span>
+                                    <div class="fw-bold text-success">₱@finesValidated.ToString("N2")</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>Remittance Process:</strong>
+                <ol class="mb-0 mt-2 small">
+                    <li><strong>Ready to Remit:</strong> Collected payments that need to be submitted to Org Treasurer</li>
+                    <li><strong>Pending Validation:</strong> Submitted for remittance, awaiting Org Treasurer approval</li>
+                    <li><strong>Validated:</strong> Approved by Org Treasurer and recorded in official organizational records</li>
+                </ol>
+            </div>
         </div>
     </div>
 </div>

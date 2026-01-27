@@ -50,14 +50,7 @@
                         </div>
                         <span class="badge badge-@statusClass"><i class="bi @icon me-1"></i> @statusText</span>
                     </div>
-                    @if (statusText.ToLower() == "absent")
-                    {
-                        <div class="mt-3 text-end">
-                            <a href="@Url.Action("SubmitExcuse", "Excuse", new { eventId = record.EventId })" class="btn btn-outline-warning btn-sm">
-                                <i class="bi bi-pencil-square"></i> Submit Excuse Letter
-                            </a>
-                        </div>
-                    }
+
                 </div>
             </div>
         }
@@ -71,3 +64,4 @@
         </div>
     }
 </div>
+

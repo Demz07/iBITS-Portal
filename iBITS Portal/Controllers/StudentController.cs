@@ -1,4 +1,3 @@
-// C:\Users\Dave\OneDrive\Desktop\this where the updated code must be located\Controllers\StudentController.cs
 using DocumentFormat.OpenXml.Spreadsheet;
 using iBITS_Portal.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace iBITS_Portal.Controllers
 {
-    [Authorize] // Just require authentication, not a specific role
+    [Authorize]
     public class StudentController : Controller
     {
         private readonly PortaliBitsContext _context;
@@ -20,33 +19,9 @@ namespace iBITS_Portal.Controllers
             _userManager = userManager;
         }
 
-        // Events Page - Display all upcoming and past events
-        public async Task<IActionResult> Events()
-        {
-            var userId = _userManager.GetUserName(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentNum == userId);
-
-            if (student == null)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            ViewBag.Student = student;
-
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var events = await _context.Events
-                .OrderByDescending(e => e.EventDate)
-                .ToListAsync();
-
-            var attendances = await _context.Attendances
-                .Where(a => a.StudentNum == userId)
-                .ToDictionaryAsync(a => a.EventId, a => a);
-
-            ViewBag.Attendances = attendances;
-            ViewBag.Today = today;
-
-            return View(events);
-        }
+        // ==============================================================
+        // PAGE ACTIONS (Return Views)
+        // ==============================================================
 
         // Timeline Page - Display student's participation timeline
         public async Task<IActionResult> Timeline()
@@ -71,7 +46,6 @@ namespace iBITS_Portal.Controllers
         }
 
         // Financials Page - Display fees, fines, and payment history
-        // FIXED: Added proper Includes and case-insensitive status checks
         public async Task<IActionResult> Financials()
         {
             var userId = _userManager.GetUserName(User);
@@ -84,19 +58,18 @@ namespace iBITS_Portal.Controllers
 
             ViewBag.Student = student;
 
-            // Get fees for this student - explicitly track entities for fresh data
+            // Get fees
             var fees = await _context.Fees
-                .AsNoTracking()  // FIXED: Ensure we get fresh data from database
+                .AsNoTracking()
                 .Where(f => f.StudentNum == userId)
                 .OrderByDescending(f => f.FeesStartDate)
                 .ToListAsync();
 
-            // Get fines for this student (from attendance or direct assignment)
-            // FIXED: Include Attendance AND Event for proper display
+            // Get fines
             var fines = await _context.Fines
-                .AsNoTracking()  // FIXED: Ensure we get fresh data from database
+                .AsNoTracking()
                 .Include(f => f.Attendance)
-                    .ThenInclude(a => a.Event)  // FIXED: Include Event for EventName display
+                    .ThenInclude(a => a.Event)
                 .Where(f => f.StudentNum == userId || (f.Attendance != null && f.Attendance.StudentNum == userId))
                 .OrderByDescending(f => f.FinesStartDate)
                 .ToListAsync();
@@ -104,35 +77,25 @@ namespace iBITS_Portal.Controllers
             ViewBag.Fees = fees;
             ViewBag.Fines = fines;
 
-            // Calculate totals - FIXED: Use case-insensitive comparison
-            var totalFeesPaid = fees
-                .Where(f => string.Equals(f.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase))
-                .Sum(f => f.Amount) ?? 0;
+            // Calculate totals - Only unpaid amounts shown to students
             var totalFeesUnpaid = fees
                 .Where(f => !string.Equals(f.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase))
-                .Sum(f => f.Amount) ?? 0;
-            var totalFinesPaid = fines
-                .Where(f => string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                 .Sum(f => f.Amount) ?? 0;
             var totalFinesUnpaid = fines
                 .Where(f => !string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                 .Sum(f => f.Amount) ?? 0;
-
-            ViewBag.TotalFeesPaid = totalFeesPaid;
-            ViewBag.TotalFeesUnpaid = totalFeesUnpaid;
-            ViewBag.TotalFinesPaid = totalFinesPaid;
-            ViewBag.TotalFinesUnpaid = totalFinesUnpaid;
+            
             ViewBag.TotalBalanceDue = totalFeesUnpaid + totalFinesUnpaid;
-
-            // Debug logging - can be removed in production
-            System.Diagnostics.Debug.WriteLine($"[Financials] Student: {userId}");
-            System.Diagnostics.Debug.WriteLine($"[Financials] Fees count: {fees.Count}, Paid: {fees.Count(f => string.Equals(f.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase))}");
-            System.Diagnostics.Debug.WriteLine($"[Financials] Fines count: {fines.Count}, Paid: {fines.Count(f => string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))}");
 
             return View();
         }
 
-        // Action to get payment transaction history (AJAX) - FIXED VERSION
+        // ==============================================================
+        // JSON ACTIONS (for AJAX calls from the frontend)
+        // ==============================================================
+
+        // Action to get payment transaction history (AJAX)
+        // UPDATED: Simplified to show only essential information for students
         public async Task<JsonResult> GetPaymentHistory()
         {
             try
@@ -142,7 +105,7 @@ namespace iBITS_Portal.Controllers
                 // Get fee payment transactions
                 var feeTransactions = await _context.PaymentTransactions
                     .Include(t => t.Fee)
-                    .Include(t => t.Treasurer)  // FIXED: Changed from ProcessedByNavigation
+                    .Include(t => t.Treasurer)
                     .Where(t => t.StudentNum == userId)
                     .OrderByDescending(t => t.PaymentDate)
                     .Select(t => new
@@ -150,30 +113,24 @@ namespace iBITS_Portal.Controllers
                         type = "Fee",
                         description = t.Fee != null ? t.Fee.FeeName : "Fee Payment",
                         amount = t.Amount,
-                        paymentDate = t.PaymentDate,
-                        paymentMethod = t.PaymentMethod,
-                        processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System",  // FIXED
-                        transactionReference = t.TransactionReference,
-                        notes = t.Notes
+                        paymentDate = t.PaymentDate, // Kept for sorting purposes
+                        processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System"
                     })
                     .ToListAsync();
 
                 // Get fine payment transactions
                 var fineTransactions = await _context.FinePaymentTransactions
                     .Include(t => t.Fine)
-                    .Include(t => t.Treasurer)  // FIXED: Changed from ProcessedByNavigation
+                    .Include(t => t.Treasurer)
                     .Where(t => t.StudentNum == userId)
                     .OrderByDescending(t => t.PaymentDate)
                     .Select(t => new
                     {
                         type = "Fine",
-                        description = t.Fine != null ? (t.Fine.Description ?? "Fine Payment") : "Fine Payment",  // FIXED: Changed from FineReason
+                        description = t.Fine != null ? (t.Fine.Description ?? "Fine Payment") : "Fine Payment",
                         amount = t.Amount,
-                        paymentDate = t.PaymentDate,
-                        paymentMethod = t.PaymentMethod,
-                        processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System",  // FIXED
-                        transactionReference = t.TransactionReference,
-                        notes = t.Notes
+                        paymentDate = t.PaymentDate, // Kept for sorting purposes
+                        processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System"
                     })
                     .ToListAsync();
 
@@ -186,8 +143,73 @@ namespace iBITS_Portal.Controllers
             }
             catch (Exception ex)
             {
+                // Log the exception ex here
                 return Json(new { success = false, message = "Error loading payment history." });
             }
+        }
+
+        // Handles the Dashboard "View All Events" Popup
+        [HttpGet]
+        public async Task<JsonResult> GetAllEventsJson()
+        {
+            try
+            {
+                var userId = _userManager.GetUserName(User);
+
+                // 1. Get All Events (Sorted by Date)
+                var events = await _context.Events
+                    .AsNoTracking()
+                    .OrderByDescending(e => e.EventDate)
+                    .ToListAsync();
+
+                // 2. Get User's Attendance Record
+                var userAttendance = await _context.Attendances
+                    .AsNoTracking()
+                    .Where(a => a.StudentNum == userId)
+                    .ToDictionaryAsync(a => a.EventId, a => a.AttendanceStatus);
+
+                // 3. Merge Data
+                var eventList = events.Select(e => new
+                {
+                    eventId = e.EventId,
+                    eventName = e.EventName,
+                    eventDate = e.EventDate,
+                    startTime = e.StartTime.HasValue ? e.StartTime.Value.ToString(@"hh\:mm tt") : null,
+                    endTime = e.EndTime.HasValue ? e.EndTime.Value.ToString(@"hh\:mm tt") : null,
+                    eventLocation = e.EventLocation,
+                    eventDesc = e.EventDesc,
+                    attendanceStatus = userAttendance.ContainsKey(e.EventId) ? userAttendance[e.EventId] : "Not Registered"
+                });
+
+                return Json(eventList);
+            }
+            catch (Exception ex)
+            {
+                 // Log the exception ex here
+                return Json(new { error = "Failed to fetch events" });
+            }
+        }
+        
+        // Action to get basic profile data for the Account Settings modal
+        [HttpGet]
+        public async Task<JsonResult> GetProfileData()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "User not found." });
+            }
+
+            var student = await _context.Students.AsNoTracking().FirstOrDefaultAsync(s => s.StudentNum == user.UserName);
+
+            return Json(new
+            {
+                success = true,
+                username = user.UserName,
+                phoneNumber = await _userManager.GetPhoneNumberAsync(user),
+                fullName = student?.FullName,
+                course = student != null ? $"{student.Course} | {student.YearLevelSection}" : ""
+            });
         }
     }
 }
