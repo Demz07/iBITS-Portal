@@ -120,7 +120,7 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
             </div>
@@ -135,7 +135,7 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
             </div>
@@ -148,7 +148,7 @@
         <!-- Paid Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fees by Program-Year</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fees by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="collectedChart"></canvas>
                     <div id="collectedNoData" class="chart-no-data">
@@ -161,7 +161,7 @@
         <!-- Unpaid Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fees by Program-Year</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fees by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="pendingChart"></canvas>
                     <div id="pendingNoData" class="chart-no-data">
@@ -207,26 +207,25 @@
             </select>
         </div>
 
-        <!-- Program-Year Filter -->
+        <!-- Program Filter -->
         <div class="col-md-2">
-            <label class="form-label small text-muted">Program-Year</label>
-            <select id="filterProgramYear" class="form-select form-select-sm">
-                <option value="">All Program-Years</option>
+            <label class="form-label small text-muted">Program</label>
+            <select id="filterProgram" class="form-select form-select-sm">
+                <option value="">All Programs</option>
+                <option value="BSIT">BSIT</option>
+                <option value="DIT">DIT</option>
             </select>
         </div>
 
-        <!-- Section Filter -->
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Section</label>
-            <select id="filterSection" class="form-select form-select-sm">
-                <option value="">All Sections</option>
-                @if (ViewBag.Sections != null)
-                {
-                    foreach (var sect in ViewBag.Sections)
-                    {
-                        <option value="@sect">@sect</option>
-                    }
-                }
+        <!-- Year Level Filter -->
+        <div class="col-md-1">
+            <label class="form-label small text-muted">Year</label>
+            <select id="filterYear" class="form-select form-select-sm">
+                <option value="">All</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
             </select>
         </div>
 
@@ -271,11 +270,8 @@
                     <th class="text-center" style="width: 50px;">☐</th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
-                    <th>Section</th>
                     <th>Description</th>
                     <th>Amount</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
                     <th>Status</th>
                     <th class="text-center" style="width: 80px;">Action</th>
                 </tr>
@@ -305,6 +301,15 @@
 
                         var rowClass = isOfficiallyPaid ? "row-paid" : (isLocked ? "row-locked" : "");
 
+                        // Extract year level and program from YearLevelSection (e.g., "BSIT 3-1" -> "3")
+                        var yearLevel = "";
+                        var program = student?.Course ?? "";
+                        if (!string.IsNullOrEmpty(student?.YearLevelSection))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(student.YearLevelSection, @"\d+");
+                            if (match.Success) yearLevel = match.Value;
+                        }
+
                         <tr class="fee-row @rowClass"
                             data-fee-id="@fee.FeeId"
                             data-ref-id="@fee.FeeId"
@@ -312,6 +317,8 @@
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
                             data-section="@(student?.YearLevelSection ?? "")"
+                            data-program="@program"
+                            data-year="@yearLevel"
                             data-status="@displayStatus.ToLower()"
                             data-amount="@(fee.Amount ?? 0)"
                             data-paid="@displayAmountPaid"
@@ -345,13 +352,8 @@
                                     <span class="text-danger">ID: @fee.StudentNum</span>
                                 }
                             </td>
-                            <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
-
-                            <!-- Display Calculated Values based on Validation -->
-                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@displayAmountPaid.ToString("N2")</td>
-                            <td class="balance" style="color: @(displayBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@displayBalance.ToString("N2")</td>
 
                             <!-- Status Badge -->
                             <td>

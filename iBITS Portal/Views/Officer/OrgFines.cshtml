@@ -119,7 +119,7 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
             </div>
@@ -134,7 +134,7 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
             </div>
@@ -147,7 +147,7 @@
         <!-- Paid Fines Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fines by Program-Year</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fines by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="paidChart"></canvas>
                     <div class="chart-no-data" id="paidNoData">
@@ -161,7 +161,7 @@
         <!-- Unpaid Fines Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fines by Program-Year</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fines by Program & Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="unpaidChart"></canvas>
                     <div class="chart-no-data" id="unpaidNoData">
@@ -185,7 +185,8 @@
         </button>
     </div>
 
-    <div class="row g-3">
+    <!-- First Row of Filters -->
+    <div class="row g-3 mb-3">
         <!-- Search -->
         <div class="col-md-3">
             <label class="form-label small text-muted">Search Student</label>
@@ -202,18 +203,25 @@
             </select>
         </div>
 
-        <!-- Section Filter -->
+        <!-- Program -->
         <div class="col-md-2">
-            <label class="form-label small text-muted">Section</label>
-            <select id="filterSection" class="form-select form-select-sm">
-                <option value="">All Sections</option>
-                @if (ViewBag.Sections != null)
-                {
-                    foreach (var sect in ViewBag.Sections)
-                    {
-                        <option value="@sect">@sect</option>
-                    }
-                }
+            <label class="form-label small text-muted">Program</label>
+            <select id="filterProgram" class="form-select form-select-sm">
+                <option value="">All Programs</option>
+                <option value="BSIT">BSIT</option>
+                <option value="DIT">DIT</option>
+            </select>
+        </div>
+
+        <!-- Year Level -->
+        <div class="col-md-1">
+            <label class="form-label small text-muted">Year</label>
+            <select id="filterYear" class="form-select form-select-sm">
+                <option value="">All</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
             </select>
         </div>
 
@@ -224,17 +232,25 @@
                 <option value="">All Statuses</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
-                <option value="excused">Excused</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Second Row of Filters (Conditional) -->
+    <div class="row g-3" id="conditionalFiltersRow" style="display: none;">
+        <!-- Event Filter (shows when Fine Type = Event) -->
+        <div class="col-md-4" id="filterEventContainer" style="display: none;">
+            <label class="form-label small text-muted">Event</label>
+            <select id="filterEvent" class="form-select form-select-sm">
+                <option value="">All Events</option>
             </select>
         </div>
 
-        <!-- Program -->
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Program</label>
-            <select id="filterProgram" class="form-select form-select-sm">
-                <option value="">All Programs</option>
-                <option value="BSIT">BSIT</option>
-                <option value="DIT">DIT</option>
+        <!-- Description/Reason Filter (shows when Fine Type = Manual) -->
+        <div class="col-md-4" id="filterDescriptionContainer" style="display: none;">
+            <label class="form-label small text-muted">Description/Reason</label>
+            <select id="filterDescription" class="form-select form-select-sm">
+                <option value="">All Descriptions</option>
             </select>
         </div>
     </div>
@@ -269,11 +285,8 @@
                     <th class="text-center" style="width: 50px;">☐</th>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
-                    <th>SECTION</th>
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
-                    <th>PAID</th>
-                    <th>BALANCE</th>
                     <th>STATUS</th>
                     <th class="text-center" style="width: 100px;">ACTION</th>
                 </tr>
@@ -304,13 +317,25 @@
 
                     var statusClass = isOfficiallyPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
 
+                    // Extract year level from YearLevelSection (e.g., "BSIT 3-1" -> "3")
+                    var yearLevel = "";
+                    if (!string.IsNullOrEmpty(student?.YearLevelSection))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(student.YearLevelSection, @"\d+");
+                        if (match.Success) yearLevel = match.Value;
+                    }
+
                     <tr class="fine-row @statusClass"
                         data-fine-id="@fine.FineId"
                         data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
                         data-status="@displayStatus.ToLower()"
                         data-section="@student?.YearLevelSection"
+                        data-program="@student?.Course"
+                        data-year="@yearLevel"
                         data-finetype="@(isEventFine ? "event" : "manual")"
+                        data-event="@(eventRecord?.EventName?.ToLower() ?? "")"
+                        data-description="@(description?.ToLower() ?? "")"
                         data-amount="@(fine.Amount ?? 0)"
                         data-paid="@displayAmountPaid"
                         data-balance="@displayBalance">
@@ -347,7 +372,6 @@
                                 <span class="text-danger">Unknown Student</span>
                             }
                         </td>
-                        <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                         <td>
                             @if (!isEventFine)
                             {
@@ -359,10 +383,6 @@
                             }
                         </td>
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-
-                        <!-- Display Calculated Values -->
-                        <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@displayAmountPaid.ToString("N2")</td>
-                        <td class="balance" style="color: @(displayBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@displayBalance.ToString("N2")</td>
 
                         <!-- Status Badge -->
                         <td>

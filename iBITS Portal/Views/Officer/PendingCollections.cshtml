@@ -138,7 +138,15 @@
     <div class="row g-4">
         @if (isFines)
         {
-            var groupedByFine = fines.GroupBy(f => f.Description ?? "Other").OrderBy(g => g.Key);
+            // Group fines by Description (manual fines) or Event Name (event fines)
+            var groupedByFine = fines.GroupBy(f => {
+                if (!string.IsNullOrEmpty(f.Description))
+                    return f.Description;
+                else if (f.Attendance?.Event?.EventName != null)
+                    return f.Attendance.Event.EventName;
+                else
+                    return "Other";
+            }).OrderBy(g => g.Key);
             
             @foreach (var group in groupedByFine)
             {

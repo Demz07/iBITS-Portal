@@ -525,6 +525,8 @@ namespace iBITS_Portal.Controllers
                 var treasurer = await _context.Students.FindAsync(user.UserName);
                 var fine = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.Event)
                     .FirstOrDefaultAsync(f => f.FineId == fineId);
 
                 if (fine == null)
@@ -1675,6 +1677,8 @@ namespace iBITS_Portal.Controllers
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
@@ -2228,12 +2232,17 @@ namespace iBITS_Portal.Controllers
                 // Get fines ready for remittance (paid but not yet remitted)
                 var pendingFines = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
-                    .Where(f => f.StudentNumNavigation != null && 
-                                f.StudentNumNavigation.YearLevelSection == section &&
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.Event)
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.StudentNumNavigation)
+                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) && 
+                                ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
+                                 (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
                                 f.FinesStatus == "Paid" &&
                                 f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
                     .OrderBy(f => f.Description)
-                    .ThenBy(f => f.StudentNumNavigation.StudentLn)
+                    .ThenBy(f => f.StudentNumNavigation != null ? f.StudentNumNavigation.StudentLn : f.Attendance.StudentNumNavigation.StudentLn)
                     .ToListAsync();
 
                 // Group by description/category
@@ -2302,15 +2311,20 @@ namespace iBITS_Portal.Controllers
 
             if (type == "fine")
             {
-                // Get fines for this category
+                // Get fines for this category (match by Description for manual fines, or Event Name for event fines)
                 var fines = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
-                    .Where(f => f.StudentNumNavigation != null &&
-                                f.StudentNumNavigation.YearLevelSection == section &&
-                                f.Description == feeName &&
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.Event)
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.StudentNumNavigation)
+                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) &&
+                                ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
+                                 (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
+                                (f.Description == feeName || (f.Attendance != null && f.Attendance.Event != null && f.Attendance.Event.EventName == feeName)) &&
                                 f.FinesStatus == "Paid" &&
                                 f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
-                    .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                    .OrderBy(f => f.StudentNumNavigation != null ? f.StudentNumNavigation.StudentLn : f.Attendance.StudentNumNavigation.StudentLn)
                     .ToListAsync();
 
                 if (!fines.Any())
@@ -2380,12 +2394,17 @@ namespace iBITS_Portal.Controllers
 
                 if (isFinetype)
                 {
-                    // Get fines for this category
+                    // Get fines for this category (match by Description for manual fines, or Event Name for event fines)
                     var fines = await _context.Fines
                         .Include(f => f.StudentNumNavigation)
-                        .Where(f => f.StudentNumNavigation != null &&
-                                    f.StudentNumNavigation.YearLevelSection == section &&
-                                    f.Description == feeName &&
+                        .Include(f => f.Attendance)
+                            .ThenInclude(a => a.Event)
+                        .Include(f => f.Attendance)
+                            .ThenInclude(a => a.StudentNumNavigation)
+                        .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) &&
+                                    ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
+                                     (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
+                                    (f.Description == feeName || (f.Attendance != null && f.Attendance.Event != null && f.Attendance.Event.EventName == feeName)) &&
                                     f.FinesStatus == "Paid" &&
                                     f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
                         .ToListAsync();
@@ -2427,12 +2446,16 @@ namespace iBITS_Portal.Controllers
                     foreach (var fine in fines)
                     {
                         // Create remittance item
+                        // Get StudentNum from either direct reference (manual fines) or Attendance (event fines)
+                        var studentNum = fine.StudentNum ?? fine.Attendance?.StudentNum ?? string.Empty;
+                        var studentName = fine.StudentNumNavigation?.FullName ?? fine.Attendance?.StudentNumNavigation?.FullName;
+                        
                         var item = new RemittanceItem
                         {
                             RemittanceId = remittance.RemittanceId,
                             FineId = fine.FineId,
-                            StudentNum = fine.StudentNum ?? string.Empty,
-                            StudentName = fine.StudentNumNavigation?.FullName,
+                            StudentNum = studentNum,
+                            StudentName = studentName,
                             Amount = fine.Amount ?? 0,
                             CollectionDate = fine.CollectionDate ?? DateTime.Now,
                             PaymentMethod = "Cash" // Default, could be enhanced
@@ -2692,6 +2715,8 @@ namespace iBITS_Portal.Controllers
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
                 .OrderBy(f => f.StudentNumNavigation.YearLevelSection)
                 .ThenBy(f => f.StudentNumNavigation.StudentLn)
                 .ToListAsync();
