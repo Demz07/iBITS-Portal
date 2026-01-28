@@ -96,7 +96,7 @@
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <!-- Total Expected -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -111,7 +111,7 @@
         </div>
 
         <!-- Collected -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -126,7 +126,7 @@
         </div>
 
         <!-- Outstanding -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -140,20 +140,6 @@
             </div>
         </div>
 
-        <!-- Collection Rate -->
-        <div class="col-md-3">
-            <div class="summary-card rate">
-                <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-percent fs-3"></i>
-                    </div>
-                    <div>
-                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRate">@collectionRate</span>%</div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Charts -->
@@ -161,7 +147,7 @@
         <!-- Paid Fines Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fines by Section</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fines by Program-Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="paidChart"></canvas>
                     <div class="chart-no-data" id="paidNoData">
@@ -175,7 +161,7 @@
         <!-- Unpaid Fines Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fines by Section</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fines by Program-Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="unpaidChart"></canvas>
                     <div class="chart-no-data" id="unpaidNoData">

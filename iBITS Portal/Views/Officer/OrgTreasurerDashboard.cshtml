@@ -233,50 +233,63 @@
     </div>
 </div>
 
-<!-- SECTION BREAKDOWN -->
+<!-- MONTHLY COLLECTION TRENDS -->
 <div class="row mt-4">
     <div class="col-12">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
-                <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Section Breakdown
+                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends (Current Academic Year)
             </h5>
-            @if (sectionStats.Any())
+            <canvas id="trendsChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- PROGRAM-YEAR BREAKDOWN -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Paid/Unpaid by Program-Year
+                <button class="btn btn-sm btn-outline-light float-end" onclick="exportProgramYearData()">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+            </h5>
+            @if (ViewBag.ProgramYearStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearStats).Any())
             {
-                @foreach (var stat in sectionStats)
+                @foreach (var stat in ViewBag.ProgramYearStats)
                 {
-                    var sectionTotal = (decimal)stat.TotalFees;
-                    var sectionPaid = (decimal)stat.PaidFees;
-                    var sectionPending = sectionTotal - sectionPaid;
-                    var sectionRate = sectionTotal > 0 ? (sectionPaid / sectionTotal * 100) : 0;
+                    var programYearTotal = (decimal)stat.TotalFees;
+                    var programYearPaid = (decimal)stat.PaidFees;
+                    var programYearUnpaid = programYearTotal - programYearPaid;
 
                     <div class="section-breakdown-card">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0 text-white">Section @stat.Section</h6>
-                            <span class="badge bg-primary">@sectionRate.ToString("F1")% Collected</span>
+                            <h6 class="mb-0 text-white">@stat.ProgramYear</h6>
                         </div>
                         <div class="row text-center mt-3">
                             <div class="col-4">
                                 <small class="text-muted d-block">Total Expected</small>
-                                <h6 class="text-white mb-0">₱@sectionTotal.ToString("N2")</h6>
+                                <h6 class="text-white mb-0">₱@programYearTotal.ToString("N2")</h6>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted d-block">Collected</small>
-                                <h6 class="text-success mb-0">₱@sectionPaid.ToString("N2")</h6>
+                                <small class="text-muted d-block">Paid</small>
+                                <h6 class="text-success mb-0">₱@programYearPaid.ToString("N2")</h6>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted d-block">Pending</small>
-                                <h6 class="text-danger mb-0">₱@sectionPending.ToString("N2")</h6>
+                                <small class="text-muted d-block">Unpaid</small>
+                                <h6 class="text-danger mb-0">₱@programYearUnpaid.ToString("N2")</h6>
                             </div>
                         </div>
                         <div class="progress mt-3" style="height: 8px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: @sectionRate%"></div>
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F1"))%"></div>
                         </div>
                     </div>
                 }
             }
             else
             {
-                <p class="text-center text-muted py-4">No section data available.</p>
+                <p class="text-center text-muted py-4">No program-year data available.</p>
             }
         </div>
     </div>
@@ -285,12 +298,77 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Monthly Trends Line Chart
+        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+        const monthlyTrends = @Html.Raw(Json.Serialize(ViewBag.MonthlyTrends ?? new List<object>()));
+        
+        new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyTrends.map(t => t.Month),
+                datasets: [
+                    {
+                        label: 'Fees Collected',
+                        data: monthlyTrends.map(t => t.FeesCollected),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Fines Collected',
+                        data: monthlyTrends.map(t => t.FinesCollected),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#fff', font: { size: 12 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            color: '#fff',
+                            callback: function(value) {
+                                return '₱' + value.toLocaleString();
+                            }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#fff' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
+            }
+        });
+
         // Financial Doughnut Chart
         const ctx = document.getElementById('financialChart').getContext('2d');
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Fees Collected', 'Fines Collected', 'Pending Fees', 'Pending Fines'],
+                labels: ['Paid Fees', 'Paid Fines', 'Unpaid Fees', 'Unpaid Fines'],
                 datasets: [{
                     data: [@totalFeesCollected, @totalFinesCollected, @pendingFees, @pendingFines],
                     backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],

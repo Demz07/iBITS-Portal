@@ -1459,12 +1459,10 @@ namespace iBITS_Portal.Controllers
             var totalExpected = fees.Sum(f => f.Amount ?? 0);
             var totalCollected = fees.Where(f => f.FeeStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0);
             var totalPending = totalExpected - totalCollected;
-            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
 
             ViewBag.TotalExpected = totalExpected;
             ViewBag.TotalCollected = totalCollected;
             ViewBag.TotalPending = totalPending;
-            ViewBag.CollectionRate = collectionRate;
 
             // Get unique fee names for filter dropdown
             ViewBag.FeeNames = fees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
@@ -1477,16 +1475,38 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(s => s)
                 .ToListAsync();
 
-            // Chart Data - Collected by Section (ONLY VALIDATED REMITTANCES)
+            // Chart Data - Paid by Program-Year (ONLY VALIDATED REMITTANCES)
             var collectedBreakdown = fees
-                .Where(f => f.FeeStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null)
-                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .Where(f => f.FeeStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .GroupBy(f => {
+                    var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
+                    var parts = section.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        var program = parts[0];
+                        var yearWithSection = parts[1];
+                        var year = new string(yearWithSection.TakeWhile(char.IsDigit).ToArray());
+                        return $"{program}-{year}";
+                    }
+                    return "Unknown";
+                })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
-            // Chart Data - Pending by Section (includes unpaid + paid but not yet validated)
+            // Chart Data - Unpaid by Program-Year (includes unpaid + paid but not yet validated)
             var pendingBreakdown = fees
-                .Where(f => (f.FeeStatus?.ToLower() != "paid" || f.RemittanceStatus != FeeRemittanceStatus.Remitted) && f.StudentNumNavigation != null)
-                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .Where(f => (f.FeeStatus?.ToLower() != "paid" || f.RemittanceStatus != FeeRemittanceStatus.Remitted) && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .GroupBy(f => {
+                    var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
+                    var parts = section.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        var program = parts[0];
+                        var yearWithSection = parts[1];
+                        var year = new string(yearWithSection.TakeWhile(char.IsDigit).ToArray());
+                        return $"{program}-{year}";
+                    }
+                    return "Unknown";
+                })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
             ViewBag.CollectedBreakdown = collectedBreakdown;
@@ -1512,12 +1532,10 @@ namespace iBITS_Portal.Controllers
             var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);
             var totalCollected = fines.Where(f => f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0);
             var totalPending = totalExpected - totalCollected;
-            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
 
             ViewBag.TotalExpected = totalExpected;
             ViewBag.TotalCollected = totalCollected;
             ViewBag.TotalPending = totalPending;
-            ViewBag.CollectionRate = collectionRate;
 
             // Get unique sections for filter dropdown
             ViewBag.Sections = await _context.Students
@@ -1538,16 +1556,38 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(r => r)
                 .ToList();
 
-            // Chart Data - Paid by Section (ONLY VALIDATED REMITTANCES)
+            // Chart Data - Paid by Program-Year (ONLY VALIDATED REMITTANCES)
             var paidBreakdown = fines
-                .Where(f => f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null)
-                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .Where(f => f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .GroupBy(f => {
+                    var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
+                    var parts = section.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        var program = parts[0];
+                        var yearWithSection = parts[1];
+                        var year = new string(yearWithSection.TakeWhile(char.IsDigit).ToArray());
+                        return $"{program}-{year}";
+                    }
+                    return "Unknown";
+                })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
-            // Chart Data - Unpaid by Section (includes unpaid + paid but not validated)
+            // Chart Data - Unpaid by Program-Year (includes unpaid + paid but not validated)
             var unpaidBreakdown = fines
-                .Where(f => (f.FinesStatus?.ToLower() == "unpaid" || (f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus != FeeRemittanceStatus.Remitted)) && f.StudentNumNavigation != null)
-                .GroupBy(f => f.StudentNumNavigation.YearLevelSection ?? "Unknown")
+                .Where(f => (f.FinesStatus?.ToLower() == "unpaid" || (f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus != FeeRemittanceStatus.Remitted)) && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .GroupBy(f => {
+                    var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
+                    var parts = section.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        var program = parts[0];
+                        var yearWithSection = parts[1];
+                        var year = new string(yearWithSection.TakeWhile(char.IsDigit).ToArray());
+                        return $"{program}-{year}";
+                    }
+                    return "Unknown";
+                })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
             ViewBag.PaidBreakdown = paidBreakdown;
@@ -3500,17 +3540,58 @@ namespace iBITS_Portal.Controllers
             ViewBag.ValidatedThisMonthCount = validatedThisMonth.Count;
             ViewBag.ValidatedThisMonthAmount = validatedThisMonth.Sum(r => r.TotalAmount);
 
-            // Section breakdown
-            var sectionStats = fees.GroupBy(f => f.StudentNumNavigation?.YearLevelSection ?? "Unknown")
+            // Program-Year breakdown (group by program and year level only, not by section)
+            var programYearStats = fees
+                .Where(f => f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .GroupBy(f => {
+                    var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
+                    // Extract program and year (e.g., "BSIT-1A" -> "BSIT-1", "BSCS-2B" -> "BSCS-2")
+                    var parts = section.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        var program = parts[0]; // e.g., "BSIT"
+                        var yearWithSection = parts[1]; // e.g., "1A" or "2B"
+                        var year = new string(yearWithSection.TakeWhile(char.IsDigit).ToArray()); // Extract year number
+                        return $"{program}-{year}";
+                    }
+                    return "Unknown";
+                })
                 .Select(g => new
                 {
-                    Section = g.Key,
+                    ProgramYear = g.Key,
                     TotalFees = g.Sum(f => f.Amount ?? 0),
                     PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0),
                     RemittedFees = g.Where(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0)
-                }).ToList();
+                })
+                .OrderBy(s => s.ProgramYear)
+                .ToList();
 
-            ViewBag.SectionStats = sectionStats;
+            ViewBag.ProgramYearStats = programYearStats;
+
+            // Calculate monthly trends for current academic year (Aug - Present)
+            var currentYear = DateTime.Now.Year;
+            var academicYearStart = DateTime.Now.Month >= 8 
+                ? new DateTime(currentYear, 8, 1) 
+                : new DateTime(currentYear - 1, 8, 1);
+
+            var monthlyTrends = Enumerable.Range(0, (DateTime.Now.Year - academicYearStart.Year) * 12 + DateTime.Now.Month - academicYearStart.Month + 1)
+                .Select(offset => {
+                    var month = academicYearStart.AddMonths(offset);
+                    var monthStart = new DateTime(month.Year, month.Month, 1);
+                    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+
+                    var feesInMonth = fees.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FeeStatus?.ToUpper() == "PAID");
+                    var finesInMonth = fines.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FinesStatus?.ToUpper() == "PAID");
+
+                    return new {
+                        Month = month.ToString("MMM yyyy"),
+                        FeesCollected = feesInMonth.Sum(f => f.Amount ?? 0),
+                        FinesCollected = finesInMonth.Sum(f => f.Amount ?? 0)
+                    };
+                })
+                .ToList();
+
+            ViewBag.MonthlyTrends = monthlyTrends;
 
             return View("OrgTreasurerDashboard");
         }

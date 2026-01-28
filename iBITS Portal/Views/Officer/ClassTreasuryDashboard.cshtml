@@ -363,11 +363,11 @@
                 <table class="table table-sm">
                     <tbody>
                         <tr>
-                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Collected</td>
+                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Paid</td>
                             <td class="text-end fw-bold text-success">₱@totalFeesCollected.ToString("N2")</td>
                         </tr>
                         <tr>
-                            <td><i class="bi bi-hourglass-split text-warning me-2"></i> Pending</td>
+                            <td><i class="bi bi-hourglass-split text-warning me-2"></i> Unpaid</td>
                             <td class="text-end fw-bold text-warning">₱@pendingFees.ToString("N2")</td>
                         </tr>
                         <tr class="table-active">
@@ -389,11 +389,11 @@
                 <table class="table table-sm">
                     <tbody>
                         <tr>
-                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Collected</td>
+                            <td><i class="bi bi-check-circle-fill text-success me-2"></i> Paid</td>
                             <td class="text-end fw-bold text-success">₱@totalFinesCollected.ToString("N2")</td>
                         </tr>
                         <tr>
-                            <td><i class="bi bi-hourglass-split text-danger me-2"></i> Pending</td>
+                            <td><i class="bi bi-hourglass-split text-danger me-2"></i> Unpaid</td>
                             <td class="text-end fw-bold text-danger">₱@pendingFines.ToString("N2")</td>
                         </tr>
                         <tr class="table-active">
@@ -415,7 +415,7 @@
     new Chart(collectionsCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Fees Collected', 'Fines Collected', 'Pending Fees', 'Pending Fines'],
+            labels: ['Paid Fees', 'Paid Fines', 'Unpaid Fees', 'Unpaid Fines'],
             datasets: [{
                 data: [@totalFeesCollected, @totalFinesCollected, @pendingFees, @pendingFines],
                 backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
@@ -453,13 +453,13 @@
             labels: ['Fees', 'Fines'],
             datasets: [
                 {
-                    label: 'Collected',
+                    label: 'Paid',
                     data: [@totalFeesCollected, @totalFinesCollected],
                     backgroundColor: '#10b981',
                     borderWidth: 0
                 },
                 {
-                    label: 'Pending',
+                    label: 'Unpaid',
                     data: [@pendingFees, @pendingFines],
                     backgroundColor: '#ef4444',
                     borderWidth: 0

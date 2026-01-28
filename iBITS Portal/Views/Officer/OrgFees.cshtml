@@ -97,7 +97,7 @@
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <!-- Total Expected -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -112,7 +112,7 @@
         </div>
 
         <!-- Collected -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -127,7 +127,7 @@
         </div>
 
         <!-- Outstanding -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -141,28 +141,14 @@
             </div>
         </div>
 
-        <!-- Collection Rate -->
-        <div class="col-md-3">
-            <div class="summary-card rate">
-                <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-percent fs-3"></i>
-                    </div>
-                    <div>
-                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRateDisplay">@collectionRate</span>%</div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Pie Charts -->
     <div class="row g-4">
-        <!-- Collected Chart -->
+        <!-- Paid Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Collected by Section</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart-fill me-2"></i>Paid Fees by Program-Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="collectedChart"></canvas>
                     <div id="collectedNoData" class="chart-no-data">
@@ -172,10 +158,10 @@
                 </div>
             </div>
         </div>
-        <!-- Pending Chart -->
+        <!-- Unpaid Chart -->
         <div class="col-md-6">
             <div class="chart-panel" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; height: 100%;">
-                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Pending by Section</h6>
+                <h6 class="text-center text-muted mb-4"><i class="bi bi-pie-chart me-2"></i>Unpaid Fees by Program-Year</h6>
                 <div style="height: 250px; position: relative;">
                     <canvas id="pendingChart"></canvas>
                     <div id="pendingNoData" class="chart-no-data">
@@ -221,13 +207,11 @@
             </select>
         </div>
 
-        <!-- Program Filter -->
+        <!-- Program-Year Filter -->
         <div class="col-md-2">
-            <label class="form-label small text-muted">Program</label>
-            <select id="filterProgram" class="form-select form-select-sm">
-                <option value="">All Programs</option>
-                <option value="BSIT">BSIT</option>
-                <option value="DIT">DIT</option>
+            <label class="form-label small text-muted">Program-Year</label>
+            <select id="filterProgramYear" class="form-select form-select-sm">
+                <option value="">All Program-Years</option>
             </select>
         </div>
 
@@ -875,6 +859,149 @@
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
+
+        // ============================================================
+        // POPULATE PROGRAM-YEAR FILTER
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const programYearFilter = document.getElementById('filterProgramYear');
+            const programYears = new Set();
+            
+            // Extract unique program-years from table rows
+            document.querySelectorAll('tbody tr').forEach(row => {
+                const section = row.dataset.section || row.querySelector('td:nth-child(4)')?.textContent?.trim();
+                if (section) {
+                    // Extract program-year from section (e.g., "BSIT-1A" -> "BSIT-1")
+                    const parts = section.split('-');
+                    if (parts.length >= 2) {
+                        const program = parts[0];
+                        const yearWithSection = parts[1];
+                        const year = yearWithSection.match(/\d+/)?.[0];
+                        if (year) {
+                            programYears.add(`${program}-${year}`);
+                        }
+                    }
+                }
+            });
+            
+            // Populate dropdown
+            Array.from(programYears).sort().forEach(py => {
+                const option = document.createElement('option');
+                option.value = py;
+                option.textContent = py;
+                programYearFilter.appendChild(option);
+            });
+        });
     </script>
     <script src="~/js/officer-fees.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // ============================================================
+        // EXPORT PROGRAM-YEAR DATA
+        // ============================================================
+        function exportProgramYearData() {
+            const programYearStats = @Html.Raw(Json.Serialize(ViewBag.ProgramYearStats ?? new List<object>()));
+            
+            if (!programYearStats || programYearStats.length === 0) {
+                alert('No data available to export.');
+                return;
+            }
+
+            // Show export options modal
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div class="modal fade" id="exportModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content glass-modal" style="background: rgba(30, 30, 30, 0.95); border: 1px solid rgba(212, 175, 55, 0.3);">
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-white"><i class="bi bi-download me-2"></i> Export Data</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">Choose export format:</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" onclick="exportToExcel()">
+                                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-danger" onclick="exportToPDF()">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+            exportModal.show();
+            document.getElementById('exportModal').addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
+        function exportToExcel() {
+            const programYearStats = @Html.Raw(Json.Serialize(ViewBag.ProgramYearStats ?? new List<object>()));
+            
+            const data = [
+                ['Program-Year', 'Total Expected', 'Paid', 'Unpaid']
+            ];
+            
+            programYearStats.forEach(stat => {
+                data.push([
+                    stat.ProgramYear,
+                    stat.TotalFees.toFixed(2),
+                    stat.PaidFees.toFixed(2),
+                    (stat.TotalFees - stat.PaidFees).toFixed(2)
+                ]);
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 15 },
+                { wch: 15 },
+                { wch: 15 },
+                { wch: 15 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Program-Year Breakdown');
+            XLSX.writeFile(wb, `Program-Year-Breakdown-${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const programYearStats = @Html.Raw(Json.Serialize(ViewBag.ProgramYearStats ?? new List<object>()));
+            
+            doc.setFontSize(18);
+            doc.text('Program-Year Breakdown Report', 14, 20);
+            
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+            
+            const tableData = programYearStats.map(stat => [
+                stat.ProgramYear,
+                '₱' + stat.TotalFees.toFixed(2),
+                '₱' + stat.PaidFees.toFixed(2),
+                '₱' + (stat.TotalFees - stat.PaidFees).toFixed(2)
+            ]);
+            
+            doc.autoTable({
+                head: [['Program-Year', 'Total Expected', 'Paid', 'Unpaid']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [16, 185, 129] },
+                styles: { fontSize: 10 }
+            });
+            
+            doc.save(`Program-Year-Breakdown-${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+        }
+    </script>
 }
