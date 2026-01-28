@@ -475,12 +475,32 @@
                     </div>
                 </div>
 
+                <!-- Bulk Actions Toolbar -->
+                <div class="bulk-actions-toolbar" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-white fw-bold"><span id="selectedCount-@categoryName.Replace(" ", "-")">0</span> selected</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-success me-2 bulk-mark-paid" data-category="@categoryName">
+                                <i class="bi bi-check-circle me-1"></i> Mark as Paid
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning bulk-revoke" data-category="@categoryName">
+                                <i class="bi bi-x-circle me-1"></i> Revoke
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Category Table -->
                 <div class="fee-category-body">
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover mb-0" style="background: transparent;">
+                        <table class="table table-dark table-hover mb-0" style="background: transparent;" data-category-table="@categoryName">
                             <thead>
                                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="width: 40px; color: var(--gold-primary);">
+                                        <input type="checkbox" class="form-check-input select-all-category" data-category="@categoryName" title="Select All">
+                                    </th>
                                     <th style="width: 40px; color: var(--gold-primary);">#</th>
                                     <th style="color: var(--gold-primary);">Student</th>
                                     <th style="color: var(--gold-primary);">Amount</th>
@@ -502,7 +522,25 @@
                                     var isPendingRemit = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
 
-                                    <tr class="@rowClass fee-row" data-fee-id="@fee.FeeId" data-fee-name="@(fee.FeeName ?? "")" data-student-name="@(student?.FullName ?? "")" data-student-id="@fee.StudentNum" data-status="@(isPaid ? "paid" : "unpaid")">
+                                    <tr class="@rowClass fee-row" 
+                                        data-fee-id="@fee.FeeId" 
+                                        data-fee-name="@(fee.FeeName ?? "")" 
+                                        data-student-name="@(student?.FullName ?? "")" 
+                                        data-student-id="@fee.StudentNum" 
+                                        data-status="@(isPaid ? "paid" : "unpaid")"
+                                        data-is-locked="@isLocked.ToString().ToLower()"
+                                        data-category="@categoryName">
+                                        
+                                        <td>
+                                            @if (!isLocked)
+                                            {
+                                                <input type="checkbox" class="form-check-input fee-checkbox" data-fee-id="@fee.FeeId" data-category="@categoryName">
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-lock-fill text-muted" title="Remitted - Cannot modify"></i>
+                                            }
+                                        </td>
                                         <td class="text-muted">@rowNum</td>
                                         <td>
                                             <div class="text-white fw-semibold">@(student?.FullName ?? "Unknown")</div>
@@ -777,6 +815,143 @@
             const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        // ============================================================
+        // BULK SELECTION FUNCTIONALITY
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle Select All checkbox for each category
+            document.querySelectorAll('.select-all-category').forEach(selectAll => {
+                selectAll.addEventListener('change', function() {
+                    const category = this.dataset.category;
+                    const table = document.querySelector(`table[data-category-table="${category}"]`);
+                    const checkboxes = table.querySelectorAll('.fee-checkbox:not(:disabled)');
+                    
+                    checkboxes.forEach(cb => {
+                        cb.checked = this.checked;
+                    });
+                    
+                    updateBulkToolbar(category);
+                });
+            });
+
+            // Handle individual checkbox changes
+            document.querySelectorAll('.fee-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const category = this.dataset.category;
+                    updateBulkToolbar(category);
+                    updateSelectAllState(category);
+                });
+            });
+
+            // Bulk Mark as Paid
+            document.querySelectorAll('.bulk-mark-paid').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const category = this.dataset.category;
+                    const selectedIds = getSelectedFeeIds(category);
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fees to mark as paid');
+                        return;
+                    }
+
+                    if (!confirm(`Mark ${selectedIds.length} fee(s) as paid?`)) return;
+
+                    await bulkAction('BulkMarkFeesAsPaid', selectedIds, category);
+                });
+            });
+
+            // Bulk Revoke
+            document.querySelectorAll('.bulk-revoke').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const category = this.dataset.category;
+                    const selectedIds = getSelectedFeeIds(category);
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fees to revoke');
+                        return;
+                    }
+
+                    if (!confirm(`Revoke payment for ${selectedIds.length} fee(s)?`)) return;
+
+                    await bulkAction('BulkRevokeFees', selectedIds, category);
+                });
+            });
+        });
+
+        function getSelectedFeeIds(category) {
+            const table = document.querySelector(`table[data-category-table="${category}"]`);
+            const selected = [];
+            table.querySelectorAll('.fee-checkbox:checked').forEach(cb => {
+                selected.push(parseInt(cb.dataset.feeId));
+            });
+            return selected;
+        }
+
+        function updateBulkToolbar(category) {
+            const selectedIds = getSelectedFeeIds(category);
+            const countSpan = document.getElementById(`selectedCount-${category.replace(/ /g, '-')}`);
+            
+            if (countSpan) {
+                countSpan.textContent = selectedIds.length;
+            }
+
+            // Show/hide toolbar based on selection
+            const categoryCard = document.querySelector(`table[data-category-table="${category}"]`).closest('.fee-category-card');
+            const categoryToolbar = categoryCard.querySelector('.bulk-actions-toolbar');
+            
+            if (selectedIds.length > 0) {
+                categoryToolbar.style.display = 'block';
+            } else {
+                categoryToolbar.style.display = 'none';
+            }
+        }
+
+        function updateSelectAllState(category) {
+            const table = document.querySelector(`table[data-category-table="${category}"]`);
+            const selectAllCheckbox = table.querySelector('.select-all-category');
+            const checkboxes = table.querySelectorAll('.fee-checkbox');
+            const checkedBoxes = table.querySelectorAll('.fee-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedBoxes.length === checkboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedBoxes.length > 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+
+        async function bulkAction(action, feeIds, category) {
+            try {
+                const response = await fetch(`/Officer/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    },
+                    body: JSON.stringify({ feeIds, category })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('success', result.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'An error occurred. Please try again.');
+            }
         }
 
         // ============================================================

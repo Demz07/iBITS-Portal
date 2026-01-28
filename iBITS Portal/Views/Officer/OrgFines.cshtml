@@ -278,11 +278,30 @@
         </div>
     </div>
 
+    <!-- Bulk Actions Toolbar -->
+    <div class="bulk-actions-toolbar" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white fw-bold"><span id="selectedCount">0</span> selected</span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-success me-2" id="bulkMarkPaid">
+                    <i class="bi bi-check-circle me-1"></i> Mark as Paid
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" id="bulkRevoke">
+                    <i class="bi bi-x-circle me-1"></i> Revoke
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-glass" id="finesTable">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 50px;">☐</th>
+                    <th class="text-center" style="width: 50px;">
+                        <input type="checkbox" class="form-check-input" id="selectAll" title="Select All">
+                    </th>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
                     <th>DESCRIPTION</th>
@@ -297,22 +316,24 @@
                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
                     var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
-                    var dbStatus = fine.PaymentStatus; // Actual DB Status
+                    var dbStatus = fine.FinesStatus; // Use FinesStatus field
                     var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                    var isPendingRemittance = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                     var isEventFine = fine.AttendanceId != null;
-                    var isExcused = dbStatus == "Excused";
+                    var isExcused = dbStatus?.ToUpper() == "EXCUSED";
+                    var isPaidByClassTreasurer = dbStatus?.ToUpper() == "PAID" && !isRemitted;
 
                     // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
                     // Exception: Excused fines show as Excused immediately.
-                    var isOfficiallyPaid = dbStatus == "Paid" && isRemitted;
+                    var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
 
                     // Visual Data
-                    var displayAmountPaid = isOfficiallyPaid ? fine.AmountPaid : 0;
+                    var displayAmountPaid = isOfficiallyPaid ? (fine.Amount ?? 0) : 0;
                     var displayBalance = isOfficiallyPaid ? 0 : (isExcused ? 0 : (fine.Amount ?? 0));
                     var displayStatus = isOfficiallyPaid ? "Paid" : (isExcused ? "Excused" : "Unpaid");
 
-                    // Locking Logic
-                    var isLocked = dbStatus == "Paid" || dbStatus == "Partial" || isExcused;
+                    // Locking Logic - Can only edit if unpaid and not locked by class treasurer
+                    var isLocked = isPaidByClassTreasurer || isExcused || isOfficiallyPaid;
                     var canEdit = !isLocked;
 
                     var statusClass = isOfficiallyPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
@@ -338,25 +359,29 @@
                         data-description="@(description?.ToLower() ?? "")"
                         data-amount="@(fine.Amount ?? 0)"
                         data-paid="@displayAmountPaid"
-                        data-balance="@displayBalance">
+                        data-balance="@displayBalance"
+                        data-is-locked="@isLocked.ToString().ToLower()">
 
-                        <!-- Lock/Status Column -->
-                        <td class="text-center text-muted">
-                            @if (isLocked && !isOfficiallyPaid && !isExcused)
+                        <!-- Checkbox Column -->
+                        <td class="text-center">
+                            @if (!isLocked)
                             {
-                                <i class="bi bi-hourglass-split text-warning" title="Pending Validation"></i>
-                            }
-                            else if (isOfficiallyPaid)
-                            {
-                                <i class="bi bi-check-all text-success" title="Validated"></i>
-                            }
-                            else if (isExcused)
-                            {
-                                <i class="bi bi-shield-check text-info"></i>
+                                <input type="checkbox" class="form-check-input fine-checkbox" data-fine-id="@fine.FineId">
                             }
                             else
                             {
-                                <span>-</span>
+                                @if (isPaidByClassTreasurer)
+                                {
+                                    <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                }
+                                else if (isOfficiallyPaid)
+                                {
+                                    <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
+                                }
+                                else if (isExcused)
+                                {
+                                    <i class="bi bi-shield-check text-info" title="Excused"></i>
+                                }
                             }
                         </td>
 
@@ -408,18 +433,17 @@
                                     <i class="bi bi-check-circle"></i>
                                 </button>
                             }
+                            else if (isPaidByClassTreasurer)
+                            {
+                                <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
+                            }
                             else if (isOfficiallyPaid)
                             {
-                                <span class="text-success" title="Validated"><i class="bi bi-lock-fill"></i></span>
+                                <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
                             }
                             else if (isExcused)
                             {
                                 <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
-                            }
-                            else
-                            {
-                                @* Locked because Class Treasurer has it *@
-                                <span class="text-muted" title="Pending Remittance"><i class="bi bi-hourglass"></i></span>
                             }
                         </td>
                     </tr>
@@ -902,6 +926,131 @@
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
+
+        // ============================================================
+        // BULK SELECTION FUNCTIONALITY
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('selectAll');
+            const bulkToolbar = document.querySelector('.bulk-actions-toolbar');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const bulkMarkPaidBtn = document.getElementById('bulkMarkPaid');
+            const bulkRevokeBtn = document.getElementById('bulkRevoke');
+
+            // Select All functionality
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.fine-checkbox:not(:disabled)');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                    updateBulkToolbar();
+                });
+            }
+
+            // Individual checkbox change
+            document.querySelectorAll('.fine-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateBulkToolbar();
+                    updateSelectAllState();
+                });
+            });
+
+            // Bulk Mark as Paid
+            if (bulkMarkPaidBtn) {
+                bulkMarkPaidBtn.addEventListener('click', async function() {
+                    const selectedIds = getSelectedFineIds();
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fines to mark as paid');
+                        return;
+                    }
+
+                    if (!confirm(`Mark ${selectedIds.length} fine(s) as paid?`)) return;
+
+                    await bulkAction('BulkMarkOrgFinesAsPaid', selectedIds);
+                });
+            }
+
+            // Bulk Revoke
+            if (bulkRevokeBtn) {
+                bulkRevokeBtn.addEventListener('click', async function() {
+                    const selectedIds = getSelectedFineIds();
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fines to revoke');
+                        return;
+                    }
+
+                    if (!confirm(`Revoke payment for ${selectedIds.length} fine(s)?`)) return;
+
+                    await bulkAction('BulkRevokeOrgFines', selectedIds);
+                });
+            }
+
+            function getSelectedFineIds() {
+                const selected = [];
+                document.querySelectorAll('.fine-checkbox:checked').forEach(cb => {
+                    selected.push(parseInt(cb.dataset.fineId));
+                });
+                return selected;
+            }
+
+            function updateBulkToolbar() {
+                const selectedIds = getSelectedFineIds();
+                
+                if (selectedCountSpan) {
+                    selectedCountSpan.textContent = selectedIds.length;
+                }
+
+                if (bulkToolbar) {
+                    bulkToolbar.style.display = selectedIds.length > 0 ? 'block' : 'none';
+                }
+            }
+
+            function updateSelectAllState() {
+                const checkboxes = document.querySelectorAll('.fine-checkbox');
+                const checkedBoxes = document.querySelectorAll('.fine-checkbox:checked');
+                
+                if (!selectAll) return;
+
+                if (checkboxes.length === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else if (checkedBoxes.length === checkboxes.length) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else if (checkedBoxes.length > 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+            }
+
+            async function bulkAction(action, fineIds) {
+                try {
+                    const response = await fetch(`/Officer/${action}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ fineIds })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('success', result.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showToast('error', result.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                }
+            }
+        });
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
 }

@@ -3945,7 +3945,505 @@ namespace iBITS_Portal.Controllers
             return View("OrgTreasurerDashboard");
         }
 
+
+        // ============================================================
+        // BULK ACTIONS FOR CLASS TREASURER - FINES
+        // ============================================================
+        
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> BulkMarkFinesAsPaid([FromBody] BulkFineActionRequest request)
+        {
+            try
+            {
+                if (request.FineIds == null || request.FineIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fines selected" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var fineId in request.FineIds)
+                {
+                    var fine = await _context.Fines
+                        .Include(f => f.StudentNumNavigation)
+                        .Include(f => f.Attendance)
+                            .ThenInclude(a => a.Event)
+                        .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                    if (fine == null || fine.FinesStatus == "Paid" || fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Mark as paid
+                    fine.FinesStatus = "Paid";
+                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectedBy = treasurer.StudentNum;
+
+                    // Create payment transaction for history
+                    var transaction = new FinePaymentTransaction
+                    {
+                        FineId = fine.FineId,
+                        StudentNum = fine.StudentNum ?? "",
+                        Amount = fine.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        Notes = "Bulk payment - Class Treasurer"
+                    };
+                    _context.FinePaymentTransactions.Add(transaction);
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully marked {successCount} fine(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> BulkRevokeFines([FromBody] BulkFineActionRequest request)
+        {
+            try
+            {
+                if (request.FineIds == null || request.FineIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fines selected" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var fineId in request.FineIds)
+                {
+                    var fine = await _context.Fines.FindAsync(fineId);
+
+                    if (fine == null || fine.FinesStatus != "Paid" || fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Revoke payment
+                    fine.FinesStatus = "Unpaid";
+                    fine.CollectionDate = null;
+                    fine.CollectedBy = null;
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully revoked {successCount} fine payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // BULK FEE ACTIONS - CLASS TREASURER
+        // ============================================================
+
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> BulkMarkFeesAsPaid([FromBody] BulkFeeActionRequest request)
+        {
+            try
+            {
+                if (request.FeeIds == null || request.FeeIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fees selected" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var feeId in request.FeeIds)
+                {
+                    var fee = await _context.Fees
+                        .Include(f => f.StudentNumNavigation)
+                        .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                    if (fee == null || fee.FeeStatus == "Paid" || fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Mark as paid
+                    fee.FeeStatus = "Paid";
+                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectedBy = treasurer.StudentNum;
+
+                    // Create payment transaction for history
+                    var transaction = new PaymentTransaction
+                    {
+                        FeeId = fee.FeeId,
+                        StudentNum = fee.StudentNum ?? "",
+                        Amount = fee.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        Notes = "Bulk payment - Class Treasurer"
+                    };
+                    _context.PaymentTransactions.Add(transaction);
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully marked {successCount} fee(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> BulkRevokeFees([FromBody] BulkFeeActionRequest request)
+        {
+            try
+            {
+                if (request.FeeIds == null || request.FeeIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fees selected" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var feeId in request.FeeIds)
+                {
+                    var fee = await _context.Fees.FindAsync(feeId);
+
+                    if (fee == null || fee.FeeStatus != "Paid" || fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Revoke payment
+                    fee.FeeStatus = "Unpaid";
+                    fee.CollectionDate = null;
+                    fee.CollectedBy = null;
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully revoked {successCount} fee payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // BULK FINE ACTIONS - ORG TREASURER
+        // ============================================================
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BulkMarkOrgFinesAsPaid([FromBody] BulkFineActionRequest request)
+        {
+            try
+            {
+                if (request.FineIds == null || request.FineIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fines selected" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var fineId in request.FineIds)
+                {
+                    var fine = await _context.Fines
+                        .Include(f => f.StudentNumNavigation)
+                        .Include(f => f.Attendance)
+                            .ThenInclude(a => a.Event)
+                        .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                    // Can only mark as paid if it's currently unpaid and not locked by class treasurer
+                    if (fine == null || fine.FinesStatus == "Paid" || fine.FinesStatus == "Partial" || fine.FinesStatus == "Excused")
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Mark as paid and remitted (Org Treasurer validates immediately)
+                    fine.FinesStatus = "Paid";
+                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectedBy = treasurer.StudentNum;
+                    fine.RemittanceStatus = FeeRemittanceStatus.Remitted;
+                    fine.OfficialPaymentDate = DateTime.Now;
+
+                    // Create payment transaction for history
+                    var transaction = new FinePaymentTransaction
+                    {
+                        FineId = fine.FineId,
+                        StudentNum = fine.StudentNum ?? "",
+                        Amount = fine.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        Notes = "Bulk payment - Org Treasurer (Validated)"
+                    };
+                    _context.FinePaymentTransactions.Add(transaction);
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully marked {successCount} fine(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BulkRevokeOrgFines([FromBody] BulkFineActionRequest request)
+        {
+            try
+            {
+                if (request.FineIds == null || request.FineIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fines selected" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var fineId in request.FineIds)
+                {
+                    var fine = await _context.Fines.FindAsync(fineId);
+
+                    // Can only revoke if it's paid but not officially validated (remitted)
+                    if (fine == null || fine.FinesStatus != "Paid" || fine.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Revoke payment
+                    fine.FinesStatus = "Unpaid";
+                    fine.CollectionDate = null;
+                    fine.CollectedBy = null;
+                    fine.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully revoked {successCount} fine payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // BULK FEE ACTIONS - ORG TREASURER
+        // ============================================================
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BulkMarkOrgFeesAsPaid([FromBody] BulkFeeActionRequest request)
+        {
+            try
+            {
+                if (request.FeeIds == null || request.FeeIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fees selected" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var feeId in request.FeeIds)
+                {
+                    var fee = await _context.Fees
+                        .Include(f => f.StudentNumNavigation)
+                        .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+                    // Can only mark as paid if it's currently unpaid and not locked by class treasurer
+                    if (fee == null || fee.FeeStatus == "Paid" || fee.FeeStatus == "Partial")
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Mark as paid and remitted (Org Treasurer validates immediately)
+                    fee.FeeStatus = "Paid";
+                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectedBy = treasurer.StudentNum;
+                    fee.RemittanceStatus = FeeRemittanceStatus.Remitted;
+                    fee.OfficialPaymentDate = DateTime.Now;
+
+                    // Create payment transaction for history
+                    var transaction = new PaymentTransaction
+                    {
+                        FeeId = fee.FeeId,
+                        StudentNum = fee.StudentNum ?? "",
+                        Amount = fee.Amount ?? 0,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "Cash",
+                        ProcessedBy = treasurer.StudentNum ?? "",
+                        Notes = "Bulk payment - Org Treasurer (Validated)"
+                    };
+                    _context.PaymentTransactions.Add(transaction);
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully marked {successCount} fee(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BulkRevokeOrgFees([FromBody] BulkFeeActionRequest request)
+        {
+            try
+            {
+                if (request.FeeIds == null || request.FeeIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fees selected" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var feeId in request.FeeIds)
+                {
+                    var fee = await _context.Fees.FindAsync(feeId);
+
+                    // Can only revoke if it's paid but not officially validated (remitted)
+                    if (fee == null || fee.FeeStatus != "Paid" || fee.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Revoke payment
+                    fee.FeeStatus = "Unpaid";
+                    fee.CollectionDate = null;
+                    fee.CollectedBy = null;
+                    fee.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully revoked {successCount} fee payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
         #endregion
 
+    }
+
+    // ============================================================
+    // REQUEST MODELS FOR BULK ACTIONS
+    // ============================================================
+    public class BulkFineActionRequest
+    {
+        public List<int> FineIds { get; set; }
+        public string Category { get; set; }
+    }
+
+    public class BulkFeeActionRequest
+    {
+        public List<int> FeeIds { get; set; }
+        public string Category { get; set; }
     }
 }

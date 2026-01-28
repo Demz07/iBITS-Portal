@@ -238,16 +238,7 @@
 
 
 
-                <!-- EXECUTIVE BOARD / "Officer" ROLE FEATURES -->
-                @if (User.IsInRole("Officer"))
-                {
-                    <li class="@(controller == "Officer" && action == "Announcements" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="Announcements"><i class="bi bi-megaphone"></i> Announcements</a>
-                    </li>
-                    <li class="@(controller == "Officer" && action == "EventManagement" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="EventManagement"><i class="bi bi-calendar-event-fill"></i> Event Management</a>
-                    </li>
-                }
+               
 
                 <!-- ADMIN / SYSTEM FEATURES -->
             </ul>

@@ -2415,6 +2415,7 @@ namespace iBITS_Portal.Controllers
                 var fine = new Fine
                 {
                     AttendanceId = attendanceId,
+                    StudentNum = attendance.StudentNum, // FIX: Set StudentNum for proper navigation
                     Amount = fineAmount,
                     FinesStatus = "Unpaid",
                     FinesStartDate = DateOnly.FromDateTime(DateTime.Now),

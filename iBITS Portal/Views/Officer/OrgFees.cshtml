@@ -263,11 +263,30 @@
         </div>
     </div>
 
+    <!-- Bulk Actions Toolbar -->
+    <div class="bulk-actions-toolbar" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="text-white fw-bold"><span id="selectedCount">0</span> selected</span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-success me-2" id="bulkMarkPaid">
+                    <i class="bi bi-check-circle me-1"></i> Mark as Paid
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" id="bulkRevoke">
+                    <i class="bi bi-x-circle me-1"></i> Revoke
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-glass" id="feesTable">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 50px;">☐</th>
+                    <th class="text-center" style="width: 50px;">
+                        <input type="checkbox" class="form-check-input" id="selectAll" title="Select All">
+                    </th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
                     <th>Description</th>
@@ -282,21 +301,22 @@
                     foreach (var fee in Model)
                     {
                         var student = fee.StudentNumNavigation;
-                        var dbStatus = fee.PaymentStatus; // Actual status in DB
+                        var dbStatus = fee.FeeStatus; // Use FeeStatus field
                         var isRemitted = fee.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                        var isPendingRemittance = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
+                        var isPaidByClassTreasurer = dbStatus?.ToUpper() == "PAID" && !isRemitted;
 
                         // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
-                        var isOfficiallyPaid = dbStatus == "Paid" && isRemitted;
+                        var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
 
                         // Visual Data (What Org Treasurer Sees)
-                        var displayAmountPaid = isOfficiallyPaid ? fee.AmountPaid : 0;
-                        var displayBalance = isOfficiallyPaid ? fee.RemainingBalance : (fee.Amount ?? 0);
+                        var displayAmountPaid = isOfficiallyPaid ? (fee.Amount ?? 0) : 0;
+                        var displayBalance = isOfficiallyPaid ? 0 : (fee.Amount ?? 0);
                         var displayStatus = isOfficiallyPaid ? "Paid" : "Unpaid";
 
                         // Locking Logic:
-                        // Lock if officially paid OR if Class Treasurer has collected it (dbStatus is Paid/Partial)
-                        // but it hasn't been validated yet (to prevent double collection).
-                        var isLocked = dbStatus == "Paid" || dbStatus == "Partial";
+                        // Lock if officially paid OR if Class Treasurer has collected it (to prevent double collection)
+                        var isLocked = isPaidByClassTreasurer || isOfficiallyPaid;
                         var canEdit = !isLocked;
 
                         var rowClass = isOfficiallyPaid ? "row-paid" : (isLocked ? "row-locked" : "");
@@ -322,21 +342,25 @@
                             data-status="@displayStatus.ToLower()"
                             data-amount="@(fee.Amount ?? 0)"
                             data-paid="@displayAmountPaid"
-                            data-balance="@displayBalance">
+                            data-balance="@displayBalance"
+                            data-is-locked="@isLocked.ToString().ToLower()">
 
-                            <!-- Row Number / Lock Icon -->
-                            <td class="text-center text-muted">
-                                @if (isLocked && !isOfficiallyPaid)
+                            <!-- Checkbox Column -->
+                            <td class="text-center">
+                                @if (!isLocked)
                                 {
-                                    <i class="bi bi-hourglass-split text-warning" title="Pending Validation (Collected by Class Treasurer)"></i>
-                                }
-                                else if (isOfficiallyPaid)
-                                {
-                                    <i class="bi bi-check-all text-success" title="Validated"></i>
+                                    <input type="checkbox" class="form-check-input fee-checkbox" data-fee-id="@fee.FeeId">
                                 }
                                 else
                                 {
-                                    <span>-</span>
+                                    @if (isPaidByClassTreasurer)
+                                    {
+                                        <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                    }
+                                    else if (isOfficiallyPaid)
+                                    {
+                                        <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
+                                    }
                                 }
                             </td>
 
@@ -375,14 +399,13 @@
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 }
+                                else if (isPaidByClassTreasurer)
+                                {
+                                    <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
+                                }
                                 else if (isOfficiallyPaid)
                                 {
-                                    <span class="text-success" title="Validated Payment"><i class="bi bi-lock-fill"></i></span>
-                                }
-                                else
-                                {
-                                    @* Locked because Class Treasurer has it, but not validated yet *@
-                                    <span class="text-muted" title="Pending Remittance from Class Treasurer"><i class="bi bi-hourglass"></i></span>
+                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
                                 }
                             </td>
                         </tr>
@@ -1006,5 +1029,154 @@
             
             bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
         }
+
+        // ============================================================
+        // BULK SELECTION FUNCTIONALITY
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('selectAll');
+            const bulkToolbar = document.querySelector('.bulk-actions-toolbar');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const bulkMarkPaidBtn = document.getElementById('bulkMarkPaid');
+            const bulkRevokeBtn = document.getElementById('bulkRevoke');
+
+            // Select All functionality
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.fee-checkbox:not(:disabled)');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                    updateBulkToolbar();
+                });
+            }
+
+            // Individual checkbox change
+            document.querySelectorAll('.fee-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateBulkToolbar();
+                    updateSelectAllState();
+                });
+            });
+
+            // Bulk Mark as Paid
+            if (bulkMarkPaidBtn) {
+                bulkMarkPaidBtn.addEventListener('click', async function() {
+                    const selectedIds = getSelectedFeeIds();
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fees to mark as paid');
+                        return;
+                    }
+
+                    if (!confirm(`Mark ${selectedIds.length} fee(s) as paid?`)) return;
+
+                    await bulkAction('BulkMarkOrgFeesAsPaid', selectedIds);
+                });
+            }
+
+            // Bulk Revoke
+            if (bulkRevokeBtn) {
+                bulkRevokeBtn.addEventListener('click', async function() {
+                    const selectedIds = getSelectedFeeIds();
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fees to revoke');
+                        return;
+                    }
+
+                    if (!confirm(`Revoke payment for ${selectedIds.length} fee(s)?`)) return;
+
+                    await bulkAction('BulkRevokeOrgFees', selectedIds);
+                });
+            }
+
+            function getSelectedFeeIds() {
+                const selected = [];
+                document.querySelectorAll('.fee-checkbox:checked').forEach(cb => {
+                    selected.push(parseInt(cb.dataset.feeId));
+                });
+                return selected;
+            }
+
+            function updateBulkToolbar() {
+                const selectedIds = getSelectedFeeIds();
+                
+                if (selectedCountSpan) {
+                    selectedCountSpan.textContent = selectedIds.length;
+                }
+
+                if (bulkToolbar) {
+                    bulkToolbar.style.display = selectedIds.length > 0 ? 'block' : 'none';
+                }
+            }
+
+            function updateSelectAllState() {
+                const checkboxes = document.querySelectorAll('.fee-checkbox');
+                const checkedBoxes = document.querySelectorAll('.fee-checkbox:checked');
+                
+                if (!selectAll) return;
+
+                if (checkboxes.length === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else if (checkedBoxes.length === checkboxes.length) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else if (checkedBoxes.length > 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+            }
+
+            async function bulkAction(action, feeIds) {
+                try {
+                    const response = await fetch(`/Officer/${action}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ feeIds })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('success', result.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showToast('error', result.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('error', 'An error occurred. Please try again.');
+                }
+            }
+
+            function showToast(type, message) {
+                const bgClass = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'danger');
+                const icon = type === 'success' ? 'check-circle' : (type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle');
+                const toastHtml = `
+                    <div class="toast align-items-center text-white bg-${bgClass} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body"><i class="bi bi-${icon} me-2"></i>${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>`;
+                let container = document.querySelector('.toast-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    container.style.zIndex = '9999';
+                    document.body.appendChild(container);
+                }
+                container.insertAdjacentHTML('beforeend', toastHtml);
+                const toast = container.lastElementChild;
+                const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+                bsToast.show();
+                toast.addEventListener('hidden.bs.toast', () => toast.remove());
+            }
+        });
     </script>
 }
