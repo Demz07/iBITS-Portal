@@ -1777,6 +1777,205 @@ namespace iBITS_Portal.Controllers
         }
 
         // ============================================================
+        // MARK CLASS FINE AS PAID - AJAX (Class Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> MarkClassFinePaid(int fineId)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+                {
+                    return Json(new { success = false, message = "No section assigned to your account." });
+                }
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found." });
+                }
+
+                // Verify the fine belongs to a student in the treasurer's section
+                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only process payments for students in your section." });
+                }
+
+                // Check if fine is already remitted (locked)
+                if (fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot modify: This fine has been remitted or is pending remittance." });
+                }
+
+                if (fine.FinesStatus?.ToLower() == "excused" || fine.FinesStatus?.ToLower() == "waived")
+                {
+                    return Json(new { success = false, message = "Cannot modify an excused fine." });
+                }
+
+                if (fine.FinesStatus?.ToUpper() == "PAID")
+                {
+                    return Json(new { success = false, message = "This fine is already marked as paid." });
+                }
+
+                // Mark as PAID (full payment only)
+                fine.FinesStatus = "Paid";
+                fine.AmountPaid = fine.Amount ?? 0;
+                fine.CollectedBy = treasurer.StudentNum;
+                fine.CollectionDate = DateTime.Now;
+
+                _context.Fines.Update(fine);
+
+                // Create payment transaction for receipt/history
+                var transaction = new FinePaymentTransaction
+                {
+                    FineId = fineId,
+                    StudentNum = fine.StudentNum ?? "",
+                    Amount = fine.Amount ?? 0,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = "Cash",
+                    ProcessedBy = treasurer.StudentNum ?? "",
+                    TransactionReference = null,
+                    Notes = "Full payment recorded by Class Treasurer"
+                };
+                _context.FinePaymentTransactions.Add(transaction);
+
+                // Notify student with receipt details
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "✅ Fine Payment Receipt",
+                        Message = $"Your fine '{fine.Description ?? "Fine"}' has been PAID.\n\n" +
+                                  $"Amount: ₱{fine.Amount:N2}\n" +
+                                  $"Collected by: {treasurer.FullName}\n" +
+                                  $"Date: {DateTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
+                                  $"Thank you for your payment!",
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"✅ Fine marked as PAID for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} (₱{fine.Amount:N2}). Receipt sent to student."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error marking fine as paid: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // REVOKE CLASS FINE PAYMENT - AJAX (Class Treasurer)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Class Treasurer")]
+        public async Task<IActionResult> RevokeClassFinePaid(int fineId)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null || string.IsNullOrEmpty(treasurer.YearLevelSection))
+                {
+                    return Json(new { success = false, message = "No section assigned to your account." });
+                }
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found." });
+                }
+
+                // Verify the fine belongs to a student in the treasurer's section
+                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                {
+                    return Json(new { success = false, message = "You can only process payments for students in your section." });
+                }
+
+                // Check if fine is already remitted (locked)
+                if (fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted)
+                {
+                    return Json(new { success = false, message = "Cannot revoke: This fine has been remitted or is pending remittance." });
+                }
+
+                if (fine.FinesStatus?.ToUpper() != "PAID")
+                {
+                    return Json(new { success = false, message = "This fine is not marked as paid." });
+                }
+
+                // Revoke payment
+                fine.FinesStatus = "Unpaid";
+                fine.AmountPaid = 0;
+                fine.CollectedBy = null;
+                fine.CollectionDate = null;
+
+                _context.Fines.Update(fine);
+
+                // Delete the payment transaction(s) for this fine to remove from payment history
+                var transactions = await _context.FinePaymentTransactions
+                    .Where(t => t.FineId == fineId)
+                    .ToListAsync();
+                
+                if (transactions.Any())
+                {
+                    _context.FinePaymentTransactions.RemoveRange(transactions);
+                }
+
+                // Notify student with details
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "⚠️ Fine Payment Revoked",
+                        Message = $"Your fine payment has been REVOKED.\n\n" +
+                                  $"Fine: {fine.Description ?? "Fine"}\n" +
+                                  $"Amount: ₱{fine.Amount:N2}\n" +
+                                  $"Status: UNPAID\n" +
+                                  $"Revoked by: {treasurer.FullName}\n" +
+                                  $"Date: {DateTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
+                                  $"Please contact your Class Treasurer for more details.",
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"✅ Payment revoked for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum}. Student has been notified."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error revoking payment: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
         // CLASS TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
