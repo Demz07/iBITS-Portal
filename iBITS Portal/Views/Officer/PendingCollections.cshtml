@@ -1,14 +1,20 @@
 @* FILE PATH: Views/Officer/PendingCollections.cshtml *@
-@* CLASS TREASURER - View payments ready for remittance *@
-@model IEnumerable<iBITS_Portal.Models.Fee>
+@* CLASS TREASURER - View payments ready for remittance (Fees & Fines) *@
+@model dynamic
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Pending Collections";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     var currentSection = ViewBag.Section as string ?? "N/A";
-    var feeNames = ViewBag.FeeNames as List<string> ?? new List<string>();
-    var selectedFeeName = ViewBag.SelectedFeeName as string;
+    var type = ViewBag.Type as string ?? "fees";
+    var isFines = type == "fines";
+    var categoryNames = ViewBag.FeeNames as List<string> ?? (ViewBag.FineNames as List<string> ?? new List<string>());
     var totalAmount = ViewBag.TotalPendingAmount as decimal? ?? 0;
     var totalCount = ViewBag.TotalPendingCount as int? ?? 0;
+    
+    // Cast model to appropriate type
+    var fees = !isFines ? (Model as IEnumerable<Fee>)?.ToList() ?? new List<Fee>() : new List<Fee>();
+    var fines = isFines ? (Model as IEnumerable<Fine>)?.ToList() ?? new List<Fine>() : new List<Fine>();
 }
 
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
@@ -61,14 +67,14 @@
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
-            <i class="bi bi-collection me-2"></i> Pending Collections
+            <i class="bi bi-collection me-2"></i> Pending @(isFines ? "Fine" : "Fee") Collections
             <span class="badge bg-warning text-dark ms-2">@totalCount payments</span>
         </h3>
-        <p class="text-muted small mb-0">Section @currentSection - Payments collected but not yet remitted to Org Treasurer</p>
+        <p class="text-muted small mb-0">Section @currentSection - @(isFines ? "Fine" : "Fee") payments collected but not yet remitted to Org Treasurer</p>
     </div>
     <div>
-        <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
-            <i class="bi bi-arrow-left me-1"></i> Dashboard
+        <a asp-action="@(isFines ? "ClassFines" : "ClassFees")" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to @(isFines ? "Fines" : "Fees")
         </a>
         <a asp-action="RemittanceHistory" class="btn btn-outline-warning btn-sm">
             <i class="bi bi-clock-history me-1"></i> Remittance History
@@ -113,97 +119,127 @@
     </div>
 </div>
 
-<!-- FILTER BY FEE CATEGORY -->
-@if (feeNames.Any())
-{
-    <div class="glass-panel p-3 mb-4">
-        <form method="get" class="row g-3 align-items-center">
-            <div class="col-auto">
-                <label class="text-muted"><i class="bi bi-funnel me-1"></i> Filter by Fee:</label>
-            </div>
-            <div class="col-md-4">
-                <select name="feeName" class="form-select form-select-sm" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white;" onchange="this.form.submit()">
-                    <option value="">All Fee Categories</option>
-                    @foreach (var name in feeNames)
-                    {
-                        <option value="@name" selected="@(selectedFeeName == name)">@name</option>
-                    }
-                </select>
-            </div>
-            @if (!string.IsNullOrEmpty(selectedFeeName))
-            {
-                <div class="col-auto">
-                    <a asp-action="PendingCollections" class="btn btn-outline-secondary btn-sm">Clear Filter</a>
-                </div>
-            }
-        </form>
-    </div>
-}
-
-<!-- FEE CATEGORIES GROUPED -->
-@if (Model.Any())
-{
-    var groupedByFee = Model.GroupBy(f => f.FeeName).OrderBy(g => g.Key);
-    
-    <div class="row g-4">
-        @foreach (var group in groupedByFee)
-        {
-            var feeName = group.Key ?? "Unknown Fee";
-            var groupTotal = group.Sum(f => f.Amount ?? 0);
-            var groupCount = group.Count();
-            
-            <div class="col-12">
-                <div class="fee-category-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h5 class="text-white mb-1">@feeName</h5>
-                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
-                        </div>
-                        <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
-                            <i class="bi bi-send me-1"></i> Remit to Org Treasurer
-                        </a>
-                    </div>
-                    
-                    <!-- Student List -->
-                    <div class="table-responsive">
-                        <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <th style="color: var(--gold-primary);">Student</th>
-                                    <th style="color: var(--gold-primary);">Student #</th>
-                                    <th style="color: var(--gold-primary);">Amount</th>
-                                    <th style="color: var(--gold-primary);">Collected</th>
-                                    <th style="color: var(--gold-primary);">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
-                                {
-                                    <tr>
-                                        <td>@fee.StudentNumNavigation?.FullName</td>
-                                        <td><code>@fee.StudentNum</code></td>
-                                        <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
-                                        <td>@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
-                                        <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-}
-else
+<!-- INFO MESSAGE -->
+@if (totalCount == 0)
 {
     <div class="glass-panel p-5 text-center">
         <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-        <h5 class="text-white">No Pending Collections</h5>
-        <p class="text-muted mb-3">All collected payments have been remitted, or no payments have been collected yet.</p>
-        <a asp-action="ClassFees" class="btn btn-outline-warning">
-            <i class="bi bi-cash-stack me-1"></i> Collect Payments
+        <h5 class="text-white">No Pending @(isFines ? "Fine" : "Fee") Collections</h5>
+        <p class="text-muted">All @(isFines ? "fine" : "fee") payments have been remitted or there are no collected payments yet.</p>
+        <a asp-action="@(isFines ? "ClassFines" : "ClassFees")" class="btn btn-outline-light mt-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to @(isFines ? "Fines" : "Fees") Management
         </a>
+    </div>
+}
+
+<!-- CATEGORIES GROUPED -->
+@if (totalCount > 0)
+{
+    <div class="row g-4">
+        @if (isFines)
+        {
+            var groupedByFine = fines.GroupBy(f => f.Description ?? "Other").OrderBy(g => g.Key);
+            
+            @foreach (var group in groupedByFine)
+            {
+                var categoryName = group.Key;
+                var groupTotal = group.Sum(f => f.Amount ?? 0);
+                var groupCount = group.Count();
+                
+                <div class="col-12">
+                    <div class="fee-category-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="text-white mb-1">@categoryName</h5>
+                                <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                            </div>
+                            <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit">
+                                <i class="bi bi-send me-1"></i> Remit to Org Treasurer
+                            </a>
+                        </div>
+                        
+                        <!-- Student List -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <th style="color: var(--gold-primary);">Student</th>
+                                        <th style="color: var(--gold-primary);">Student #</th>
+                                        <th style="color: var(--gold-primary);">Amount</th>
+                                        <th style="color: var(--gold-primary);">Collected</th>
+                                        <th style="color: var(--gold-primary);">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var fine in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+                                    {
+                                        <tr>
+                                            <td>@fine.StudentNumNavigation?.FullName</td>
+                                            <td><code>@fine.StudentNum</code></td>
+                                            <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
+                                            <td>@(fine.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                            <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            var groupedByFee = fees.GroupBy(f => f.FeeName ?? "Other").OrderBy(g => g.Key);
+            
+            @foreach (var group in groupedByFee)
+            {
+                var feeName = group.Key;
+                var groupTotal = group.Sum(f => f.Amount ?? 0);
+                var groupCount = group.Count();
+                
+                <div class="col-12">
+                    <div class="fee-category-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="text-white mb-1">@feeName</h5>
+                                <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                            </div>
+                            <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
+                                <i class="bi bi-send me-1"></i> Remit to Org Treasurer
+                            </a>
+                        </div>
+                        
+                        <!-- Student List -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <th style="color: var(--gold-primary);">Student</th>
+                                        <th style="color: var(--gold-primary);">Student #</th>
+                                        <th style="color: var(--gold-primary);">Amount</th>
+                                        <th style="color: var(--gold-primary);">Collected</th>
+                                        <th style="color: var(--gold-primary);">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+                                    {
+                                        <tr>
+                                            <td>@fee.StudentNumNavigation?.FullName</td>
+                                            <td><code>@fee.StudentNum</code></td>
+                                            <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                            <td>@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                            <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
     </div>
 }
 

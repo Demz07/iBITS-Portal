@@ -192,39 +192,51 @@
                     </li>
                 }
 
-                <!-- SECRETARY FEATURES -->
+                <!-- SECRETARY FEATURES (Combined) -->
+                @* Find the Secretary Features section in your sidebar and replace it with this *@
+
                 @if (User.IsInRole("Class Secretary") || User.IsInRole("Org Secretary"))
                 {
                     <li class="nav-section-header">
                         <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-clipboard-check me-1"></i> Attendance</span>
                     </li>
+
+                    @* 1. Dashboard: Visible ONLY to Org Secretary *@
+                    @if (User.IsInRole("Org Secretary"))
+                    {
+                        <li class="@(controller == "Officer" && action == "OrgSecretaryDashboard" ? "active" : "")">
+                            <a asp-controller="Officer" asp-action="OrgSecretaryDashboard">
+                                <i class="bi bi-speedometer2"></i> Secretary Dashboard
+                            </a>
+                        </li>
+                    }
+
+                    @* 2. Scanner: Visible to BOTH *@
                     <li class="@(controller == "Officer" && action == "Scanner" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="Scanner"><i class="bi bi-qr-code-scan"></i> QR Attendance Scanner</a>
+                        <a asp-controller="Officer" asp-action="Scanner">
+                            <i class="bi bi-qr-code-scan"></i> QR Attendance Scanner
+                        </a>
+                    </li>
+
+                    @* 3. Attendance Records: Visible to BOTH (Placed here so it appears only once) *@
+                    <li class="@(controller == "Officer" && action == "AttendanceRecords" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="AttendanceRecords">
+                            <i class="bi bi-list-check"></i> Attendance Records
+                        </a>
                     </li>
                 }
 
-                <!-- ORG SECRETARY ONLY FEATURES -->
+                @* IMPORTANT: Scroll down to where your "ORG SECRETARY ONLY FEATURES" block was *@
+                @* Make sure "Attendance Records" is NOT listed there again. It should look like this: *@
+
                 @if (User.IsInRole("Org Secretary"))
                 {
-                    <li class="@(controller == "Officer" && action == "AttendanceRecords" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="AttendanceRecords"><i class="bi bi-list-check"></i> Attendance Records</a>
-                    </li>
-                    <li class="@(controller == "Officer" && action == "CreateManualFee" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="CreateManualFee"><i class="bi bi-plus-circle"></i> Create Manual Fee</a>
-                    </li>
-                    <li class="@(controller == "Officer" && action == "CreateManualFine" ? "active" : "")">
-                        <a asp-controller="Officer" asp-action="CreateManualFine"><i class="bi bi-plus-circle"></i> Create Manual Fine</a>
-                    </li>
-                    <li class="nav-section-header mt-2">
-                        <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-file-earmark-medical me-1"></i> Excuses</span>
-                    </li>
-                    <li class="@(controller == "Excuse" && action == "ManageExcuses" ? "active" : "")">
-                        <a asp-controller="Excuse" asp-action="ManageExcuses"><i class="bi bi-file-earmark-medical"></i> Manage Excuses</a>
-                    </li>
-                    <li class="@(controller == "Excuse" && action == "AllExcuses" ? "active" : "")">
-                        <a asp-controller="Excuse" asp-action="AllExcuses"><i class="bi bi-list-ul"></i> All Excuses</a>
-                    </li>
+                    @* Keep only other Org Secretary specific links here, like Manual Fees/Fines if you still have them *@
+                    @* Do NOT put Attendance Records here because it is already listed above *@
                 }
+
+
+
 
                 <!-- EXECUTIVE BOARD / "Officer" ROLE FEATURES -->
                 @if (User.IsInRole("Officer"))

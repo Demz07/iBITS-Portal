@@ -4,6 +4,14 @@
     ViewData["Title"] = "Attendance Records";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
 
+    bool isOrgSecretary = User.IsInRole("Org Secretary");
+    bool canEdit = isOrgSecretary;
+
+    // Retrieve restricted data from Controller
+    string lockedSection = ViewBag.LockedSection as string;
+    string lockedProgram = ViewBag.LockedProgram as string;
+    bool isRestricted = !string.IsNullOrEmpty(lockedSection);
+
     var events = ViewBag.Events as List<iBITS_Portal.Models.Event> ?? new List<iBITS_Portal.Models.Event>();
     var programs = ViewBag.Programs as List<string> ?? new List<string>();
     var yearLevels = ViewBag.YearLevels as List<string> ?? new List<string>();
@@ -14,7 +22,7 @@
     <style>
         .table-glass {
             table-layout: fixed !important;
-            min-width: 1350px !important;
+            min-width: 1250px !important;
             width: 100%;
         }
 
@@ -54,35 +62,13 @@
             width: 80px;
         }
 
-        .form-check-input:checked {
-            background-color: var(--gold-primary);
-            border-color: var(--gold-primary);
-        }
-
-        #bulkActionBar {
-            display: none;
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--gold-primary);
-            border-radius: 12px;
-            padding: 15px 25px;
-            position: sticky;
-            top: 20px;
-            z-index: 1000;
-            margin-bottom: 20px;
-            animation: slideIn 0.3s ease;
-        }
-
-        @@keyframes slideIn {
-            from {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .static-filter {
+            cursor: not-allowed;
+            opacity: 0.8;
+            border-color: var(--gold-primary) !important;
+            background: rgba(212, 175, 55, 0.05) !important;
+            color: var(--gold-text) !important;
+            font-weight: 600;
         }
     </style>
 }
@@ -96,62 +82,76 @@
     </div>
 }
 
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show glass-panel border-danger mb-4" role="alert" style="background: rgba(239, 68, 68, 0.1);">
-        <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i> <span class="text-danger">@TempData["ErrorMessage"]</span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(1);"></button>
-    </div>
-}
-
 <!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="glass-header-title">
             <i class="bi bi-filter-circle-fill me-2 text-gold"></i> Attendance Records
         </h4>
-        <p class="mb-0 small text-muted">View and modify student attendance status</p>
+        @if (isRestricted)
+        {
+            <p class="mb-0 small text-info">
+                <i class="bi bi-shield-lock-fill me-1"></i> Class Secretary: <strong>@lockedProgram - @lockedSection</strong>
+            </p>
+        }
+        else
+        {
+            <p class="mb-0 small text-muted">Organization-wide attendance management</p>
+        }
     </div>
-    <a href="@Url.Action("OrgSecretaryDashboard", "Officer")" class="btn btn-gold-outline">
-        <i class="bi bi-arrow-left me-1"></i> Back
-    </a>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("AttendanceRecords")" class="btn btn-glass" title="Clear All Filters">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+        </a>
+        @if (isOrgSecretary)
+        {
+            <a href="@Url.Action("OrgSecretaryDashboard", "Officer")" class="btn btn-gold-outline">
+                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+            </a>
+        }
+    </div>
 </div>
 
-<!-- BULK ACTION BAR -->
-<div id="bulkActionBar" class="glass-panel">
-    <form asp-action="BulkUpdateStatus" method="post" id="bulkForm">
-        <div class="d-flex align-items-center justify-content-between">
-            <div class="text-strong">
-                <i class="bi bi-check2-all me-2 text-gold"></i>
-                <span id="selectedCount">0</span> Students Selected
+<!-- BULK ACTION BAR (Only for Org Secretary) -->
+@if (canEdit)
+{
+    <div id="bulkActionBar" class="glass-panel">
+        <form asp-action="BulkUpdateStatus" method="post" id="bulkForm">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="text-strong">
+                    <i class="bi bi-check2-all me-2 text-gold"></i>
+                    <span id="selectedCount">0</span> Students Selected
+                </div>
+                <div class="d-flex gap-2">
+                    <div id="bulkIdContainer"></div>
+                    <select name="bulkStatus" class="glass-select py-1" style="width: 180px;" required>
+                        <option value="" disabled selected>Select Action...</option>
+                        <option value="Present">Mark Present</option>
+                        <option value="Absent">Mark Absent</option>
+                        <option value="Excused">Mark Excused</option>
+                    </select>
+                    <button type="submit" class="btn btn-gold-outline px-4">Apply to Selected</button>
+                    <button type="button" class="btn btn-outline-light" onclick="deselectAll()">Cancel</button>
+                </div>
             </div>
-            <div class="d-flex gap-2">
-                <div id="bulkIdContainer"></div>
-                <select name="bulkStatus" class="glass-select py-1" style="width: 180px;" required>
-                    <option value="" disabled selected>Select Action...</option>
-                    <option value="Present">Mark Present</option>
-                    <option value="Absent">Mark Absent</option>
-                    <option value="Excused">Mark Excused</option>
-                </select>
-                <button type="submit" class="btn btn-gold-outline px-4">Apply to Selected</button>
-                <button type="button" class="btn btn-outline-light" onclick="deselectAll()">Cancel</button>
-            </div>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
+}
 
-<!-- FILTERS + SEARCH -->
+<!-- FILTERS -->
 <div class="filter-glass-panel mb-4">
-    <form method="get" asp-action="AttendanceRecords">
+    <form method="get" asp-action="AttendanceRecords" id="filterForm">
         <div class="row g-3">
+            <!-- Search -->
             <div class="col-md-3">
-                <label class="filter-label">Search Student</label>
-                <input type="text" name="searchQuery" id="searchQuery" value="@ViewBag.SearchQuery"
-                       class="glass-select" placeholder="Name or ID...">
+                <label class="filter-label">Search Name/ID</label>
+                <input type="text" name="searchQuery" id="searchQuery" value="@ViewBag.SearchQuery" class="glass-select" placeholder="Search..." onkeypress="if(event.keyCode == 13){ this.form.submit(); }">
             </div>
-            <div class="col-md-2">
+
+            <!-- Event -->
+            <div class="col-md-3">
                 <label class="filter-label">Event</label>
-                <select class="glass-select" name="eventId" id="eventId">
+                <select class="glass-select" name="eventId" id="eventId" onchange="this.form.submit()">
                     <option value="">-- All Events --</option>
                     @foreach (var evt in events)
                     {
@@ -159,50 +159,78 @@
                     }
                 </select>
             </div>
+
+            <!-- Program (Locked for Class Secretary) -->
             <div class="col-md-2">
                 <label class="filter-label">Program</label>
-                <select class="glass-select" name="program" id="program">
-                    <option value="">-- All --</option>
-                    @foreach (var prog in programs)
-                    {
-                        <option value="@prog">@prog</option>
-                    }
-                </select>
+                @if (isRestricted)
+                {
+                    <input type="text" class="glass-select static-filter" value="@lockedProgram" readonly />
+                    <input type="hidden" name="program" value="@lockedProgram" />
+                }
+                else
+                {
+                    <select class="glass-select" name="program" id="program" onchange="this.form.submit()">
+                        <option value="">-- All --</option>
+                        @foreach (var prog in programs)
+                        {
+                            <option value="@prog">@prog</option>
+                        }
+                    </select>
+                }
             </div>
-            @* RESTORED YEAR LEVEL FILTER *@
+
+            <!-- Year Level (Locked for Class Secretary) -->
             <div class="col-md-2">
-                <label class="filter-label">Year Level</label>
-                <select class="glass-select" name="yearLevel" id="yearLevel">
-                    <option value="">-- All --</option>
-                    @foreach (var year in yearLevels)
-                    {
-                        <option value="@year">@year</option>
-                    }
-                </select>
+                <label class="filter-label">Year & Section</label>
+                @if (isRestricted)
+                {
+                    <input type="text" class="glass-select static-filter" value="@lockedSection" readonly />
+                    <input type="hidden" name="yearLevel" value="@lockedSection" />
+                }
+                else
+                {
+                    <select class="glass-select" name="yearLevel" id="yearLevel" onchange="this.form.submit()">
+                        <option value="">-- All --</option>
+                        @foreach (var year in yearLevels)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    </select>
+                }
             </div>
+
+            <!-- Status -->
             <div class="col-md-2">
                 <label class="filter-label">Status</label>
-                <select class="glass-select" name="status" id="statusFilter">
+                <select class="glass-select" name="status" id="statusFilter" onchange="this.form.submit()">
                     <option value="">-- All --</option>
                     <option value="Present">Present</option>
                     <option value="Absent">Absent</option>
                     <option value="Excused">Excused</option>
                 </select>
             </div>
-            <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-gold-outline w-100" title="Filter"><i class="bi bi-search"></i></button>
-            </div>
         </div>
     </form>
 </div>
 
+
 <!-- TABLE -->
 <div class="glass-panel">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="glass-header-title"><i class="bi bi-table me-2 text-gold"></i> Records</h5>
+        <button class="btn btn-sm btn-success px-3 fw-bold" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+        </button>
+    </div>
     <div class="table-responsive">
         <table class="table-glass" id="attendanceTable">
             <thead>
                 <tr>
-                    <th class="col-check text-center"><input type="checkbox" class="form-check-input" id="selectAll"></th>
+                    @if (canEdit)
+                    {
+                        <th class="col-check text-center"><input type="checkbox" class="form-check-input" id="selectAll"></th>
+                    }
                     <th class="col-id">Student ID</th>
                     <th class="col-name">Full Name</th>
                     <th class="col-program">Program</th>
@@ -210,14 +238,20 @@
                     <th class="col-event">Event</th>
                     <th class="col-date">Date</th>
                     <th class="col-status text-center">Status</th>
-                    <th class="col-action text-center">Action</th>
+                    @if (canEdit)
+                    {
+                        <th class="col-action text-center">Action</th>
+                    }
                 </tr>
             </thead>
             <tbody>
                 @foreach (var attendance in Model)
                 {
                     <tr>
-                        <td class="text-center"><input type="checkbox" class="form-check-input row-checkbox" value="@attendance.AttendanceId"></td>
+                        @if (canEdit)
+                        {
+                            <td class="text-center"><input type="checkbox" class="form-check-input row-checkbox" value="@attendance.AttendanceId"></td>
+                        }
                         <td class="col-id font-monospace">@attendance.StudentNum</td>
                         <td class="col-name fw-bold text-strong">@attendance.StudentNumNavigation?.StudentFn @attendance.StudentNumNavigation?.StudentLn</td>
                         <td>@attendance.StudentNumNavigation?.Course</td>
@@ -229,14 +263,17 @@
                                 @attendance.AttendanceStatus
                             </span>
                         </td>
-                        <td class="text-center">
-                            <button class="btn-action-edit" data-bs-toggle="modal" data-bs-target="#adjustAttendanceModal"
-                                    data-attendance-id="@attendance.AttendanceId"
-                                    data-student-name="@attendance.StudentNumNavigation?.StudentFn @attendance.StudentNumNavigation?.StudentLn"
-                                    data-current-status="@attendance.AttendanceStatus">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                        </td>
+                        @if (canEdit)
+                        {
+                            <td class="text-center">
+                                <button class="btn-action-edit" data-bs-toggle="modal" data-bs-target="#adjustAttendanceModal"
+                                        data-attendance-id="@attendance.AttendanceId"
+                                        data-student-name="@attendance.StudentNumNavigation?.StudentFn @attendance.StudentNumNavigation?.StudentLn"
+                                        data-current-status="@attendance.AttendanceStatus">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -245,82 +282,100 @@
 </div>
 
 <!-- ADJUST ATTENDANCE MODAL -->
-<div class="modal fade" id="adjustAttendanceModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-panel" style="border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-strong">Adjust Individual Attendance</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form asp-action="UpdateAttendanceStatus" asp-controller="Officer" method="post">
-                <div class="modal-body">
-                    <input type="hidden" id="modalAttendanceId" name="attendanceId" />
-                    <p class="text-muted small mb-1">Student Name</p>
-                    <h5 id="modalStudentName" class="text-gold mb-4"></h5>
+@if (canEdit)
+{
+    <div class="modal fade" id="adjustAttendanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-panel" style="border: 1px solid var(--gold-primary);">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-strong">Adjust Individual Attendance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form asp-action="UpdateAttendanceStatus" asp-controller="Officer" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" id="modalAttendanceId" name="attendanceId" />
+                        <p class="text-muted small mb-1">Student Name</p>
+                        <h5 id="modalStudentName" class="text-gold mb-4"></h5>
 
-                    <div class="mb-3">
-                        <label class="filter-label">New Status</label>
-                        <select class="glass-select" id="modalStatus" name="newStatus">
-                            <option value="Present">Present</option>
-                            <option value="Absent">Absent</option>
-                            <option value="Excused">Excused</option>
-                        </select>
+                        <div class="mb-3">
+                            <label class="filter-label">New Status</label>
+                            <select class="glass-select" id="modalStatus" name="newStatus">
+                                <option value="Present">Present</option>
+                                <option value="Absent">Absent</option>
+                                <option value="Excused">Excused</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-gold-outline fw-bold">Save Changes</button>
-                </div>
-            </form>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-gold-outline fw-bold">Save Changes</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
+}
 
 @section Scripts {
-    <script src="~/js/attendance.js" asp-append-version="true"></script>
+    @if (canEdit)
+    {
+        <script src="~/js/attendance.js" asp-append-version="true"></script>
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script>
-        // Checkbox and Bulk Logic
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.row-checkbox');
-        const bulkBar = document.getElementById('bulkActionBar');
-        const countDisplay = document.getElementById('selectedCount');
-        const idContainer = document.getElementById('bulkIdContainer');
+        @if (canEdit)
+        {
+                        <text>
+                        const selectAll = document.getElementById('selectAll');
+                        const bulkBar = document.getElementById('bulkActionBar');
+                        const countDisplay = document.getElementById('selectedCount');
+                        const idContainer = document.getElementById('bulkIdContainer');
 
-        function updateBulkBar() {
-            const checked = document.querySelectorAll('.row-checkbox:checked');
-            const count = checked.length;
-            countDisplay.innerText = count;
-            bulkBar.style.display = count > 0 ? 'block' : 'none';
+                        function updateBulkBar() {
+                            const checked = document.querySelectorAll('.row-checkbox:checked');
+                            const count = checked.length;
+                            countDisplay.innerText = count;
+                            bulkBar.style.display = count > 0 ? 'block' : 'none';
 
-            idContainer.innerHTML = '';
-            checked.forEach(cb => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'attendanceIds';
-                input.value = cb.value;
-                idContainer.appendChild(input);
-            });
+                            idContainer.innerHTML = '';
+                            checked.forEach(cb => {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'attendanceIds';
+                                input.value = cb.value;
+                                idContainer.appendChild(input);
+                            });
+                        }
+
+                        if(selectAll) {
+                            selectAll.addEventListener('change', (e) => {
+                                const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+                                rowCheckboxes.forEach(cb => cb.checked = e.target.checked);
+                                updateBulkBar();
+                            });
+                        }
+
+                        document.addEventListener('change', (e) => {
+                            if (e.target.classList.contains('row-checkbox')) {
+                                updateBulkBar();
+                            }
+                        });
+
+                        function deselectAll() {
+                            if(selectAll) selectAll.checked = false;
+                            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+                            updateBulkBar();
+                        }
+                        </text>
         }
 
-        if(selectAll) {
-            selectAll.addEventListener('change', (e) => {
-                const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-                rowCheckboxes.forEach(cb => cb.checked = e.target.checked);
-                updateBulkBar();
-            });
+        function exportToExcel() {
+            const table = document.getElementById('attendanceTable');
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Attendance Records"});
+            XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toISOString().split('T')[0] + '.xlsx');
         }
 
-        document.querySelectorAll('.row-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateBulkBar);
-        });
-
-        function deselectAll() {
-            if(selectAll) selectAll.checked = false;
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-            updateBulkBar();
-        }
-
-        // Filter preservation
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             ['eventId', 'program', 'yearLevel', 'status', 'searchQuery'].forEach(id => {

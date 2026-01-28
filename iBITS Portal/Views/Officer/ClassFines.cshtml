@@ -11,7 +11,6 @@
     var totalExp = ViewBag.TotalExpected ?? 0m;
     var totalCol = ViewBag.TotalCollected ?? 0m;
     var totalPending = ViewBag.TotalPending ?? 0m;
-    var collectionRate = ViewBag.CollectionRate ?? 0m;
     
     // Group fines by description/event for remittance
     var finesByCategory = allFines.GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Other").OrderBy(g => g.Key).ToList();
@@ -141,7 +140,7 @@
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <!-- Total Expected -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -155,8 +154,8 @@
             </div>
         </div>
 
-        <!-- Collected -->
-        <div class="col-md-3">
+        <!-- Paid -->
+        <div class="col-md-4">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -164,14 +163,14 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Outstanding -->
-        <div class="col-md-3">
+        <!-- Unpaid -->
+        <div class="col-md-4">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
                     <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
@@ -179,22 +178,7 @@
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Collection Rate -->
-        <div class="col-md-3">
-            <div class="summary-card rate">
-                <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-percent fs-3"></i>
-                    </div>
-                    <div>
-                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRate">@collectionRate</span>%</div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
             </div>

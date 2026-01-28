@@ -1,6 +1,7 @@
 @* FILE PATH: Views/Officer/InitiateRemittance.cshtml *@
-@* CLASS TREASURER - Confirm remittance submission *@
-@model IEnumerable<iBITS_Portal.Models.Fee>
+@* CLASS TREASURER - Confirm remittance submission (Fees & Fines) *@
+@model dynamic
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Initiate Remittance";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
@@ -9,6 +10,12 @@
     var totalAmount = ViewBag.TotalAmount as decimal? ?? 0;
     var totalStudents = ViewBag.TotalStudents as int? ?? 0;
     var treasurerName = ViewBag.TreasurerName as string ?? "Class Treasurer";
+    var type = ViewBag.Type as string ?? "fee";
+    var isFine = type == "fine";
+    
+    // Cast model to appropriate type
+    var fees = !isFine ? (Model as IEnumerable<Fee>)?.ToList() ?? new List<Fee>() : new List<Fee>();
+    var fines = isFine ? (Model as IEnumerable<Fine>)?.ToList() ?? new List<Fine>() : new List<Fine>();
 }
 
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
@@ -70,11 +77,11 @@
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
-            <i class="bi bi-send-check me-2"></i> Confirm Remittance
+            <i class="bi bi-send-check me-2"></i> Confirm @(isFine ? "Fine" : "Fee") Remittance
         </h3>
-        <p class="text-muted small mb-0">Review and submit this remittance to the Org Treasurer</p>
+        <p class="text-muted small mb-0">Review and submit this @(isFine ? "fine" : "fee") remittance to the Org Treasurer</p>
     </div>
-    <a asp-action="PendingCollections" class="btn btn-outline-light btn-sm">
+    <a asp-action="PendingCollections" asp-route-type="@(isFine ? "fines" : null)" class="btn btn-outline-light btn-sm">
         <i class="bi bi-arrow-left me-1"></i> Back
     </a>
 </div>
@@ -123,8 +130,9 @@
     <form asp-action="ConfirmRemittance" method="post" class="text-center">
         @Html.AntiForgeryToken()
         <input type="hidden" name="feeName" value="@feeName" />
-        <button type="submit" class="btn btn-confirm-remit" onclick="return confirm('Are you sure you want to submit this remittance? This action cannot be undone.');">
-            <i class="bi bi-send-fill me-2"></i> Submit Remittance to Org Treasurer
+        <input type="hidden" name="type" value="@type" />
+        <button type="submit" class="btn btn-confirm-remit" onclick="return confirm('Are you sure you want to submit this @(isFine ? "fine" : "fee") remittance? This action cannot be undone.');">
+            <i class="bi bi-send-fill me-2"></i> Submit @(isFine ? "Fine" : "Fee") Remittance to Org Treasurer
         </button>
         <p class="text-muted small mt-2 mb-0">Submitted by: @treasurerName</p>
     </form>
@@ -135,20 +143,41 @@
     <h5 class="text-white mb-3"><i class="bi bi-people me-2"></i> Included Payments (@totalStudents)</h5>
     
     <div class="row">
-        @foreach (var fee in Model.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+        @if (isFine)
         {
-            <div class="col-md-6 col-lg-4">
-                <div class="student-list-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="text-white fw-semibold">@fee.StudentNumNavigation?.FullName</div>
-                        <small class="text-muted">@fee.StudentNum</small>
-                    </div>
-                    <div class="text-end">
-                        <div class="fw-bold" style="color: var(--gold-primary);">₱@((fee.Amount ?? 0).ToString("N2"))</div>
-                        <small class="text-muted">@(fee.CollectionDate?.ToString("MM/dd") ?? "")</small>
+            @foreach (var fine in fines.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="student-list-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white fw-semibold">@fine.StudentNumNavigation?.FullName</div>
+                            <small class="text-muted">@fine.StudentNum</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold" style="color: var(--gold-primary);">₱@((fine.Amount ?? 0).ToString("N2"))</div>
+                            <small class="text-muted">@(fine.CollectionDate?.ToString("MM/dd") ?? "")</small>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
+        }
+        else
+        {
+            @foreach (var fee in fees.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="student-list-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white fw-semibold">@fee.StudentNumNavigation?.FullName</div>
+                            <small class="text-muted">@fee.StudentNum</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold" style="color: var(--gold-primary);">₱@((fee.Amount ?? 0).ToString("N2"))</div>
+                            <small class="text-muted">@(fee.CollectionDate?.ToString("MM/dd") ?? "")</small>
+                        </div>
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
