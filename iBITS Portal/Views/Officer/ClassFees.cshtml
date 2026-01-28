@@ -23,45 +23,188 @@
 <link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
 
-@section Styles{
-<style>
-    .chart-no-data { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 250px; color: rgba(255, 255, 255, 0.4); text-align: center; }
-    .chart-no-data i { font-size: 4rem; margin-bottom: 1rem; color: rgba(212, 175, 55, 0.2); }
-    .chart-no-data p { font-size: 1.1rem; font-weight: 600; margin: 0; }
-    .summary-card { height: 100%; min-height: 110px; }
-    .section-badge { background: linear-gradient(135deg, var(--gold-primary), #b8860b); color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
-    
-    /* Remittance Styles */
-    .btn-remit { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
-    .btn-remit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); color: white; }
-    .btn-remit:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; transform: none; box-shadow: none; }
-    
-    .btn-mark-paid { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; }
-    .btn-mark-paid:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); color: white; }
-    .btn-mark-paid:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; }
-    
-    .btn-revoke { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-    .btn-revoke:hover { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); color: white; }
-    
-    /* Status badges */
-    .remittance-status { padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600; }
-    .remittance-status.not-remitted { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-    .remittance-status.collected { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .remittance-status.pending-remit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .remittance-status.remitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-    
-    /* Fee category card */
-    .fee-category-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
-    .fee-category-header { background: rgba(212, 175, 55, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem; }
-    .fee-category-body { padding: 0; }
-    
-    /* Lock indicator */
-    .lock-indicator { color: #a78bfa; font-size: 0.8rem; }
-    .row-locked { opacity: 0.7; background: rgba(139, 92, 246, 0.05); }
-    
-    /* Quick stats bar */
-    .quick-stats { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 1rem; }
-</style>
+@section Styles {
+    <style>
+        .chart-no-data {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 250px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+        }
+
+            .chart-no-data i {
+                font-size: 4rem;
+                margin-bottom: 1rem;
+                color: rgba(212, 175, 55, 0.2);
+            }
+
+            .chart-no-data p {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin: 0;
+            }
+
+        .summary-card {
+            height: 100%;
+            min-height: 110px;
+        }
+
+        .section-badge {
+            background: linear-gradient(135deg, var(--gold-primary), #b8860b);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* Remittance Styles */
+        .btn-remit {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+            .btn-remit:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+                color: white;
+            }
+
+            .btn-remit:disabled {
+                background: rgba(107, 114, 128, 0.3);
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+        .btn-mark-paid {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+            .btn-mark-paid:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+                color: white;
+            }
+
+            .btn-mark-paid:disabled {
+                background: rgba(107, 114, 128, 0.3);
+                cursor: not-allowed;
+            }
+
+        .btn-revoke {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+            .btn-revoke:hover {
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+                color: white;
+            }
+
+        /* Status badges */
+        .remittance-status {
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+            .remittance-status.not-remitted {
+                background: rgba(107, 114, 128, 0.2);
+                color: #9ca3af;
+            }
+
+            .remittance-status.collected {
+                background: rgba(16, 185, 129, 0.2);
+                color: #34d399;
+            }
+
+            .remittance-status.pending-remit {
+                background: rgba(245, 158, 11, 0.2);
+                color: #fbbf24;
+            }
+
+            .remittance-status.remitted {
+                background: rgba(139, 92, 246, 0.2);
+                color: #a78bfa;
+            }
+
+        /* Fee category card */
+        .fee-category-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .fee-category-header {
+            background: rgba(212, 175, 55, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 1.25rem;
+        }
+
+        .fee-category-body {
+            padding: 0;
+        }
+
+        /* Locked State Styling (Purple Glow) */
+        .border-purple {
+            border: 1px solid #8b5cf6 !important;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        .bg-purple {
+            background-color: #8b5cf6 !important;
+            color: white;
+        }
+
+        /* Lock indicator */
+        .lock-indicator {
+            color: #a78bfa;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .row-locked {
+            opacity: 0.6;
+            background: rgba(139, 92, 246, 0.05);
+            pointer-events: none;
+        }
+
+        /* Quick stats bar */
+        .quick-stats {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+    </style>
 }
 
 @Html.AntiForgeryToken()
@@ -286,7 +429,7 @@
             var categoryCollectedNotRemitted = categoryFees.Count(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
             var categoryRemitted = categoryFees.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
             var canRemit = categoryCollectedNotRemitted > 0;
-            
+
             // Check if this category is validated (closed)
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
@@ -307,10 +450,10 @@
                             <span class="mx-2">|</span>
                             <span class="text-success">@categoryPaid Paid</span> •
                             <span class="text-warning">@categoryUnpaid Unpaid</span>
-                            @if (categoryRemitted > 0)
+                            @if (categoryRemitted > 0 || (isClosed && categoryPaid > 0))
                             {
                                 <span class="mx-1">•</span>
-                                <span class="text-purple">@categoryRemitted Remitted</span>
+                                <span class="text-purple">@(isClosed? categoryPaid : categoryRemitted) Remitted</span>
                             }
                         </small>
                     </div>
@@ -327,7 +470,7 @@
                         }
                         else if (categoryRemitted == categoryFees.Count)
                         {
-                            <span class="badge bg-purple"><i class="bi bi-check-all me-1"></i> All Remitted</span>
+                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-check-all me-1"></i> All Remitted</span>
                         }
                     </div>
                 </div>
@@ -347,7 +490,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @{ var rowNum = 1; }
+                                @{
+                                    var rowNum = 1;
+                                }
                                 @foreach (var fee in categoryFees.OrderBy(f => f.StudentNumNavigation?.StudentLn))
                                 {
                                     var student = fee.StudentNumNavigation;
@@ -375,17 +520,18 @@
                                             }
                                         </td>
                                         <td>
-                                            @if (isRemitted)
+                                            @* UPDATED LOGIC: If Remitted OR (Category Closed AND Paid), show as Remitted *@
+                                            @if (isRemitted || (isClosed && isPaid))
                                             {
-                                                <span class="remittance-status remitted"><i class="bi bi-lock-fill me-1"></i>Remitted</span>
+                                                <span class="remittance-status remitted" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-lock-fill me-1"></i>Remitted</span>
                                             }
                                             else if (isPendingRemit)
                                             {
-                                                <span class="remittance-status pending-remit"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                                <span class="remittance-status pending-remit" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
                                             }
                                             else if (isPaid)
                                             {
-                                                <span class="remittance-status collected"><i class="bi bi-piggy-bank me-1"></i>Collected</span>
+                                                <span class="remittance-status collected" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600;"><i class="bi bi-piggy-bank me-1"></i>Collected</span>
                                             }
                                             else
                                             {
@@ -395,19 +541,19 @@
                                         <td class="text-center">
                                             @if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Already remitted or pending">
+                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }
                                             else if (isPaid)
                                             {
-                                                <button type="button" class="btn btn-revoke btn-sm" onclick="revokeFeePayment(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")')" title="Revoke payment">
+                                                <button type="button" class="btn btn-revoke btn-sm" onclick="revokeFeePayment(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")')" title="Revoke payment" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
                                                     <i class="bi bi-x-circle me-1"></i> Revoke
                                                 </button>
                                             }
                                             else
                                             {
-                                                <button type="button" class="btn btn-mark-paid btn-sm" onclick="markFeePaid(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fee.Amount ?? 0))" title="Mark as fully paid">
+                                                <button type="button" class="btn btn-mark-paid btn-sm" onclick="markFeePaid(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fee.Amount ?? 0))" title="Mark as fully paid" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
                                                     <i class="bi bi-check-circle me-1"></i> Mark Paid
                                                 </button>
                                             }

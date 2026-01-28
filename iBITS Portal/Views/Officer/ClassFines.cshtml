@@ -11,57 +11,210 @@
     var totalExp = ViewBag.TotalExpected ?? 0m;
     var totalCol = ViewBag.TotalCollected ?? 0m;
     var totalPending = ViewBag.TotalPending ?? 0m;
-    
+
     // Group fines by description/event for remittance
     var finesByCategory = allFines.GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Other").OrderBy(g => g.Key).ToList();
-    
+
     // Count collected but not remitted
     var pendingRemittanceCount = allFines.Count(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
     var pendingRemittanceAmount = allFines.Where(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted).Sum(f => f.Amount ?? 0);
+
+    // ==========================================================================================
+    // DATA PREPARATION
+    // ==========================================================================================
+    var rawEvents = ViewBag.Events as IEnumerable<iBITS_Portal.Models.Event>;
+    // Explicitly Cast to <object> to fix compilation errors
+    var simpleEvents = rawEvents?.Select(e => new { eventName = e.EventName }).Cast<object>().ToList() ?? new List<object>();
+
+    var rawReasons = ViewBag.ManualFineReasons as IEnumerable<string>;
+    var simpleReasons = rawReasons?.ToList() ?? new List<string>();
 }
 
 <link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
 
-@section Styles{
-<style>
-    .chart-no-data { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 250px; color: rgba(255, 255, 255, 0.4); text-align: center; }
-    .chart-no-data i { font-size: 4rem; margin-bottom: 1rem; color: rgba(212, 175, 55, 0.2); }
-    .chart-no-data p { font-size: 1.1rem; font-weight: 600; margin: 0; }
-    .summary-card { height: 100%; min-height: 110px; }
-    .section-badge { background: linear-gradient(135deg, var(--gold-primary), #b8860b); color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
-    
-    /* Remittance Styles */
-    .btn-remit { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
-    .btn-remit:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); color: white; }
-    .btn-remit:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; transform: none; box-shadow: none; }
-    
-    .btn-mark-paid { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; }
-    .btn-mark-paid:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); color: white; }
-    .btn-mark-paid:disabled { background: rgba(107, 114, 128, 0.3); cursor: not-allowed; }
-    
-    .btn-revoke { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-    .btn-revoke:hover { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); color: white; }
-    
-    /* Status badges */
-    .remittance-status { padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; font-weight: 600; }
-    .remittance-status.not-remitted { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-    .remittance-status.collected { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .remittance-status.pending-remit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .remittance-status.remitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-    
-    /* Fine category card */
-    .fine-category-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
-    .fine-category-header { background: rgba(239, 68, 68, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem; }
-    .fine-category-body { padding: 0; }
-    
-    /* Lock indicator */
-    .lock-indicator { color: #a78bfa; font-size: 0.8rem; }
-    .row-locked { opacity: 0.7; background: rgba(139, 92, 246, 0.05); }
-    
-    /* Quick stats bar */
-    .quick-stats { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 1rem; }
-</style>
+@section Styles {
+    <style>
+        .chart-no-data {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 250px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+        }
+
+            .chart-no-data i {
+                font-size: 4rem;
+                margin-bottom: 1rem;
+                color: rgba(212, 175, 55, 0.2);
+            }
+
+            .chart-no-data p {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin: 0;
+            }
+
+        .summary-card {
+            height: 100%;
+            min-height: 110px;
+        }
+
+        .section-badge {
+            background: linear-gradient(135deg, var(--gold-primary), #b8860b);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* Remittance Styles */
+        .btn-remit {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+            .btn-remit:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+                color: white;
+            }
+
+            .btn-remit:disabled {
+                background: rgba(107, 114, 128, 0.3);
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+        .btn-mark-paid {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+            .btn-mark-paid:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+                color: white;
+            }
+
+            .btn-mark-paid:disabled {
+                background: rgba(107, 114, 128, 0.3);
+                cursor: not-allowed;
+            }
+
+        .btn-revoke {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+            .btn-revoke:hover {
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+                color: white;
+            }
+
+        /* Status badges */
+        .remittance-status {
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+            .remittance-status.not-remitted {
+                background: rgba(107, 114, 128, 0.2);
+                color: #9ca3af;
+            }
+
+            .remittance-status.collected {
+                background: rgba(16, 185, 129, 0.2);
+                color: #34d399;
+            }
+
+            .remittance-status.pending-remit {
+                background: rgba(245, 158, 11, 0.2);
+                color: #fbbf24;
+            }
+
+            .remittance-status.remitted {
+                background: rgba(139, 92, 246, 0.2);
+                color: #a78bfa;
+            }
+
+        /* Fine category card */
+        .fine-category-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .fine-category-header {
+            background: rgba(239, 68, 68, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 1.25rem;
+        }
+
+        .fine-category-body {
+            padding: 0;
+        }
+
+        /* Locked State Styling - Matches ClassFees */
+        .border-purple {
+            border: 1px solid #8b5cf6 !important;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        .bg-purple {
+            background-color: #8b5cf6 !important;
+            color: white;
+        }
+
+        /* Lock indicator */
+        .lock-indicator {
+            color: #a78bfa;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .row-locked {
+            opacity: 0.6;
+            background: rgba(139, 92, 246, 0.05);
+            pointer-events: none;
+        }
+
+        /* Quick stats bar */
+        .quick-stats {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+    </style>
 }
 
 @Html.AntiForgeryToken()
@@ -217,7 +370,7 @@
     </div>
 </div>
 
-<!-- FILTERS SECTION -->
+<!-- FILTERS SECTION (Removed Program/Year) -->
 <div class="glass-panel p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); font-weight: 700; margin: 0;">
@@ -228,15 +381,15 @@
         </button>
     </div>
 
-    <div class="row g-3">
+    <div class="row g-2">
         <!-- Search -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label class="form-label small text-muted">Search Student</label>
             <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Name or ID...">
         </div>
 
         <!-- Fine Type -->
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label small text-muted">Fine Type</label>
             <select id="filterFineType" class="form-select form-select-sm">
                 <option value="">All Types</option>
@@ -245,25 +398,12 @@
             </select>
         </div>
 
-        <!-- Event/Reason -->
+        <!-- Event/Reason (Dynamic) -->
         <div class="col-md-3">
             <label class="form-label small text-muted">Event/Reason</label>
             <select id="filterReason" class="form-select form-select-sm">
                 <option value="">All</option>
-                @if (ViewBag.Events != null)
-                {
-                    foreach (var evt in ViewBag.Events)
-                    {
-                        <option value="@evt.EventName">@evt.EventName</option>
-                    }
-                }
-                @if (ViewBag.ManualFineReasons != null)
-                {
-                    foreach (var reason in ViewBag.ManualFineReasons)
-                    {
-                        <option value="@reason">@reason (Manual)</option>
-                    }
-                }
+                <!-- Options populated by JS -->
             </select>
         </div>
 
@@ -274,13 +414,13 @@
                 <option value="">All Statuses</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
-                <option value="excused">Excused</option>
+
             </select>
         </div>
     </div>
 </div>
 
-<!-- FINE RECORDS BY CATEGORY (Remittance-Based UI) -->
+<!-- FINE RECORDS BY CATEGORY -->
 <div class="glass-panel p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">
@@ -311,9 +451,9 @@
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
 
-            <div class="fine-category-card mb-4" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden;">
+            <div class="fine-category-card mb-4 @(isClosed ? "border-purple" : "")">
                 <!-- Category Header -->
-                <div class="fine-category-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 1.25rem;">
+                <div class="fine-category-header d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-white mb-1 fw-bold">
                             @categoryName
@@ -372,7 +512,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @{ var rowNum = 1; }
+                                @{
+                                    var rowNum = 1;
+                                }
                                 @foreach (var fine in categoryFines.OrderBy(f => f.StudentNumNavigation?.StudentLn ?? f.Attendance?.StudentNumNavigation?.StudentLn))
                                 {
                                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
@@ -383,7 +525,14 @@
                                     var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
 
-                                    <tr class="@rowClass fine-row" data-fine-id="@fine.FineId" data-student-name="@(student?.FullName ?? "")" data-student-id="@(student?.StudentNum ?? fine.StudentNum)" data-reason="@categoryName" data-fine-type="@(fine.AttendanceId != null ? "event" : "manual")" data-status="@(isPaid ? "paid" : (isExcused ? "excused" : "unpaid"))">
+                                    <tr class="@rowClass fine-row"
+                                        data-fine-id="@fine.FineId"
+                                        data-student-name="@(student?.FullName ?? "")"
+                                        data-student-id="@(student?.StudentNum ?? fine.StudentNum)"
+                                        data-reason="@categoryName"
+                                        data-fine-type="@(fine.AttendanceId != null ? "event" : "manual")"
+                                        data-status="@(isPaid ? "paid" : (isExcused ? "excused" : "unpaid"))">
+
                                         <td class="text-muted">@rowNum</td>
                                         <td>
                                             <div class="text-white fw-semibold">@(student?.FullName ?? "Unknown")</div>
@@ -429,23 +578,23 @@
                                         <td class="text-center">
                                             @if (isExcused)
                                             {
-                                                <span class="text-info" title="Excused by Secretary"><i class="bi bi-shield-check"></i></span>
+                                                <span class="text-info" title="Excused by Secretary"><i class="bi bi-shield-check"></i> Excused</span>
                                             }
                                             else if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Already remitted or pending" style="color: #a78bfa; font-size: 0.8rem;">
+                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }
                                             else if (isPaid)
                                             {
-                                                <button type="button" class="btn btn-revoke btn-sm" onclick="revokeFinePayment(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Revoke payment" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                                                <button type="button" class="btn btn-revoke btn-sm" onclick="revokeFinePayment(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Revoke payment">
                                                     <i class="bi bi-x-circle me-1"></i> Revoke
                                                 </button>
                                             }
                                             else
                                             {
-                                                <button type="button" class="btn btn-mark-paid btn-sm" onclick="markFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as fully paid" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+                                                <button type="button" class="btn btn-mark-paid btn-sm" onclick="markFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@categoryName?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as fully paid">
                                                     <i class="bi bi-check-circle me-1"></i> Mark Paid
                                                 </button>
                                             }
@@ -469,7 +618,6 @@
         </div>
     }
 </div>
-
 
 <!-- MARK FINE AS PAID MODAL -->
 <div class="modal fade" id="markFinePaidModal" tabindex="-1" data-bs-backdrop="static">
@@ -552,13 +700,151 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
-        // Data passed from Controller
+        // Data passed from Controller for Charts
         window.finesChartsData = {
             paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown ?? new Dictionary<string, decimal>())),
             unpaid: @Html.Raw(Json.Serialize(ViewBag.UnpaidBreakdown ?? new Dictionary<string, decimal>()))
         };
 
+        // Data for Dynamic Filter Dropdowns
+        // FIX: Select only the EventName to prevent "Object Cycle" JSON errors
+        const allEvents = @Html.Raw(Json.Serialize(simpleEvents));
+        const manualReasons = @Html.Raw(Json.Serialize(simpleReasons));
 
+        // ============================================================
+        // DYNAMIC FILTER LOGIC
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterSearch = document.getElementById('filterSearch');
+            const filterFineType = document.getElementById('filterFineType');
+            const filterReason = document.getElementById('filterReason');
+            const filterStatus = document.getElementById('filterStatus');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+            // 1. Populate/Update Reason Dropdown based on Fine Type
+            function updateReasonDropdown() {
+                const type = filterFineType.value;
+
+                // Clear existing options, keep default "All"
+                filterReason.innerHTML = '<option value="">All</option>';
+
+                if (type === 'event') {
+                    // Show only events
+                    allEvents.forEach(evt => {
+                        const opt = document.createElement('option');
+                        opt.value = evt.eventName;
+                        opt.textContent = evt.eventName;
+                        filterReason.appendChild(opt);
+                    });
+                } else if (type === 'manual') {
+                    // Show only manual reasons
+                    manualReasons.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r;
+                        opt.textContent = r;
+                        filterReason.appendChild(opt);
+                    });
+                } else {
+                    // Show ALL (Events + Manual)
+                    // Add Events
+                    if(allEvents && allEvents.length > 0) {
+                        const group1 = document.createElement('optgroup');
+                        group1.label = "Events";
+                        allEvents.forEach(evt => {
+                            const opt = document.createElement('option');
+                            opt.value = evt.eventName;
+                            opt.textContent = evt.eventName;
+                            group1.appendChild(opt);
+                        });
+                        filterReason.appendChild(group1);
+                    }
+
+                    // Add Manual Reasons
+                    if(manualReasons && manualReasons.length > 0) {
+                        const group2 = document.createElement('optgroup');
+                        group2.label = "Manual Fines";
+                        manualReasons.forEach(r => {
+                            // Avoid duplicates if a manual reason has exact same name as event
+                            if (!Array.from(filterReason.options).some(o => o.value === r)) {
+                                const opt = document.createElement('option');
+                                opt.value = r;
+                                opt.textContent = r;
+                                group2.appendChild(opt);
+                            }
+                        });
+                        filterReason.appendChild(group2);
+                    }
+                }
+            }
+
+            // 2. Main Apply Filters Function
+            function applyFilters() {
+                const searchTerm = filterSearch.value.toLowerCase().trim();
+                const selectedFineType = filterFineType.value.toLowerCase();
+                const selectedReason = filterReason.value.toLowerCase();
+                const selectedStatus = filterStatus.value.toLowerCase();
+
+                const rows = document.querySelectorAll('.fine-row');
+                const categoryCards = document.querySelectorAll('.fine-category-card');
+
+                rows.forEach(row => {
+                    // Get data attributes from the row
+                    const studentName = (row.getAttribute('data-student-name') || '').toLowerCase();
+                    const studentId = (row.getAttribute('data-student-id') || '').toLowerCase();
+                    const reason = (row.getAttribute('data-reason') || '').toLowerCase();
+                    const fineType = (row.getAttribute('data-fine-type') || '').toLowerCase();
+                    const status = (row.getAttribute('data-status') || '').toLowerCase();
+
+                    let show = true;
+
+                    // Search Filter
+                    if (searchTerm && !studentName.includes(searchTerm) && !studentId.includes(searchTerm)) show = false;
+
+                    // Fine Type Filter
+                    if (selectedFineType && fineType !== selectedFineType) show = false;
+
+                    // Reason/Event Filter
+                    if (selectedReason && reason !== selectedReason) show = false;
+
+                    // Status Filter
+                    if (selectedStatus && status !== selectedStatus) show = false;
+
+                    row.style.display = show ? '' : 'none';
+                });
+
+                // Hide empty category cards if all their rows are hidden
+                categoryCards.forEach(card => {
+                    const visibleRows = card.querySelectorAll('.fine-row:not([style*="display: none"])');
+                    card.style.display = visibleRows.length > 0 ? '' : 'none';
+                });
+            }
+
+            // Attach Event Listeners
+            filterFineType.addEventListener('change', () => {
+                updateReasonDropdown(); // Update reasons when type changes
+                applyFilters();
+            });
+
+            filterSearch.addEventListener('input', applyFilters);
+            filterReason.addEventListener('change', applyFilters);
+            filterStatus.addEventListener('change', applyFilters);
+
+            // Clear Filters Button
+            clearFiltersBtn.addEventListener('click', function() {
+                filterSearch.value = '';
+                filterFineType.value = '';
+                filterStatus.value = '';
+
+                // Reset dependent dropdowns to default state
+                updateReasonDropdown();
+                filterReason.value = '';
+
+                applyFilters();
+            });
+
+            // Initialize dropdowns on page load
+            updateReasonDropdown();
+        });
 
         // ============================================================
         // MARK FINE AS PAID - Show Modal
@@ -595,8 +881,10 @@
             try {
                 const formData = new FormData();
                 formData.append('fineId', currentFineData.fineId);
-                
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                // Safe check for token
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
 
                 const response = await fetch('/Officer/MarkClassFinePaid', {
                     method: 'POST',
@@ -610,11 +898,13 @@
 
                 if (result.success) {
                     // Close modal
-                    bootstrap.Modal.getInstance(document.getElementById('markFinePaidModal')).hide();
-                    
+                    const modalEl = document.getElementById('markFinePaidModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
                     // Show success toast
                     showToast('success', result.message);
-                    
+
                     // Reload page after short delay
                     setTimeout(() => {
                         location.reload();
@@ -665,8 +955,9 @@
             try {
                 const formData = new FormData();
                 formData.append('fineId', currentFineData.fineId);
-                
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
 
                 const response = await fetch('/Officer/RevokeClassFinePaid', {
                     method: 'POST',
@@ -680,11 +971,13 @@
 
                 if (result.success) {
                     // Close modal
-                    bootstrap.Modal.getInstance(document.getElementById('revokeFinePaymentModal')).hide();
-                    
+                    const modalEl = document.getElementById('revokeFinePaymentModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
                     // Show success toast
                     showToast('success', result.message);
-                    
+
                     // Reload page after short delay
                     setTimeout(() => {
                         location.reload();
@@ -702,6 +995,9 @@
             }
         }
 
+        // ============================================================
+        // TOAST NOTIFICATION HELPER
+        // ============================================================
         function showToast(type, message) {
             const bgClass = type === 'success' ? 'success' : (type === 'info' ? 'info' : 'danger');
             const icon = type === 'success' ? 'check-circle' : (type === 'info' ? 'info-circle' : 'exclamation-circle');
@@ -725,80 +1021,6 @@
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
-
-        // ============================================================
-        // FILTER AND SEARCH FUNCTIONALITY
-        // ============================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterSearch = document.getElementById('filterSearch');
-            const filterFineType = document.getElementById('filterFineType');
-            const filterReason = document.getElementById('filterReason');
-            const filterStatus = document.getElementById('filterStatus');
-            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-
-            function applyFilters() {
-                const searchTerm = filterSearch.value.toLowerCase().trim();
-                const selectedFineType = filterFineType.value.toLowerCase();
-                const selectedReason = filterReason.value.toLowerCase();
-                const selectedStatus = filterStatus.value.toLowerCase();
-
-                const rows = document.querySelectorAll('.fine-row');
-                const categoryCards = document.querySelectorAll('.fine-category-card');
-
-                rows.forEach(row => {
-                    const studentName = (row.getAttribute('data-student-name') || '').toLowerCase();
-                    const studentId = (row.getAttribute('data-student-id') || '').toLowerCase();
-                    const reason = (row.getAttribute('data-reason') || '').toLowerCase();
-                    const fineType = (row.getAttribute('data-fine-type') || '').toLowerCase();
-                    const status = (row.getAttribute('data-status') || '').toLowerCase();
-
-                    let show = true;
-
-                    // Search filter (student name or ID)
-                    if (searchTerm && !studentName.includes(searchTerm) && !studentId.includes(searchTerm)) {
-                        show = false;
-                    }
-
-                    // Fine type filter
-                    if (selectedFineType && fineType !== selectedFineType) {
-                        show = false;
-                    }
-
-                    // Reason/Event filter
-                    if (selectedReason && reason !== selectedReason) {
-                        show = false;
-                    }
-
-                    // Status filter
-                    if (selectedStatus && status !== selectedStatus) {
-                        show = false;
-                    }
-
-                    row.style.display = show ? '' : 'none';
-                });
-
-                // Hide empty category cards
-                categoryCards.forEach(card => {
-                    const visibleRows = card.querySelectorAll('.fine-row:not([style*="display: none"])');
-                    card.style.display = visibleRows.length > 0 ? '' : 'none';
-                });
-            }
-
-            // Event listeners
-            filterSearch.addEventListener('input', applyFilters);
-            filterFineType.addEventListener('change', applyFilters);
-            filterReason.addEventListener('change', applyFilters);
-            filterStatus.addEventListener('change', applyFilters);
-
-            // Clear filters
-            clearFiltersBtn.addEventListener('click', function() {
-                filterSearch.value = '';
-                filterFineType.value = '';
-                filterReason.value = '';
-                filterStatus.value = '';
-                applyFilters();
-            });
-        });
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
 }

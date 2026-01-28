@@ -46,6 +46,7 @@ namespace iBITS_Portal.Controllers
         }
 
         // Financials Page - Display fees, fines, and payment history
+        // Financials Page - Display fees, fines, and payment history
         public async Task<IActionResult> Financials()
         {
             var userId = _userManager.GetUserName(User);
@@ -62,16 +63,16 @@ namespace iBITS_Portal.Controllers
             var fees = await _context.Fees
                 .AsNoTracking()
                 .Where(f => f.StudentNum == userId)
-                .OrderByDescending(f => f.FeesStartDate)
+                .OrderByDescending(f => f.FeesDueDate)
                 .ToListAsync();
 
-            // Get fines
+            // Get fines - FIXED: Load Attendance and Event for proper naming
             var fines = await _context.Fines
                 .AsNoTracking()
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
-                .Where(f => f.StudentNum == userId || (f.Attendance != null && f.Attendance.StudentNum == userId))
-                .OrderByDescending(f => f.FinesStartDate)
+                .Where(f => f.StudentNum == userId)
+                .OrderByDescending(f => f.FinesDueDate)
                 .ToListAsync();
 
             ViewBag.Fees = fees;
@@ -84,7 +85,7 @@ namespace iBITS_Portal.Controllers
             var totalFinesUnpaid = fines
                 .Where(f => !string.Equals(f.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                 .Sum(f => f.Amount) ?? 0;
-            
+
             ViewBag.TotalBalanceDue = totalFeesUnpaid + totalFinesUnpaid;
 
             return View();
@@ -96,6 +97,8 @@ namespace iBITS_Portal.Controllers
 
         // Action to get payment transaction history (AJAX)
         // UPDATED: Simplified to show only essential information for students
+        // Action to get payment transaction history (AJAX)
+        // FIXED: Joined with Attendance and Event to show the actual Event Name in receipts
         public async Task<JsonResult> GetPaymentHistory()
         {
             try
@@ -113,23 +116,29 @@ namespace iBITS_Portal.Controllers
                         type = "Fee",
                         description = t.Fee != null ? t.Fee.FeeName : "Fee Payment",
                         amount = t.Amount,
-                        paymentDate = t.PaymentDate, // Kept for sorting purposes
+                        paymentDate = t.PaymentDate,
                         processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System"
                     })
                     .ToListAsync();
 
                 // Get fine payment transactions
+                // FIXED: Include chain t -> Fine -> Attendance -> Event
                 var fineTransactions = await _context.FinePaymentTransactions
                     .Include(t => t.Fine)
+                        .ThenInclude(f => f.Attendance)
+                            .ThenInclude(a => a.Event)
                     .Include(t => t.Treasurer)
                     .Where(t => t.StudentNum == userId)
                     .OrderByDescending(t => t.PaymentDate)
                     .Select(t => new
                     {
                         type = "Fine",
-                        description = t.Fine != null ? (t.Fine.Description ?? "Fine Payment") : "Fine Payment",
+                        // Logic: Use Manual Description IF available, ELSE use Event Name, ELSE fallback
+                        description = t.Fine != null
+                            ? (t.Fine.Description ?? (t.Fine.Attendance != null && t.Fine.Attendance.Event != null ? t.Fine.Attendance.Event.EventName : "Fine Payment"))
+                            : "Fine Payment",
                         amount = t.Amount,
-                        paymentDate = t.PaymentDate, // Kept for sorting purposes
+                        paymentDate = t.PaymentDate,
                         processedBy = t.Treasurer != null ? t.Treasurer.StudentFn + " " + t.Treasurer.StudentLn : "System"
                     })
                     .ToListAsync();
@@ -143,7 +152,6 @@ namespace iBITS_Portal.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception ex here
                 return Json(new { success = false, message = "Error loading payment history." });
             }
         }

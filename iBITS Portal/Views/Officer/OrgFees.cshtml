@@ -286,43 +286,53 @@
                     foreach (var fee in Model)
                     {
                         var student = fee.StudentNumNavigation;
-                        var paymentStatus = fee.PaymentStatus;
-                        var isPaid = paymentStatus == "Paid";
-                        var isUnpaid = paymentStatus == "Unpaid";
-                        var remainingBalance = fee.RemainingBalance;
-                        
-                        // Check remittance status - CANNOT edit if PAID or REMITTED
+                        var dbStatus = fee.PaymentStatus; // Actual status in DB
                         var isRemitted = fee.RemittanceStatus == FeeRemittanceStatus.Remitted;
-                        var isPendingRemit = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
-                        var isLocked = isPaid || isRemitted || isPendingRemit;
-                        var canEdit = isUnpaid && !isLocked;
-                        
-                        var statusClass = isPaid ? "row-paid" : (isLocked ? "row-locked" : "");
 
-                        <tr class="fee-row @statusClass"
+                        // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
+                        var isOfficiallyPaid = dbStatus == "Paid" && isRemitted;
+
+                        // Visual Data (What Org Treasurer Sees)
+                        var displayAmountPaid = isOfficiallyPaid ? fee.AmountPaid : 0;
+                        var displayBalance = isOfficiallyPaid ? fee.RemainingBalance : (fee.Amount ?? 0);
+                        var displayStatus = isOfficiallyPaid ? "Paid" : "Unpaid";
+
+                        // Locking Logic:
+                        // Lock if officially paid OR if Class Treasurer has collected it (dbStatus is Paid/Partial)
+                        // but it hasn't been validated yet (to prevent double collection).
+                        var isLocked = dbStatus == "Paid" || dbStatus == "Partial";
+                        var canEdit = !isLocked;
+
+                        var rowClass = isOfficiallyPaid ? "row-paid" : (isLocked ? "row-locked" : "");
+
+                        <tr class="fee-row @rowClass"
                             data-fee-id="@fee.FeeId"
                             data-ref-id="@fee.FeeId"
                             data-student-name="@(student?.FullName?.ToLower() ?? "")"
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
                             data-section="@(student?.YearLevelSection ?? "")"
-                            data-status="@paymentStatus.ToLower()"
+                            data-status="@displayStatus.ToLower()"
                             data-amount="@(fee.Amount ?? 0)"
-                            data-paid="@fee.AmountPaid"
-                            data-balance="@remainingBalance">
-                            
-                            <!-- Row Number -->
+                            data-paid="@displayAmountPaid"
+                            data-balance="@displayBalance">
+
+                            <!-- Row Number / Lock Icon -->
                             <td class="text-center text-muted">
-                                @if (isLocked)
+                                @if (isLocked && !isOfficiallyPaid)
                                 {
-                                    <i class="bi bi-lock-fill" style="color: #a78bfa;" title="Locked - Cannot edit"></i>
+                                    <i class="bi bi-hourglass-split text-warning" title="Pending Validation (Collected by Class Treasurer)"></i>
+                                }
+                                else if (isOfficiallyPaid)
+                                {
+                                    <i class="bi bi-check-all text-success" title="Validated"></i>
                                 }
                                 else
                                 {
                                     <span>-</span>
                                 }
                             </td>
-                            
+
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
                             <td>
                                 @if (student != null)
@@ -338,20 +348,14 @@
                             <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
-                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
-                            <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
-                            
-                            <!-- Status Badge with Remittance Info -->
+
+                            <!-- Display Calculated Values based on Validation -->
+                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@displayAmountPaid.ToString("N2")</td>
+                            <td class="balance" style="color: @(displayBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@displayBalance.ToString("N2")</td>
+
+                            <!-- Status Badge -->
                             <td>
-                                @if (isRemitted)
-                                {
-                                    <span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-lock-fill"></i> Remitted</span>
-                                }
-                                else if (isPendingRemit)
-                                {
-                                    <span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i class="bi bi-hourglass-split"></i> Pending</span>
-                                }
-                                else if (isPaid)
+                                @if (isOfficiallyPaid)
                                 {
                                     <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                 }
@@ -360,8 +364,8 @@
                                     <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                                 }
                             </td>
-                            
-                            <!-- Actions - ONLY for UNPAID records -->
+
+                            <!-- Actions -->
                             <td class="text-center">
                                 @if (canEdit)
                                 {
@@ -369,17 +373,14 @@
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 }
-                                else if (isRemitted)
+                                else if (isOfficiallyPaid)
                                 {
-                                    <span class="text-purple" title="Remitted - Locked"><i class="bi bi-lock-fill"></i></span>
-                                }
-                                else if (isPendingRemit)
-                                {
-                                    <span class="text-warning" title="Pending Remittance"><i class="bi bi-hourglass-split"></i></span>
+                                    <span class="text-success" title="Validated Payment"><i class="bi bi-lock-fill"></i></span>
                                 }
                                 else
                                 {
-                                    <span class="text-success" title="Paid"><i class="bi bi-check-circle-fill"></i></span>
+                                    @* Locked because Class Treasurer has it, but not validated yet *@
+                                    <span class="text-muted" title="Pending Remittance from Class Treasurer"><i class="bi bi-hourglass"></i></span>
                                 }
                             </td>
                         </tr>

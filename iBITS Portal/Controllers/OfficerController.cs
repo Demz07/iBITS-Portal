@@ -40,6 +40,8 @@ namespace iBITS_Portal.Controllers
             return scannedData;
         }
 
+
+
         // ============================================================
         // ANNOUNCEMENTS
         // ============================================================
@@ -1983,6 +1985,10 @@ namespace iBITS_Portal.Controllers
 
                 var fine = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.StudentNumNavigation) // Ensure indirect student data is loaded
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.Event)
                     .FirstOrDefaultAsync(f => f.FineId == fineId);
 
                 if (fine == null)
@@ -1990,23 +1996,27 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "Fine not found." });
                 }
 
-                // Verify the fine belongs to a student in the treasurer's section
-                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                // ============================================================
+                // FIX: Check for the student record via direct link OR through the attendance record.
+                // This ensures event-based fines are correctly validated.
+                // ============================================================
+                var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+                if (student?.YearLevelSection != treasurer.YearLevelSection)
                 {
                     return Json(new { success = false, message = "You can only process payments for students in your section." });
                 }
 
-                // CATEGORY CLOSURE CHECK: If this fine category has been validated, Class Treasurer cannot edit anymore
+                // CATEGORY CLOSURE CHECK
                 var fineCategory = fine.Description ?? fine.Attendance?.Event?.EventName ?? "Other";
                 var validatedRemittance = await _context.Remittances
                     .FirstOrDefaultAsync(r => r.Section == treasurer.YearLevelSection
-                        && (r.FineCategory == fineCategory || r.FeeName == fineCategory)
+                        && (r.FineCategory == fineCategory)
                         && r.RemittanceType == RemittanceType.Fine
                         && r.Status == RemittanceStatus.Validated);
 
                 if (validatedRemittance != null)
                 {
-                    return Json(new { success = false, message = $"This fine category '{fineCategory}' has been validated and is now locked. Only the Org Treasurer can update fines in this category. Batch: {validatedRemittance.BatchCode}" });
+                    return Json(new { success = false, message = $"This fine category '{fineCategory}' has been validated and is now locked." });
                 }
 
                 // Check if fine is already remitted (locked)
@@ -2025,7 +2035,7 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "This fine is already marked as paid." });
                 }
 
-                // Mark as PAID (full payment only)
+                // Mark as PAID
                 fine.FinesStatus = "Paid";
                 fine.AmountPaid = fine.Amount ?? 0;
                 fine.CollectedBy = treasurer.StudentNum;
@@ -2033,32 +2043,29 @@ namespace iBITS_Portal.Controllers
 
                 _context.Fines.Update(fine);
 
-                // Create payment transaction for receipt/history
+                // ============================================================
+                // FIX: Ensure StudentNum is correctly populated for event-based fines.
+                // ============================================================
                 var transaction = new FinePaymentTransaction
                 {
                     FineId = fineId,
-                    StudentNum = fine.StudentNum ?? "",
+                    StudentNum = student?.StudentNum ?? "", // Use the student object found earlier
                     Amount = fine.Amount ?? 0,
                     PaymentDate = DateTime.Now,
                     PaymentMethod = "Cash",
                     ProcessedBy = treasurer.StudentNum ?? "",
-                    TransactionReference = null,
                     Notes = "Full payment recorded by Class Treasurer"
                 };
                 _context.FinePaymentTransactions.Add(transaction);
 
-                // Notify student with receipt details
-                if (!string.IsNullOrEmpty(fine.StudentNum))
+                // Notify student
+                if (student != null && !string.IsNullOrEmpty(student.StudentNum))
                 {
                     _context.Notifications.Add(new Notification
                     {
-                        StudentNum = fine.StudentNum,
+                        StudentNum = student.StudentNum,
                         Title = "✅ Fine Payment Receipt",
-                        Message = $"Your fine '{fine.Description ?? "Fine"}' has been PAID.\n\n" +
-                                  $"Amount: ₱{fine.Amount:N2}\n" +
-                                  $"Collected by: {treasurer.FullName}\n" +
-                                  $"Date: {DateTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
-                                  $"Thank you for your payment!",
+                        Message = $"Your fine '{fine.Description ?? "Fine"}' has been PAID.\n\nAmount: ₱{fine.Amount:N2}\nCollected by: {treasurer.FullName}",
                         NotificationType = "Payment",
                         NotificationDate = DateTime.Now,
                         IsRead = false,
@@ -2071,7 +2078,7 @@ namespace iBITS_Portal.Controllers
                 return Json(new
                 {
                     success = true,
-                    message = $"✅ Fine marked as PAID for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum} (₱{fine.Amount:N2}). Receipt sent to student."
+                    message = $"✅ Fine marked as PAID for {student?.FullName}."
                 });
             }
             catch (Exception ex)
@@ -2079,6 +2086,7 @@ namespace iBITS_Portal.Controllers
                 return Json(new { success = false, message = $"Error marking fine as paid: {ex.Message}" });
             }
         }
+
 
         // ============================================================
         // REVOKE CLASS FINE PAYMENT - AJAX (Class Treasurer)
@@ -2099,6 +2107,10 @@ namespace iBITS_Portal.Controllers
 
                 var fine = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance) // ADDED: Include attendance for the check
+                        .ThenInclude(a => a.StudentNumNavigation)
+                    .Include(f => f.Attendance)
+                        .ThenInclude(a => a.Event)
                     .FirstOrDefaultAsync(f => f.FineId == fineId);
 
                 if (fine == null)
@@ -2106,13 +2118,16 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "Fine not found." });
                 }
 
-                // Verify the fine belongs to a student in the treasurer's section
-                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                // ============================================================
+                // FIX: Check for the student record via direct link OR through the attendance record.
+                // ============================================================
+                var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+                if (student?.YearLevelSection != treasurer.YearLevelSection)
                 {
                     return Json(new { success = false, message = "You can only process payments for students in your section." });
                 }
 
-                // CATEGORY CLOSURE CHECK: If this fine category has been validated, Class Treasurer cannot edit anymore
+                // CATEGORY CLOSURE CHECK
                 var fineCategory = fine.Description ?? fine.Attendance?.Event?.EventName ?? "Other";
                 var validatedRemittance = await _context.Remittances
                     .FirstOrDefaultAsync(r => r.Section == treasurer.YearLevelSection
@@ -2148,18 +2163,18 @@ namespace iBITS_Portal.Controllers
                 var transactions = await _context.FinePaymentTransactions
                     .Where(t => t.FineId == fineId)
                     .ToListAsync();
-                
+
                 if (transactions.Any())
                 {
                     _context.FinePaymentTransactions.RemoveRange(transactions);
                 }
 
                 // Notify student with details
-                if (!string.IsNullOrEmpty(fine.StudentNum))
+                if (!string.IsNullOrEmpty(student.StudentNum))
                 {
                     _context.Notifications.Add(new Notification
                     {
-                        StudentNum = fine.StudentNum,
+                        StudentNum = student.StudentNum,
                         Title = "⚠️ Fine Payment Revoked",
                         Message = $"Your fine payment has been REVOKED.\n\n" +
                                   $"Fine: {fine.Description ?? "Fine"}\n" +
@@ -2180,7 +2195,7 @@ namespace iBITS_Portal.Controllers
                 return Json(new
                 {
                     success = true,
-                    message = $"✅ Payment revoked for {fine.StudentNumNavigation?.FullName ?? fine.StudentNum}. Student has been notified."
+                    message = $"✅ Payment revoked for {student?.FullName ?? fine.StudentNum}. Student has been notified."
                 });
             }
             catch (Exception ex)
@@ -2555,6 +2570,7 @@ namespace iBITS_Portal.Controllers
 
         // ============================================================
         // CLASS TREASURER - FINES MANAGEMENT (Admin-style UI)
+        // FINAL FIX: Robust query to handle both direct and indirect student links.
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
         public async Task<IActionResult> ClassFines()
@@ -2570,25 +2586,36 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
 
+            // ============================================================
+            // FIX: This robust query checks for a matching section via TWO paths:
+            // 1. The direct link: Fine -> Student -> Section (for all new/fixed fines)
+            // 2. The indirect link: Fine -> Attendance -> Student -> Section (as a fallback)
+            // This ensures all relevant fines for the section are displayed.
+            // ============================================================
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
+                .Where(f =>
+                    (f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
+                    (f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)
+                )
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
-            // Get validated remittances for this section to determine which categories are closed
+            // Get validated categories
             var validatedCategories = await _context.Remittances
-                .Where(r => r.Section == section 
+                .Where(r => r.Section == section
                     && r.RemittanceType == RemittanceType.Fine
                     && r.Status == RemittanceStatus.Validated)
-                .Select(r => r.FeeName)
+                .Select(r => r.FineCategory)
                 .ToListAsync();
 
             ViewBag.ValidatedCategories = validatedCategories;
 
-            // Calculate statistics (exclude waived from expected)
+            // Calculate statistics
             var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);
             var totalCollected = fines.Where(f => f.FinesStatus?.ToLower() == "paid").Sum(f => f.Amount ?? 0);
             var totalPending = totalExpected - totalCollected;
@@ -2603,7 +2630,7 @@ namespace iBITS_Portal.Controllers
             // Get events for filter
             ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();
 
-            // Get unique manual fine reasons for this section
+            // Get unique manual fine reasons
             ViewBag.ManualFineReasons = fines
                 .Where(f => f.AttendanceId == null && !string.IsNullOrEmpty(f.Description))
                 .Select(f => f.Description)
@@ -2611,13 +2638,12 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(r => r)
                 .ToList();
 
-            // Chart Data - Paid by Fine Type/Event
+            // Chart Data
             var paidBreakdown = fines
                 .Where(f => f.FinesStatus?.ToLower() == "paid")
                 .GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Unknown")
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
-            // Chart Data - Unpaid by Fine Type/Event
             var unpaidBreakdown = fines
                 .Where(f => f.FinesStatus?.ToLower() == "unpaid")
                 .GroupBy(f => f.Description ?? f.Attendance?.Event?.EventName ?? "Unknown")
@@ -2628,6 +2654,8 @@ namespace iBITS_Portal.Controllers
 
             return View(fines);
         }
+
+
 
         // ============================================================
         // EXPORT FEES FOR ORG TREASURER

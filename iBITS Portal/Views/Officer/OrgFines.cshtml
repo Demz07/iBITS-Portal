@@ -284,37 +284,50 @@
                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                     var eventRecord = fine.Attendance?.Event;
                     var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
-                    var paymentStatus = fine.PaymentStatus;
-                    var isPaid = paymentStatus == "Paid";
-                    var isUnpaid = paymentStatus == "Unpaid";
-                    var isExcused = paymentStatus == "Excused";
-                    var remainingBalance = fine.RemainingBalance;
-                    var isEventFine = fine.AttendanceId != null;
-                    
-                    // Check remittance status - CANNOT edit if PAID, EXCUSED, or REMITTED
+                    var dbStatus = fine.PaymentStatus; // Actual DB Status
                     var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
-                    var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
-                    var isLocked = isPaid || isExcused || isRemitted || isPendingRemit;
-                    var canEdit = isUnpaid && !isLocked;
-                    
-                    var statusClass = isPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
+                    var isEventFine = fine.AttendanceId != null;
+                    var isExcused = dbStatus == "Excused";
+
+                    // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
+                    // Exception: Excused fines show as Excused immediately.
+                    var isOfficiallyPaid = dbStatus == "Paid" && isRemitted;
+
+                    // Visual Data
+                    var displayAmountPaid = isOfficiallyPaid ? fine.AmountPaid : 0;
+                    var displayBalance = isOfficiallyPaid ? 0 : (isExcused ? 0 : (fine.Amount ?? 0));
+                    var displayStatus = isOfficiallyPaid ? "Paid" : (isExcused ? "Excused" : "Unpaid");
+
+                    // Locking Logic
+                    var isLocked = dbStatus == "Paid" || dbStatus == "Partial" || isExcused;
+                    var canEdit = !isLocked;
+
+                    var statusClass = isOfficiallyPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
 
                     <tr class="fine-row @statusClass"
                         data-fine-id="@fine.FineId"
                         data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
-                        data-status="@paymentStatus.ToLower()"
+                        data-status="@displayStatus.ToLower()"
                         data-section="@student?.YearLevelSection"
                         data-finetype="@(isEventFine ? "event" : "manual")"
                         data-amount="@(fine.Amount ?? 0)"
-                        data-paid="@fine.AmountPaid"
-                        data-balance="@remainingBalance">
+                        data-paid="@displayAmountPaid"
+                        data-balance="@displayBalance">
 
                         <!-- Lock/Status Column -->
                         <td class="text-center text-muted">
-                            @if (isLocked)
+                            @if (isLocked && !isOfficiallyPaid && !isExcused)
                             {
-                                <i class="bi bi-lock-fill" style="color: #a78bfa;" title="Locked - Cannot edit"></i>
+                                <i class="bi bi-hourglass-split text-warning" title="Pending Validation"></i>
+                            }
+                            else if (isOfficiallyPaid)
+                            {
+                                <i class="bi bi-check-all text-success" title="Validated"></i>
+                            }
+                            else if (isExcused)
+                            {
+                                <i class="bi bi-shield-check text-info"></i>
                             }
                             else
                             {
@@ -346,20 +359,14 @@
                             }
                         </td>
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-                        <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
-                        <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
-                        
-                        <!-- Status Badge with Remittance Info -->
+
+                        <!-- Display Calculated Values -->
+                        <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@displayAmountPaid.ToString("N2")</td>
+                        <td class="balance" style="color: @(displayBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@displayBalance.ToString("N2")</td>
+
+                        <!-- Status Badge -->
                         <td>
-                            @if (isRemitted)
-                            {
-                                <span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i class="bi bi-lock-fill"></i> Remitted</span>
-                            }
-                            else if (isPendingRemit)
-                            {
-                                <span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i class="bi bi-hourglass-split"></i> Pending</span>
-                            }
-                            else if (isPaid)
+                            @if (isOfficiallyPaid)
                             {
                                 <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                             }
@@ -372,8 +379,8 @@
                                 <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                             }
                         </td>
-                        
-                        <!-- Actions - ONLY for UNPAID records -->
+
+                        <!-- Actions -->
                         <td class="text-center">
                             @if (canEdit)
                             {
@@ -381,21 +388,18 @@
                                     <i class="bi bi-check-circle"></i>
                                 </button>
                             }
-                            else if (isRemitted)
+                            else if (isOfficiallyPaid)
                             {
-                                <span class="text-purple" title="Remitted - Locked"><i class="bi bi-lock-fill"></i></span>
-                            }
-                            else if (isPendingRemit)
-                            {
-                                <span class="text-warning" title="Pending Remittance"><i class="bi bi-hourglass-split"></i></span>
-                            }
-                            else if (isPaid)
-                            {
-                                <span class="text-success" title="Paid"><i class="bi bi-check-circle-fill"></i></span>
+                                <span class="text-success" title="Validated"><i class="bi bi-lock-fill"></i></span>
                             }
                             else if (isExcused)
                             {
                                 <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
+                            }
+                            else
+                            {
+                                @* Locked because Class Treasurer has it *@
+                                <span class="text-muted" title="Pending Remittance"><i class="bi bi-hourglass"></i></span>
                             }
                         </td>
                     </tr>
