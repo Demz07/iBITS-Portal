@@ -158,6 +158,27 @@ namespace iBITS_Portal.Controllers
 
         // Handles the Dashboard "View All Events" Popup
         [HttpGet]
+        // ADD THIS TO StudentController.cs
+        public async Task<IActionResult> GetDetailsJson(string id)
+        {
+            var s = await _context.Students.FirstOrDefaultAsync(x => x.StudentNum == id);
+            if (s == null) return NotFound();
+
+            return Json(new
+            {
+                firstName = s.StudentFn,
+                lastName = s.StudentLn,
+                studentNum = s.StudentNum,
+                course = s.Course,
+                yearLevel = s.YearLevelSection,
+                birthday = s.Birthday?.ToString("MMM dd, yyyy"),
+                image = s.StudentImage ?? "/images/default-avatar.png",
+                email = s.StudentEmail,
+                type = s.StudentType,
+                classification = s.Classification
+            });
+        }
+
         public async Task<JsonResult> GetAllEventsJson()
         {
             try
@@ -194,11 +215,11 @@ namespace iBITS_Portal.Controllers
             }
             catch (Exception ex)
             {
-                 // Log the exception ex here
+                // Log the exception ex here
                 return Json(new { error = "Failed to fetch events" });
             }
         }
-        
+
         // Action to get basic profile data for the Account Settings modal
         [HttpGet]
         public async Task<JsonResult> GetProfileData()
@@ -222,3 +243,5 @@ namespace iBITS_Portal.Controllers
         }
     }
 }
+
+

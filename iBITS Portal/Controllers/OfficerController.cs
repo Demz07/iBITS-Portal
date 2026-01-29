@@ -712,11 +712,11 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> PostPaymentReminder(string content, string targetAudience)
+        public async Task<IActionResult> PostPaymentReminder(string content, string targetAudience, string reminderTitle, string reminderType)
         {
-            if (string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrWhiteSpace(content) || string.IsNullOrWhiteSpace(reminderTitle))
             {
-                TempData["Error"] = "Content required.";
+                TempData["Error"] = "Both Title and Message are required.";
                 return RedirectToAction("PaymentReminders");
             }
 
@@ -726,11 +726,11 @@ namespace iBITS_Portal.Controllers
 
             var announcement = new Announcement
             {
-                Title = "Payment Reminder",
+                Title = "Payment Reminder: " + reminderTitle,
                 Content = content,
                 PostedBy = poster,
                 Timestamp = DateTime.Now,
-                AnnouncementType = "Payment Reminder",
+                AnnouncementType = reminderType,
                 TargetAudience = targetAudience
             };
 
@@ -740,6 +740,9 @@ namespace iBITS_Portal.Controllers
             TempData["Message"] = "Payment reminder posted successfully.";
             return RedirectToAction("PaymentReminders");
         }
+
+
+
 
         // ============================================================
         // VIEW ALL PAYMENT RECORDS (Org Treasurer)
@@ -4445,5 +4448,7 @@ namespace iBITS_Portal.Controllers
     {
         public List<int> FeeIds { get; set; }
         public string Category { get; set; }
-    }
+    }   
+
+
 }

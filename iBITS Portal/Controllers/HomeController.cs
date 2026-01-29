@@ -104,9 +104,12 @@ namespace iBITS_Portal.Controllers
                 .ToListAsync();
 
             var announcements = await _context.Announcements
-                .OrderByDescending(a => a.Timestamp)
-                .Take(3)
-                .ToListAsync();
+    .Where(a => a.TargetAudience == "All Students" ||
+                a.TargetAudience == student.Course ||
+                (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
+    .OrderByDescending(a => a.Timestamp)
+    .Take(10)
+    .ToListAsync();
 
             // ============================================================
             // NEW: FINANCIAL SUMMARY
@@ -189,3 +192,5 @@ namespace iBITS_Portal.Controllers
         public IActionResult Privacy() { return View(); }
     }
 }
+
+

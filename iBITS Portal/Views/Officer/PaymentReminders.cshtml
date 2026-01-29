@@ -1,4 +1,3 @@
-@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\PaymentReminders.cshtml *@
 @* FILE PATH: Views/Officer/PaymentReminders.cshtml *@
 @{
     ViewData["Title"] = "Payment Reminders";
@@ -6,26 +5,47 @@
 }
 
 @section Styles {
-<style>
-    .reminder-template {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
+    <style>
+        .reminder-template {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
-    .reminder-template:hover {
-        background: rgba(255,255,255,0.1);
-        border-color: var(--gold-primary);
-        transform: translateX(5px);
-    }
-</style>
+            .reminder-template:hover {
+                background: rgba(255,255,255,0.1);
+                border-color: rgba(255,255,255,0.3);
+                transform: translateX(5px);
+            }
+
+            .reminder-template.active {
+                border-color: var(--gold-primary) !important;
+                background: rgba(212, 175, 55, 0.1) !important;
+                box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+            }
+
+        .text-orange {
+            color: #fd7e14 !important;
+        }
+
+        /* UPDATED: Triple the size (approx 114px) and unique ID */
+        #reminderMessage {
+            resize: none;
+            overflow: hidden;
+            height: 114px !important;
+            line-height: 1.5;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
 }
 
-<!-- TempData Messages -->
 @if (TempData["Message"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show">
@@ -41,7 +61,6 @@
     </div>
 }
 
-<!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="glass-header-title">
@@ -55,14 +74,14 @@
 </div>
 
 <div class="row">
-    <!-- REMINDER FORM -->
+    <!-- LEFT COLUMN: REMINDER FORM -->
     <div class="col-md-8">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-4">
                 <i class="bi bi-pencil-square me-2 text-gold"></i> Create Payment Reminder
             </h5>
 
-            <form asp-action="PostPaymentReminder" method="post">
+            <form asp-action="PostPaymentReminder" method="post" onsubmit="return validateForm()">
                 @Html.AntiForgeryToken()
 
                 <div class="mb-3">
@@ -76,14 +95,19 @@
                         <option value="BSIT">BSIT Program</option>
                         <option value="BSCS">BSCS Program</option>
                     </select>
-                    <small class="form-text text-muted">Select who should see this reminder</small>
+                </div>
+
+                <input type="hidden" name="reminderType" id="reminderType" value="" />
+
+                <div class="mb-3">
+                    <label for="reminderTitle" class="form-label">Reminder Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="reminderTitle" id="reminderTitle" required placeholder="e.g., Monthly Dues">
                 </div>
 
                 <div class="mb-3">
-                    <label for="content" class="form-label">Reminder Message <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="content" name="content" rows="6" required 
-                              placeholder="Enter your payment reminder message..."></textarea>
-                    <small class="form-text text-muted">This will appear on student dashboards as a payment reminder</small>
+                    <label for="reminderMessage" class="form-label">Reminder Message <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="reminderMessage" name="content" required
+                              placeholder="Type your message here..."></textarea>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center">
@@ -98,35 +122,30 @@
         </div>
     </div>
 
-    <!-- REMINDER TEMPLATES -->
+    <!-- RIGHT COLUMN: TYPE OF REMINDER SELECTION -->
     <div class="col-md-4">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
-                <i class="bi bi-clipboard-check me-2 text-gold"></i> Quick Templates
+                <i class="bi bi-clipboard-check me-2 text-gold"></i> Type of Reminder
             </h5>
-            <p class="small text-muted mb-3">Click to use a template</p>
+            <p class="small text-muted mb-3">Click to use type of reminder</p>
 
-            <div class="reminder-template" onclick="useTemplate('general')">
+            <div class="reminder-template" onclick="useTemplate(this, 'General Reminder')">
                 <h6 class="text-warning mb-1"><i class="bi bi-bell me-1"></i> General Reminder</h6>
-                <small class="text-muted">Friendly payment reminder</small>
+                <small class="text-muted">Standard payment notice</small>
             </div>
 
-            <div class="reminder-template" onclick="useTemplate('urgent')">
+            <div class="reminder-template" onclick="useTemplate(this, 'Urgent Notice')">
                 <h6 class="text-danger mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Urgent Notice</h6>
-                <small class="text-muted">For approaching deadlines</small>
+                <small class="text-muted">Approaching deadlines</small>
             </div>
 
-            <div class="reminder-template" onclick="useTemplate('final')">
-                <h6 class="text-danger mb-1"><i class="bi bi-hourglass-split me-1"></i> Final Notice</h6>
-                <small class="text-muted">Last call before deadline</small>
+            <div class="reminder-template" onclick="useTemplate(this, 'Final Notice')">
+                <h6 class="text-orange mb-1"><i class="bi bi-hourglass-split me-1"></i> Final Notice</h6>
+                <small class="text-muted">Last call for payments</small>
             </div>
 
-            <div class="reminder-template" onclick="useTemplate('thankyou')">
-                <h6 class="text-success mb-1"><i class="bi bi-hand-thumbs-up me-1"></i> Thank You</h6>
-                <small class="text-muted">Acknowledge payments</small>
-            </div>
-
-            <div class="reminder-template" onclick="useTemplate('newFee')">
+            <div class="reminder-template" onclick="useTemplate(this, 'New Fee Posted')">
                 <h6 class="text-info mb-1"><i class="bi bi-receipt me-1"></i> New Fee Posted</h6>
                 <small class="text-muted">Announce new fees</small>
             </div>
@@ -135,26 +154,49 @@
 </div>
 
 @section Scripts {
-<script>
-    const templates = {
-        general: "📢 Payment Reminder\n\nHello iBITS Members! 👋\n\nThis is a friendly reminder to settle any pending fees and fines. Please check your Financials page to view your current balance.\n\nPayment can be processed through your class treasurer during office hours.\n\nThank you for your cooperation! 🙏",
-        
-        urgent: "⚠️ URGENT: Payment Deadline Approaching\n\nDear iBITS Members,\n\nThe payment deadline is fast approaching! Please settle your pending fees and fines as soon as possible to avoid any inconvenience.\n\nDeadline: [SPECIFY DATE]\n\nCheck your Financials page now and contact your class treasurer for payment processing.\n\nYour prompt action is greatly appreciated.",
-        
-        final: "🚨 FINAL NOTICE: Payment Deadline\n\nAttention All Members,\n\nThis is a FINAL REMINDER that the payment deadline is [SPECIFY DATE]. Any unpaid fees and fines after this date may result in:\n- Late payment fees\n- Restrictions on event participation\n- Other penalties as per organization policy\n\nPlease settle your balance immediately through your class treasurer.\n\nThank you for your immediate attention to this matter.",
-        
-        thankyou: "✅ Thank You for Your Payment!\n\nDear iBITS Members,\n\nWe sincerely appreciate those who have already settled their fees and fines. Your prompt payment helps support our organization's activities and programs.\n\nFor those with remaining balances, please check your Financials page and process payment at your earliest convenience.\n\nThank you for your continued support! 💙",
-        
-        newFee: "📋 New Fee Posted\n\nHello iBITS Members!\n\nA new fee has been posted to your account:\n\nFee Name: [SPECIFY FEE NAME]\nAmount: ₱[AMOUNT]\nDue Date: [DATE]\n\nPlease check your Financials page for complete details. Payment can be made through your class treasurer.\n\nThank you!"
-    };
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    function useTemplate(type) {
-        document.getElementById('content').value = templates[type];
-    }
+    <script>
+        function useTemplate(element, typeName) {
+            // Sets the hidden reminderType field for the database
+            document.getElementById('reminderType').value = typeName;
 
-    function clearForm() {
-        document.getElementById('content').value = '';
-        document.getElementById('targetAudience').selectedIndex = 0;
-    }
-</script>
+            // Handle Visual Selection Highlight
+            document.querySelectorAll('.reminder-template').forEach(box => {
+                box.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            // Note: Automatic text filling has been removed as per request
+        }
+
+        function validateForm() {
+            const type = document.getElementById('reminderType').value;
+            if (!type) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Selection Required',
+                    text: "Please select a 'Type of Reminder' from the right side before posting.",
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    confirmButtonColor: '#D4AF37',
+                    iconColor: '#D4AF37'
+                });
+                return false;
+            }
+            return true;
+        }
+
+        function clearForm() {
+            document.getElementById('reminderMessage').value = '';
+            document.getElementById('reminderTitle').value = '';
+            document.getElementById('reminderType').value = '';
+            document.getElementById('targetAudience').selectedIndex = 0;
+
+            document.querySelectorAll('.reminder-template').forEach(box => {
+                box.classList.remove('active');
+            });
+        }
+    </script>
 }
+
