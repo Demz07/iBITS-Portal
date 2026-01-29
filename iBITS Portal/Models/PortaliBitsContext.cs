@@ -37,6 +37,11 @@ public partial class PortaliBitsContext : DbContext
     // ============================================================
     public virtual DbSet<Remittance> Remittances { get; set; }
     public virtual DbSet<RemittanceItem> RemittanceItems { get; set; }
+    
+    // ============================================================
+    // ANNOUNCEMENT DISMISSAL TRACKING
+    // ============================================================
+    public virtual DbSet<UserAnnouncementDismissal> UserAnnouncementDismissals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -365,6 +370,35 @@ public partial class PortaliBitsContext : DbContext
                 .HasDefaultValue("NotRemitted");
 
             entity.HasIndex(e => e.RemittanceStatus);
+        });
+
+        // ============================================================
+        // USER ANNOUNCEMENT DISMISSAL CONFIGURATION
+        // ============================================================
+        modelBuilder.Entity<UserAnnouncementDismissal>(entity =>
+        {
+            entity.ToTable("UserAnnouncementDismissals");
+            
+            entity.HasKey(e => e.Id);
+            
+            // Unique constraint to prevent duplicate dismissals
+            entity.HasIndex(e => new { e.StudentNum, e.AnnouncementId })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_StudentAnnouncement");
+            
+            // Foreign key to Student
+            entity.HasOne(d => d.Student)
+                  .WithMany()
+                  .HasForeignKey(d => d.StudentNum)
+                  .HasConstraintName("FK_UserAnnouncementDismissal_Student")
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            // Foreign key to Announcement
+            entity.HasOne(d => d.Announcement)
+                  .WithMany()
+                  .HasForeignKey(d => d.AnnouncementId)
+                  .HasConstraintName("FK_UserAnnouncementDismissal_Announcement")
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

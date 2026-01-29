@@ -704,15 +704,48 @@ namespace iBITS_Portal.Controllers
         // POST PAYMENT REMINDER (Org Treasurer)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public IActionResult PaymentReminders()
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> PaymentReminders()
         {
+            // Get dynamic target audience options from actual student data
+            var courses = await _context.Students
+                .Where(s => s.IsArchived != true && !string.IsNullOrEmpty(s.Course))
+                .Select(s => s.Course)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+
+            var yearLevels = new List<string> { "1st Year", "2nd Year", "3rd Year", "4th Year" };
+
+            // Get existing payment reminders posted by this officer
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+            string posterName = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
+
+            var existingReminders = await _context.Announcements
+                .Where(a => a.AnnouncementType == "Payment Reminder" 
+                         && a.PostedBy == posterName
+                         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now))
+                .OrderByDescending(a => a.Timestamp)
+                .ToListAsync();
+
+            ViewBag.Courses = courses;
+            ViewBag.YearLevels = yearLevels;
+            ViewBag.ExistingReminders = existingReminders;
+            ViewBag.PosterName = posterName;
+
             return View();
         }
 
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> PostPaymentReminder(string content, string targetAudience, string reminderTitle, string reminderType)
+        public async Task<IActionResult> PostPaymentReminder(
+            string content, 
+            string targetAudience, 
+            string reminderTitle, 
+            string reminderType,
+            int expiryDays = 30)
         {
             if (string.IsNullOrWhiteSpace(content) || string.IsNullOrWhiteSpace(reminderTitle))
             {
@@ -724,6 +757,9 @@ namespace iBITS_Portal.Controllers
             var treasurer = await _context.Students.FindAsync(user.UserName);
             string poster = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
+            // Calculate expiry date
+            DateTime? expiryDate = expiryDays > 0 ? DateTime.Now.AddDays(expiryDays) : (DateTime?)null;
+
             var announcement = new Announcement
             {
                 Title = "Payment Reminder: " + reminderTitle,
@@ -731,13 +767,103 @@ namespace iBITS_Portal.Controllers
                 PostedBy = poster,
                 Timestamp = DateTime.Now,
                 AnnouncementType = reminderType,
-                TargetAudience = targetAudience
+                TargetAudience = targetAudience,
+                ExpiryDate = expiryDate
             };
 
             _context.Announcements.Add(announcement);
             await _context.SaveChangesAsync();
 
-            TempData["Message"] = "Payment reminder posted successfully.";
+            // Send individual notifications to targeted students
+            var targetedStudents = await GetTargetedStudents(targetAudience);
+            
+            foreach (var student in targetedStudents)
+            {
+                var notification = new Notification
+                {
+                    StudentNum = student.StudentNum,
+                    Title = announcement.Title,
+                    Message = content,
+                    NotificationDate = DateTime.Now,
+                    NotificationType = "Payment Reminder",
+                    SentBy = poster,
+                    IsRead = false
+                };
+                _context.Notifications.Add(notification);
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Payment reminder posted successfully to {targetedStudents.Count} student(s)!";
+            return RedirectToAction("PaymentReminders");
+        }
+
+        // ============================================================
+        // HELPER: Get Targeted Students Based on Audience Criteria
+        // ============================================================
+        private async Task<List<Student>> GetTargetedStudents(string targetAudience)
+        {
+            var query = _context.Students.Where(s => s.IsArchived != true);
+
+            if (targetAudience == "All Students")
+            {
+                return await query.ToListAsync();
+            }
+            else if (targetAudience == "Students with Outstanding Balance")
+            {
+                // Get students who have unpaid fees
+                var studentsWithBalance = await _context.Fees
+                    .Where(f => f.FeeStatus != "Paid")
+                    .Select(f => f.StudentNum)
+                    .Distinct()
+                    .ToListAsync();
+
+                return await query.Where(s => studentsWithBalance.Contains(s.StudentNum)).ToListAsync();
+            }
+            else if (targetAudience.Contains("Year"))
+            {
+                // Extract year level (e.g., "1st Year" -> "1st")
+                var yearPrefix = targetAudience.Split(new[] { ' ' }, StringSplitOptions.None)[0];
+                return await query.Where(s => s.YearLevelSection != null && s.YearLevelSection.Contains(yearPrefix)).ToListAsync();
+            }
+            else
+            {
+                // Assume it's a course (BSIT, BSCS, etc.)
+                return await query.Where(s => s.Course == targetAudience).ToListAsync();
+            }
+        }
+
+        // ============================================================
+        // DELETE PAYMENT REMINDER
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePaymentReminder(int id)
+        {
+            var announcement = await _context.Announcements.FindAsync(id);
+            
+            if (announcement == null)
+            {
+                TempData["Error"] = "Reminder not found.";
+                return RedirectToAction("PaymentReminders");
+            }
+
+            // Verify the officer is deleting their own reminder
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+            string posterName = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
+
+            if (announcement.PostedBy != posterName && !User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "You can only delete your own reminders.";
+                return RedirectToAction("PaymentReminders");
+            }
+
+            _context.Announcements.Remove(announcement);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Payment reminder deleted successfully!";
             return RedirectToAction("PaymentReminders");
         }
 

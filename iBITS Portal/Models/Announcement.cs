@@ -33,5 +33,10 @@ namespace iBITS_Portal.Models
         /// </summary>
         [StringLength(100)]
         public string? TargetAudience { get; set; }
+
+        /// <summary>
+        /// Expiry date for the announcement. After this date, the announcement will be automatically hidden.
+        /// </summary>
+        public DateTime? ExpiryDate { get; set; }
     }
 }

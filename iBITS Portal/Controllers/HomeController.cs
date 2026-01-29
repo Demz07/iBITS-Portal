@@ -103,13 +103,22 @@ namespace iBITS_Portal.Controllers
                 .Take(3)
                 .ToListAsync();
 
+            // Get dismissed announcement IDs for this student
+            var dismissedAnnouncementIds = await _context.UserAnnouncementDismissals
+                .Where(d => d.StudentNum == user.UserName)
+                .Select(d => d.AnnouncementId)
+                .ToListAsync();
+
+            // Filter announcements: match target audience, not expired, not dismissed
             var announcements = await _context.Announcements
-    .Where(a => a.TargetAudience == "All Students" ||
-                a.TargetAudience == student.Course ||
-                (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
-    .OrderByDescending(a => a.Timestamp)
-    .Take(10)
-    .ToListAsync();
+                .Where(a => (a.TargetAudience == "All Students" ||
+                            a.TargetAudience == student.Course ||
+                            (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
+                            && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
+                            && !dismissedAnnouncementIds.Contains(a.Id))
+                .OrderByDescending(a => a.Timestamp)
+                .Take(10)
+                .ToListAsync();
 
             // ============================================================
             // NEW: FINANCIAL SUMMARY
@@ -190,6 +199,49 @@ namespace iBITS_Portal.Controllers
         }
 
         public IActionResult Privacy() { return View(); }
+
+        // ============================================================
+        // DISMISS ANNOUNCEMENT (Student Action)
+        // ============================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DismissAnnouncement(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || user.UserName == null)
+            {
+                return Json(new { success = false, message = "User not authenticated" });
+            }
+
+            // Check if announcement exists
+            var announcement = await _context.Announcements.FindAsync(id);
+            if (announcement == null)
+            {
+                return Json(new { success = false, message = "Announcement not found" });
+            }
+
+            // Check if already dismissed
+            var existingDismissal = await _context.UserAnnouncementDismissals
+                .FirstOrDefaultAsync(d => d.StudentNum == user.UserName && d.AnnouncementId == id);
+
+            if (existingDismissal != null)
+            {
+                return Json(new { success = true, message = "Already dismissed" });
+            }
+
+            // Create dismissal record
+            var dismissal = new UserAnnouncementDismissal
+            {
+                StudentNum = user.UserName,
+                AnnouncementId = id,
+                DismissedAt = DateTime.Now
+            };
+
+            _context.UserAnnouncementDismissals.Add(dismissal);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Announcement dismissed successfully" });
+        }
     }
 }
 

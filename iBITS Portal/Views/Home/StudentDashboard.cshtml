@@ -197,9 +197,18 @@
 
                 @foreach (var announcement in regularAnnouncements)
                 {
-                    <div class="announcement-item">
-                        <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") • Posted by @announcement.PostedBy</small>
-                        <p class="mb-0 mt-1 text-white">@announcement.Content</p>
+                    <div class="announcement-item" id="announcement-@announcement.Id">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") · Posted by @announcement.PostedBy</small>
+                                <p class="mb-0 mt-1 text-white">@announcement.Content</p>
+                            </div>
+                            <button class="btn btn-sm btn-link text-muted p-0 ms-2" 
+                                    onclick="dismissAnnouncement(@announcement.Id, this)" 
+                                    title="Dismiss this announcement">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                     </div>
                 }
             </div>
@@ -283,6 +292,14 @@
                     <h4 class="fw-bold mb-3">@reminder.Title.Replace("Payment Reminder: ", "")</h4>
                     <div style="white-space: pre-line; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">@reminder.Content</div>
                     <div class="mt-3 opacity-50 small text-end">Posted by: @reminder.PostedBy</div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Close
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="dismissAnnouncement(@reminder.Id, this)" data-reminder-id="@reminder.Id">
+                        <i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder
+                    </button>
                 </div>
             </div>
         </div>
@@ -753,6 +770,75 @@
                 });
             }
         });
+
+        // ============================================================
+        // DISMISS ANNOUNCEMENT FUNCTIONALITY
+        // ============================================================
+        function dismissAnnouncement(announcementId, button) {
+            if (!confirm('Are you sure you want to dismiss this announcement? You won\'t see it again.')) {
+                return;
+            }
+
+            // Disable button to prevent double-clicks
+            button.disabled = true;
+            button.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Dismissing...';
+
+            // Get CSRF token
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            fetch('/Home/DismissAnnouncement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: `id=${announcementId}&__RequestVerificationToken=${encodeURIComponent(token)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal if open
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modal' + announcementId));
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    // Remove announcement from DOM with fade effect
+                    const announcementElement = document.getElementById('announcement-' + announcementId);
+                    if (announcementElement) {
+                        announcementElement.style.transition = 'opacity 0.3s ease';
+                        announcementElement.style.opacity = '0';
+                        setTimeout(() => {
+                            announcementElement.remove();
+                            
+                            // Check if no announcements left
+                            const announcementsContainer = document.querySelector('.announcement-scroll-container');
+                            if (announcementsContainer && announcementsContainer.children.length === 0) {
+                                announcementsContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-inbox display-4"></i><p class="mt-2">No announcements</p></div>';
+                            }
+                        }, 300);
+                    }
+
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alertDiv.style.zIndex = '9999';
+                    alertDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Announcement dismissed successfully<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    document.body.appendChild(alertDiv);
+                    setTimeout(() => alertDiv.remove(), 3000);
+                } else {
+                    alert('Error dismissing announcement: ' + data.message);
+                    button.disabled = false;
+                    button.innerHTML = '<i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder';
+            });
+        }
     </script>
 }
 

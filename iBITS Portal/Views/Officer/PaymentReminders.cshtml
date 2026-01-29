@@ -1,4 +1,5 @@
 @* FILE PATH: Views/Officer/PaymentReminders.cshtml *@
+@* OPTIMIZED VERSION with Expiry Date, Dynamic Targeting, Delete Functionality *@
 @{
     ViewData["Title"] = "Payment Reminders";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
@@ -32,7 +33,6 @@
             color: #fd7e14 !important;
         }
 
-        /* UPDATED: Triple the size (approx 114px) and unique ID */
         #reminderMessage {
             resize: none;
             overflow: hidden;
@@ -43,13 +43,49 @@
             color: white;
             border: 1px solid rgba(255,255,255,0.1);
         }
+
+        .char-counter {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .char-counter.warning {
+            color: #ffc107;
+        }
+
+        .char-counter.danger {
+            color: #dc3545;
+        }
+
+        .reminder-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .reminder-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .badge-expiry {
+            font-size: 0.75rem;
+        }
+
+        .delete-btn {
+            padding: 4px 8px;
+            font-size: 0.85rem;
+        }
     </style>
 }
 
-@if (TempData["Message"] != null)
+@if (TempData["Success"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show">
-        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Message"]
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
@@ -64,9 +100,9 @@
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="glass-header-title">
-            <i class="bi bi-megaphone-fill me-2 text-warning"></i> Post Payment Reminder
+            <i class="bi bi-megaphone-fill me-2 text-warning"></i> Payment Reminders Management
         </h4>
-        <p class="mb-0 small text-muted">Send reminders to students about pending fees and fines</p>
+        <p class="mb-0 small text-muted">Create, manage, and track payment reminders</p>
     </div>
     <a href="@Url.Action("OrgTreasurerDashboard", "Officer")" class="btn btn-secondary">
         <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
@@ -75,7 +111,7 @@
 
 <div class="row">
     <!-- LEFT COLUMN: REMINDER FORM -->
-    <div class="col-md-8">
+    <div class="col-lg-6 mb-4">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-4">
                 <i class="bi bi-pencil-square me-2 text-gold"></i> Create Payment Reminder
@@ -84,32 +120,72 @@
             <form asp-action="PostPaymentReminder" method="post" onsubmit="return validateForm()">
                 @Html.AntiForgeryToken()
 
+                <!-- Target Audience -->
                 <div class="mb-3">
-                    <label for="targetAudience" class="form-label">Target Audience <span class="text-danger">*</span></label>
+                    <label for="targetAudience" class="form-label">
+                        Target Audience <span class="text-danger">*</span>
+                    </label>
                     <select class="form-select" id="targetAudience" name="targetAudience" required>
                         <option value="All Students">All Students</option>
-                        <option value="1st Year">1st Year Students</option>
-                        <option value="2nd Year">2nd Year Students</option>
-                        <option value="3rd Year">3rd Year Students</option>
-                        <option value="4th Year">4th Year Students</option>
-                        <option value="BSIT">BSIT Program</option>
-                        <option value="BSCS">BSCS Program</option>
+                        <option value="Students with Outstanding Balance">Students with Outstanding Balance</option>
+                        <optgroup label="Year Levels">
+                            @foreach (var year in ViewBag.YearLevels as List<string>)
+                            {
+                                <option value="@year">@year</option>
+                            }
+                        </optgroup>
+                        <optgroup label="Programs">
+                            @foreach (var course in ViewBag.Courses as List<string>)
+                            {
+                                <option value="@course">@course</option>
+                            }
+                        </optgroup>
                     </select>
+                    <small class="text-muted">Select who will receive this reminder</small>
                 </div>
 
+                <!-- Reminder Type (Hidden) -->
                 <input type="hidden" name="reminderType" id="reminderType" value="" />
 
+                <!-- Reminder Title -->
                 <div class="mb-3">
-                    <label for="reminderTitle" class="form-label">Reminder Title <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="reminderTitle" id="reminderTitle" required placeholder="e.g., Monthly Dues">
+                    <label for="reminderTitle" class="form-label">
+                        Reminder Title <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" name="reminderTitle" id="reminderTitle" 
+                           required placeholder="e.g., Monthly Dues Payment" maxlength="100">
                 </div>
 
+                <!-- Reminder Message -->
                 <div class="mb-3">
-                    <label for="reminderMessage" class="form-label">Reminder Message <span class="text-danger">*</span></label>
+                    <label for="reminderMessage" class="form-label">
+                        Reminder Message <span class="text-danger">*</span>
+                    </label>
                     <textarea class="form-control" id="reminderMessage" name="content" required
-                              placeholder="Type your message here..."></textarea>
+                              placeholder="Type your message here..." maxlength="500" oninput="updateCharCount()"></textarea>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">Be clear and concise</small>
+                        <small class="char-counter" id="charCounter">0 / 500</small>
+                    </div>
                 </div>
 
+                <!-- Expiry Date -->
+                <div class="mb-3">
+                    <label for="expiryDays" class="form-label">
+                        <i class="bi bi-clock-history me-1"></i> Auto-Delete After
+                    </label>
+                    <select class="form-select" id="expiryDays" name="expiryDays">
+                        <option value="7">7 Days</option>
+                        <option value="14">14 Days</option>
+                        <option value="30" selected>30 Days (Recommended)</option>
+                        <option value="60">60 Days</option>
+                        <option value="90">90 Days</option>
+                        <option value="0">Never Expire</option>
+                    </select>
+                    <small class="text-muted">Reminder will be automatically hidden after this period</small>
+                </div>
+
+                <!-- Action Buttons -->
                 <div class="d-flex justify-content-between align-items-center">
                     <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
                         <i class="bi bi-x-circle me-1"></i> Clear
@@ -122,13 +198,14 @@
         </div>
     </div>
 
-    <!-- RIGHT COLUMN: TYPE OF REMINDER SELECTION -->
-    <div class="col-md-4">
-        <div class="glass-panel">
+    <!-- RIGHT COLUMN: TYPE SELECTION & EXISTING REMINDERS -->
+    <div class="col-lg-6">
+        <!-- Type of Reminder Selection -->
+        <div class="glass-panel mb-4">
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-clipboard-check me-2 text-gold"></i> Type of Reminder
             </h5>
-            <p class="small text-muted mb-3">Click to use type of reminder</p>
+            <p class="small text-muted mb-3">Click to select reminder type</p>
 
             <div class="reminder-template" onclick="useTemplate(this, 'General Reminder')">
                 <h6 class="text-warning mb-1"><i class="bi bi-bell me-1"></i> General Reminder</h6>
@@ -150,6 +227,71 @@
                 <small class="text-muted">Announce new fees</small>
             </div>
         </div>
+
+        <!-- Existing Active Reminders -->
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-list-check me-2 text-gold"></i> Your Active Reminders
+            </h5>
+
+            @if (ViewBag.ExistingReminders != null && ((List<iBITS_Portal.Models.Announcement>)ViewBag.ExistingReminders).Count > 0)
+            {
+                @foreach (var reminder in (List<iBITS_Portal.Models.Announcement>)ViewBag.ExistingReminders)
+                {
+                    <div class="reminder-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0 text-warning">@reminder.Title</h6>
+                            <form asp-action="DeletePaymentReminder" method="post" style="display:inline;" 
+                                  onsubmit="return confirmDelete('@reminder.Title')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@reminder.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger delete-btn">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <p class="mb-2 small text-muted">@reminder.Content</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary badge-expiry">
+                                    <i class="bi bi-people me-1"></i>@reminder.TargetAudience
+                                </span>
+                                <span class="badge bg-info badge-expiry ms-1">
+                                    @reminder.AnnouncementType
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                @if (reminder.ExpiryDate.HasValue)
+                                {
+                                    var daysLeft = (reminder.ExpiryDate.Value - DateTime.Now).Days;
+                                    <i class="bi bi-clock me-1"></i>
+                                    @if (daysLeft > 0)
+                                    {
+                                        <span>Expires in @daysLeft days</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-warning">Expires today</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <text><i class="bi bi-infinity"></i> No expiry</text>
+                                }
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No active reminders yet</p>
+                    <small class="text-muted">Create your first reminder using the form</small>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
@@ -158,16 +300,12 @@
 
     <script>
         function useTemplate(element, typeName) {
-            // Sets the hidden reminderType field for the database
             document.getElementById('reminderType').value = typeName;
 
-            // Handle Visual Selection Highlight
             document.querySelectorAll('.reminder-template').forEach(box => {
                 box.classList.remove('active');
             });
             element.classList.add('active');
-
-            // Note: Automatic text filling has been removed as per request
         }
 
         function validateForm() {
@@ -192,11 +330,38 @@
             document.getElementById('reminderTitle').value = '';
             document.getElementById('reminderType').value = '';
             document.getElementById('targetAudience').selectedIndex = 0;
+            document.getElementById('expiryDays').value = '30';
 
             document.querySelectorAll('.reminder-template').forEach(box => {
                 box.classList.remove('active');
             });
+
+            updateCharCount();
         }
+
+        function updateCharCount() {
+            const textarea = document.getElementById('reminderMessage');
+            const counter = document.getElementById('charCounter');
+            const length = textarea.value.length;
+            const maxLength = 500;
+
+            counter.textContent = `${length} / ${maxLength}`;
+
+            counter.classList.remove('warning', 'danger');
+            if (length > maxLength * 0.9) {
+                counter.classList.add('danger');
+            } else if (length > maxLength * 0.75) {
+                counter.classList.add('warning');
+            }
+        }
+
+        function confirmDelete(title) {
+            return confirm(`Are you sure you want to delete the reminder: "${title}"?\n\nThis action cannot be undone.`);
+        }
+
+        // Initialize character counter on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCharCount();
+        });
     </script>
 }
-
