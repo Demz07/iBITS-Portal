@@ -818,11 +818,38 @@
 /*              FINANCIAL SUMMARY CARDS                    */
 /* ======================================================= */
 
-.financial-summary-cards {
+.financial-summary-cards.split-view {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 8px;
+    grid-template-columns: repeat(2, 1fr); /* 2 Columns instead of 4 */
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+    .financial-summary-cards.split-view .summary-card {
+        padding: 12px;
+    }
+
+    .financial-summary-cards.split-view .card-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1.1rem;
+    }
+
+    .financial-summary-cards.split-view .card-value {
+        font-size: 1.1rem;
+    }
+
+/* Responsive: On mobile, stack everything */
+@media (max-width: 1200px) {
+    .financial-summary-cards.split-view {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .financial-summary-cards.split-view {
+        grid-template-columns: 1fr; /* Stack vertically on very small screens */
+    }
 }
 
 .summary-card {
@@ -1668,3 +1695,159 @@
     background-color: #fff;
     border-color: rgba(0, 0, 0, 0.1);
 }
+
+
+/* ======================================================= */
+/*              FILTER DROPDOWNS                           */
+/* ======================================================= */
+
+.filter-container {
+    position: relative;
+    min-width: 200px;
+}
+
+.filter-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--gold-primary);
+    margin-bottom: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.glass-select {
+    width: 100%;
+    background: rgba(11, 26, 51, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--text-strong);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23D4AF37' stroke='none' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px 12px;
+    transition: all 0.3s ease;
+}
+
+    .glass-select:focus {
+        outline: none;
+        border-color: var(--gold-primary);
+        background-color: rgba(11, 26, 51, 0.8);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    }
+
+    .glass-select option {
+        background-color: #0b1a33;
+        color: #fff;
+        padding: 10px;
+    }
+
+/* Light Theme overrides */
+[data-theme="light"] .glass-select {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--text-strong);
+    border-color: rgba(212, 175, 55, 0.4);
+}
+
+    [data-theme="light"] .glass-select option {
+        background-color: #fff;
+        color: #000;
+    }
+
+
+/* 1. Force 3 cards in one row */
+.financial-cards-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+/* 2. Compact Summary Card Styling */
+.summary-card.compact {
+    padding: 10px 8px;
+    gap: 8px;
+    flex-direction: column; /* Stack icon on top of text for space */
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
+
+    .summary-card.compact .card-icon.small {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+        margin-bottom: 2px;
+    }
+
+    .summary-card.compact .card-content {
+        width: 100%;
+    }
+
+    .summary-card.compact .card-value.small {
+        font-size: 1rem; /* Smaller font to fit */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .summary-card.compact .card-badge.top-right {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+/* 3. Visual Divider between Columns (Desktop only) */
+.border-white-10 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+@media (min-width: 1200px) {
+    .border-end-xl {
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* 4. Small select input */
+.glass-select.fs-sm {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background-position: right 6px center;
+}
+
+/* 5. Chart container adjustment */
+.chart-container-medium canvas {
+    max-height: 100%;
+    max-width: 100%;
+}
+
+/* Interactive Category Label */
+.category-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gold-primary); /* Gold color as requested for main labels, looks good here too */
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.clickable-badge {
+    cursor: pointer !important; /* Force the hand cursor */
+    position: relative; /* Required for z-index to work */
+    z-index: 100; /* Lifts the element above the glass overlay */
+    pointer-events: auto; /* Ensures the element captures mouse events */
+    transition: transform 0.2s; /* Optional: adds hover effect */
+}
+
+    .clickable-badge:hover {
+        transform: scale(1.05); /* Visual feedback when hovering */
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5); /* Gold glow */
+    }

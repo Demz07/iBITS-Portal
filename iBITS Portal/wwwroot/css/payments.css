@@ -58,14 +58,16 @@ body {
 .summary-card {
     background: var(--input-bg);
     border-radius: 12px;
-    padding: 20px;
+    padding: 30px;
     border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
     transition: transform 0.2s, background 0.3s;
     height: 100%;
-    min-height: 110px;
+    min-height: 120px;
+    width: 100%;
+    grid-template-columns: repeat(3, 1fr);
 }
 
     .summary-card:hover {
@@ -75,19 +77,15 @@ body {
     }
 
     .summary-card.total {
-        border-left: 4px solid #ef4444;
+        border-left: 4px solid #06b6d4;
     }
 
     .summary-card.collected {
-        border-left: 4px solid #10b981;
+        border-left: 4px solid #22c55e;
     }
 
     .summary-card.pending {
-        border-left: 4px solid #fbbf24;
-    }
-
-    .summary-card.rate {
-        border-left: 4px solid #8b5cf6;
+        border-left: 4px solid #ef4444;
     }
 
 .card-value {
@@ -228,6 +226,8 @@ body {
     border: 1px solid var(--input-border) !important;
     color: var(--text-strong) !important;
     border-radius: 8px;
+    padding: 12px;
+    color-scheme: dark;
 }
 
     .form-control:focus, .form-select:focus {

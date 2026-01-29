@@ -1,26 +1,56 @@
 ﻿/* ============================================================ */
 /* FILE PATH: wwwroot/js/student-records.js                     */
 /* ============================================================ */
-/* UPDATED: Added Dynamic Filter Management feature             */
-/* - Users can show/hide filters from a settings dropdown       */
-/* - Filter preferences are saved in localStorage               */
-/* - Active filters shown as removable pills                    */
-/* ============================================================ */
-/* NEW FEATURE: Auto-Apply Filters from Dashboard URL params    */
-/* - Automatically filters by program and year when coming      */
-/*   from Dashboard year level cards                            */
+/* UPDATED: Auto-submit filters on dropdown change              */
+/* - Removed need for "Apply" button                            */
+/* - Filters automatically submit when changed                  */
+/* - Debounced search input for better UX                       */
 /* ============================================================ */
 
 $(document).ready(function () {
 
     // ==========================================
-    // AUTO-APPLY FILTERS FROM DASHBOARD (NEW)
+    // AUTO-SUBMIT FILTERS ON CHANGE (NEW)
+    // ==========================================
+
+    // Debounce timer for search input
+    let searchDebounceTimer = null;
+
+    // Auto-submit when filter dropdowns change
+    $('.auto-submit-filter').on('change', function () {
+        console.log('Filter changed:', $(this).attr('id'), '=', $(this).val());
+        // Small delay to ensure Select2 has updated
+        setTimeout(() => {
+            $('#filterForm').submit();
+        }, 100);
+    });
+
+    // Auto-submit when sort order changes
+    $('#sortOrder').on('change', function () {
+        console.log('Sort order changed:', $(this).val());
+        setTimeout(() => {
+            $('#filterForm').submit();
+        }, 100);
+    });
+
+
+    // Also submit on Enter key in search
+    $('#searchString').on('keypress', function (e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            clearTimeout(searchDebounceTimer);
+            $('#filterForm').submit();
+        }
+    });
+
+    // ==========================================
+    // AUTO-APPLY FILTERS FROM DASHBOARD
     // ==========================================
     const urlParams = new URLSearchParams(window.location.search);
     const autoApply = urlParams.get('autoApply');
     const programParam = urlParams.get('program');
     const yearParam = urlParams.get('year');
-    const statusParam = urlParams.get('status');
+
 
     if (autoApply === 'true') {
         // Auto-apply filters based on URL parameters
@@ -30,75 +60,50 @@ $(document).ready(function () {
             const programSelect = document.getElementById('programFilter');
             if (programSelect) {
                 programSelect.value = programParam;
-                // Trigger change event to update dependent filters
                 $(programSelect).trigger('change');
             }
         }
 
         // Set Year filter
         if (yearParam) {
-            // Wait a bit for program filter to update
             setTimeout(() => {
                 const yearSelect = document.getElementById('yearFilter');
                 if (yearSelect) {
-                    // FIXED: The yearFilter dropdown now expects values like "1", "2", "3", "4" (without dash)
-                    // No need to append dash anymore - use the year value directly
                     yearSelect.value = yearParam;
                     $(yearSelect).trigger('change');
                 }
             }, 100);
         }
 
-        // Set Status filter (for archived view)
-        if (statusParam) {
-            setTimeout(() => {
-                const statusSelect = document.getElementById('statusFilter');
-                if (statusSelect) {
-                    statusSelect.value = statusParam;
-                    $(statusSelect).trigger('change');
-                }
-            }, 100);
-        }
-
-        // Auto-trigger the search/filter after a short delay
+        // Auto-trigger the form submit after a short delay
         setTimeout(() => {
-            // Click the Apply button (btn-gold with type="submit")
-            const searchBtn = document.querySelector('button[type="submit"].btn-gold');
-            if (searchBtn) {
-                searchBtn.click();
-            }
-
-            // Show a toast notification
+            $('#filterForm').submit();
             showToastNotification('success', 'Filters applied automatically from Dashboard');
         }, 300);
     }
 
     // ==========================================
-    // 0. DYNAMIC FILTER VISIBILITY MANAGEMENT
+    // DYNAMIC FILTER VISIBILITY MANAGEMENT
     // ==========================================
     const FILTER_STORAGE_KEY = 'ibits_student_filters';
     const allFilters = ['search', 'sortOrder', 'program', 'year', 'section', 'type', 'role', 'status'];
-    const alwaysVisibleFilters = ['search']; // Filters that cannot be hidden
+    const alwaysVisibleFilters = ['search'];
     let visibleFilters = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY)) || {};
 
-    // Initialize default filter visibility if not set
     if (Object.keys(visibleFilters).length === 0) {
         allFilters.forEach(f => visibleFilters[f] = true);
         localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(visibleFilters));
     }
 
-    // Apply filter visibility on page load
     function applyFilterVisibility() {
         allFilters.forEach(filter => {
             const $filterItem = $(`.filter-item[data-filter="${filter}"]`);
             const $checkbox = $(`.filter-toggle[value="${filter}"]`);
 
             if (alwaysVisibleFilters.includes(filter)) {
-                // Always visible filters
                 $filterItem.show();
                 $checkbox.prop('checked', true).prop('disabled', true);
             } else {
-                // Toggleable filters
                 if (visibleFilters[filter]) {
                     $filterItem.removeClass('filter-hidden').show();
                     $checkbox.prop('checked', true);
@@ -109,15 +114,12 @@ $(document).ready(function () {
             }
         });
 
-        // Update active filters pills display
         updateActiveFiltersPills();
     }
 
-    // Handle filter toggle checkbox changes
     $('.filter-toggle').on('change', function () {
         const filterName = $(this).val();
 
-        // Prevent disabling always-visible filters
         if (alwaysVisibleFilters.includes(filterName)) {
             $(this).prop('checked', true);
             return;
@@ -132,14 +134,12 @@ $(document).ready(function () {
             $filterItem.removeClass('filter-hidden').fadeIn(200);
         } else {
             $filterItem.addClass('filter-hidden').fadeOut(200);
-            // Also clear the filter value when hiding
             clearFilterValue(filterName);
         }
 
         updateActiveFiltersPills();
     });
 
-    // Reset all filters to visible
     $('#btnResetFiltersInside').on('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -157,7 +157,6 @@ $(document).ready(function () {
         updateActiveFiltersPills();
     });
 
-    // Clear a specific filter's value
     function clearFilterValue(filterName) {
         const filterMap = {
             'search': '#searchString',
@@ -166,8 +165,7 @@ $(document).ready(function () {
             'year': '#yearFilter',
             'section': '#sectionFilter',
             'type': '#typeFilter',
-            'role': '#roleFilter',
-            'status': '#statusFilter'
+            'role': '#roleFilter'
         };
 
         const $element = $(filterMap[filterName]);
@@ -177,10 +175,13 @@ $(document).ready(function () {
             } else {
                 $element.val('');
             }
+            // Auto-submit after clearing
+            setTimeout(() => {
+                $('#filterForm').submit();
+            }, 100);
         }
     }
 
-    // Update the active filters pills display
     function updateActiveFiltersPills() {
         const $container = $('#activeFiltersPills');
         const $list = $('#activeFiltersList');
@@ -193,8 +194,7 @@ $(document).ready(function () {
             'year': 'Year',
             'section': 'Section',
             'type': 'Type',
-            'role': 'Role',
-            'status': 'Status'
+            'role': 'Role'
         };
 
         const filterSelectors = {
@@ -204,14 +204,13 @@ $(document).ready(function () {
             'year': '#yearFilter',
             'section': '#sectionFilter',
             'type': '#typeFilter',
-            'role': '#roleFilter',
-            'status': '#statusFilter'
+            'role': '#roleFilter'
         };
 
         let hasActiveFilters = false;
 
         allFilters.forEach(filter => {
-            if (!visibleFilters[filter]) return; // Skip hidden filters
+            if (!visibleFilters[filter]) return;
 
             const $element = $(filterSelectors[filter]);
             let value = $element.val();
@@ -219,13 +218,11 @@ $(document).ready(function () {
             if (value && value.trim() !== '') {
                 hasActiveFilters = true;
 
-                // Get display text for select elements
                 let displayValue = value;
                 if ($element.is('select')) {
                     displayValue = $element.find('option:selected').text();
                 }
 
-                // Create pill element
                 const $pill = $(`
                     <span class="filter-pill" data-filter="${filter}">
                         <span class="filter-pill-label">${filterDisplayNames[filter]}:</span>
@@ -239,7 +236,6 @@ $(document).ready(function () {
             }
         });
 
-        // Show/hide the active filters container
         if (hasActiveFilters) {
             $container.slideDown(200);
         } else {
@@ -247,19 +243,17 @@ $(document).ready(function () {
         }
     }
 
-    // Apply visibility on page load
     applyFilterVisibility();
 
-    // Update pills when form inputs change
-    $('#filterForm').on('change', 'select, input', function () {
+    // Only listen for changes on 'select' elements (your dropdowns).
+    $('#filterForm').on('change', 'select', function () {
         updateActiveFiltersPills();
     });
 
-    // Prevent dropdown from closing when clicking inside
     $('.filter-settings-dropdown').on('click', (e) => e.stopPropagation());
 
     // ==========================================
-    // 1. SEARCH BAR CLEAR FUNCTIONALITY
+    // SEARCH BAR CLEAR FUNCTIONALITY
     // ==========================================
     const $searchInput = $('#searchString');
     const $clearBtn = $('#btnClearSearch');
@@ -271,23 +265,29 @@ $(document).ready(function () {
             $clearBtn.removeClass('show').fadeOut(150);
         }
     }
+
     $searchInput.on('input keyup', toggleClearButton);
+
     $clearBtn.on('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         $searchInput.val('');
         toggleClearButton();
+        // Auto-submit after clearing
         $('#filterForm').submit();
         $searchInput.focus();
     });
+
     toggleClearButton();
 
     // ==========================================
-    // 2. INITIALIZE SELECT2
+    // INITIALIZE SELECT2
     // ==========================================
-    $('.select2-enable').select2({ minimumResultsForSearch: Infinity, width: '100%' });
+    $('.select2-enable').select2({
+        minimumResultsForSearch: Infinity,
+        width: '100%'
+    });
 
-    // Initialize Select2 inside create student modal when shown
     $('#createStudentModal').on('shown.bs.modal', function () {
         $('.select2-modal').select2({
             dropdownParent: $('#createStudentModal'),
@@ -296,7 +296,6 @@ $(document).ready(function () {
         });
     });
 
-    // Initialize Select2 inside role modal when shown
     $('#roleModal').on('shown.bs.modal', function () {
         $('#modalRoleSelect').select2({
             dropdownParent: $('#roleModal'),
@@ -306,24 +305,22 @@ $(document).ready(function () {
     });
 
     // ==========================================
-    // 3. MODAL FORM RESET
+    // MODAL FORM RESET
     // ==========================================
     $('#createStudentModal').on('hidden.bs.modal', function () {
         $(this).find('form').trigger('reset');
         $('.select2-modal').val(null).trigger('change');
     });
 
-    // Reset role modal on close
     $('#roleModal').on('hidden.bs.modal', function () {
-        // Clear password field when modal closes
         $('#adminPasswordInput').val('');
     });
 
     // ==========================================
-    // 4. COLUMN VISIBILITY LOGIC
+    // COLUMN VISIBILITY LOGIC
     // ==========================================
     const STORAGE_KEY = 'ibits_student_cols';
-    const allColumns = ['col-id', 'col-name', 'col-program', 'col-section', 'col-year', 'col-type', 'col-role', 'col-status'];
+    const allColumns = ['col-id', 'col-name', 'col-program', 'col-section', 'col-year', 'col-type', 'col-role'];
     let visibleColumns = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
     if (Object.keys(visibleColumns).length === 0 || visibleColumns['col-program'] === undefined) {
@@ -344,7 +341,6 @@ $(document).ready(function () {
             document.getElementById('chkYear').checked = visibleColumns['col-year'];
             document.getElementById('chkType').checked = visibleColumns['col-type'];
             document.getElementById('chkRole').checked = visibleColumns['col-role'];
-            document.getElementById('chkStatus').checked = visibleColumns['col-status'];
         }
     }
     applyCols();
@@ -368,7 +364,7 @@ $(document).ready(function () {
     $('.dropdown-menu').on('click', (e) => e.stopPropagation());
 
     // ==========================================
-    // 5. DOUBLE-CLICK FOR STUDENT DETAILS
+    // DOUBLE-CLICK FOR STUDENT DETAILS
     // ==========================================
     $('.student-row').dblclick(function () {
         const studentId = $(this).data('id');
@@ -403,12 +399,10 @@ $(document).ready(function () {
         const mappingModalEl = document.getElementById('mappingModal');
         const mappingModalInstance = bootstrap.Modal.getOrCreateInstance(mappingModalEl);
 
-        // First, hide the current modal
         if (previewModalInstance) {
             previewModalInstance.hide();
         }
 
-        // Then, show the mapping modal
         mappingModalInstance.show();
     });
 
@@ -418,12 +412,9 @@ $(document).ready(function () {
 // GLOBAL HELPER FUNCTIONS
 // ==========================================
 
-/**
- * Reset all filters and redirect to clean StudentRecords page
- */
 function resetFilters() {
     $('#searchString').val('');
-    $('#sortOrder, #yearFilter, #statusFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter').val('').trigger('change');
+    $('#sortOrder, #yearFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter').val('').trigger('change');
     if (window.studentRecordsUrl) {
         window.location.href = window.studentRecordsUrl;
     } else {
@@ -431,10 +422,6 @@ function resetFilters() {
     }
 }
 
-/**
- * Remove a specific filter pill and clear its value
- * @param {string} filterName - The filter name to remove
- */
 function removeFilterPill(filterName) {
     const filterMap = {
         'search': '#searchString',
@@ -443,8 +430,7 @@ function removeFilterPill(filterName) {
         'year': '#yearFilter',
         'section': '#sectionFilter',
         'type': '#typeFilter',
-        'role': '#roleFilter',
-        'status': '#statusFilter'
+        'role': '#roleFilter'
     };
 
     const $element = $(filterMap[filterName]);
@@ -456,21 +442,18 @@ function removeFilterPill(filterName) {
         }
     }
 
-    // Update the pills display
     updateActiveFiltersPillsGlobal();
 
-    // Auto-submit the form to apply the filter removal
-    $('#filterForm').submit();
+    // Auto-submit after removing pill
+    setTimeout(() => {
+        $('#filterForm').submit();
+    }, 100);
 }
 
-/**
- * Clear all active filters and submit
- */
 function clearAllActiveFilters() {
     $('#searchString').val('');
-    $('#sortOrder, #programFilter, #yearFilter, #sectionFilter, #typeFilter, #roleFilter, #statusFilter').val('').trigger('change');
+    $('#sortOrder, #programFilter, #yearFilter, #sectionFilter, #typeFilter, #roleFilter').val('').trigger('change');
 
-    // Submit the form
     if (window.studentRecordsUrl) {
         window.location.href = window.studentRecordsUrl;
     } else {
@@ -478,10 +461,6 @@ function clearAllActiveFilters() {
     }
 }
 
-/**
- * Global function to update active filters pills
- * Called from outside document.ready scope
- */
 function updateActiveFiltersPillsGlobal() {
     const $container = $('#activeFiltersPills');
     const $list = $('#activeFiltersList');
@@ -495,7 +474,6 @@ function updateActiveFiltersPillsGlobal() {
         'section': 'Section',
         'type': 'Type',
         'role': 'Role',
-        'status': 'Status'
     };
 
     const filterSelectors = {
@@ -506,10 +484,9 @@ function updateActiveFiltersPillsGlobal() {
         'section': '#sectionFilter',
         'type': '#typeFilter',
         'role': '#roleFilter',
-        'status': '#statusFilter'
     };
 
-    const allFilters = ['search', 'sortOrder', 'program', 'year', 'section', 'type', 'role', 'status'];
+    const allFilters = ['search', 'sortOrder', 'program', 'year', 'section', 'type', 'role'];
     let hasActiveFilters = false;
 
     allFilters.forEach(filter => {
@@ -544,13 +521,10 @@ function updateActiveFiltersPillsGlobal() {
     }
 }
 
-/**
- * FIXED: Open the role management modal with correct element IDs
- * @param {Event} event - Click event
- * @param {string} studentId - Student number
- * @param {string} studentName - Student full name  
- * @param {string} currentRole - Current role of the student
- */
+// ==========================================
+// REMAINING FUNCTIONS (UNCHANGED)
+// ==========================================
+
 function setRoleModal(event, studentId, studentName, currentRole) {
     if (event) event.stopPropagation();
 
@@ -577,10 +551,6 @@ function setRoleModal(event, studentId, studentName, currentRole) {
     new bootstrap.Modal(document.getElementById('roleModal')).show();
 }
 
-/**
- * Open the edit student modal with pre-filled data
- * UPDATED: Now properly sets the Student Type and School Year Enrolled dropdowns with Select2
- */
 function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled) {
     if (event) event.stopPropagation();
     const form = $('#editStudentForm');
@@ -645,9 +615,6 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
     });
 }
 
-/**
- * Open the reset password confirmation modal
- */
 function openResetPasswordModal(event, id, name) {
     if (event) event.stopPropagation();
 
@@ -658,17 +625,12 @@ function openResetPasswordModal(event, id, name) {
     new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
 }
 
-/**
- * Export to Excel with visible columns only (WYSIWYG)
- * Passes current filters and visible columns to the export endpoint
- */
 function exportToExcelWithColumns() {
     const searchString = $('#searchString').val() || '';
     const programFilter = $('#programFilter').val() || '';
     const yearFilter = $('#yearFilter').val() || '';
     const sectionFilter = $('#sectionFilter').val() || '';
     const typeFilter = $('#typeFilter').val() || '';
-    const statusFilter = $('#statusFilter').val() || '';
     const roleFilter = $('#roleFilter').val() || '';
 
     const STORAGE_KEY = 'ibits_student_cols';
@@ -681,8 +643,7 @@ function exportToExcelWithColumns() {
         'col-section': 'Section',
         'col-year': 'Year',
         'col-type': 'Type',
-        'col-role': 'Role',
-        'col-status': 'Status'
+        'col-role': 'Role'
     };
 
     const columns = [];
@@ -699,7 +660,6 @@ function exportToExcelWithColumns() {
         yearFilter: yearFilter,
         sectionFilter: sectionFilter,
         typeFilter: typeFilter,
-        statusFilter: statusFilter,
         roleFilter: roleFilter,
         columns: columns.join(',')
     });
@@ -707,9 +667,6 @@ function exportToExcelWithColumns() {
     window.location.href = `${baseUrl}?${params.toString()}`;
 }
 
-// ==========================================
-// TOAST NOTIFICATION HELPER (NEW)
-// ==========================================
 function showToastNotification(type, message) {
     let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
@@ -1169,3 +1126,4 @@ $(document).ready(function () {
         }
     });
 });
+

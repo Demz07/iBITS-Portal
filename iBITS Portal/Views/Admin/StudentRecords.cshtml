@@ -1,10 +1,9 @@
 ﻿@* ============================================================ *@
 @* FILE PATH: Views/Admin/StudentRecords.cshtml                 *@
 @* ============================================================ *@
-@* UPDATED: Added Dynamic Filter Management feature             *@
-@* - Users can show/hide filters from a settings dropdown       *@
-@* - Filter preferences are saved in localStorage               *@
-@* - Active filters shown as removable pills                    *@
+@* UPDATED: Auto-apply filters on dropdown change               *@
+@* - Removed "Apply" button                                     *@
+@* - Filters automatically submit when changed                  *@
 @* ============================================================ *@
 
 @using System.Text.RegularExpressions
@@ -25,7 +24,6 @@
     <div>
         <h4 class="glass-header-title mb-2" style="font-size: 1.5rem;">
             <i class="bi bi-people-fill me-2" style="color:var(--gold-primary)"></i> Student Records
-            <span class="badge bg-primary ms-2" style="font-size: 0.85rem;">@Model.TotalCount Total</span>
         </h4>
         <p class="mb-0" style="color: var(--text-main); font-size: 0.95rem;">Manage registered students, update roles, and monitor status.</p>
     </div>
@@ -43,47 +41,36 @@
 
 <!-- ================= STATS CARDS SECTION ================= -->
 <div class="row mb-4 g-4">
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="glass-stat">
             <div class="d-flex justify-content-between">
                 <div>
                     <div class="stat-label">Total Population</div>
-                    <div class="stat-value">@ViewBag.TotalStudents</div>
+                    <div class="stat-value">@ViewBag.ActiveMembers</div>
                 </div>
                 <i class="bi bi-people-fill stat-icon"></i>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="glass-stat">
             <div class="d-flex justify-content-between">
                 <div>
-                    <div class="stat-label">Officers</div>
+                    <div class="stat-label">Org Officers</div>
                     <div class="stat-value">@ViewBag.TotalOfficers</div>
                 </div>
-                <i class="bi bi-shield-shaded stat-icon"></i>
+                <i class="bi bi-person-badge-fill stat-icon"></i>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="glass-stat">
             <div class="d-flex justify-content-between">
                 <div>
-                    <div class="stat-label">Active Status</div>
-                    <div class="stat-value">@ViewBag.ActiveMembers</div>
+                    <div class="stat-label">Class Officers</div>
+                    <div class="stat-value">@ViewBag.TotalClassOfficers</div>
                 </div>
-                <i class="bi bi-check-circle-fill stat-icon"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="glass-stat">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <div class="stat-label">Archived</div>
-                    <div class="stat-value">@ViewBag.ArchivedMembers</div>
-                </div>
-                <i class="bi bi-archive-fill stat-icon" style="filter: grayscale(1);"></i>
+                <i class="bi bi-person-badge-fill stat-icon"></i>
             </div>
         </div>
     </div>
@@ -145,13 +132,12 @@
             <div class="col-md-4">
                 <label class="small text-muted mb-1 text-uppercase fw-bold">Actions</label>
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn-gold flex-grow-1" title="Apply Filters"><i class="bi bi-funnel-fill me-2"></i> Apply</button>
-                    <button type="button" id="btnSelectMode" class="btn-gold-outline" onclick="toggleSelectionMode()" title="Select Multiple">
+                    <button type="button" id="btnSelectMode" class="btn-gold flex-grow-1" onclick="toggleSelectionMode()" title="Select Multiple">
                         <i class="bi bi-ui-checks me-1"></i> Select
                     </button>
                     <button type="button" class="btn btn-outline-warning" onclick="resetFilters()" title="Reset Filters" style="border-color:var(--gold-primary); color:var(--gold-primary); min-width: 45px;"><i class="bi bi-arrow-clockwise"></i></button>
 
-                    <!-- FILTER SETTINGS DROPDOWN (NEW) -->
+                    <!-- FILTER SETTINGS DROPDOWN -->
                     <div class="dropdown">
                         <button class="btn btn-glass" type="button" id="filterSettingsMenu" data-bs-toggle="dropdown" aria-expanded="false" title="Customize Filters" style="height: 100%; min-width: 45px; display:flex; align-items:center; justify-content:center;">
                             <i class="bi bi-sliders"></i>
@@ -169,11 +155,11 @@
                             <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="section" id="chkFilterSection" checked><label class="form-check-label" for="chkFilterSection">Section</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="type" id="chkFilterType" checked><label class="form-check-label" for="chkFilterType">Student Type</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="role" id="chkFilterRole" checked><label class="form-check-label" for="chkFilterRole">Role</label></div></li>
-                            <li><div class="form-check my-2"><input class="form-check-input filter-toggle" type="checkbox" value="status" id="chkFilterStatus" checked><label class="form-check-label" for="chkFilterStatus">Status</label></div></li>
+
                         </ul>
                     </div>
 
-                    <!-- COLUMN VISIBILITY DROPDOWN (Existing) -->
+                    <!-- COLUMN VISIBILITY DROPDOWN -->
                     <div class="dropdown">
                         <button class="btn btn-glass dropdown-toggle" type="button" id="colMenu" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide Columns" style="height: 100%; min-width: 45px; display:flex; align-items:center; justify-content:center;">
                             <i class="bi bi-layout-three-columns"></i>
@@ -191,7 +177,7 @@
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-year" id="chkYear" checked><label class="form-check-label" for="chkYear">Year</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-type" id="chkType" checked><label class="form-check-label" for="chkType">Student Type</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-role" id="chkRole" checked><label class="form-check-label" for="chkRole">Role</label></div></li>
-                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-status" id="chkStatus" checked><label class="form-check-label" for="chkStatus">Status</label></div></li>
+
                         </ul>
                     </div>
                 </div>
@@ -203,7 +189,7 @@
             <!-- Program Filter -->
             <div class="col-md-2 filter-item" data-filter="program">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Program</label>
-                <select name="programFilter" id="programFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                <select name="programFilter" id="programFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Programs</option>
                     @if (ViewBag.Programs != null)
                     {
@@ -217,7 +203,7 @@
             <!-- Year Filter -->
             <div class="col-md-2 filter-item" data-filter="year">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Year</label>
-                <select name="yearFilter" id="yearFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                <select name="yearFilter" id="yearFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Years</option>
                     @if (ViewBag.Years != null)
                     {
@@ -239,7 +225,7 @@
             <!-- Section Filter -->
             <div class="col-md-2 filter-item" data-filter="section">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Section</label>
-                <select name="sectionFilter" id="sectionFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                <select name="sectionFilter" id="sectionFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Sections</option>
                     @if (ViewBag.Sections != null)
                     {
@@ -253,7 +239,7 @@
             <!-- Student Type Filter -->
             <div class="col-md-2 filter-item" data-filter="type">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Student Type</label>
-                <select name="typeFilter" id="typeFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                <select name="typeFilter" id="typeFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Types</option>
                     @if (ViewBag.StudentTypes != null)
                     {
@@ -267,21 +253,14 @@
             <!-- Role Filter -->
             <div class="col-md-2 filter-item" data-filter="role">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Role</label>
-                <select name="roleFilter" id="roleFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
+                <select name="roleFilter" id="roleFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Roles</option>
-                    <option value="Officer" selected="@(ViewBag.RoleFilter == "Officer")">Officer</option>
+                    <option value="Org Officer" selected="@(ViewBag.RoleFilter == "Org Officer")">Org Officer</option>
+                    <option value="Class Officer" selected="@(ViewBag.RoleFilter == "Class Officer")">Class Officer</option>
                     <option value="Member" selected="@(ViewBag.RoleFilter == "Member")">Member</option>
                 </select>
             </div>
-            <!-- Status Filter -->
-            <div class="col-md-2 filter-item" data-filter="status">
-                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Status</label>
-                <select name="statusFilter" id="statusFilter" class="form-select select2-enable" style="font-size: 0.85rem;">
-                    <option value="">All Statuses</option>
-                    <option value="Active" selected="@(ViewBag.StatusFilter == "Active")">Active</option>
-                    <option value="Archived" selected="@(ViewBag.StatusFilter == "Archived")">Archived</option>
-                </select>
-            </div>
+
         </div>
     </form>
 </div>
@@ -332,7 +311,7 @@
                     <th class="col-year">Year</th>
                     <th class="col-type">Type</th>
                     <th class="col-role">Role</th>
-                    <th class="col-status">Status</th>
+
                     <th class="text-end pe-4 col-actions">Actions</th>
                 </tr>
             </thead>
@@ -388,16 +367,7 @@
                                     <span class="badge badge-blue">Member</span>
                                 }
                             </td>
-                            <td class="col-status">
-                                @if (student.Classification == "Active")
-                                {
-                                    <span class="badge badge-green"><i class="bi bi-check-circle me-1"></i> Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-gray"><i class="bi bi-archive me-1"></i> Archived</span>
-                                }
-                            </td>
+
                             <td class="text-end pe-4 col-actions">
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-icon-only" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
@@ -428,7 +398,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="9" class="text-center py-5">
+                        <td colspan="8" class="text-center py-5">
                             <i class="bi bi-inbox fs-1" style="color: var(--border-color);"></i>
                             <p class="mt-3" style="color: var(--text-main);">No student records found matching the criteria.</p>
                         </td>
@@ -445,12 +415,12 @@
             <div class="text-muted small">Showing @((Model.PageNumber - 1) * Model.Items.Count + 1) to @((Model.PageNumber - 1) * Model.Items.Count + Model.Items.Count) of @Model.TotalCount students</div>
             <nav>
                 <ul class="pagination mb-0">
-                    <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber - 1 })"><i class="bi bi-chevron-left"></i></a></li>
+                    <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber - 1 })"><i class="bi bi-chevron-left"></i></a></li>
                     @for (int i = 1; i <= Model.TotalPages; i++)
                     {
-                        <li class="page-item @(i == Model.PageNumber ? "active" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = i })">@i</a></li>
+                        <li class="page-item @(i == Model.PageNumber ? "active" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, roleFilter = ViewBag.RoleFilter, pageNumber = i })">@i</a></li>
                     }
-                    <li class="page-item @(!Model.HasNextPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, statusFilter = ViewBag.StatusFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber + 1 })"><i class="bi bi-chevron-right"></i></a></li>
+                    <li class="page-item @(!Model.HasNextPage ? "disabled" : "")"><a class="page-link" href="@Url.Action("StudentRecords", new { searchString = currentFilter, programFilter = ViewBag.ProgramFilter, yearFilter = ViewBag.YearFilter, sectionFilter = ViewBag.SectionFilter, typeFilter = ViewBag.TypeFilter, roleFilter = ViewBag.RoleFilter, pageNumber = Model.PageNumber + 1 })"><i class="bi bi-chevron-right"></i></a></li>
                 </ul>
             </nav>
         </div>
@@ -471,40 +441,13 @@
             <form asp-action="CreateStudent" method="post" id="createStudentForm">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-4">
+                    <!-- Row 1: Student Number, Student Type -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">Student ID <span class="text-danger">*</span></label>
                             <input type="text" name="StudentNum" class="form-control" required />
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">First Name <span class="text-danger">*</span></label>
-                            <input type="text" name="StudentFn" class="form-control" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" name="StudentLn" class="form-control" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Middle Name</label>
-                            <input type="text" name="StudentMn" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="StudentEmail" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Birthday</label>
-                            <input type="date" name="Birthday" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Course/Program</label>
-                            <input type="text" name="Course" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Year & Section</label>
-                            <input type="text" name="YearLevelSection" class="form-control" placeholder="e.g., 3-1" />
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Student Type</label>
                             <select name="StudentType" class="form-select select2-modal">
                                 <option value="Regular">Regular</option>
@@ -513,7 +456,54 @@
                                 <option value="Ladderized">Ladderized</option>
                             </select>
                         </div>
-                        <!-- NEW: School Year Enrolled Field -->
+                    </div>
+
+                    <!-- Row 2: First Name, Middle Name, Last Name -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" name="StudentFn" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" name="StudentMn" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" name="StudentLn" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Birthday, Email -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Birthday</label>
+                            <input type="date" name="Birthday" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="StudentEmail" class="form-control" />
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Course, Year & Section, School Year -->
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Course/Program</label>
+                            <select name="Course" class="form-select select2-modal">
+                                <option value="BSIT">BSIT</option>
+                                <option value="DIT">DIT</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Year & Section</label>
+                            <select name="YearLevelSection" class="form-select select2-modal">
+                                <option value="1-1">1-1</option>
+                                <option value="2-1">2-1</option>
+                                <option value="3-1">3-1</option>
+                                <option value="4-1">4-1</option>
+                            </select>
+                        </div>
                         <div class="col-md-4">
                             <label class="form-label">School Year Enrolled <span class="text-danger">*</span></label>
                             <select name="SchoolYearEnrolled" id="createSchoolYearEnrolled" class="form-select select2-modal" required>
@@ -631,3 +621,4 @@
     </script>
     <script src="~/js/student-records.js" asp-append-version="true"></script>
 }
+

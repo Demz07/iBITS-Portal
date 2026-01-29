@@ -148,7 +148,9 @@
                 <div class="glass-panel chart-panel h-100">
                     <div class="panel-header">
                         <h5 class="panel-title"><i class="bi bi-pie-chart-fill me-2"></i>Students per Program</h5>
-                        <span class="badge badge-gold">Total: <span id="totalStudents">0</span></span>
+                        <span class="badge badge-gold clickable-badge" onclick="showAllStudentsModal()" style="cursor: pointer;">
+                            Total: <span id="totalStudents">0</span>
+                        </span>
                     </div>
                     <div class="chart-container">
                         <canvas id="studentsPerProgramChart"></canvas>
@@ -223,220 +225,21 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- SECTION 2: STUDENT STATUS                                    -->
+    <!-- MODAL: Student Enrollment Details                            -->
     <!-- ============================================================ -->
-    <div class="dashboard-section">
-        <div class="section-header">
-            <div class="section-icon status-icon">
-                <i class="bi bi-people-fill"></i>
-            </div>
-            <h5 class="section-title">Student Status</h5>
-            <span class="section-badge section-badge-green">Activity Overview</span>
-        </div>
-
-        <div class="row g-4">
-            <!-- Active Students Line Graph -->
-            <div class="col-lg-5">
-                <div class="glass-panel chart-panel h-100">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-graph-up me-2"></i>Active Students</h5>
-                        <span class="badge badge-success">Monthly Trend</span>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="activeStudentsLineChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Archive Counter (Clickable) -->
-            <div class="col-lg-3">
-                <div class="glass-panel h-100 d-flex flex-column clickable-panel" onclick="showArchivedStudentsModal()">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-archive-fill me-2"></i>Archive</h5>
-                    </div>
-                    <div class="archive-counter flex-grow-1 d-flex flex-column justify-content-center align-items-center">
-                        <div class="archive-icon">
-                            <i class="bi bi-archive"></i>
-                        </div>
-                        <span class="archive-value" id="archiveCount">0</span>
-                        <span class="archive-label">Total Archived Students</span>
-                        <span class="click-hint mt-2"><i class="bi bi-eye me-1"></i>Click to view</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active vs Inactive Pie Chart -->
-            <div class="col-lg-4">
-                <div class="glass-panel chart-panel h-100">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-pie-chart me-2"></i>Status Distribution</h5>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="activeInactivePieChart"></canvas>
-                    </div>
-                    <div class="chart-legend">
-                        <div class="legend-item">
-                            <span class="legend-color active"></span>
-                            <span class="legend-text">Active</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color inactive"></span>
-                            <span class="legend-text">Inactive</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- SECTION 3: FINANCIAL OVERVIEW                                -->
-    <!-- ============================================================ -->
-    <div class="dashboard-section">
-        <div class="section-header">
-            <div class="section-icon financial-icon">
-                <i class="bi bi-currency-exchange"></i>
-            </div>
-            <h5 class="section-title">Financial Overview</h5>
-            <span class="section-badge section-badge-cyan">Payments & Fines</span>
-        </div>
-
-        <!-- Financial Summary Cards -->
-        <div class="financial-summary-cards">
-            <div class="summary-card total">
-                <div class="card-icon">
-                    <i class="bi bi-wallet2"></i>
-                </div>
-                <div class="card-content">
-                    <div class="card-value">₱<span id="totalExpected">0.00</span></div>
-                    <div class="card-label">Total Expected</div>
-                </div>
-            </div>
-            <div class="summary-card collected">
-                <div class="card-icon">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <div class="card-content">
-                    <div class="card-value">₱<span id="totalCollected">0.00</span></div>
-                    <div class="card-label">Collected</div>
-                    <div class="card-badge success"><span id="collectionRate">0</span>%</div>
-                </div>
-            </div>
-            <div class="summary-card pending">
-                <div class="card-icon">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-                <div class="card-content">
-                    <div class="card-value">₱<span id="totalPendingCard">0.00</span></div>
-                    <div class="card-label">Pending</div>
-                    <div class="card-badge warning"><span id="pendingRate">0</span>%</div>
-                </div>
-            </div>
-            <div class="summary-card fines">
-                <div class="card-icon">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div class="card-content">
-                    <div class="card-value">₱<span id="totalFinesCard">0.00</span></div>
-                    <div class="card-label">Fines Issued</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4 mt-2">
-            <!-- Payments Collected Pie Chart -->
-            <div class="col-lg-4">
-                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="payments" data-status="paid">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-check-circle me-2"></i>Payments Collected</h5>
-                        <span class="badge badge-success">₱<span id="totalPayments">0.00</span></span>
-                    </div>
-                    <div class="chart-container-medium">
-                        <canvas id="paymentsPieChart"></canvas>
-                    </div>
-                    <div class="chart-legend-horizontal compact">
-                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
-                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
-                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
-                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
-                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
-                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
-                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
-                    </div>
-                    <div class="chart-click-hint">
-                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
-                    </div>
-                </div>
-            </div>
-
-            <!-- Payments Pending Pie Chart -->
-            <div class="col-lg-4">
-                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="payments" data-status="pending">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-clock-history me-2"></i>Payments Pending</h5>
-                        <span class="badge badge-warning">₱<span id="totalPending">0.00</span></span>
-                    </div>
-                    <div class="chart-container-medium">
-                        <canvas id="pendingPieChart"></canvas>
-                    </div>
-                    <div class="chart-legend-horizontal compact">
-                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
-                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
-                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
-                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
-                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
-                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
-                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
-                    </div>
-                    <div class="chart-click-hint">
-                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fines Pie Chart -->
-            <div class="col-lg-4">
-                <div class="glass-panel chart-panel h-100 clickable-chart" data-chart-type="fines">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Fines Issued</h5>
-                        <span class="badge badge-danger">₱<span id="totalFines">0.00</span></span>
-                    </div>
-                    <div class="chart-container-medium">
-                        <canvas id="finesPieChart"></canvas>
-                    </div>
-                    <div class="chart-legend-horizontal compact">
-                        <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
-                        <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
-                        <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
-                        <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
-                        <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
-                        <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
-                        <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
-                    </div>
-                    <div class="chart-click-hint">
-                        <i class="bi bi-hand-index-thumb"></i> Click segment for details
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- MODAL: Chart Details                                         -->
-    <!-- ============================================================ -->
-    <div class="modal fade" id="chartDetailsModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal fade" id="enrollmentDetailsModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content glass-modal">
                 <div class="modal-header">
                     <h5 class="modal-title text-gold">
-                        <i class="bi bi-bar-chart-fill me-2"></i>
-                        <span id="modalTitle">Chart Details</span>
+                        <i class="bi bi-mortarboard-fill me-2"></i>
+                        <span id="enrollmentModalTitle">Student Details</span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Loading State -->
-                    <div id="modalLoading" class="text-center py-5">
+                    <div id="enrollmentModalLoading" class="text-center py-5">
                         <div class="spinner-border text-gold" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
@@ -444,39 +247,303 @@
                     </div>
 
                     <!-- Content -->
-                    <div id="modalContent" style="display: none;">
+                    <div id="enrollmentModalContent" style="display: none;">
                         <!-- Summary Cards -->
                         <div class="details-summary">
                             <div class="summary-item">
-                                <div class="summary-value" id="detailTotalAmount">₱0.00</div>
+                                <div class="summary-value" id="enrollmentTotalStudents">0</div>
+                                <div class="summary-label">Total Students</div>
+                            </div>
+                        </div>
+
+                        <!-- Student List Table -->
+                        <div class="details-section">
+                            <h6 class="details-section-title">
+                                <i class="bi bi-people me-2"></i>Student List
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Student ID</th>
+                                            <th>Name</th>
+                                            <th>Section</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="enrollmentStudentListBody">
+                                        <!-- Dynamic content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="modal-quick-actions me-auto">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="exportEnrollmentModalData()" title="Export to Excel">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="sendNoticeToEnrollmentStudents()" title="Send Notice">
+                            <i class="bi bi-bell"></i>
+                        </button>
+                    </div>
+                    <a href="@Url.Action("StudentRecords", "Admin")" class="btn btn-gold-outline" id="enrollmentGoToStudentsBtn">
+                        <i class="bi bi-arrow-right-circle me-1"></i> View in Student Records
+                    </a>
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- FINANCIAL OVERVIEW (Consolidated)                            -->
+    <!-- ============================================================ -->
+    <div class="dashboard-section">
+        <!-- Main Section Header -->
+        <div class="section-header border-bottom-0 pb-0 mb-4">
+            <div class="section-icon financial-icon">
+                <i class="bi bi-bank2"></i>
+            </div>
+            <h5 class="section-title">Financial Overview</h5>
+        </div>
+
+        <div class="row g-4">
+            <!-- ========================== -->
+            <!-- LEFT COLUMN: FEES          -->
+            <!-- ========================== -->
+            <div class="col-xl-6" style="border-right: 1px solid rgba(255,255,255,0.1);">
+                <!-- Fees Sub-Header & Filter -->
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <!-- Requirement: Gold Label -->
+                    <h6 class="text-gold fw-bold m-0"><i class="bi bi-wallet2 me-2"></i>FEES COLLECTION</h6>
+
+                    <!-- Requirement: Separated Interactive Label -->
+                    <div class="d-flex align-items-center">
+                        <label for="feeCategoryFilter" class="category-label me-2">Category</label>
+                        <div class="filter-container" style="width: 140px;">
+                            <select class="glass-select py-1" style="font-size: 0.8rem;" id="feeCategoryFilter" onchange="refreshFinancialData('fees')">
+                                <option value="all">All Fees</option>
+                                @if (ViewBag.FeeCategories != null)
+                                {
+                                    foreach (var category in ViewBag.FeeCategories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fees Summary Cards -->
+                <div class="financial-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">
+                    <div class="summary-card total" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-cash-stack"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesExpected">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Total</div>
+                        </div>
+                    </div>
+                    <div class="summary-card collected" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-check-circle-fill"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesCollected">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Paid</div>
+                            <div class="card-badge success" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="feesCollectionRate">0</span>%</div>
+                        </div>
+                    </div>
+
+                    <!-- Requirement: Fees Unpaid set to Red (Danger) instead of Yellow (Warning) -->
+                    <div class="summary-card pending" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem; background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-x-circle-fill"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesPending">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Unpaid</div>
+                            <div class="card-badge danger" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="feesPendingRate">0</span>%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fees Charts -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="paid">
+                            <div class="text-center mb-1"><small class="text-success fw-bold">Paid Distribution</small></div>
+                            <div class="chart-container-medium" style="height: 150px;">
+                                <canvas id="feesPaidChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="pending">
+                            <!-- Requirement: Text changed to Red -->
+                            <div class="text-center mb-1"><small class="text-danger fw-bold">Unpaid Distribution</small></div>
+                            <div class="chart-container-medium" style="height: 150px;">
+                                <canvas id="feesUnpaidChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shared Legend -->
+                <div class="chart-legend-horizontal compact border-0 pt-3 mt-0 justify-content-center">
+                    <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
+                    <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
+                    <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
+                    <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
+                    <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
+                    <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
+                    <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
+                </div>
+            </div>
+
+            <!-- ========================== -->
+            <!-- RIGHT COLUMN: FINES        -->
+            <!-- ========================== -->
+            <div class="col-xl-6">
+                <!-- Fines Sub-Header & Filter -->
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <!-- Requirement: Gold Label (Changed from text-danger) -->
+                    <h6 class="text-gold fw-bold m-0"><i class="bi bi-exclamation-triangle me-2"></i>FINES & PENALTIES</h6>
+
+                    <!-- Requirement: Separated Interactive Label -->
+                    <div class="d-flex align-items-center">
+                        <label for="fineCategoryFilter" class="category-label me-2">Category</label>
+                        <div class="filter-container" style="width: 140px;">
+                            <select class="glass-select py-1" style="font-size: 0.8rem;" id="fineCategoryFilter" onchange="refreshFinancialData('fines')">
+                                <option value="all">All Fines</option>
+                                <option value="manual">Manual Only</option>
+                                <option value="event">Event Only</option>
+                                <optgroup label="Specific Events/Reasons">
+                                    @if (ViewBag.FineCategories != null)
+                                    {
+                                        foreach (var category in ViewBag.FineCategories)
+                                        {
+                                            <option value="@category">@category</option>
+                                        }
+                                    }
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fines Summary Cards -->
+                <div class="financial-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">
+                    <div class="summary-card total" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-cash-stack"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesExpected">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Total</div>
+                        </div>
+                    </div>
+                    <div class="summary-card collected" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-check-circle-fill"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesCollected">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Paid</div>
+                            <div class="card-badge success" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="finesCollectionRate">0</span>%</div>
+                        </div>
+                    </div>
+                    <div class="summary-card pending" style="padding: 10px;">
+                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem; background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-exclamation-circle-fill"></i></div>
+                        <div class="card-content">
+                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesPending">0.00</span></div>
+                            <div class="card-label" style="font-size: 0.7rem;">Unpaid</div>
+                            <div class="card-badge danger" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="finesPendingRate">0</span>%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fines Charts -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="paid">
+                            <div class="text-center mb-1"><small class="text-success fw-bold">Paid Distribution</small></div>
+                            <div class="chart-container-medium" style="height: 150px;">
+                                <canvas id="finesPaidChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="pending">
+                            <div class="text-center mb-1"><small class="text-danger fw-bold">Unpaid Distribution</small></div>
+                            <div class="chart-container-medium" style="height: 150px;">
+                                <canvas id="finesUnpaidChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shared Legend -->
+                <div class="chart-legend-horizontal compact border-0 pt-3 mt-0 justify-content-center">
+                    <div class="legend-item"><span class="legend-color bsit1"></span><span>BSIT1</span></div>
+                    <div class="legend-item"><span class="legend-color bsit2"></span><span>BSIT2</span></div>
+                    <div class="legend-item"><span class="legend-color bsit3"></span><span>BSIT3</span></div>
+                    <div class="legend-item"><span class="legend-color bsit4"></span><span>BSIT4</span></div>
+                    <div class="legend-item"><span class="legend-color dit1"></span><span>DIT1</span></div>
+                    <div class="legend-item"><span class="legend-color dit2"></span><span>DIT2</span></div>
+                    <div class="legend-item"><span class="legend-color dit3"></span><span>DIT3</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL: Financial Chart Details                               -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="financialDetailsModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title text-gold">
+                        <i class="bi bi-currency-exchange me-2"></i>
+                        <span id="financialModalTitle">Financial Details</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Loading State -->
+                    <div id="financialModalLoading" class="text-center py-5">
+                        <div class="spinner-border text-gold" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading details...</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="financialModalContent" style="display: none;">
+                        <!-- Summary Cards -->
+                        <div class="details-summary">
+                            <div class="summary-item">
+                                <div class="summary-value" id="financialTotalAmount">₱0.00</div>
                                 <div class="summary-label">Total Amount</div>
                             </div>
                             <div class="summary-item">
-                                <div class="summary-value" id="detailStudentCount">0</div>
+                                <div class="summary-value" id="financialStudentCount">0</div>
                                 <div class="summary-label">Students</div>
                             </div>
-                            <div class="summary-item">
-                                <div class="summary-value" id="detailAverage">₱0.00</div>
-                                <div class="summary-label">Average/Student</div>
-                            </div>
+
                         </div>
 
                         <!-- Fee/Event Breakdown Table -->
                         <div class="details-section">
-                            <h6 class="details-section-title" id="breakdownTitle">
+                            <h6 class="details-section-title" id="financialBreakdownTitle">
                                 <i class="bi bi-list-ul me-2"></i>Fee Breakdown
                             </h6>
                             <div class="table-responsive">
-                                <table class="table table-dark table-hover" id="breakdownTable">
+                                <table class="table table-dark table-hover">
                                     <thead>
                                         <tr>
-                                            <th id="breakdownColName">Fee Name</th>
+                                            <th id="financialBreakdownColName">Fee Name</th>
                                             <th>Amount</th>
                                             <th>Students</th>
                                             <th>Total</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="breakdownBody">
+                                    <tbody id="financialBreakdownBody">
                                         <!-- Dynamic content -->
                                     </tbody>
                                 </table>
@@ -485,23 +552,23 @@
 
                         <!-- Student List (Collapsible) -->
                         <div class="details-section">
-                            <h6 class="details-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#studentListCollapse" style="cursor: pointer;">
+                            <h6 class="details-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#financialStudentListCollapse" style="cursor: pointer;">
                                 <i class="bi bi-people me-2"></i>Student List
                                 <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                             </h6>
-                            <div class="collapse" id="studentListCollapse">
+                            <div class="collapse" id="financialStudentListCollapse">
                                 <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                                     <table class="table table-dark table-sm table-hover">
                                         <thead>
                                             <tr>
                                                 <th>Student ID</th>
                                                 <th>Name</th>
-                                                <th id="studentColDetail">Fee</th>
+                                                <th id="financialStudentColDetail">Fee</th>
                                                 <th>Amount</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="studentListBody">
+                                        <tbody id="financialStudentListBody">
                                             <!-- Dynamic content -->
                                         </tbody>
                                     </table>
@@ -511,23 +578,16 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <!-- Quick Actions in Modal -->
                     <div class="modal-quick-actions me-auto">
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="exportModalData()" title="Export to Excel">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="exportFinancialModalData()" title="Export to Excel">
                             <i class="bi bi-download"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="sendNoticeToModalStudents()" title="Send Notice" id="modalSendNoticeBtn">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="sendNoticeToFinancialStudents()" title="Send Notice">
                             <i class="bi bi-bell"></i>
                         </button>
                     </div>
-                    <a href="@Url.Action("Payments", "Admin")" class="btn btn-gold-outline" id="goToPaymentsBtn">
+                    <a href="@Url.Action("Payments", "Admin")" class="btn btn-gold-outline" id="financialGoToPaymentsBtn">
                         <i class="bi bi-arrow-right-circle me-1"></i> Go to Payments
-                    </a>
-                    <a href="@Url.Action("StudentRecords", "Admin")" class="btn btn-gold-outline" id="goToStudentsBtn" style="display: none;">
-                        <i class="bi bi-arrow-right-circle me-1"></i> View in Student Records
-                    </a>
-                    <a href="@Url.Action("Events", "Admin")" class="btn btn-gold-outline" id="goToEventsBtn" style="display: none;">
-                        <i class="bi bi-arrow-right-circle me-1"></i> View All Events
                     </a>
                     <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -622,137 +682,42 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SECTION 4: EVENTS OVERVIEW                                   -->
-    <!-- ============================================================ -->
-    <div class="dashboard-section">
-        <div class="section-header">
-            <div class="section-icon events-icon">
-                <i class="bi bi-calendar-event-fill"></i>
-            </div>
-            <h5 class="section-title">Events Overview</h5>
-            <span class="section-badge section-badge-purple">@DateTime.Now.Year Schedule</span>
-        </div>
 
-        <div class="row g-4">
-            <!-- Events Line Graph -->
-            <div class="col-lg-7">
-                <div class="glass-panel chart-panel h-100">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-graph-up-arrow me-2"></i>Monthly Events</h5>
-                        <span class="badge badge-info">This Year</span>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="eventsLineChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Completed/Upcoming Doughnut -->
-            <div class="col-lg-5">
-                <div class="glass-panel chart-panel h-100">
-                    <div class="panel-header">
-                        <h5 class="panel-title"><i class="bi bi-check2-circle me-2"></i>Event Status</h5>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="eventStatusDoughnutChart"></canvas>
-                    </div>
-                    <div class="chart-legend">
-                        <div class="legend-item">
-                            <span class="legend-color completed"></span>
-                            <span class="legend-text">Completed</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color upcoming"></span>
-                            <span class="legend-text">Upcoming</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
-    <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
             // Pass data from controller to JavaScript
             window.dashboardData = {
-                // Students per program
-                studentsPerProgram: @Html.Raw(Json.Serialize(ViewBag.StudentsPerProgram ?? new Dictionary<string, int> { { "BSIT", 0 }, { "DIT", 0 } })),
-
-                // Total students (BSIT + DIT only)
+                // Student Enrollment (Preserved)
+                studentsPerProgram: @Html.Raw(Json.Serialize(ViewBag.StudentsPerProgram)),
                 totalStudents: @(ViewBag.TotalStudents ?? 0),
+                yearLevelCounts: @Html.Raw(Json.Serialize(ViewBag.YearLevelCounts)),
 
-                // Year level counts
-                yearLevelCounts: @Html.Raw(Json.Serialize(ViewBag.YearLevelCounts ?? new Dictionary<string, int> {
-                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
-                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
-                                                })),
+                // NEW: Financial Data Structure
+                feesData: @Html.Raw(Json.Serialize(ViewBag.FeesData)),
+                finesData: @Html.Raw(Json.Serialize(ViewBag.FinesData)),
 
-    // Monthly active students
-    monthlyActiveStudents: @Html.Raw(Json.Serialize(ViewBag.MonthlyActiveStudents ?? new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 })),
-
-                // Archive count
-                archiveCount: @(ViewBag.ArchiveCount ?? 0),
-
-                // Active vs Inactive
-                activeInactive: @Html.Raw(Json.Serialize(ViewBag.ActiveInactive ?? new Dictionary<string, int> { { "Active", 0 }, { "Inactive", 0 } })),
-
-                // Payments by program (Paid)
-                paymentsByProgram: @Html.Raw(Json.Serialize(ViewBag.PaymentsByProgram ?? new Dictionary<string, decimal> {
-                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
-                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
-                                                })),
-
-    // Total payments (Paid)
-    totalPayments: @(ViewBag.TotalPayments ?? 0),
-
-                // Pending payments by program (Unpaid)
-                pendingByProgram: @Html.Raw(Json.Serialize(ViewBag.PendingByProgram ?? new Dictionary<string, decimal> {
-                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
-                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
-                                                })),
-
-    // Total pending (Unpaid)
-    totalPending: @(ViewBag.TotalPending ?? 0),
-
-                // Financial summary
-                totalExpected: @(ViewBag.TotalExpected ?? 0),
-                totalCollected: @(ViewBag.TotalCollected ?? 0),
-                collectionRate: @(ViewBag.CollectionRate ?? 0),
-
-                // Fines by program
-                finesByProgram: @Html.Raw(Json.Serialize(ViewBag.FinesByProgram ?? new Dictionary<string, decimal> {
-                                                                                { "BSIT1", 0 }, { "BSIT2", 0 }, { "BSIT3", 0 }, { "BSIT4", 0 },
-                                                                                { "DIT1", 0 }, { "DIT2", 0 }, { "DIT3", 0 }
-                                                })),
-
-    // Total fines
-    totalFines: @(ViewBag.TotalFines ?? 0),
-
-                // Monthly events
-                monthlyEvents: @Html.Raw(Json.Serialize(ViewBag.MonthlyEvents ?? new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 })),
-
-                // Event status
-                eventStatus: @Html.Raw(Json.Serialize(ViewBag.EventStatus ?? new Dictionary<string, int> { { "Completed", 0 }, { "Upcoming", 0 } }))
+                // Placeholders to prevent JS errors if referenced
+                monthlyActiveStudents: [],
+                archiveCount: 0,
+                activeInactive: {},
+                monthlyEvents: [],
+                eventStatus: {}
             };
 
-            // Dashboard URLs for AJAX
+            // Dashboard URLs
             window.dashboardRefreshUrl = '@Url.Action("GetDashboardData", "Admin")';
             window.chartDetailsUrl = '@Url.Action("GetChartDetails", "Admin")';
             window.finesDetailsUrl = '@Url.Action("GetFinesDetails", "Admin")';
-            window.studentsByProgramUrl = '@Url.Action("GetStudentsByProgram", "Admin")';
             window.studentsByYearLevelUrl = '@Url.Action("GetStudentsByYearLevel", "Admin")';
-            window.archivedStudentsUrl = '@Url.Action("GetArchivedStudents", "Admin")';
-            window.studentsByStatusUrl = '@Url.Action("GetStudentsByStatus", "Admin")';
-            window.eventsByMonthUrl = '@Url.Action("GetEventsByMonth", "Admin")';
-            window.eventsByStatusUrl = '@Url.Action("GetEventsByStatus", "Admin")';
-            window.sendNotificationUrl = '@Url.Action("SendNotification", "Admin")';
-            window.notificationPreviewUrl = '@Url.Action("GetNotificationPreview", "Admin")';
+
+            // Ensure student records URL is correct for the double-click modal
             window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
-            window.eventsUrl = '@Url.Action("Events", "Admin")';
-    </script>
-    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+            window.notificationPreviewUrl = '@Url.Action("GetNotificationPreview", "Admin")';
+            window.sendNotificationUrl = '@Url.Action("SendNotification", "Admin")';
+        </script>
+        <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
 }
+
+

@@ -1,0 +1,190 @@
+﻿@* 
+    FILE PATH: Views/Home/LandingPage.cshtml
+    Professional Landing Page for iBITS Portal
+*@
+
+@{
+    ViewData["Title"] = "iBITS Portal - Unified Attendance & Payment System";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <meta name="description" content="iBITS Portal - Unified Attendance and Payment Management System for PUP Lopez, Quezon Campus">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/landing-developers.css" asp-append-version="true" />
+</head>
+<body>
+
+    <!-- Background Effects -->
+    <div class="ambient-bg"></div>
+    <canvas id="matrixCanvas"></canvas>
+
+
+
+    <!-- Floating Navigation (appears on scroll) -->
+    <nav class="floating-nav visible" id="floatingNav">
+        <div class="nav-container">
+            <div class="hero-header">
+                <img src="~/images/pup-logo.png" alt="PUP Logo" class="pup-logo">
+                <div class="header-text">
+                    <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name">LOPEZ, QUEZON CAMPUS</span>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a asp-controller="Home" asp-action="LandingPage">Home</a></li>
+                <li><a asp-controller="Home" asp-action="LandingPageAbout">Organization</a></li>
+                <li><a asp-controller="Home" asp-action="LandingPagePeople">System</a></li>
+                <li><a asp-controller="Home" asp-action="LandingDevelopers">Developers</a></li>
+                @* <li><a href="#statistics">Enter Portal</a></li> *@
+                <a asp-controller="Home" asp-action="Gateway" class="btn-enter">
+                    <span>Enter Portal</span>
+                    @* <i class="bi bi-arrow-right-circle"></i> *@
+                </a>
+            </ul>
+
+        </div>
+
+    </nav>
+
+
+    <section class="header">
+        <h1 class="hero-title">
+            MEET <span class="gradient-text">THE DEVELOPERS</span>
+        </h1>
+    </section>
+
+
+
+    <div class="dev3-container" data-aos="zoom-in">
+        <div class="dev3-frame">
+            <!-- The Gold Glow Effect -->
+            <div class="dev3-glow"></div>
+
+            <!-- The Image -->
+            <img src="~/images/developers3.png" alt="iBITS Advisers and Instructors" class="dev3-full-image">
+
+            <!-- Optional: A decorative corner border to make it look high-tech -->
+            <div class="dev3-accent dev3-left"></div>
+            <div class="dev3-accent dev3-right"></div>
+        </div>
+    </div>
+
+
+    <div class="dev2-container" data-aos="zoom-in">
+        <div class="dev2-frame">
+            <!-- The Gold Glow Effect -->
+            <div class="dev2-glow"></div>
+
+            <!-- The Image -->
+            <img src="~/images/developers2.png" alt="iBITS Advisers and Instructors" class="dev2-full-image">
+
+            <!-- Optional: A decorative corner border to make it look high-tech -->
+            <div class="dev2-accent dev2-left"></div>
+            <div class="dev2-accent dev2-right"></div>
+        </div>
+    </div>
+
+
+    <div class="dev-container" data-aos="zoom-in">
+        <div class="dev-frame">
+            <!-- The Gold Glow Effect -->
+            <div class="dev-glow"></div>
+
+            <!-- The Image -->
+            <img src="~/images/developers1.png" alt="iBITS Advisers and Instructors" class="dev-full-image">
+
+            <!-- Optional: A decorative corner border to make it look high-tech -->
+            <div class="dev-accent dev-left"></div>
+            <div class="dev-accent dev-right"></div>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <section id="about" class="about-section section-spacing">
+        <div class="container">
+
+
+            <!-- Development Team Section -->
+            <div class="team-section" data-aos="fade-up">
+                <div class="team-header">
+                    <h3 class="team-title">TECHNOLOGIES USED</h3>
+
+                </div>
+
+                <div class="team-footer" data-aos="fade-up">
+                    <div class="tech-info">
+                        <span class="tech-badge-large">ASP.NET Core MVC</span>
+                        <span class="tech-badge-large">SQL Server</span>
+                        <span class="tech-badge-large">Bootstrap 5</span>
+                        <span class="tech-badge-large">QR Code Technology</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <footer class="footer">
+        <div class="footer-container">
+
+            <!-- Left Section: Logo and Title -->
+            <div class="footer-section left">
+                <div class="footer-brand">
+                    <div class="footer-logo-circle">
+                        <img src="~/images/logo.png" alt="Portal Logo">
+                    </div>
+                    <h3>iBITS Portal</h3>
+                </div>
+            </div>
+
+            <!-- Center Section: Copyright -->
+            <div class="footer-section center">
+                <p>&copy; 2025 All rights reserved.</p>
+            </div>
+
+            <!-- Right Section: Contact -->
+            <div class="footer-section right">
+                <h4>Connect with Us</h4>
+                <div class="social-icons">
+                    <!-- Facebook Icon -->
+                    <a href="https://www.facebook.com/Ibits16" target="_blank" class="icon fb" aria-label="Facebook">
+                        <i class="fa-brands fa-facebook"></i>
+                    </a>
+                    <!-- Email/Mail Icon -->
+                    <a href="mailto:ibits16official@gmail.com" target="_blank" class="icon mail" aria-label="Email">
+                        <i class="fa-solid fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </footer>
+
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS Animation Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/landing-developers.js" asp-append-version="true"></script>
+
+</body>
+</html>
+
+

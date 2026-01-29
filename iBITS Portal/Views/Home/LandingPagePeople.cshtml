@@ -1,0 +1,302 @@
+﻿@{
+    ViewData["Title"] = "iBITS Portal - Unified Attendance & Payment System";
+    Layout = null;
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <meta name="description" content="iBITS Portal - Unified Attendance and Payment Management System for PUP Lopez, Quezon Campus">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/landing-page-people.css" asp-append-version="true" />
+</head>
+<body>
+
+
+    <!-- Background Effects -->
+    <div class="ambient-bg"></div>
+    <canvas id="matrixCanvas"></canvas>
+
+    <nav class="floating-nav visible" id="floatingNav">
+        <div class="nav-container">
+            <div class="hero-header">
+                <img src="~/images/pup-logo.png" alt="PUP Logo" class="pup-logo">
+                <div class="header-text">
+                    <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name">LOPEZ, QUEZON CAMPUS</span>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a asp-controller="Home" asp-action="LandingPage">Home</a></li>
+                <li><a asp-controller="Home" asp-action="LandingPageAbout">Organization</a></li>
+                <li><a asp-controller="Home" asp-action="LandingPagePeople">System</a></li>
+                <li><a asp-controller="Home" asp-action="LandingDevelopers">Developers</a></li>
+                @* <li><a href="#statistics">Enter Portal</a></li> *@
+                <a asp-controller="Home" asp-action="Gateway" class="btn-enter">
+                    <span>Enter Portal</span>
+                    @* <i class="bi bi-arrow-right-circle"></i> *@
+                </a>
+            </ul>
+
+        </div>
+
+    </nav>
+
+    <section class="header">
+        <h1 class="hero-title">
+            iBITS <span class="gradient-text">PORTAL - SYSTEM OVERVIEW</span>
+        </h1>
+        <div class="overview">
+            <p>
+                The iBITS Portal: Unified Attendance and Payment System is a centralized web-based designed to automate attendance tracking, fee monitoring, and record management using role-based access for students, officers, and administrators. It replaces manual logbooks with a secure system for managing student membership, event attendance, and fees/fines, ensuring accuracy, efficiency, and transparency.
+            </p>
+
+        </div>
+    </section>
+
+    <div class="ur">
+        <h1 class="user-role">USER ROLES</h1>
+    </div>
+    <section id="about" class="about-mv section-spacing">
+        <div class="MV-grid" data-aos="fade-up">
+            <div class="mv-card" data-aos="flip-left" data-aos-delay="0">
+
+                <h3>ADMIN</h3>
+
+                <p>Manages users, events, fees, batch import, role assignment, password resets, archiving, and audit logs.</p>
+            </div>
+
+            <div class="mv-card" data-aos="flip-left" data-aos-delay="100">
+
+                <h3>MEMBERS</h3>
+
+                <p>
+                    View dashboard, announcements, attendance history, status and balance. <br>
+                    Use digital ID.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="info-container">
+        <div class="info-grid">
+            <div class="label">ORG SECRETARY</div>
+            <div class="label">CLASS SECRETARY</div>
+            <div class="label">ORG TREASURER</div>
+            <div class="label">CLASS TREASURER</div>
+
+            <div class="value">Oversee attendance, manage events, and generate reports.</div>
+            <div class="value">Manage and submit section attendance.</div>
+            <div class="value">Manage fees/fines, validate remittances, and view global finances.</div>
+            <div class="value">Record payments for students within their section.</div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section section-spacing">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-label">Key Features</span>
+                <h2 class="section-title">Everything You Need, All in One Place</h2>
+                <p class="section-description">
+                    Powerful tools designed to simplify operations and enhance productivity
+                </p>
+            </div>
+
+            <div class="features-grid">
+                <!-- Feature 1 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="0">
+                    <div class="feature-icon qr-code">
+                        <i class="bi bi-qr-code-scan"></i>
+                    </div>
+                    <h3>QR Code Attendance</h3>
+                    <p>
+                        Each student has a unique QR code. Officers use the scanner to verify attendance
+                        at events in real-time. The system automatically records Present/Late/Absent status,
+                        and generates fines based on student classification (Member, Class Officer, Org Officer).
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Real-time</span>
+                        <span class="tag">Contactless</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-lightning-fill"></i>
+                        <span>Instant attendance logging</span>
+                    </div>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon payment">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <h3>Fee & Fine Management</h3>
+                    <p>
+                        Track membership fees and attendance-based fines with complete payment history.
+                        Officers/treasurers record payment confirmations with method, reference number, and notes.
+                        Students view their balance, due dates, and paid/unpaid status in real-time.
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Transparent</span>
+                        <span class="tag">Organized</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Complete audit trail</span>
+                    </div>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon analytics">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h3>Admin Dashboard & Reports</h3>
+                    <p>
+                        Comprehensive admin dashboard showing total students, events, fees, and fines at a glance.
+                        View detailed attendance reports, payment summaries, and activity logs.
+                        Track member participation rates and financial status across academic years.
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Insights</span>
+                        <span class="tag">Data-driven</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Real-time statistics</span>
+                    </div>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon events">
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+                    <h3>Event Management System</h3>
+                    <p>
+                        Create events with name, date, time, location, and duration. Set different fine amounts
+                        for each classification (Member, Class Officer, Org Officer) for iBITS and Non-iBITS events.
+                        Officers can scan QR codes during the event for instant attendance tracking.
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Flexible</span>
+                        <span class="tag">Efficient</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-calendar-check"></i>
+                        <span>Multi-type events</span>
+                    </div>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="400">
+                    <div class="feature-icon records">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <h3>Student Records & Archive</h3>
+                    <p>
+                        Complete student profiles with photo, student number, course, year level, and classification.
+                        Track enrollment by school year, mark students as graduated or continuing.
+                        View individual attendance history, financial records, and balance summaries.
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Organized</span>
+                        <span class="tag">Complete</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-cloud-check"></i>
+                        <span>Centralized database</span>
+                    </div>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card interactive-hover" data-aos="fade-up" data-aos-delay="500">
+                    <div class="feature-icon security">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h3>3-Tier Role-Based Access</h3>
+                    <p>
+                        Admin: Manage students, events, fees, fines, view activity logs, and generate reports.
+                        Officer: Create events, scan QR codes, record payments, and manage announcements.
+                        Student: View personal attendance, financials, upcoming events, and organization timeline.
+                    </p>
+                    <div class="feature-tags">
+                        <span class="tag">Secure</span>
+                        <span class="tag">Controlled</span>
+                    </div>
+                    <div class="feature-stat">
+                        <i class="bi bi-shield-fill-check"></i>
+                        <span>3 user roles</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+
+
+    <footer class="footer">
+        <div class="footer-container">
+
+            <!-- Left Section: Logo and Title -->
+            <div class="footer-section left">
+                <div class="footer-brand">
+                    <div class="footer-logo-circle">
+                        <img src="~/images/logo.png" alt="Portal Logo">
+                    </div>
+                    <h3>iBITS Portal</h3>
+                </div>
+            </div>
+
+            <!-- Center Section: Copyright -->
+            <div class="footer-section center">
+                <p>&copy; 2025 All rights reserved.</p>
+            </div>
+
+            <!-- Right Section: Contact -->
+            <div class="footer-section right">
+                <h4>Connect with Us</h4>
+                <div class="social-icons">
+                    <!-- Facebook Icon -->
+                    <a href="https://www.facebook.com/Ibits16" target="_blank" class="icon fb" aria-label="Facebook">
+                        <i class="fa-brands fa-facebook"></i>
+                    </a>
+                    <!-- Email/Mail Icon -->
+                    <a href="mailto:ibits16official@gmail.com" target="_blank" class="icon mail" aria-label="Email">
+                        <i class="fa-solid fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </footer>
+
+
+
+
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS Animation Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/landing-page-people.js" asp-append-version="true"></script>
+</body>
+</html>
+

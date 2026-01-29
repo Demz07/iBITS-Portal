@@ -170,7 +170,6 @@ body {
     flex-grow: 1; /* Fill remaining space */
     overflow-y: auto; /* Enable vertical scroll */
     padding: 30px; /* Content padding goes here now */
-
     scrollbar-width: thin;
     scrollbar-color: var(--gold-dim) transparent;
 }
@@ -505,3 +504,80 @@ body {
 #sessionExpiredModal .text-warning {
     color: #fbbf24 !important;
 }
+
+/* ======================================================= */
+/*      LIGHT MODE FIX – SIDEBAR & FINANCIALS TAB          */
+/* ======================================================= */
+
+[data-theme="light"] #sidebar {
+    background: var(--bg-glass);
+}
+
+    /* MAIN SIDEBAR LINKS */
+    [data-theme="light"] #sidebar ul li a {
+        color: var(--text-main);
+    }
+
+        [data-theme="light"] #sidebar ul li a i {
+            color: var(--text-main);
+        }
+
+        /* HOVER STATE */
+        [data-theme="light"] #sidebar ul li a:hover {
+            background: linear-gradient(90deg, var(--gold-dim) 0%, transparent 100%);
+            color: var(--gold-primary);
+        }
+
+    /* ACTIVE MAIN TAB (Financials included) */
+    [data-theme="light"] #sidebar ul li.active > a {
+        background: linear-gradient(90deg, var(--gold-dim) 0%, transparent 100%);
+        color: var(--text-strong) !important;
+        border-left-color: var(--gold-primary);
+        font-weight: 600;
+    }
+
+        /* PARENT TAB WHEN SUBMENU IS EXPANDED (Financials when Fees/Fines is active) */
+        [data-theme="light"] #sidebar ul li.active > a.dropdown-toggle,
+        [data-theme="light"] #sidebar ul li > a.dropdown-toggle[aria-expanded="true"] {
+            background: linear-gradient(90deg, var(--gold-dim) 0%, transparent 100%) !important;
+            color: var(--text-strong) !important;
+            border-left-color: var(--gold-primary) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+    /* ======================================================= */
+    /*          FINANCIALS SUBMENU – LIGHT MODE FIX             */
+    /* ======================================================= */
+
+    [data-theme="light"] #sidebar ul ul a {
+        background: rgba(194, 157, 43, 0.08); /* soft gold tint */
+        color: var(--text-strong) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+        [data-theme="light"] #sidebar ul ul a i {
+            color: var(--text-strong) !important;
+        }
+
+        /* SUBMENU HOVER */
+        [data-theme="light"] #sidebar ul ul a:hover {
+            background: rgba(194, 157, 43, 0.18);
+            color: var(--gold-primary) !important;
+        }
+
+    /* ACTIVE SUBMENU ITEM (Fees / Fines) */
+    [data-theme="light"] #sidebar ul ul li.active > a {
+        background: rgba(194, 157, 43, 0.35) !important;
+        color: var(--text-strong) !important;
+        font-weight: 700 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Ensure submenu is visible when expanded */
+    [data-theme="light"] #sidebar ul ul.show {
+        display: block !important;
+    }

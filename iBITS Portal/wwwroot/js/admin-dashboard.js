@@ -4,6 +4,7 @@
  * ============================================================
  * iBITS Portal - Admin Dashboard Charts
  * Gold & Navy Blue Theme with Chart.js
+ * Separate Modals for Enrollment and Financial Sections
  * ============================================================
  */
 
@@ -53,14 +54,10 @@ Chart.defaults.font.family = "'Segoe UI', 'Roboto', sans-serif";
 // CHART INSTANCES
 // ==========================================
 
-let studentsPerProgramChart = null;
-let activeStudentsLineChart = null;
-let activeInactivePieChart = null;
-let paymentsPieChart = null;
-let pendingPieChart = null;
-let finesPieChart = null;
-let eventsLineChart = null;
-let eventStatusDoughnutChart = null;
+let feesPaidChart = null;
+let feesUnpaidChart = null;
+let finesPaidChart = null;
+let finesUnpaidChart = null;
 
 // ==========================================
 // INITIALIZATION
@@ -78,14 +75,141 @@ function initializeDashboard() {
 
     // Initialize all charts
     initStudentsPerProgramChart(data);
-    initActiveStudentsLineChart(data);
-    initActiveInactivePieChart(data);
     initPaymentsPieChart(data);
     initPendingPieChart(data);
     initFinesPieChart(data);
-    initEventsLineChart(data);
-    initEventStatusDoughnutChart(data);
+
+    // Initialize Fees Charts
+    if (data.feesData) {
+        initFinancialChart('feesPaidChart', data.feesData.paidByProgram, 'fees', 'paid');
+        initFinancialChart('feesUnpaidChart', data.feesData.unpaidByProgram, 'fees', 'pending');
+        updateFinancialSummary('fees', data.feesData);
+    }
+
+    // Initialize Fines Charts
+    if (data.finesData) {
+        initFinancialChart('finesPaidChart', data.finesData.paidByProgram, 'fines', 'paid');
+        initFinancialChart('finesUnpaidChart', data.finesData.unpaidByProgram, 'fines', 'pending');
+        updateFinancialSummary('fines', data.finesData);
+    }
 }
+
+// Generic Financial Chart Initializer
+function initFinancialChart(canvasId, dataMap, type, status) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    // Destroy existing if re-initializing
+    const existingChart = Chart.getChart(canvasId);
+    if (existingChart) existingChart.destroy();
+
+    const chartData = [
+        dataMap.bsit1 || dataMap.BSIT1 || 0,
+        dataMap.bsit2 || dataMap.BSIT2 || 0,
+        dataMap.bsit3 || dataMap.BSIT3 || 0,
+        dataMap.bsit4 || dataMap.BSIT4 || 0,
+        dataMap.dit1 || dataMap.DIT1 || 0,
+        dataMap.dit2 || dataMap.DIT2 || 0,
+        dataMap.dit3 || dataMap.DIT3 || 0
+    ];
+
+    const hasData = chartData.some(val => val > 0);
+    // Handle "No Data" visibility logic here... (hide canvas, show message)
+
+    const colors = type === 'fees' && status === 'paid' ?
+        [chartColors.bsit1, chartColors.bsit2, chartColors.bsit3, chartColors.bsit4, chartColors.dit1, chartColors.dit2, chartColors.dit3] : // Gold/Blue
+        type === 'fees' && status === 'pending' ?
+            // Make pending fees look slightly different (e.g., Orange tint) or keep uniform
+            [chartColors.bsit1, chartColors.bsit2, chartColors.bsit3, chartColors.bsit4, chartColors.dit1, chartColors.dit2, chartColors.dit3] :
+            // Fines (Red tint could be applied dynamically, but sticking to program colors is cleaner)
+            [chartColors.bsit1, chartColors.bsit2, chartColors.bsit3, chartColors.bsit4, chartColors.dit1, chartColors.dit2, chartColors.dit3];
+
+    new Chart(ctx, {
+        type: 'doughnut', // Doughnut looks better for this
+        data: {
+            labels: ['BSIT1', 'BSIT2', 'BSIT3', 'BSIT4', 'DIT1', 'DIT2', 'DIT3'],
+            datasets: [{
+                data: chartData,
+                backgroundColor: colors,
+                borderWidth: 1,
+                borderColor: 'rgba(11, 26, 51, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            onClick: (e, elements, chart) => {
+                if (!elements.length) return;
+                const idx = elements[0].index;
+                const segment = chart.data.labels[idx];
+                const category = document.getElementById(type === 'fees' ? 'feeCategoryFilter' : 'fineCategoryFilter').value;
+
+                // Open Modal
+                if (type === 'fees') {
+                    showFinancialDetailsModal('payments', segment, status, category); // Reuse existing 'payments' key
+                } else {
+                    showFinancialDetailsModal('fines', segment, status, category);
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return `${context.label}: ₱${Number(context.raw).toLocaleString()}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Refresh Data on Dropdown Change
+function refreshFinancialData(type) {
+    const feeCat = document.getElementById('feeCategoryFilter').value;
+    const fineCat = document.getElementById('fineCategoryFilter').value;
+
+    const btn = document.querySelector('.section-icon.' + (type === 'fees' ? 'financial-icon' : 'status-icon'));
+    if (btn) btn.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+
+    fetch(`${window.dashboardRefreshUrl}?feeCategory=${feeCat}&fineCategory=${fineCat}`)
+        .then(res => res.json())
+        .then(data => {
+            if (type === 'fees' && data.feesOverview) {
+                initFinancialChart('feesPaidChart', data.feesOverview.paidByProgram, 'fees', 'paid');
+                initFinancialChart('feesUnpaidChart', data.feesOverview.unpaidByProgram, 'fees', 'pending');
+                updateFinancialSummary('fees', data.feesOverview);
+            }
+            if (type === 'fines' && data.finesOverview) {
+                initFinancialChart('finesPaidChart', data.finesOverview.paidByProgram, 'fines', 'paid');
+                initFinancialChart('finesUnpaidChart', data.finesOverview.unpaidByProgram, 'fines', 'pending');
+                updateFinancialSummary('fines', data.finesOverview);
+            }
+        })
+        .finally(() => {
+            // Restore icon
+            if (btn) btn.innerHTML = type === 'fees' ? '<i class="bi bi-wallet2"></i>' : '<i class="bi bi-exclamation-triangle"></i>';
+        });
+}
+
+function updateFinancialSummary(type, data) {
+    document.getElementById(type + 'Expected').textContent = formatCurrency(data.totalExpected);
+    document.getElementById(type + 'Collected').textContent = formatCurrency(data.totalCollected);
+    document.getElementById(type + 'Pending').textContent = formatCurrency(data.totalPending);
+
+    // Rates
+    const collRateEl = document.getElementById(type + 'CollectionRate');
+    if (collRateEl) collRateEl.textContent = data.collectionRate.toFixed(1);
+
+    const pendRateEl = document.getElementById(type + 'PendingRate');
+    if (pendRateEl) {
+        const rate = data.totalExpected > 0 ? ((data.totalPending / data.totalExpected) * 100).toFixed(1) : 0;
+        pendRateEl.textContent = rate;
+    }
+}
+
 
 // ==========================================
 // UPDATE COUNTERS
@@ -103,8 +227,6 @@ function updateCounters(data) {
     animateCounter('dit2Count', yearLevels.dit2 || yearLevels.DIT2 || 0);
     animateCounter('dit3Count', yearLevels.dit3 || yearLevels.DIT3 || 0);
 
-    // Archive count
-    animateCounter('archiveCount', data.archiveCount || 0);
 
     // Total students (use totalStudents from controller, fallback to calculated)
     const totalStudents = data.totalStudents || 0;
@@ -249,117 +371,7 @@ function initStudentsPerProgramChart(data) {
 }
 
 // ==========================================
-// 2. ACTIVE STUDENTS (Line Chart)
-// ==========================================
-
-function initActiveStudentsLineChart(data) {
-    const ctx = document.getElementById('activeStudentsLineChart');
-    if (!ctx) return;
-
-    const monthlyData = data.monthlyActiveStudents || new Array(12).fill(0);
-
-    activeStudentsLineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'Active Students',
-                data: monthlyData,
-                borderColor: chartColors.green,
-                backgroundColor: chartColors.greenLight,
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: chartColors.green,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(11, 26, 51, 0.95)',
-                    titleColor: chartColors.gold,
-                    bodyColor: chartColors.textStrong,
-                    borderColor: chartColors.green,
-                    borderWidth: 1,
-                    padding: 12
-                }
-            },
-            scales: {
-                x: {
-                    grid: { color: chartColors.gridColor },
-                    ticks: { color: chartColors.textLight }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: chartColors.gridColor },
-                    ticks: {
-                        color: chartColors.textLight,
-                        stepSize: 10
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
-// 3. ACTIVE VS INACTIVE (Pie Chart)
-// ==========================================
-
-function initActiveInactivePieChart(data) {
-    const ctx = document.getElementById('activeInactivePieChart');
-    if (!ctx) return;
-
-    const status = data.activeInactive || {};
-    const activeCount = status.active || status.Active || 0;
-    const inactiveCount = status.inactive || status.Inactive || 0;
-
-    activeInactivePieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Active', 'Inactive'],
-            datasets: [{
-                data: [activeCount, inactiveCount],
-                backgroundColor: [chartColors.green, chartColors.red],
-                borderColor: ['rgba(34, 197, 94, 0.8)', 'rgba(239, 68, 68, 0.8)'],
-                borderWidth: 2,
-                hoverOffset: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(11, 26, 51, 0.95)',
-                    titleColor: chartColors.gold,
-                    bodyColor: chartColors.textStrong,
-                    borderColor: chartColors.gold,
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: function (context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
-                            return `${context.label}: ${context.raw} (${percentage}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
-// 4. PAYMENTS BY PROGRAM (Pie Chart)
+// FINANCIAL CHARTS
 // ==========================================
 
 function initPaymentsPieChart(data) {
@@ -368,7 +380,6 @@ function initPaymentsPieChart(data) {
 
     const payments = data.paymentsByProgram || {};
 
-    // Get all payment values
     const paymentData = [
         payments.bsit1 || payments.BSIT1 || 0,
         payments.bsit2 || payments.BSIT2 || 0,
@@ -379,11 +390,9 @@ function initPaymentsPieChart(data) {
         payments.dit3 || payments.DIT3 || 0
     ];
 
-    // Check if all values are 0 (no data)
     const hasData = paymentData.some(val => val > 0);
 
     if (!hasData) {
-        // Show "No Data" message instead of empty chart
         showNoDataMessage(ctx, 'No payment data available');
         return;
     }
@@ -411,7 +420,7 @@ function initPaymentsPieChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            onClick: (event, elements) => handleChartClick(event, elements, 'payments', 'paid', paymentsPieChart),
+            onClick: (event, elements) => handleFinancialChartClick(event, elements, 'payments', 'paid', paymentsPieChart),
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -432,17 +441,12 @@ function initPaymentsPieChart(data) {
     });
 }
 
-// ==========================================
-// 5. PENDING PAYMENTS (Pie Chart)
-// ==========================================
-
 function initPendingPieChart(data) {
     const ctx = document.getElementById('pendingPieChart');
     if (!ctx) return;
 
     const pending = data.pendingByProgram || {};
 
-    // Get all pending values
     const pendingData = [
         pending.bsit1 || pending.BSIT1 || 0,
         pending.bsit2 || pending.BSIT2 || 0,
@@ -453,7 +457,6 @@ function initPendingPieChart(data) {
         pending.dit3 || pending.DIT3 || 0
     ];
 
-    // Check if all values are 0 (no data)
     const hasData = pendingData.some(val => val > 0);
 
     if (!hasData) {
@@ -484,7 +487,7 @@ function initPendingPieChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            onClick: (event, elements) => handleChartClick(event, elements, 'payments', 'pending', pendingPieChart),
+            onClick: (event, elements) => handleFinancialChartClick(event, elements, 'payments', 'pending', pendingPieChart),
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -505,17 +508,12 @@ function initPendingPieChart(data) {
     });
 }
 
-// ==========================================
-// 6. FINES BY PROGRAM (Pie Chart)
-// ==========================================
-
 function initFinesPieChart(data) {
     const ctx = document.getElementById('finesPieChart');
     if (!ctx) return;
 
     const fines = data.finesByProgram || {};
 
-    // Get all fine values
     const fineData = [
         fines.bsit1 || fines.BSIT1 || 0,
         fines.bsit2 || fines.BSIT2 || 0,
@@ -526,7 +524,6 @@ function initFinesPieChart(data) {
         fines.dit3 || fines.DIT3 || 0
     ];
 
-    // Check if all values are 0 (no data)
     const hasData = fineData.some(val => val > 0);
 
     if (!hasData) {
@@ -557,7 +554,7 @@ function initFinesPieChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            onClick: (event, elements) => handleChartClick(event, elements, 'fines', null, finesPieChart),
+            onClick: (event, elements) => handleFinancialChartClick(event, elements, 'fines', null, finesPieChart),
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -604,117 +601,6 @@ function showNoDataMessage(canvas, message) {
 }
 
 // ==========================================
-// 6. EVENTS LINE CHART
-// ==========================================
-
-function initEventsLineChart(data) {
-    const ctx = document.getElementById('eventsLineChart');
-    if (!ctx) return;
-
-    const monthlyData = data.monthlyEvents || new Array(12).fill(0);
-
-    eventsLineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'Events',
-                data: monthlyData,
-                borderColor: chartColors.cyan,
-                backgroundColor: chartColors.cyanLight,
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: chartColors.cyan,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(11, 26, 51, 0.95)',
-                    titleColor: chartColors.gold,
-                    bodyColor: chartColors.textStrong,
-                    borderColor: chartColors.cyan,
-                    borderWidth: 1,
-                    padding: 12
-                }
-            },
-            scales: {
-                x: {
-                    grid: { color: chartColors.gridColor },
-                    ticks: { color: chartColors.textLight }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: chartColors.gridColor },
-                    ticks: {
-                        color: chartColors.textLight,
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
-// 7. EVENT STATUS (Doughnut Chart)
-// ==========================================
-
-function initEventStatusDoughnutChart(data) {
-    const ctx = document.getElementById('eventStatusDoughnutChart');
-    if (!ctx) return;
-
-    const status = data.eventStatus || {};
-    const completed = status.completed || status.Completed || 0;
-    const upcoming = status.upcoming || status.Upcoming || 0;
-
-    eventStatusDoughnutChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Completed', 'Upcoming'],
-            datasets: [{
-                data: [completed, upcoming],
-                backgroundColor: [chartColors.gold, chartColors.cyan],
-                borderColor: ['rgba(212, 175, 55, 0.8)', 'rgba(6, 182, 212, 0.8)'],
-                borderWidth: 2,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(11, 26, 51, 0.95)',
-                    titleColor: chartColors.gold,
-                    bodyColor: chartColors.textStrong,
-                    borderColor: chartColors.gold,
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: function (context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
-                            return `${context.label}: ${context.raw} (${percentage}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
 // REFRESH DASHBOARD
 // ==========================================
 
@@ -723,25 +609,16 @@ function refreshDashboard() {
     $btn.find('i').addClass('spin-animation');
     $btn.prop('disabled', true);
 
-    // If refresh URL is available, fetch new data
     if (window.dashboardRefreshUrl) {
         $.ajax({
             url: window.dashboardRefreshUrl,
             type: 'GET',
             success: function (data) {
                 window.dashboardData = data;
-
-                // Update counters
                 updateCounters(data);
-
-                // Update all charts
                 updateStudentsPerProgramChart(data);
-                updateActiveStudentsLineChart(data);
-                updateActiveInactivePieChart(data);
                 updatePaymentsPieChart(data);
                 updateFinesPieChart(data);
-                updateEventsLineChart(data);
-                updateEventStatusDoughnutChart(data);
             },
             error: function () {
                 console.error('Failed to refresh dashboard data');
@@ -755,7 +632,6 @@ function refreshDashboard() {
             }
         });
     } else {
-        // Just re-initialize with existing data
         setTimeout(() => {
             $btn.find('i').removeClass('spin-animation');
             $btn.prop('disabled', false);
@@ -775,22 +651,6 @@ function updateStudentsPerProgramChart(data) {
         programs.dit || programs.DIT || 0
     ];
     studentsPerProgramChart.update();
-}
-
-function updateActiveStudentsLineChart(data) {
-    if (!activeStudentsLineChart) return;
-    activeStudentsLineChart.data.datasets[0].data = data.monthlyActiveStudents || new Array(12).fill(0);
-    activeStudentsLineChart.update();
-}
-
-function updateActiveInactivePieChart(data) {
-    if (!activeInactivePieChart) return;
-    const status = data.activeInactive || {};
-    activeInactivePieChart.data.datasets[0].data = [
-        status.active || status.Active || 0,
-        status.inactive || status.Inactive || 0
-    ];
-    activeInactivePieChart.update();
 }
 
 function updatePaymentsPieChart(data) {
@@ -823,107 +683,178 @@ function updateFinesPieChart(data) {
     finesPieChart.update();
 }
 
-function updateEventsLineChart(data) {
-    if (!eventsLineChart) return;
-    eventsLineChart.data.datasets[0].data = data.monthlyEvents || new Array(12).fill(0);
-    eventsLineChart.update();
+// ==========================================
+// ENROLLMENT MODAL HANDLERS
+// ==========================================
+
+function showYearLevelModal(program, yearLevel) {
+    const modal = new bootstrap.Modal(document.getElementById('enrollmentDetailsModal'));
+    const modalTitle = document.getElementById('enrollmentModalTitle');
+    const modalLoading = document.getElementById('enrollmentModalLoading');
+    const modalContent = document.getElementById('enrollmentModalContent');
+    const goToStudentsBtn = document.getElementById('enrollmentGoToStudentsBtn');
+
+    // Set modal title
+    modalTitle.textContent = `${program} ${getOrdinal(yearLevel)} Year Students`;
+
+    // Update navigation button
+    if (goToStudentsBtn) {
+        const queryParams = `?program=${program}&year=${yearLevel}&autoApply=true`;
+        goToStudentsBtn.href = window.studentRecordsUrl + queryParams;
+    }
+
+    // Show loading state
+    modalLoading.style.display = 'block';
+    modalContent.style.display = 'none';
+
+    modal.show();
+
+    fetch(`${window.studentsByYearLevelUrl}?program=${program}&yearLevel=${yearLevel}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateEnrollmentModal(data);
+            } else {
+                showEnrollmentModalError(data.message || 'Failed to load details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showEnrollmentModalError('Failed to load details');
+        })
+        .finally(() => {
+            modalLoading.style.display = 'none';
+            modalContent.style.display = 'block';
+        });
 }
 
-function updateEventStatusDoughnutChart(data) {
-    if (!eventStatusDoughnutChart) return;
-    const status = data.eventStatus || {};
-    eventStatusDoughnutChart.data.datasets[0].data = [
-        status.completed || status.Completed || 0,
-        status.upcoming || status.Upcoming || 0
-    ];
-    eventStatusDoughnutChart.update();
-}
+function populateEnrollmentModal(data) {
+    const summary = data.summary || {};
 
-// ==========================================
-// CHART CLICK HANDLER
-// ==========================================
+    // Update summary cards
+    const totalStudentsEl = document.getElementById('enrollmentTotalStudents');
+    const activeStudentsEl = document.getElementById('enrollmentActiveStudents');
+    const inactiveStudentsEl = document.getElementById('enrollmentInactiveStudents');
 
-function handleChartClick(event, elements, chartType, status, chart) {
-    if (!elements || elements.length === 0) return;
+    if (totalStudentsEl) totalStudentsEl.textContent = summary.totalStudents || 0;
+    if (activeStudentsEl) activeStudentsEl.textContent = summary.activeStudents || 0;
+    if (inactiveStudentsEl) inactiveStudentsEl.textContent = (summary.totalStudents - summary.activeStudents) || 0;
 
-    const index = elements[0].index;
-    const label = chart.data.labels[index]; // e.g., "BSIT3"
-    const value = chart.data.datasets[0].data[index];
-
-    // Don't open modal for zero values
-    if (value === 0) return;
-
-    // Open the details modal
-    showChartDetailsModal(chartType, label, status);
-}
-
-// ==========================================
-// SHOW CHART DETAILS MODAL
-// ==========================================
-
-function showChartDetailsModal(chartType, segment, status) {
-    const modalEl = document.getElementById('chartDetailsModal');
-    if (!modalEl) {
-        console.error('chartDetailsModal not found');
+    // Populate student list
+    const studentListBody = document.getElementById('enrollmentStudentListBody');
+    if (!studentListBody) {
+        console.error('enrollmentStudentListBody element not found');
         return;
     }
 
-    const modal = new bootstrap.Modal(modalEl);
-    const modalTitle = document.getElementById('modalTitle');
-    const modalLoading = document.getElementById('modalLoading');
-    const modalContent = document.getElementById('modalContent');
-    const breakdownTitle = document.getElementById('breakdownTitle');
-    const breakdownColName = document.getElementById('breakdownColName');
-    const studentColDetail = document.getElementById('studentColDetail');
-    const goToPaymentsBtn = document.getElementById('goToPaymentsBtn');
+    studentListBody.innerHTML = '';
 
-    // Set modal title based on chart type and status
+    if (data.students && data.students.length > 0) {
+        data.students.forEach(student => {
+            const row = document.createElement('tr');
+            const statusClass = student.status === 'Active' ? 'paid' : 'unpaid';
+            row.innerHTML = `
+                <td><code>${student.studentNum}</code></td>
+                <td>${student.name}</td>
+                <td>${student.section || 'N/A'}</td>
+              
+            `;
+            studentListBody.appendChild(row);
+        });
+    } else {
+        studentListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No students found</td></tr>';
+    }
+}
+
+function showEnrollmentModalError(message) {
+    const modalContent = document.getElementById('enrollmentModalContent');
+    modalContent.innerHTML = `
+        <div class="text-center py-4">
+            <div class="text-danger mb-3">
+                <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
+            </div>
+            <p class="text-muted">${message}</p>
+        </div>
+    `;
+}
+
+// ==========================================
+// FINANCIAL MODAL HANDLERS
+// ==========================================
+
+function handleFinancialChartClick(event, elements, chartType, status, chart) {
+    if (!elements || elements.length === 0) return;
+
+    const index = elements[0].index;
+    const label = chart.data.labels[index];
+    const value = chart.data.datasets[0].data[index];
+
+    if (value === 0) return;
+
+    showFinancialDetailsModal(chartType, label, status);
+}
+
+function showFinancialDetailsModal(chartType, segment, status, category) {
+    const modalEl = document.getElementById('financialDetailsModal');
+    if (!modalEl) return;
+
+    const modal = new bootstrap.Modal(modalEl);
+    const modalTitle = document.getElementById('financialModalTitle');
+    const modalLoading = document.getElementById('financialModalLoading');
+    const modalContent = document.getElementById('financialModalContent');
+    const breakdownTitle = document.getElementById('financialBreakdownTitle');
+    const breakdownColName = document.getElementById('financialBreakdownColName');
+    const studentColDetail = document.getElementById('financialStudentColDetail');
+
     const yearLevel = segment.replace('BSIT', '').replace('DIT', '');
     const program = segment.includes('BSIT') ? 'BSIT' : 'DIT';
 
     let titleText = '';
+    let url = '';
+    const categoryParam = category ? `&category=${encodeURIComponent(category)}` : '';
+
     if (chartType === 'payments') {
-        titleText = status === 'paid'
-            ? `${program} ${getOrdinal(yearLevel)} Year - Payments Collected`
-            : `${program} ${getOrdinal(yearLevel)} Year - Payments Pending`;
+        titleText = status === 'paid' ?
+            `${program} ${getOrdinal(yearLevel)} Year - Payments Collected` :
+            `${program} ${getOrdinal(yearLevel)} Year - Payments Pending`;
         if (breakdownTitle) breakdownTitle.innerHTML = '<i class="bi bi-list-ul me-2"></i>Fee Breakdown';
         if (breakdownColName) breakdownColName.textContent = 'Fee Name';
         if (studentColDetail) studentColDetail.textContent = 'Fee';
-        if (goToPaymentsBtn) goToPaymentsBtn.style.display = 'inline-block';
+
+        // Construct URL for GetChartDetails
+        url = `${window.chartDetailsUrl}?chartType=${chartType}&segment=${segment}&status=${status}${categoryParam}`;
+
     } else if (chartType === 'fines') {
-        titleText = `${program} ${getOrdinal(yearLevel)} Year - Fines Issued`;
-        if (breakdownTitle) breakdownTitle.innerHTML = '<i class="bi bi-list-ul me-2"></i>Event Breakdown';
-        if (breakdownColName) breakdownColName.textContent = 'Event Name';
-        if (studentColDetail) studentColDetail.textContent = 'Event';
-        if (goToPaymentsBtn) goToPaymentsBtn.style.display = 'inline-block';
+        titleText = status === 'paid' ?
+            `${program} ${getOrdinal(yearLevel)} Year - Fines Collected` :
+            `${program} ${getOrdinal(yearLevel)} Year - Fines Pending`;
+        if (breakdownTitle) breakdownTitle.innerHTML = '<i class="bi bi-list-ul me-2"></i>Event/Reason Breakdown';
+        if (breakdownColName) breakdownColName.textContent = 'Event/Reason';
+        if (studentColDetail) studentColDetail.textContent = 'Event/Reason';
+
+        // Construct URL for GetFinesDetails
+        url = `${window.finesDetailsUrl}?segment=${segment}&status=${status}${categoryParam}`;
     }
 
     if (modalTitle) modalTitle.textContent = titleText;
 
-    // Show loading state
     if (modalLoading) modalLoading.style.display = 'block';
     if (modalContent) modalContent.style.display = 'none';
 
-    // Show modal
     modal.show();
-
-    // Fetch data based on chart type
-    const url = chartType === 'fines'
-        ? `${window.finesDetailsUrl}?segment=${segment}`
-        : `${window.chartDetailsUrl}?chartType=${chartType}&segment=${segment}&status=${status}`;
 
     fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                populateModalContent(data, chartType);
+                populateFinancialModal(data, chartType);
             } else {
-                showModalError(data.message || 'Failed to load details');
+                showFinancialModalError(data.message || 'Failed to load details');
             }
         })
         .catch(error => {
             console.error('Error fetching chart details:', error);
-            showModalError('Failed to load details. Please try again.');
+            showFinancialModalError('Failed to load details. Please try again.');
         })
         .finally(() => {
             if (modalLoading) modalLoading.style.display = 'none';
@@ -931,20 +862,15 @@ function showChartDetailsModal(chartType, segment, status) {
         });
 }
 
-// ==========================================
-// POPULATE MODAL CONTENT
-// ==========================================
-
-function populateModalContent(data, chartType) {
+function populateFinancialModal(data, chartType) {
     const summary = data.summary || {};
 
     // Update summary cards
-    document.getElementById('detailTotalAmount').textContent = `₱${formatCurrency(summary.totalAmount || 0)}`;
-    document.getElementById('detailStudentCount').textContent = summary.studentCount || 0;
-    document.getElementById('detailAverage').textContent = `₱${formatCurrency(summary.averagePerStudent || 0)}`;
+    document.getElementById('financialTotalAmount').textContent = `₱${formatCurrency(summary.totalAmount || 0)}`;
+    document.getElementById('financialStudentCount').textContent = summary.studentCount || 0;
 
     // Populate breakdown table
-    const breakdownBody = document.getElementById('breakdownBody');
+    const breakdownBody = document.getElementById('financialBreakdownBody');
     breakdownBody.innerHTML = '';
 
     const breakdown = chartType === 'fines' ? data.eventBreakdown : data.feeBreakdown;
@@ -965,7 +891,7 @@ function populateModalContent(data, chartType) {
     }
 
     // Populate student list
-    const studentListBody = document.getElementById('studentListBody');
+    const studentListBody = document.getElementById('financialStudentListBody');
     studentListBody.innerHTML = '';
 
     if (data.students && data.students.length > 0) {
@@ -986,12 +912,8 @@ function populateModalContent(data, chartType) {
     }
 }
 
-// ==========================================
-// SHOW MODAL ERROR
-// ==========================================
-
-function showModalError(message) {
-    const modalContent = document.getElementById('modalContent');
+function showFinancialModalError(message) {
+    const modalContent = document.getElementById('financialModalContent');
     modalContent.innerHTML = `
         <div class="text-center py-4">
             <div class="text-danger mb-3">
@@ -1002,8 +924,41 @@ function showModalError(message) {
     `;
 }
 
+// Show modal with all students
+function showAllStudentsModal() {
+    const modalTitle = document.getElementById('enrollmentModalTitle');
+    const goToBtn = document.getElementById('enrollmentGoToStudentsBtn');
+
+    if (modalTitle) {
+        modalTitle.textContent = 'All Students';
+    }
+
+    // Show loading state
+    const modalContent = document.getElementById('enrollmentModalContent');
+    modalContent.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-gold"></div></div>';
+
+    // Open modal
+    const modal = new bootstrap.Modal(document.getElementById('enrollmentDetailsModal'));
+    modal.show();
+
+    // Fetch all students data
+    fetch(`${window.chartDetailsUrl}?chartType=allStudents`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.students) {
+                populateEnrollmentModal(data.students);
+            } else {
+                showEnrollmentModalError('No students found');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showEnrollmentModalError('Failed to load student data');
+        });
+}
+
 // ==========================================
-// HELPER: Get Ordinal Suffix
+// HELPER FUNCTIONS
 // ==========================================
 
 function getOrdinal(n) {
@@ -1015,10 +970,6 @@ function getOrdinal(n) {
     return n;
 }
 
-// ==========================================
-// HELPER: Get Status Class
-// ==========================================
-
 function getStatusClass(status) {
     if (!status) return 'pending';
     const s = status.toLowerCase();
@@ -1028,270 +979,40 @@ function getStatusClass(status) {
 }
 
 // ==========================================
-// YEAR LEVEL COUNTER CLICK MODAL
+// EXPORT FUNCTIONS
 // ==========================================
 
-function showYearLevelModal(program, yearLevel) {
-    const modal = new bootstrap.Modal(document.getElementById('chartDetailsModal'));
-    const modalTitle = document.getElementById('modalTitle');
-    const modalLoading = document.getElementById('modalLoading');
-    const modalContent = document.getElementById('modalContent');
-
-    // Set modal title
-    modalTitle.textContent = `${program} ${getOrdinal(yearLevel)} Year Students`;
-
-    // Show correct navigation button
-    showNavigationButton('students', `?program=${program}&year=${yearLevel}`);
-
-    // Show loading state
-    modalLoading.style.display = 'block';
-    modalContent.style.display = 'none';
-
-    modal.show();
-
-    fetch(`${window.studentsByYearLevelUrl}?program=${program}&yearLevel=${yearLevel}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                populateStudentYearLevelModal(data);
-            } else {
-                showModalError(data.message || 'Failed to load details');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showModalError('Failed to load details');
-        })
-        .finally(() => {
-            modalLoading.style.display = 'none';
-            modalContent.style.display = 'block';
-        });
+function exportEnrollmentModalData() {
+    alert('Export functionality - This will export enrollment data to Excel.');
 }
 
-function populateStudentYearLevelModal(data) {
-    const summary = data.summary || {};
-
-    // Update summary cards
-    const totalAmountEl = document.getElementById('detailTotalAmount');
-    const studentCountEl = document.getElementById('detailStudentCount');
-    const averageEl = document.getElementById('detailAverage');
-
-    if (totalAmountEl) {
-        totalAmountEl.textContent = summary.totalStudents || 0;
-        const label1 = document.querySelector('.details-summary .summary-item:first-child .summary-label');
-        if (label1) label1.textContent = 'Total Students';
-    }
-
-    if (studentCountEl) {
-        studentCountEl.textContent = summary.activeStudents || 0;
-        const label2 = document.querySelector('.details-summary .summary-item:nth-child(2) .summary-label');
-        if (label2) label2.textContent = 'Active Students';
-    }
-
-    if (averageEl) {
-        // Show Total Pending (Fees + Fines)
-        const totalPending = (summary.totalPendingFees || 0) + (summary.totalPendingFines || 0);
-        averageEl.textContent = `₱${formatCurrency(totalPending)}`;
-        const label3 = document.querySelector('.details-summary .summary-item:nth-child(3) .summary-label');
-        if (label3) label3.textContent = 'Total Balance Due';
-    }
-
-    // Populate student list table
-    const breakdownBody = document.getElementById('breakdownBody');
-    const breakdownTitle = document.getElementById('breakdownTitle');
-
-    if (!breakdownBody) {
-        console.error('breakdownBody element not found');
-        return;
-    }
-
-    if (breakdownTitle) {
-        breakdownTitle.innerHTML = '<i class="bi bi-people me-2"></i>Student List';
-    }
-
-    breakdownBody.innerHTML = '';
-
-    // Update table headers to include Pending Fines
-    const headerRow = breakdownBody.closest('table')?.querySelector('thead tr');
-    if (headerRow) {
-        headerRow.innerHTML = `
-            <th>Student ID</th>
-            <th>Name</th>
-            <th>Section</th>
-            <th>Pending Fees</th>
-            <th>Pending Fines</th>
-        `;
-    }
-
-    if (data.students && data.students.length > 0) {
-        data.students.forEach(student => {
-            const row = document.createElement('tr');
-
-            const feeClass = student.pendingFees > 0 ? 'text-warning' : 'text-success';
-            const fineClass = student.pendingFines > 0 ? 'text-danger' : 'text-success';
-
-            row.innerHTML = `
-                <td><code>${student.studentNum}</code></td>
-                <td>${student.name}</td>
-                <td>${student.section}</td>
-                <td class="${feeClass}">₱${formatCurrency(student.pendingFees)}</td>
-                <td class="${fineClass}">₱${formatCurrency(student.pendingFines)}</td>
-            `;
-            breakdownBody.appendChild(row);
-        });
-    } else {
-        const headerRowCheck = breakdownBody.closest('table')?.querySelector('thead tr');
-        const colspan = headerRowCheck ? headerRowCheck.querySelectorAll('th').length : 5;
-        breakdownBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-muted">No students found</td></tr>`;
-    }
-
-    // Hide the other collapsible section meant for charts
-    const studentListSection = document.getElementById('studentListCollapse')?.closest('.details-section');
-    if (studentListSection) {
-        studentListSection.style.display = 'none';
-    }
+function exportFinancialModalData() {
+    alert('Export functionality - This will export financial data to Excel.');
 }
 
 // ==========================================
-// ARCHIVED STUDENTS MODAL
+// SEND NOTICE FUNCTIONS
 // ==========================================
 
-function showArchivedStudentsModal() {
-    const modal = new bootstrap.Modal(document.getElementById('chartDetailsModal'));
-    const modalTitle = document.getElementById('modalTitle');
-    const modalLoading = document.getElementById('modalLoading');
-    const modalContent = document.getElementById('modalContent');
-
-    modalTitle.textContent = 'Archived Students';
-    showNavigationButton('students', '?status=archived');
-
-    modalLoading.style.display = 'block';
-    modalContent.style.display = 'none';
-
-    modal.show();
-
-    fetch(window.archivedStudentsUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                populateArchivedStudentsModal(data);
-            } else {
-                showModalError(data.message || 'Failed to load details');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showModalError('Failed to load details');
-        })
-        .finally(() => {
-            modalLoading.style.display = 'none';
-            modalContent.style.display = 'block';
-        });
+function sendNoticeToEnrollmentStudents() {
+    const modalTitle = document.getElementById('enrollmentModalTitle')?.textContent || '';
+    openSendNoticeModal(modalTitle);
 }
 
-function populateArchivedStudentsModal(data) {
-    const summary = data.summary || {};
-
-    // Update summary cards with null checks
-    const totalAmountEl = document.getElementById('detailTotalAmount');
-    const studentCountEl = document.getElementById('detailStudentCount');
-    const averageEl = document.getElementById('detailAverage');
-
-    if (totalAmountEl) {
-        totalAmountEl.textContent = summary.totalArchived || 0;
-        const label1 = document.querySelector('.details-summary .summary-item:first-child .summary-label');
-        if (label1) label1.textContent = 'Total Archived';
-    }
-
-    if (studentCountEl) {
-        studentCountEl.textContent = summary.bsitCount || 0;
-        const label2 = document.querySelector('.details-summary .summary-item:nth-child(2) .summary-label');
-        if (label2) label2.textContent = 'BSIT';
-    }
-
-    if (averageEl) {
-        averageEl.textContent = summary.ditCount || 0;
-        const label3 = document.querySelector('.details-summary .summary-item:nth-child(3) .summary-label');
-        if (label3) label3.textContent = 'DIT';
-    }
-
-    const breakdownBody = document.getElementById('breakdownBody');
-    const breakdownTitle = document.getElementById('breakdownTitle');
-
-    if (!breakdownBody) {
-        console.error('breakdownBody element not found');
-        return;
-    }
-
-    if (breakdownTitle) {
-        breakdownTitle.innerHTML = '<i class="bi bi-archive me-2"></i>Archived Student List';
-    }
-
-    breakdownBody.innerHTML = '';
-
-    const headerRow = breakdownBody.closest('table')?.querySelector('thead tr');
-    if (headerRow) {
-        headerRow.innerHTML = `
-            <th>Student ID</th>
-            <th>Name</th>
-            <th>Program</th>
-            <th>Status</th>
-        `;
-    }
-
-    if (data.students && data.students.length > 0) {
-        data.students.forEach(student => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><code>${student.studentNum}</code></td>
-                <td>${student.name}</td>
-                <td>${student.program}</td>
-                <td><span class="status-badge unpaid">${student.status}</span></td>
-            `;
-            breakdownBody.appendChild(row);
-        });
-    } else {
-        const headerRowCheck = breakdownBody.closest('table')?.querySelector('thead tr');
-        const colspan = headerRowCheck ? headerRowCheck.querySelectorAll('th').length : 4;
-        breakdownBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-muted">No archived students</td></tr>`;
-    }
-
-    const studentListSection = document.getElementById('studentListCollapse')?.closest('.details-section');
-    if (studentListSection) {
-        studentListSection.style.display = 'none';
-    }
+function sendNoticeToFinancialStudents() {
+    const modalTitle = document.getElementById('financialModalTitle')?.textContent || '';
+    openSendNoticeModal(modalTitle);
 }
 
-// ==========================================
-// SHOW NAVIGATION BUTTON HELPER
-// ==========================================
+function openSendNoticeModal(contextTitle) {
+    const sendNoticeModal = new bootstrap.Modal(document.getElementById('sendNoticeModal'));
+    const subjectInput = document.getElementById('noticeSubject');
 
-function showNavigationButton(type, queryParams = '') {
-    const paymentsBtn = document.getElementById('goToPaymentsBtn');
-    const studentsBtn = document.getElementById('goToStudentsBtn');
-    const eventsBtn = document.getElementById('goToEventsBtn');
-
-    paymentsBtn.style.display = 'none';
-    studentsBtn.style.display = 'none';
-    eventsBtn.style.display = 'none';
-
-    if (type === 'payments') {
-        paymentsBtn.style.display = 'inline-block';
-        paymentsBtn.href = window.studentRecordsUrl?.replace('StudentRecords', 'Payments') + queryParams;
-    } else if (type === 'students') {
-        studentsBtn.style.display = 'inline-block';
-
-        // ⭐ NEW: Add autoApply parameter if query params exist
-        if (queryParams && queryParams !== '') {
-            const separator = queryParams.includes('?') ? '&' : '?';
-            queryParams += separator + 'autoApply=true';
-        }
-
-        studentsBtn.href = window.studentRecordsUrl + queryParams;
-    } else if (type === 'events') {
-        eventsBtn.style.display = 'inline-block';
-        eventsBtn.href = window.eventsUrl + queryParams;
+    if (subjectInput && contextTitle) {
+        subjectInput.value = `Regarding: ${contextTitle}`;
     }
+
+    sendNoticeModal.show();
 }
 
 // ==========================================
@@ -1329,7 +1050,6 @@ function initSendNoticeModal() {
         radio.addEventListener('change', function () {
             const value = this.value;
 
-            // Show/hide filter rows
             if (value === 'program') {
                 programFilterRow.style.display = 'block';
                 yearFilterRow.style.display = 'none';
@@ -1341,19 +1061,15 @@ function initSendNoticeModal() {
                 yearFilterRow.style.display = 'none';
             }
 
-            // Update preview
             updateNotificationPreview();
         });
     });
 
-    // Program and Year filter changes
     document.getElementById('noticeProgram')?.addEventListener('change', updateNotificationPreview);
     document.getElementById('noticeYear')?.addEventListener('change', updateNotificationPreview);
 
-    // Initial preview load
     updateNotificationPreview();
 
-    // Form submission
     const sendNoticeForm = document.getElementById('sendNoticeForm');
     if (sendNoticeForm) {
         sendNoticeForm.addEventListener('submit', handleSendNotice);
@@ -1399,19 +1115,16 @@ async function handleSendNotice(e) {
     const submitBtn = document.getElementById('sendNoticeBtn');
     const originalBtnText = submitBtn.innerHTML;
 
-    // Validate
     const count = parseInt(document.getElementById('recipientCount')?.textContent) || 0;
     if (count === 0) {
         alert('No students match the selected criteria.');
         return;
     }
 
-    // Confirm
     if (!confirm(`Send this notice to ${count} students?`)) {
         return;
     }
 
-    // Show loading
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
 
@@ -1442,32 +1155,4 @@ async function handleSendNotice(e) {
     }
 }
 
-// ==========================================
-// SEND NOTICE TO MODAL STUDENTS
-// ==========================================
 
-function sendNoticeToModalStudents() {
-    // Pre-populate the send notice modal based on current modal context
-    const modalTitle = document.getElementById('modalTitle')?.textContent || '';
-
-    // Open send notice modal
-    const sendNoticeModal = new bootstrap.Modal(document.getElementById('sendNoticeModal'));
-
-    // Pre-fill subject based on context
-    const subjectInput = document.getElementById('noticeSubject');
-    if (subjectInput && modalTitle) {
-        subjectInput.value = `Regarding: ${modalTitle}`;
-    }
-
-    sendNoticeModal.show();
-}
-
-// ==========================================
-// EXPORT MODAL DATA (Placeholder)
-// ==========================================
-
-function exportModalData() {
-    // Get current modal data and export to Excel
-    alert('Export functionality - This will export the currently displayed data to Excel.');
-    // In a full implementation, this would collect the table data and trigger a download
-}

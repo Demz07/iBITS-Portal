@@ -62,7 +62,7 @@
 <!-- ADMIN INFO BANNER -->
 <div class="alert mb-4" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-left: 4px solid #3b82f6; color: #93c5fd;">
     <i class="bi bi-info-circle-fill me-2"></i>
-    <strong>View Only:</strong> Admin can view and create fees, but <strong>cannot change payment status</strong>. 
+    <strong>View Only:</strong> Admin can view and create fees, but <strong>cannot change payment status</strong>.
     Payment collection is handled by <strong>Class Treasurers</strong> and validated by <strong>Org Treasurer</strong>.
 </div>
 
@@ -77,14 +77,16 @@
         justify-content: center;
         font-size: 0.85rem;
     }
-    .status-indicator.paid {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-    }
-    .status-indicator.unpaid {
-        background: rgba(239, 68, 68, 0.2);
-        color: #ef4444;
-    }
+
+        .status-indicator.paid {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-indicator.unpaid {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
 </style>
 
 <!-- ALERT MESSAGES -->
@@ -117,7 +119,7 @@
         <div class="col-md-3">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
@@ -132,12 +134,12 @@
         <div class="col-md-3">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
             </div>
@@ -147,32 +149,17 @@
         <div class="col-md-3">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.155); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Collection Rate (Purple Style) -->
-        <div class="col-md-3">
-            <div class="summary-card rate">
-                <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-percent fs-3"></i>
-                    </div>
-                    <div>
-                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRateDisplay">@collectionRate</span>%</div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Row 2: Pie Charts with No Data State -->
     <div class="row g-4">
@@ -258,13 +245,13 @@
 
         <!-- Year Level Filter -->
         <div class="col-md-1">
-            <label class="form-label small text-muted">Year</label>
+            <label class="form-label small text-muted">Year Level</label>
             <select id="filterYear" class="form-select form-select-sm">
-                <option value="">All</option>
-                <option value="1">1st</option>
-                <option value="2">2nd</option>
-                <option value="3">3rd</option>
-                <option value="4">4th</option>
+                <option value="">All Years</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
             </select>
         </div>
 
@@ -278,11 +265,7 @@
             </select>
         </div>
 
-        <!-- Academic Year Filter -->
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Academic Year</label>
-            <input type="text" id="filterAcadYear" class="form-control form-control-sm" placeholder="e.g., 2023-2024">
-        </div>
+
     </div>
 </div>
 
@@ -308,28 +291,33 @@
             <thead>
                 <tr>
                     <th class="text-center" style="width: 50px;"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i></th>
-                    <th>Ref ID</th>
-                    <th>Student Name</th>
-                    <th>Section</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                    <th class="text-center" style="width: 60px;">Actions</th>
+                    <th>REF ID</th>
+                    <th>STUDENT NAME</th>
+                    <th>PROGRAM</th>
+                    <th>YEAR LEVEL</th>
+                    <th>DESCRIPTION</th>
+                    <th>AMOUNT</th>
+                    <th>STATUS</th>
+                    <th class="text-center" style="width: 60px;">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model != null && Model.Any())
                 {
-                    foreach (var fee in Model)
+                    @foreach (var fee in Model)
                     {
                         var student = fee.StudentNumNavigation;
                         var paymentStatus = fee.PaymentStatus;
                         var isPaid = paymentStatus == "Paid";
                         var remainingBalance = fee.RemainingBalance;
                         var statusClass = isPaid ? "row-paid" : "";
-                        var checkboxClass = isPaid ? "status-paid" : "status-unpaid";
+
+                        // Extract year level from section (e.g., "1-1" -> "1")
+                        var yearLevel = student?.YearLevelSection?.Split('-').FirstOrDefault() ?? "";
+
+                        // Extract program from section
+                        var sectionLetter = student?.YearLevelSection?.Length > 1 ? student.YearLevelSection.Substring(1, 1) : "";
+                        var program = (sectionLetter == "D" || sectionLetter == "E" || sectionLetter == "F") ? "DIT" : "BSIT";
 
                         <tr class="fee-row @statusClass"
                             data-fee-id="@fee.FeeId"
@@ -338,36 +326,38 @@
                             data-student-id="@(fee.StudentNum?.ToLower() ?? "")"
                             data-fee-name="@(fee.FeeName?.ToLower() ?? "")"
                             data-section="@(student?.YearLevelSection ?? "")"
+                            data-yearlevel="@yearLevel"
+                            data-program="@program"
                             data-status="@paymentStatus.ToLower()"
                             data-amount="@(fee.Amount ?? 0)"
                             data-paid="@fee.AmountPaid"
                             data-balance="@remainingBalance">
-                            
+
                             <!-- Status Icon Column (View Only) -->
                             <td class="text-center">
                                 <div class="status-indicator @(isPaid ? "paid" : "unpaid")" title="@(isPaid ? "Paid" : "Unpaid")">
                                     <i class="bi bi-@(isPaid ? "check" : "x")"></i>
                                 </div>
                             </td>
-                            
+
                             <td class="font-monospace text-muted">#@fee.FeeId</td>
                             <td>
                                 @if (student != null)
                                 {
-                                    <div style="color: var(--text-strong); font-weight: 600;">@student.StudentFn @student.StudentLn</div>
+                                    <div style="color: var(--text-strong); font-weight: 600;">@student.FullName</div>
                                     <div class="small text-muted" style="font-size: 0.75rem;">@fee.StudentNum</div>
                                 }
                                 else
                                 {
-                                    <span class="text-danger">ID: @fee.StudentNum</span>
+                                    <span class="text-danger">Unknown Student</span>
                                 }
                             </td>
-                            <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
+                            <td><span>@program</span></td>
+                            <td><span>@yearLevel</span></td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
-                            <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fee.AmountPaid.ToString("N2")</td>
-                            <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
-                            
+
+
                             <!-- Status Badge (No Partial - Full Payment Only) -->
                             <td>
                                 @if (isPaid)
@@ -379,7 +369,7 @@
                                     <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                                 }
                             </td>
-                            
+
                             <!-- Actions Dropdown (Admin: No Payment Status Changes) -->
                             <td class="text-center">
                                 @if (!isPaid)
@@ -416,7 +406,6 @@
 
 <!-- REMOVED: Payment status change modals - Admin cannot change payment status -->
 <!-- Payment status changes are handled by Treasurers only -->
-
 <!-- DELETE FEE MODAL -->
 <div class="modal fade" id="deleteFeeModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -608,7 +597,6 @@
 </div>
 
 <!-- REMOVED: Record Fee Payment Modal - Admin cannot change payment status -->
-
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -724,7 +712,7 @@
                     </div>
                 </div>
             `;
-            
+
             let container = document.querySelector('.toast-container');
             if (!container) {
                 container = document.createElement('div');
@@ -732,7 +720,7 @@
                 container.style.zIndex = '9999';
                 document.body.appendChild(container);
             }
-            
+
             container.insertAdjacentHTML('beforeend', toastHtml);
             const toast = container.lastElementChild;
             const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
@@ -742,3 +730,4 @@
     </script>
     <script src="~/js/payments.js" asp-append-version="true"></script>
 }
+

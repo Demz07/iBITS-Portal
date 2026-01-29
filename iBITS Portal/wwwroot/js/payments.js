@@ -1,8 +1,8 @@
 ﻿/* ============================================================
-   FILE PATH: wwwroot/js/payments.js
-   ============================================================
-   UPDATED: Implemented Fee Name Dropdown Filter & Robust Matching
-   ============================================================ */
+  FILE PATH: wwwroot/js/payments.js
+  ============================================================
+  UPDATED: Implemented Fee Name Dropdown Filter & Robust Matching
+  ============================================================ */
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const rowFeeName = (row.getAttribute('data-fee-name') || '').toLowerCase();
             const rowProgram = (row.getAttribute('data-program') || '').toLowerCase();
-            const rowYear = row.getAttribute('data-year') || '';
+            const rowYearLevel = row.getAttribute('data-yearlevel') || '';
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
             const rowAcadYear = (row.getAttribute('data-acad-year') || '').toLowerCase();
 
@@ -199,10 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const matchesProgram = !programValue || rowProgram.includes(programValue);
 
             // 4. Year Level Check
-            const matchesYear = !yearValue ||
-                rowYear.includes(yearValue) ||
-                rowYear.startsWith(`${yearValue}-`) ||
-                rowYear.includes(` ${yearValue}-`);
+            const matchesYear = !yearValue || rowYearLevel === yearValue;
 
             // 5. Status Check
             let matchesStatus = false;
@@ -415,3 +412,4 @@ function initPaymentCharts(data) {
     renderChart('paymentsBreakdownChart', 'paymentsNoData', data.paid);
     renderChart('pendingBreakdownChart', 'pendingNoData', data.pending);
 }
+

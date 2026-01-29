@@ -242,7 +242,38 @@ namespace iBITS_Portal.Controllers
 
             return Json(new { success = true, message = "Announcement dismissed successfully" });
         }
+
+
+
+
     }
 }
+
+//add
+
+public class HomeController : Controller
+{
+
+    public IActionResult LandingPageAbout()
+    {
+
+
+        return View();
+    }
+
+    public IActionResult LandingPagePeople()
+    {
+
+        return View();
+    }
+
+    public IActionResult LandingDevelopers()
+    {
+
+        return View();
+    }
+}
+
+
 
 

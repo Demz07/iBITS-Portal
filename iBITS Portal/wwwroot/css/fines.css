@@ -75,15 +75,15 @@ body {
     }
 
     .summary-card.total {
-        border-left: 4px solid #ef4444;
+        border-left: 4px solid #06b6d4;
     }
 
     .summary-card.collected {
-        border-left: 4px solid #10b981;
+        border-left: 4px solid #22c55e;
     }
 
     .summary-card.pending {
-        border-left: 4px solid #fbbf24;
+        border-left: 4px solid #ef4444;
     }
 
     .summary-card.rate {
@@ -519,80 +519,80 @@ body {
         transform: scale(0.95);
     }
 
-/* Unpaid State - Empty Red Border */
-.payment-checkbox.status-unpaid {
-    border: 2px solid #ef4444;
-    background: transparent;
-    color: transparent;
-}
-
-    .payment-checkbox.status-unpaid:hover {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: #f87171;
+    /* Unpaid State - Empty Red Border */
+    .payment-checkbox.status-unpaid {
+        border: 2px solid #ef4444;
+        background: transparent;
+        color: transparent;
     }
 
-/* Partial State - Half Filled Yellow */
-.payment-checkbox.status-partial {
-    border: 2px solid #fbbf24;
-    background: linear-gradient(to top, rgba(251, 191, 36, 0.5) 50%, transparent 50%);
-    color: #fbbf24;
-}
+        .payment-checkbox.status-unpaid:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #f87171;
+        }
 
-    .payment-checkbox.status-partial:hover {
-        background: linear-gradient(to top, rgba(251, 191, 36, 0.7) 50%, rgba(251, 191, 36, 0.1) 50%);
+    /* Partial State - Half Filled Yellow */
+    .payment-checkbox.status-partial {
+        border: 2px solid #fbbf24;
+        background: linear-gradient(to top, rgba(251, 191, 36, 0.5) 50%, transparent 50%);
+        color: #fbbf24;
     }
 
-    .payment-checkbox.status-partial::after {
-        content: "◐";
-        font-size: 12px;
+        .payment-checkbox.status-partial:hover {
+            background: linear-gradient(to top, rgba(251, 191, 36, 0.7) 50%, rgba(251, 191, 36, 0.1) 50%);
+        }
+
+        .payment-checkbox.status-partial::after {
+            content: "◐";
+            font-size: 12px;
+        }
+
+    /* Paid State - Green Checked */
+    .payment-checkbox.status-paid {
+        border: 2px solid #10b981;
+        background: #10b981;
+        color: white;
     }
 
-/* Paid State - Green Checked */
-.payment-checkbox.status-paid {
-    border: 2px solid #10b981;
-    background: #10b981;
-    color: white;
-}
+        .payment-checkbox.status-paid:hover {
+            background: #059669;
+            border-color: #059669;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
 
-    .payment-checkbox.status-paid:hover {
-        background: #059669;
-        border-color: #059669;
-        box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        .payment-checkbox.status-paid::after {
+            content: "✓";
+            font-weight: bold;
+        }
+
+    /* Excused State - Blue Shield (Disabled) */
+    .payment-checkbox.status-excused {
+        border: 2px solid #3b82f6;
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+        cursor: not-allowed;
     }
 
-    .payment-checkbox.status-paid::after {
-        content: "✓";
-        font-weight: bold;
+        .payment-checkbox.status-excused:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .payment-checkbox.status-excused::after {
+            content: "🛡";
+            font-size: 12px;
+        }
+
+    /* Checkbox disabled for non-admin (cannot revoke) */
+    .payment-checkbox.no-revoke {
+        cursor: not-allowed;
+        opacity: 0.7;
     }
 
-/* Excused State - Blue Shield (Disabled) */
-.payment-checkbox.status-excused {
-    border: 2px solid #3b82f6;
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
-    cursor: not-allowed;
-}
-
-    .payment-checkbox.status-excused:hover {
-        transform: none;
-        box-shadow: none;
-    }
-
-    .payment-checkbox.status-excused::after {
-        content: "🛡";
-        font-size: 12px;
-    }
-
-/* Checkbox disabled for non-admin (cannot revoke) */
-.payment-checkbox.no-revoke {
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-    .payment-checkbox.no-revoke:hover {
-        transform: none;
-        box-shadow: none;
-    }
+        .payment-checkbox.no-revoke:hover {
+            transform: none;
+            box-shadow: none;
+        }
 
 /* --- STATUS BADGES WITH ICON + TEXT --- */
 .status-badge {
@@ -612,33 +612,33 @@ body {
         font-size: 0.85rem;
     }
 
-/* Unpaid Status - Red */
-.status-badge.status-unpaid {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
+    /* Unpaid Status - Red */
+    .status-badge.status-unpaid {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
 
-/* Partial Status - Yellow/Amber */
-.status-badge.status-partial {
-    background: rgba(251, 191, 36, 0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.3);
-}
+    /* Partial Status - Yellow/Amber */
+    .status-badge.status-partial {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+    }
 
-/* Paid Status - Green */
-.status-badge.status-paid {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
+    /* Paid Status - Green */
+    .status-badge.status-paid {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
 
-/* Excused Status - Blue */
-.status-badge.status-excused {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-}
+    /* Excused Status - Blue */
+    .status-badge.status-excused {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
 
 /* --- BADGE VARIANTS (Keep existing badge-* for backwards compatibility) --- */
 .badge-partial {

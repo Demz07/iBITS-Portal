@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const labels = Object.keys(chartData);
         const values = Object.values(chartData);
         const total = values.reduce((acc, val) => acc + val, 0);
-
         const noDataEl = document.getElementById(noDataId);
 
         if (total === 0) {
@@ -50,112 +49,118 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
-    // DYNAMIC & TABLE FILTERING
+    // CLIENT-SIDE FILTERING LOGIC (FIXED)
     // =========================================================
+    const finesFilterForm = document.getElementById('finesFilterForm');
+    if (!finesFilterForm) return;
+
+    // IMPORTANT: Prevent the form from submitting and reloading the page
+    finesFilterForm.addEventListener('submit', e => e.preventDefault());
+
+    const finesTableRows = document.querySelectorAll("#finesTable tbody tr");
     const filterFineType = document.getElementById('filterFineType');
     const eventFilterContainer = document.getElementById('eventFilterContainer');
     const reasonFilterContainer = document.getElementById('reasonFilterContainer');
     const filterEvent = document.getElementById('filterEvent');
     const filterReason = document.getElementById('filterReason');
-    const finesTableBody = document.getElementById('finesTable')?.getElementsByTagName('tbody')[0];
 
+    // Function to show/hide Event or Reason dropdowns
     const toggleDynamicFilters = () => {
         if (!filterFineType) return;
         const selectedType = filterFineType.value;
 
-        eventFilterContainer.style.display = (selectedType === 'event') ? 'block' : 'none';
-        reasonFilterContainer.style.display = (selectedType === 'manual') ? 'block' : 'none';
+        eventFilterContainer.style.display = selectedType === 'event' ? 'block' : 'none';
+        reasonFilterContainer.style.display = selectedType === 'manual' ? 'block' : 'none';
 
-        if (selectedType !== 'event') filterEvent.value = '';
-        if (selectedType !== 'manual') filterReason.value = '';
+        if (selectedType !== 'event' && filterEvent) filterEvent.value = '';
+        if (selectedType !== 'manual' && filterReason) filterReason.value = '';
     };
 
-    const applyClientSideFilters = () => {
-        if (!finesTableBody) return;
-
+    // Main function to apply all filters to the table
+    const applyTableFilters = () => {
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();
-        const statusVal = document.getElementById('filterStatus').value;
-        const programVal = document.getElementById('filterProgram').value;
-        const fineTypeVal = filterFineType.value;
-        const eventVal = filterEvent.value;
-        const reasonVal = filterReason.value;
+        const fineTypeVal = document.getElementById('filterFineType').value;
+        const eventVal = document.getElementById('filterEvent').value;
+        const reasonVal = document.getElementById('filterReason').value;
+        const statusVal = document.getElementById('filterStatus').value.toLowerCase() || '';
+        const programVal = document.getElementById('filterProgram').value.toLowerCase();
+        const yearLevelVal = document.getElementById('filterYearLevel').value;
 
-        for (let row of finesTableBody.rows) {
-            const student = row.dataset.student || '';
-            const studentNum = row.dataset.studentnum || '';
-            const status = row.dataset.status || '';
-            const program = row.dataset.program || '';
-            const fineType = row.dataset.finetype || '';
-            const eventId = row.dataset.event || '';
-            const reason = row.dataset.reason || '';
+        finesTableRows.forEach(row => {
+            const rowData = row.dataset;
+            let isVisible = true;
 
-            const searchMatch = student.includes(searchVal) || studentNum.includes(searchVal);
-            const statusMatch = !statusVal || statusVal === status;
-            const programMatch = !programVal || program === programVal;
-            const fineTypeMatch = !fineTypeVal || fineTypeVal === fineType;
-            const eventMatch = !eventVal || eventVal === eventId;
-            const reasonMatch = !reasonVal || reasonVal === reason;
+            const student = rowData.student || '';
+            const studentNum = rowData.studentnum || '';
 
-            row.style.display = (searchMatch && statusMatch && programMatch && fineTypeMatch && eventMatch && reasonMatch) ? '' : 'none';
-        }
+            if (searchVal && !(student.includes(searchVal) || studentNum.includes(searchVal)))
+                isVisible = false;
+
+            if (isVisible && fineTypeVal && rowData.finetype !== fineTypeVal)
+                isVisible = false;
+
+            if (
+                isVisible &&
+                fineTypeVal === 'event' &&
+                eventVal &&
+                Number(rowData.event) !== Number(eventVal)
+            )
+                isVisible = false;
+
+            if (
+                isVisible &&
+                fineTypeVal === 'manual' &&
+                reasonVal &&
+                !rowData.reason.includes(reasonVal.toLowerCase())
+            )
+                isVisible = false;
+
+            if (isVisible && statusVal && rowData.status && rowData.status !== statusVal)
+                isVisible = false;
+
+            if (isVisible && programVal && rowData.program.toLowerCase() !== programVal)
+                isVisible = false;
+
+            if (isVisible && yearLevelVal && rowData.yearlevel !== yearLevelVal)
+                isVisible = false;
+
+            row.style.display = isVisible ? '' : 'none';
+        });
     };
 
-    if (filterFineType) {
-        filterFineType.addEventListener('change', () => {
-            toggleDynamicFilters();
-            // Do not submit form, just apply client-side filter
-            applyClientSideFilters();
-        });
-        toggleDynamicFilters(); // Run on page load
-    }
+    // Set initial state of dynamic filters on page load
+    toggleDynamicFilters();
 
-    // Attach live client-side filtering to all inputs
-    const allFilterInputs = document.querySelectorAll('#filterSearch, #filterFineType, #filterEvent, #filterReason, #filterStatus, #filterProgram');
+    // Attach event listeners to all filter controls
+    const allFilterInputs = finesFilterForm.querySelectorAll('input, select');
     allFilterInputs.forEach(input => {
-        const eventType = input.tagName === 'INPUT' ? 'input' : 'change';
-        input.addEventListener(eventType, applyClientSideFilters);
+        const eventType = input.tagName === 'INPUT' && input.type === 'text' ? 'input' : 'change';
+        input.addEventListener(eventType, (e) => {
+            e.preventDefault(); // Prevent any default behavior
+
+            if (input.id === 'filterFineType') {
+                toggleDynamicFilters();
+            }
+
+            if (eventType === 'input') {
+                clearTimeout(input.searchTimeout);
+                input.searchTimeout = setTimeout(applyTableFilters, 300);
+            } else {
+                applyTableFilters();
+            }
+        });
     });
 
-    // Note: The "Clear Filters" button is now an <a> tag that reloads the page, so no JS is needed for it.
-    // The "Apply Filters" button submits the form to the server.
-
-    // =========================================================
-    // MODAL TRIGGER FUNCTIONS
-    // =========================================================
-    function openMarkPaidModal(id) {
-        document.getElementById('markPaidFineId').value = id;
-        document.getElementById('markPaidFineIdDisplay').innerText = id;
-        new bootstrap.Modal(document.getElementById('markPaidModal')).show();
+    // Add functionality to the "Clear Filters" button
+    const clearFinesFilterBtn = document.getElementById('clearFinesFilterBtn');
+    if (clearFinesFilterBtn) {
+        clearFinesFilterBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            finesFilterForm.reset();
+            toggleDynamicFilters();
+            applyTableFilters();
+        });
     }
-
-    function openWaiveModal(id, name, amount) {
-        document.getElementById('waiveFineId').value = id;
-        document.getElementById('waiveStudentName').innerText = name;
-        document.getElementById('waiveFineAmount').innerText = parseFloat(amount).toFixed(2);
-        new bootstrap.Modal(document.getElementById('waiveFineModal')).show();
-    }
-
-    function openAdjustModal(id, name, amount) {
-        document.getElementById('adjustFineId').value = id;
-        document.getElementById('adjustStudentName').innerText = name;
-        document.getElementById('adjustCurrentAmount').innerText = parseFloat(amount).toFixed(2);
-        document.getElementById('newAmount').value = parseFloat(amount).toFixed(2);
-        new bootstrap.Modal(document.getElementById('adjustFineModal')).show();
-    }
-
-    function openDeleteModal(id, name, amount) {
-        document.getElementById('deleteFineId').value = id;
-        document.getElementById('deleteStudentName').innerText = name;
-        document.getElementById('deleteFineAmount').innerText = parseFloat(amount).toFixed(2);
-        new bootstrap.Modal(document.getElementById('deleteFineModal')).show();
-    }
-
-    // Make modal functions globally accessible
-    window.openMarkPaidModal = openMarkPaidModal;
-    window.openWaiveModal = openWaiveModal;
-    window.openAdjustModal = openAdjustModal;
-    window.openDeleteModal = openDeleteModal;
-
 
     // =========================================================
     // CREATE FINE PREVIEW LOGIC
@@ -172,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const updatePreview = () => {
             const selectedProgram = createFineForm.querySelector('input[name="programFilter"]:checked').value;
             const selectedYear = createFineForm.querySelector('input[name="yearFilter"]:checked').value;
-
             previewLoading.style.display = 'flex';
 
             fetch(`/Admin/PreviewFineStudentCount?programFilter=${selectedProgram}&yearFilter=${selectedYear}`)
@@ -197,3 +201,4 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+

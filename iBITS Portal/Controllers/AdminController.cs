@@ -93,12 +93,13 @@ namespace iBITS_Portal.Controllers
                 .ToListAsync();
 
             ViewBag.Years = allYearSections
-                .Select(ys => StringHelper.ExtractYearLevel(ys))
-                .Where(y => y > 0)
-                .Distinct()
-                .OrderBy(y => y)
-                .Select(y => y.ToString())
-                .ToList();
+      .Select(ys => StringHelper.ExtractYearLevel(ys))
+      .Where(y => y > 0)
+      .Distinct()
+      .OrderBy(y => y)
+      .Select(y => y.ToString())
+      .ToList();
+
 
             // This logic is simplified as section-only filtering is less common
             // and can be achieved with the main search bar.
@@ -253,14 +254,29 @@ namespace iBITS_Portal.Controllers
 
             if (!string.IsNullOrEmpty(roleFilter))
             {
-                if (roleFilter == "Officer")
-                    studentsQuery = studentsQuery.Where(s => s.OfficerId != null);
-                else if (roleFilter == "Member")
-                    studentsQuery = studentsQuery.Where(s => s.OfficerId == null);
+                switch (roleFilter)
+                {
+                    case "Org Officer":
+                        // Filters for students who ARE officers AND their type is "Org"
+                        studentsQuery = studentsQuery.Where(s => s.Officer != null && s.Officer.Classification == "Org Officer");
+                        break;
+
+                    case "Class Officer":
+                        // Filters for students who ARE officers AND their type is "Class"
+                        studentsQuery = studentsQuery.Where(s => s.Officer != null && s.Officer.Classification == "Class Officer");
+                        break;
+
+                    case "Member":
+                        // Filters for students who are NOT officers
+                        studentsQuery = studentsQuery.Where(s => s.Officer == null);
+                        break;
+                }
             }
+
 
             return studentsQuery;
         }
+
 
         // =========================================================
         // HELPER: GET CURRENT ACADEMIC YEAR FROM SYSTEM SETTINGS
@@ -418,9 +434,9 @@ namespace iBITS_Portal.Controllers
         // AJAX: Get Dashboard Data for Refresh
         // =========================================================
         [HttpGet]
-        public async Task<IActionResult> GetDashboardData()
+        public async Task<IActionResult> GetDashboardData(string? feeCategory, string? fineCategory)
         {
-            var data = await BuildDashboardData();
+            var data = await BuildDashboardData(feeCategory, fineCategory);
             return Json(data);
         }
 
@@ -429,90 +445,82 @@ namespace iBITS_Portal.Controllers
         // Returns detailed breakdown when user clicks a chart segment
         // =========================================================
         [HttpGet]
-        public async Task<IActionResult> GetChartDetails(string chartType, string segment, string status)
+        public async Task<IActionResult> GetChartDetails(string chartType, string segment, string status, string? category)
         {
             try
             {
-                // Helper to extract year level
-                int ExtractYearLevel(string? yearLevelSection)
+                // ADDED: Explicitly handle only 'payments' chart type for this action
+                if (chartType.ToLower() != "payments")
                 {
-                    if (string.IsNullOrWhiteSpace(yearLevelSection)) return 0;
-                    var input = yearLevelSection.Trim().ToUpper();
-                    if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
-                    if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
-                    if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
-                    if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
-                    foreach (char c in input)
-                    {
-                        if (char.IsDigit(c))
-                        {
-                            int year = c - '0';
-                            if (year >= 1 && year <= 4) return year;
-                        }
-                    }
-                    return 0;
+                    return Json(new { success = false, message = "Invalid chart type specified for this endpoint." });
                 }
 
-                // Parse segment (e.g., "BSIT3" -> program="BSIT", year=3)
-                var program = segment.StartsWith("BSIT") ? "BSIT" : segment.StartsWith("DIT") ? "DIT" : "";
-                var yearStr = segment.Replace("BSIT", "").Replace("DIT", "");
+                if (string.IsNullOrEmpty(segment))
+                    return Json(new { success = false, message = "Invalid segment data" });
+
+                var program = segment.StartsWith("BSIT", StringComparison.OrdinalIgnoreCase) ? "BSIT" :
+                              segment.StartsWith("DIT", StringComparison.OrdinalIgnoreCase) ? "DIT" : "";
+
+                var yearStr = segment.Replace("BSIT", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("DIT", "", StringComparison.OrdinalIgnoreCase);
+
                 int.TryParse(yearStr, out int yearLevel);
 
                 if (string.IsNullOrEmpty(program) || yearLevel == 0)
                 {
-                    return Json(new { success = false, message = "Invalid segment" });
+                    return Json(new { success = false, message = "Could not determine program or year level." });
                 }
 
-                // Get fees based on chart type and status
-                var fees = await _context.Fees
+                var query = _context.Fees
                     .Include(f => f.StudentNumNavigation)
-                    .Where(f => f.StudentNumNavigation != null &&
-                                f.StudentNumNavigation.Course != null &&
-                                f.StudentNumNavigation.Course.ToUpper().Contains(program))
-                    .ToListAsync();
+                    .AsQueryable();
 
-                // Filter by year level
-                fees = fees.Where(f => ExtractYearLevel(f.StudentNumNavigation!.YearLevelSection) == yearLevel).ToList();
+                query = query.Where(f => f.StudentNumNavigation != null &&
+                                         f.StudentNumNavigation.Course != null &&
+                                         f.StudentNumNavigation.Course.Contains(program));
 
-                // Filter by status (paid or pending)
-                if (status == "paid")
+                if (!string.IsNullOrEmpty(category) && category.ToLower() != "all")
                 {
-                    fees = fees.Where(f => !string.IsNullOrWhiteSpace(f.FeeStatus) && f.FeeStatus.ToUpper() == "PAID").ToList();
-                }
-                else if (status == "pending")
-                {
-                    fees = fees.Where(f => string.IsNullOrWhiteSpace(f.FeeStatus) ||
-                                          f.FeeStatus.ToUpper() == "PENDING" ||
-                                          f.FeeStatus.ToUpper() == "UNPAID").ToList();
+                    query = query.Where(f => f.FeeName == category);
                 }
 
-                // Group by fee name to get breakdown
+                if (status.ToLower() == "paid")
+                {
+                    query = query.Where(f => f.FeeStatus == "Paid" || f.FeeStatus == "Completed");
+                }
+                else
+                {
+                    query = query.Where(f => f.FeeStatus != "Paid" && f.FeeStatus != "Completed");
+                }
+
+                var fees = await query.ToListAsync();
+
+                // In-memory filter for year level
+                fees = fees.Where(f => StringHelper.ExtractYearLevel(f.StudentNumNavigation?.YearLevelSection) == yearLevel).ToList();
+
                 var feeBreakdown = fees
                     .GroupBy(f => f.FeeName ?? "Unnamed Fee")
                     .Select(g => new
                     {
                         FeeName = g.Key,
-                        Amount = g.First().Amount ?? 0,
-                        StudentCount = g.Count(),
+                        Amount = g.FirstOrDefault()?.Amount ?? 0,
+                        StudentCount = g.Select(f => f.StudentNum).Distinct().Count(),
                         TotalAmount = g.Sum(f => f.Amount ?? 0)
                     })
                     .OrderByDescending(f => f.TotalAmount)
                     .ToList();
 
-                // Get student list
                 var students = fees
-                    .Where(f => f.StudentNumNavigation != null)
                     .Select(f => new
                     {
-                        StudentNum = f.StudentNumNavigation!.StudentNum,
-                        Name = $"{f.StudentNumNavigation.StudentFn} {f.StudentNumNavigation.StudentLn}",
+                        StudentNum = f.StudentNumNavigation?.StudentNum ?? f.StudentNum,
+                        Name = f.StudentNumNavigation?.FullName ?? "Unknown",
                         FeeName = f.FeeName ?? "Unnamed Fee",
                         Amount = f.Amount ?? 0,
-                        Status = f.FeeStatus ?? "Pending",
-                        DueDate = f.FeesDueDate.HasValue ? f.FeesDueDate.Value.ToString("MMM dd, yyyy") : "No Due Date"
+                        Status = f.FeeStatus ?? "Pending"
                     })
                     .OrderBy(s => s.Name)
-                    .Take(50) // Limit to 50 students
+                    .Take(100)
                     .ToList();
 
                 var totalAmount = fees.Sum(f => f.Amount ?? 0);
@@ -521,15 +529,10 @@ namespace iBITS_Portal.Controllers
                 return Json(new
                 {
                     success = true,
-                    segment = segment,
-                    program = program,
-                    yearLevel = yearLevel,
-                    status = status,
                     summary = new
                     {
                         totalAmount = totalAmount,
                         studentCount = studentCount,
-                        feeCount = fees.Count,
                         averagePerStudent = studentCount > 0 ? totalAmount / studentCount : 0
                     },
                     feeBreakdown = feeBreakdown,
@@ -538,7 +541,7 @@ namespace iBITS_Portal.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting chart details");
+                _logger.LogError(ex, "Error getting chart details for segment {Segment}", segment);
                 return Json(new { success = false, message = "Error loading details" });
             }
         }
@@ -548,102 +551,75 @@ namespace iBITS_Portal.Controllers
         // Returns detailed breakdown when user clicks fines chart segment
         // =========================================================
         [HttpGet]
-        public async Task<IActionResult> GetFinesDetails(string segment)
+        public async Task<IActionResult> GetFinesDetails(string segment, string status, string? category)
         {
             try
             {
-                // Helper to extract year level
-                int ExtractYearLevel(string? yearLevelSection)
+                var program = segment.StartsWith("BSIT") ? "BSIT" : segment.StartsWith("DIT") ? "DIT" : "";
+                int.TryParse(segment.Replace("BSIT", "").Replace("DIT", ""), out int yearLevel);
+
+                var query = _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Attendance).ThenInclude(a => a.StudentNumNavigation)
+                    .Include(f => f.Attendance).ThenInclude(a => a.Event)
+                    .AsQueryable();
+
+                // 1. Category Filter
+                if (!string.IsNullOrEmpty(category) && category != "all")
                 {
-                    if (string.IsNullOrWhiteSpace(yearLevelSection)) return 0;
-                    var input = yearLevelSection.Trim().ToUpper();
-                    if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
-                    if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
-                    if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
-                    if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
-                    foreach (char c in input)
-                    {
-                        if (char.IsDigit(c))
-                        {
-                            int year = c - '0';
-                            if (year >= 1 && year <= 4) return year;
-                        }
-                    }
+                    if (category == "manual")
+                        query = query.Where(f => f.AttendanceId == null);
+                    else if (category == "event")
+                        query = query.Where(f => f.AttendanceId != null);
+                    else
+                        query = query.Where(f =>
+                            (f.Attendance != null && f.Attendance.Event.EventName == category) ||
+                            (f.AttendanceId == null && f.Description == category));
+                }
+
+                // 2. Status Filter
+                if (status == "paid")
+                    query = query.Where(f => f.FinesStatus == "Paid");
+                else
+                    query = query.Where(f => f.FinesStatus != "Paid");
+
+                var fines = await query.ToListAsync();
+
+                // 3. Year/Program Filter (Memory)
+                int ExtractYearLevel(string? yls)
+                {
+                    if (string.IsNullOrWhiteSpace(yls)) return 0;
+                    var input = yls.Trim().ToUpper();
+                    foreach (char c in input) { if (char.IsDigit(c)) { int year = c - '0'; if (year >= 1 && year <= 4) return year; } }
                     return 0;
                 }
 
-                // Parse segment
-                var program = segment.StartsWith("BSIT") ? "BSIT" : segment.StartsWith("DIT") ? "DIT" : "";
-                var yearStr = segment.Replace("BSIT", "").Replace("DIT", "");
-                int.TryParse(yearStr, out int yearLevel);
+                bool ProgramMatch(Student? s) => s != null && s.Course != null && s.Course.Contains(program);
 
-                if (string.IsNullOrEmpty(program) || yearLevel == 0)
-                {
-                    return Json(new { success = false, message = "Invalid segment" });
-                }
+                fines = fines.Where(f => {
+                    var s = f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation;
+                    return ProgramMatch(s) && ExtractYearLevel(s?.YearLevelSection) == yearLevel;
+                }).ToList();
 
-                // Get fines with attendance and student info
-                var fines = await _context.Fines
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.StudentNumNavigation)
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.Event)
-                    .Where(f => f.Attendance != null &&
-                                f.Attendance.StudentNumNavigation != null &&
-                                f.Attendance.StudentNumNavigation.Course != null &&
-                                f.Attendance.StudentNumNavigation.Course.ToUpper().Contains(program))
-                    .ToListAsync();
-
-                // Filter by year level
-                fines = fines.Where(f => ExtractYearLevel(f.Attendance!.StudentNumNavigation!.YearLevelSection) == yearLevel).ToList();
-
-                // Group by event to get breakdown
-                var eventBreakdown = fines
-                    .Where(f => f.Attendance?.Event != null)
-                    .GroupBy(f => f.Attendance!.Event!.EventName ?? "Unknown Event")
-                    .Select(g => new
-                    {
-                        EventName = g.Key,
-                        FineAmount = g.First().Amount ?? 0,
-                        StudentCount = g.Count(),
-                        TotalAmount = g.Sum(f => f.Amount ?? 0)
-                    })
-                    .OrderByDescending(e => e.TotalAmount)
+                // 4. Response
+                var breakdown = fines
+                    .GroupBy(f => f.Attendance?.Event?.EventName ?? f.Description ?? "Unknown")
+                    .Select(g => new { EventName = g.Key, FineAmount = g.First().Amount ?? 0, StudentCount = g.Count(), TotalAmount = g.Sum(f => f.Amount ?? 0) })
                     .ToList();
 
-                // Get student list
-                var students = fines
-                    .Where(f => f.Attendance?.StudentNumNavigation != null)
-                    .Select(f => new
-                    {
-                        StudentNum = f.Attendance!.StudentNumNavigation!.StudentNum,
-                        Name = $"{f.Attendance.StudentNumNavigation.StudentFn} {f.Attendance.StudentNumNavigation.StudentLn}",
-                        EventName = f.Attendance.Event?.EventName ?? "Unknown Event",
-                        Amount = f.Amount ?? 0,
-                        Status = f.FinesStatus ?? "Pending",
-                        DueDate = f.FinesDueDate.HasValue ? f.FinesDueDate.Value.ToString("MMM dd, yyyy") : "No Due Date"
-                    })
-                    .OrderBy(s => s.Name)
-                    .Take(50)
-                    .ToList();
-
-                var totalAmount = fines.Sum(f => f.Amount ?? 0);
-                var studentCount = fines.Select(f => f.Attendance?.StudentNum).Distinct().Count();
+                var students = fines.Select(f => new {
+                    StudentNum = (f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation)?.StudentNum,
+                    Name = (f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation)?.FullName,
+                    EventName = f.Attendance?.Event?.EventName ?? f.Description,
+                    Amount = f.Amount,
+                    Status = f.FinesStatus
+                }).Take(50).ToList();
 
                 return Json(new
                 {
                     success = true,
-                    segment = segment,
-                    program = program,
-                    yearLevel = yearLevel,
-                    summary = new
-                    {
-                        totalAmount = totalAmount,
-                        studentCount = studentCount,
-                        fineCount = fines.Count,
-                        averagePerStudent = studentCount > 0 ? totalAmount / studentCount : 0
-                    },
-                    eventBreakdown = eventBreakdown,
+                    summary = new { totalAmount = fines.Sum(f => f.Amount ?? 0), studentCount = fines.Count },
+                    eventBreakdown = breakdown,
                     students = students
                 });
             }
@@ -653,6 +629,7 @@ namespace iBITS_Portal.Controllers
                 return Json(new { success = false, message = "Error loading details" });
             }
         }
+
 
         // =========================================================
         // AJAX: Get Students by Program (for Program Doughnut Chart)
@@ -1191,10 +1168,11 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                var data = await BuildDashboardData();
+                // FIX: Pass null, null to match the new signature
+                var data = await BuildDashboardData(null, null);
+
                 var students = await _context.Students.Where(s => s.IsArchived != true).ToListAsync();
                 var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
-                var events = await _context.Events.ToListAsync();
                 var attendances = await _context.Attendances.Include(a => a.StudentNumNavigation).Include(a => a.Event).ToListAsync();
 
                 using var workbook = new XLWorkbook();
@@ -1290,22 +1268,20 @@ namespace iBITS_Portal.Controllers
                     ws.Range(4, 1, 4, 2).Style.Font.Bold = true;
                     ws.Range(4, 1, 4, 2).Style.Fill.BackgroundColor = XLColor.FromHtml("#D4AF37");
 
-                    ws.Cell(5, 1).Value = "Total Students (BSIT + DIT)";
+                    ws.Cell(5, 1).Value = "Total Students";
                     ws.Cell(5, 2).Value = data.TotalStudents;
-                    ws.Cell(6, 1).Value = "BSIT Students";
-                    ws.Cell(6, 2).Value = data.StudentsPerProgram["BSIT"];
-                    ws.Cell(7, 1).Value = "DIT Students";
-                    ws.Cell(7, 2).Value = data.StudentsPerProgram["DIT"];
-                    ws.Cell(8, 1).Value = "Total Expected (Fees)";
-                    ws.Cell(8, 2).Value = data.TotalExpected;
-                    ws.Cell(9, 1).Value = "Total Collected";
-                    ws.Cell(9, 2).Value = data.TotalCollected;
-                    ws.Cell(10, 1).Value = "Total Pending";
-                    ws.Cell(10, 2).Value = data.TotalPending;
-                    ws.Cell(11, 1).Value = "Collection Rate";
-                    ws.Cell(11, 2).Value = $"{data.CollectionRate}%";
-                    ws.Cell(12, 1).Value = "Total Fines";
-                    ws.Cell(12, 2).Value = data.TotalFines;
+                    ws.Cell(6, 1).Value = "Total Expected Fees";
+                    ws.Cell(6, 2).Value = data.FeesOverview.TotalExpected;
+                    ws.Cell(7, 1).Value = "Total Collected Fees";
+                    ws.Cell(7, 2).Value = data.FeesOverview.TotalCollected;
+                    ws.Cell(8, 1).Value = "Total Pending Fees";
+                    ws.Cell(8, 2).Value = data.FeesOverview.TotalPending;
+                    ws.Cell(9, 1).Value = "Fee Collection Rate";
+                    ws.Cell(9, 2).Value = $"{data.FeesOverview.CollectionRate}%";
+                    ws.Cell(10, 1).Value = "Total Expected Fines";
+                    ws.Cell(10, 2).Value = data.FinesOverview.TotalExpected;
+                    ws.Cell(11, 1).Value = "Total Collected Fines";
+                    ws.Cell(11, 2).Value = data.FinesOverview.TotalCollected;
 
                     ws.Columns().AdjustToContents();
                 }
@@ -1324,6 +1300,7 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         // =========================================================
         // DEBUG: Check Database Values (REMOVE IN PRODUCTION)
@@ -1472,32 +1449,27 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         private async Task PopulateDashboardData()
         {
-            var data = await BuildDashboardData();
+            // Populate Dropdowns
+            ViewBag.FeeCategories = await _context.Fees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToListAsync();
+            var events = await _context.Events.Select(e => e.EventName).Distinct().ToListAsync();
+            var manual = await _context.Fines.Where(f => f.AttendanceId == null).Select(f => f.Description).Distinct().ToListAsync();
+            ViewBag.FineCategories = events.Concat(manual).Distinct().OrderBy(n => n).ToList();
 
+            // Get Data
+            var data = await BuildDashboardData(null, null);
+
+            // Populate Enrollment Data (Strictly preserved)
             ViewBag.StudentsPerProgram = data.StudentsPerProgram;
             ViewBag.TotalStudents = data.TotalStudents;
             ViewBag.YearLevelCounts = data.YearLevelCounts;
-            ViewBag.MonthlyActiveStudents = data.MonthlyActiveStudents;
-            ViewBag.ArchiveCount = data.ArchiveCount;
-            ViewBag.ActiveInactive = data.ActiveInactive;
-            // Payments (Paid)
-            ViewBag.PaymentsByProgram = data.PaymentsByProgram;
-            ViewBag.TotalPayments = data.TotalPayments;
-            // Pending Payments (Unpaid)
-            ViewBag.PendingByProgram = data.PendingByProgram;
-            ViewBag.TotalPending = data.TotalPending;
-            // Financial Summary
-            ViewBag.TotalExpected = data.TotalExpected;
-            ViewBag.TotalCollected = data.TotalCollected;
-            ViewBag.CollectionRate = data.CollectionRate;
-            // Fines
-            ViewBag.FinesByProgram = data.FinesByProgram;
-            ViewBag.TotalFines = data.TotalFines;
-            // Events
-            ViewBag.MonthlyEvents = data.MonthlyEvents;
-            ViewBag.EventStatus = data.EventStatus;
+
+            // Populate New Financial Data
+            ViewBag.FeesData = data.FeesOverview;
+            ViewBag.FinesData = data.FinesOverview;
+
             ViewBag.CurrentAcademicYear = await GetCurrentAcademicYear();
         }
+
 
         // =========================================================
         // HELPER: Build Dashboard Data Object
@@ -1505,24 +1477,35 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // HELPER: Build Dashboard Data Object (UPDATED FOR MANUAL FINES)
         // =========================================================
-        private async Task<DashboardDataModel> BuildDashboardData()
+        private async Task<DashboardDataModel> BuildDashboardData(string? feeCategory, string? fineCategory)
         {
-            // Fetch all data from database - exclude archived students from active counts
-            var allStudents = await _context.Students.ToListAsync();
-            var events = await _context.Events.ToListAsync();
-            var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
+            // 1. FETCH ALL STUDENTS (Unfiltered for Enrollment Section)
+            // This ensures Student Enrollment numbers NEVER change based on fee filters
+            var allStudents = await _context.Students.Where(s => s.IsArchived != true).ToListAsync();
 
-            // UPDATED: Include Student for Manual Fines
-            var fines = await _context.Fines
-                .Include(f => f.StudentNumNavigation) // Manual Fines
-                .Include(f => f.Attendance)
-                    .ThenInclude(a => a.StudentNumNavigation) // Event Fines
-                .ToListAsync();
+            // 2. FETCH FINANCIAL DATA (Filtered)
+            var feesQuery = _context.Fees.Include(f => f.StudentNumNavigation).AsQueryable();
+            if (!string.IsNullOrEmpty(feeCategory) && feeCategory != "all")
+            {
+                feesQuery = feesQuery.Where(f => f.FeeName == feeCategory);
+            }
+            var fees = await feesQuery.ToListAsync();
 
-            // Filter: Only non-archived students for main dashboard stats
-            var students = allStudents.Where(s => s.IsArchived != true).ToList();
+            var finesQuery = _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance).ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Attendance).ThenInclude(a => a.Event)
+                .AsQueryable();
 
-            // Helper to extract year level
+            if (!string.IsNullOrEmpty(fineCategory) && fineCategory != "all")
+            {
+                if (fineCategory == "manual") finesQuery = finesQuery.Where(f => f.AttendanceId == null);
+                else if (fineCategory == "event") finesQuery = finesQuery.Where(f => f.AttendanceId != null);
+                else finesQuery = finesQuery.Where(f => (f.Attendance != null && f.Attendance.Event.EventName == fineCategory) || (f.AttendanceId == null && f.Description == fineCategory));
+            }
+            var fines = await finesQuery.ToListAsync();
+
+            // 3. HELPERS
             int ExtractYearLevel(string? yearLevelSection)
             {
                 if (string.IsNullOrWhiteSpace(yearLevelSection)) return 0;
@@ -1535,113 +1518,91 @@ namespace iBITS_Portal.Controllers
                 return 0;
             }
 
-            // Helpers for Course
             bool IsBSIT(Student s) => !string.IsNullOrWhiteSpace(s.Course) && s.Course.ToUpper().Contains("BSIT");
             bool IsDIT(Student s) => !string.IsNullOrWhiteSpace(s.Course) && s.Course.ToUpper().Contains("DIT");
 
-            // 1. Student Counts
-            var bsitDitStudents = students.Where(s => IsBSIT(s) || IsDIT(s)).ToList();
-            var bsitCount = bsitDitStudents.Count(IsBSIT);
-            var ditCount = bsitDitStudents.Count(IsDIT);
-            var totalStudents = bsitCount + ditCount;
+            // 4. CALCULATE ENROLLMENT (Logic Preserved)
+            var bsitCount = allStudents.Count(IsBSIT);
+            var ditCount = allStudents.Count(IsDIT);
 
             var yearLevelCounts = new Dictionary<string, int>
-            {
-                { "BSIT1", students.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 1) },
-                { "BSIT2", students.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 2) },
-                { "BSIT3", students.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 3) },
-                { "BSIT4", students.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 4) },
-                { "DIT1", students.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 1) },
-                { "DIT2", students.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 2) },
-                { "DIT3", students.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 3) }
-            };
+    {
+        { "BSIT1", allStudents.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 1) },
+        { "BSIT2", allStudents.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 2) },
+        { "BSIT3", allStudents.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 3) },
+        { "BSIT4", allStudents.Count(s => IsBSIT(s) && ExtractYearLevel(s.YearLevelSection) == 4) },
+        { "DIT1", allStudents.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 1) },
+        { "DIT2", allStudents.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 2) },
+        { "DIT3", allStudents.Count(s => IsDIT(s) && ExtractYearLevel(s.YearLevelSection) == 3) }
+    };
 
-            // 2. Monthly Active Students
-            var monthlyActiveStudents = new int[12];
-            var activeStudentCount = students.Count(s => string.IsNullOrWhiteSpace(s.Classification) || s.Classification.ToUpper() != "ARCHIVED" && s.Classification.ToUpper() != "INACTIVE");
-            for (int i = 0; i < 12; i++) monthlyActiveStudents[i] = activeStudentCount;
-
-            // 3. Archive & Active/Inactive
-            var archiveCount = allStudents.Count(s => s.IsArchived == true || (!string.IsNullOrWhiteSpace(s.Classification) && (s.Classification.ToUpper() == "ARCHIVED" || s.Classification.ToUpper() == "INACTIVE")));
-            var activeInactive = new Dictionary<string, int> { { "Active", activeStudentCount }, { "Inactive", allStudents.Count - activeStudentCount } };
-
-            // 4. Financials (Fees)
-            decimal GetFees(Func<Student, bool> programCheck, int yearLevel, bool paid)
+            // 5. CALCULATE FEES (Paid vs Unpaid)
+            decimal GetFeeAmount(Func<Student, bool> programCheck, int yearLevel, bool isPaid)
             {
                 return fees.Where(f => f.StudentNumNavigation != null && programCheck(f.StudentNumNavigation) &&
                     ExtractYearLevel(f.StudentNumNavigation.YearLevelSection) == yearLevel &&
-                    (paid ? (f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID") : (f.FeeStatus == null || f.FeeStatus.ToUpper() != "PAID")))
+                    (isPaid
+                        ? (f.FeeStatus == "Paid" || f.FeeStatus == "Completed")
+                        : (f.FeeStatus != "Paid" && f.FeeStatus != "Completed")))
                     .Sum(f => f.Amount ?? 0);
             }
 
-            var paymentsByProgram = new Dictionary<string, decimal>
+            var feesOverview = new FinancialOverviewModel
             {
-                { "BSIT1", GetFees(IsBSIT, 1, true) }, { "BSIT2", GetFees(IsBSIT, 2, true) }, { "BSIT3", GetFees(IsBSIT, 3, true) }, { "BSIT4", GetFees(IsBSIT, 4, true) },
-                { "DIT1", GetFees(IsDIT, 1, true) }, { "DIT2", GetFees(IsDIT, 2, true) }, { "DIT3", GetFees(IsDIT, 3, true) }
+                PaidByProgram = new Dictionary<string, decimal> {
+            { "BSIT1", GetFeeAmount(IsBSIT, 1, true) }, { "BSIT2", GetFeeAmount(IsBSIT, 2, true) }, { "BSIT3", GetFeeAmount(IsBSIT, 3, true) }, { "BSIT4", GetFeeAmount(IsBSIT, 4, true) },
+            { "DIT1", GetFeeAmount(IsDIT, 1, true) }, { "DIT2", GetFeeAmount(IsDIT, 2, true) }, { "DIT3", GetFeeAmount(IsDIT, 3, true) }
+        },
+                UnpaidByProgram = new Dictionary<string, decimal> {
+            { "BSIT1", GetFeeAmount(IsBSIT, 1, false) }, { "BSIT2", GetFeeAmount(IsBSIT, 2, false) }, { "BSIT3", GetFeeAmount(IsBSIT, 3, false) }, { "BSIT4", GetFeeAmount(IsBSIT, 4, false) },
+            { "DIT1", GetFeeAmount(IsDIT, 1, false) }, { "DIT2", GetFeeAmount(IsDIT, 2, false) }, { "DIT3", GetFeeAmount(IsDIT, 3, false) }
+        }
             };
+            feesOverview.TotalExpected = fees.Sum(f => f.Amount ?? 0);
+            feesOverview.TotalCollected = fees.Where(f => f.FeeStatus == "Paid" || f.FeeStatus == "Completed").Sum(f => f.Amount ?? 0);
+            feesOverview.TotalPending = feesOverview.TotalExpected - feesOverview.TotalCollected;
+            feesOverview.CollectionRate = feesOverview.TotalExpected > 0 ? Math.Round((feesOverview.TotalCollected / feesOverview.TotalExpected) * 100, 1) : 0;
 
-            var pendingByProgram = new Dictionary<string, decimal>
+            // 6. CALCULATE FINES (Paid vs Unpaid)
+            decimal GetFineAmount(Func<Student, bool> programCheck, int yearLevel, bool isPaid)
             {
-                { "BSIT1", GetFees(IsBSIT, 1, false) }, { "BSIT2", GetFees(IsBSIT, 2, false) }, { "BSIT3", GetFees(IsBSIT, 3, false) }, { "BSIT4", GetFees(IsBSIT, 4, false) },
-                { "DIT1", GetFees(IsDIT, 1, false) }, { "DIT2", GetFees(IsDIT, 2, false) }, { "DIT3", GetFees(IsDIT, 3, false) }
-            };
-
-            // 5. Financial Summary
-            var totalExpected = fees.Sum(f => f.Amount ?? 0);
-            var totalCollected = fees.Where(f => f.FeeStatus == "Paid").Sum(f => f.Amount ?? 0);
-            var totalPending = totalExpected - totalCollected;
-            var collectionRate = totalExpected > 0 ? Math.Round((totalCollected / totalExpected) * 100, 1) : 0;
-
-            // 6. Fines Calculation (UPDATED)
-            decimal GetFines(Func<Student, bool> programCheck, int yearLevel)
-            {
-                return fines
-                    .Where(f => {
-                        // Check Manual Student OR Event Student
-                        var s = f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation;
-                        return s != null && programCheck(s) && ExtractYearLevel(s.YearLevelSection) == yearLevel;
-                    })
-                    .Sum(f => f.Amount ?? 0);
+                return fines.Where(f => {
+                    var s = f.StudentNumNavigation ?? f.Attendance?.StudentNumNavigation;
+                    if (s == null) return false;
+                    bool finePaid = (f.FinesStatus == "Paid" || f.FinesStatus == "Completed");
+                    return programCheck(s) && ExtractYearLevel(s.YearLevelSection) == yearLevel && (isPaid == finePaid);
+                }).Sum(f => f.Amount ?? 0);
             }
 
-            var finesByProgram = new Dictionary<string, decimal>
+            var finesOverview = new FinancialOverviewModel
             {
-                { "BSIT1", GetFines(IsBSIT, 1) }, { "BSIT2", GetFines(IsBSIT, 2) }, { "BSIT3", GetFines(IsBSIT, 3) }, { "BSIT4", GetFines(IsBSIT, 4) },
-                { "DIT1", GetFines(IsDIT, 1) }, { "DIT2", GetFines(IsDIT, 2) }, { "DIT3", GetFines(IsDIT, 3) }
+                PaidByProgram = new Dictionary<string, decimal> {
+            { "BSIT1", GetFineAmount(IsBSIT, 1, true) }, { "BSIT2", GetFineAmount(IsBSIT, 2, true) }, { "BSIT3", GetFineAmount(IsBSIT, 3, true) }, { "BSIT4", GetFineAmount(IsBSIT, 4, true) },
+            { "DIT1", GetFineAmount(IsDIT, 1, true) }, { "DIT2", GetFineAmount(IsDIT, 2, true) }, { "DIT3", GetFineAmount(IsDIT, 3, true) }
+        },
+                UnpaidByProgram = new Dictionary<string, decimal> {
+            { "BSIT1", GetFineAmount(IsBSIT, 1, false) }, { "BSIT2", GetFineAmount(IsBSIT, 2, false) }, { "BSIT3", GetFineAmount(IsBSIT, 3, false) }, { "BSIT4", GetFineAmount(IsBSIT, 4, false) },
+            { "DIT1", GetFineAmount(IsDIT, 1, false) }, { "DIT2", GetFineAmount(IsDIT, 2, false) }, { "DIT3", GetFineAmount(IsDIT, 3, false) }
+        }
             };
-
-            // 7. Events
-            var currentYear = DateTime.Now.Year;
-            var monthlyEvents = new int[12];
-            foreach (var evt in events.Where(e => e.EventDate.HasValue && e.EventDate.Value.Year == currentYear))
-                monthlyEvents[evt.EventDate.Value.Month - 1]++;
-
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var eventStatus = new Dictionary<string, int>
-            {
-                { "Completed", events.Count(e => e.IsClosed || (e.EventDate.HasValue && e.EventDate.Value < today)) },
-                { "Upcoming", events.Count(e => !e.IsClosed && e.EventDate.HasValue && e.EventDate.Value >= today) }
-            };
+            finesOverview.TotalExpected = fines.Sum(f => f.Amount ?? 0);
+            finesOverview.TotalCollected = fines.Where(f => f.FinesStatus == "Paid" || f.FinesStatus == "Completed").Sum(f => f.Amount ?? 0);
+            finesOverview.TotalPending = finesOverview.TotalExpected - finesOverview.TotalCollected;
+            finesOverview.CollectionRate = finesOverview.TotalExpected > 0 ? Math.Round((finesOverview.TotalCollected / finesOverview.TotalExpected) * 100, 1) : 0;
 
             return new DashboardDataModel
             {
                 StudentsPerProgram = new Dictionary<string, int> { { "BSIT", bsitCount }, { "DIT", ditCount } },
-                TotalStudents = totalStudents,
+                TotalStudents = bsitCount + ditCount,
                 YearLevelCounts = yearLevelCounts,
-                MonthlyActiveStudents = monthlyActiveStudents,
-                ArchiveCount = archiveCount,
-                ActiveInactive = activeInactive,
-                PaymentsByProgram = paymentsByProgram,
-                TotalPayments = paymentsByProgram.Values.Sum(),
-                PendingByProgram = pendingByProgram,
-                TotalPending = totalPending,
-                TotalExpected = totalExpected,
-                TotalCollected = totalCollected,
-                CollectionRate = collectionRate,
-                FinesByProgram = finesByProgram,
-                TotalFines = finesByProgram.Values.Sum(), // Uses the updated logic
-                MonthlyEvents = monthlyEvents,
-                EventStatus = eventStatus
+                FeesOverview = feesOverview,
+                FinesOverview = finesOverview,
+                // Fill other properties to prevent null errors
+                MonthlyEvents = new int[0],
+                EventStatus = new Dictionary<string, int>(),
+                MonthlyActiveStudents = new int[0],
+                ActiveInactive = new Dictionary<string, int>(),
+                ArchiveCount = 0
             };
         }
 
@@ -1654,23 +1615,25 @@ namespace iBITS_Portal.Controllers
             public int[] MonthlyActiveStudents { get; set; }
             public int ArchiveCount { get; set; }
             public Dictionary<string, int> ActiveInactive { get; set; }
-            // Payments (Paid)
-            public Dictionary<string, decimal> PaymentsByProgram { get; set; }
-            public decimal TotalPayments { get; set; }
-            // Pending Payments (Unpaid)
-            public Dictionary<string, decimal> PendingByProgram { get; set; }
-            public decimal TotalPending { get; set; }
-            // Financial Summary
-            public decimal TotalExpected { get; set; }
-            public decimal TotalCollected { get; set; }
-            public decimal CollectionRate { get; set; }
-            // Fines
-            public Dictionary<string, decimal> FinesByProgram { get; set; }
-            public decimal TotalFines { get; set; }
-            // Events
+
+            // Replaced old Payments/Fines dictionaries with these objects
+            public FinancialOverviewModel FeesOverview { get; set; }
+            public FinancialOverviewModel FinesOverview { get; set; }
+
             public int[] MonthlyEvents { get; set; }
             public Dictionary<string, int> EventStatus { get; set; }
         }
+
+        public class FinancialOverviewModel
+        {
+            public Dictionary<string, decimal> PaidByProgram { get; set; }
+            public Dictionary<string, decimal> UnpaidByProgram { get; set; }
+            public decimal TotalExpected { get; set; }
+            public decimal TotalCollected { get; set; }
+            public decimal TotalPending { get; set; }
+            public decimal CollectionRate { get; set; }
+        }
+
 
         // =========================================================
         // 2. STUDENT RECORDS PAGE
@@ -1714,7 +1677,11 @@ namespace iBITS_Portal.Controllers
 
             // The summary counts can be simplified or adjusted as needed
             ViewBag.TotalStudents = await _context.Students.CountAsync();
-            ViewBag.TotalOfficers = await _context.Students.CountAsync(s => s.OfficerId != null);
+
+            ViewBag.TotalOfficers = await _context.Students.CountAsync(s => s.Officer != null && s.Officer.Classification == "Org Officer");
+
+
+            ViewBag.TotalClassOfficers = await _context.Students.CountAsync(s => s.Officer != null && s.Officer.Classification == "Class Officer");
             ViewBag.ActiveMembers = await _context.Students.CountAsync(s => s.Classification == "Active");
             ViewBag.ArchivedMembers = await _context.Students.CountAsync(s => s.Classification == "Archived");
 
@@ -1722,6 +1689,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.AcademicYearOptions = GenerateAcademicYearOptions();
 
             return View(pagedStudents);
+
         }
 
         [HttpGet]
@@ -2784,7 +2752,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // FINES MANAGEMENT PAGE (FIXED SEARCH & FILTERING)
         // =========================================================
-        public async Task<IActionResult> Fines(string searchString, string fineType, int? eventId, string manualFineReason, string statusFilter, string programFilter, string overdueFilter)
+        public async Task<IActionResult> Fines(string searchString, string fineType, int? eventId, string manualFineReason, string statusFilter, string programFilter, string yearLevelFilter, string overdueFilter)
         {
             // --- 1. Pass filters to the View ---
             ViewData["SearchFilter"] = searchString;
@@ -2793,6 +2761,7 @@ namespace iBITS_Portal.Controllers
             ViewData["ReasonFilter"] = manualFineReason;
             ViewData["StatusFilter"] = statusFilter;
             ViewData["ProgramFilter"] = programFilter;
+            ViewData["YearLevelFilter"] = yearLevelFilter;
             ViewData["OverdueFilter"] = overdueFilter;
 
             // --- 2. Build the base query ---
@@ -2837,6 +2806,19 @@ namespace iBITS_Portal.Controllers
                     (f.StudentNumNavigation != null && f.StudentNumNavigation.Course == programFilter) ||
                     (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.Course == programFilter));
             }
+
+            if (!string.IsNullOrEmpty(yearLevelFilter))
+            {
+                query = query.Where(f =>
+                    (f.StudentNumNavigation != null &&
+                     f.StudentNumNavigation.YearLevelSection == yearLevelFilter) ||
+
+                    (f.Attendance != null &&
+                     f.Attendance.StudentNumNavigation != null &&
+                     f.Attendance.StudentNumNavigation.YearLevelSection == yearLevelFilter)
+                );
+            }
+
 
             if (!string.IsNullOrEmpty(overdueFilter) && overdueFilter == "overdue")
             {

@@ -31,7 +31,7 @@
 <!-- ADMIN INFO BANNER -->
 <div class="alert mb-4" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-left: 4px solid #3b82f6; color: #93c5fd;">
     <i class="bi bi-info-circle-fill me-2"></i>
-    <strong>View Only:</strong> Admin can view and create fines, but <strong>cannot change payment status</strong>. 
+    <strong>View Only:</strong> Admin can view and create fines, but <strong>cannot change payment status</strong>.
     Payment collection is handled by <strong>Class Treasurers</strong> and validated by <strong>Org Treasurer</strong>.
     Excused status is managed by <strong>Org Secretary</strong>.
 </div>
@@ -47,18 +47,21 @@
         justify-content: center;
         font-size: 0.85rem;
     }
-    .status-indicator.paid {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-    }
-    .status-indicator.unpaid {
-        background: rgba(239, 68, 68, 0.2);
-        color: #ef4444;
-    }
-    .status-indicator.excused {
-        background: rgba(59, 130, 246, 0.2);
-        color: #3b82f6;
-    }
+
+        .status-indicator.paid {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-indicator.unpaid {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .status-indicator.excused {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
 </style>
 
 <!-- ALERT MESSAGES -->
@@ -89,7 +92,7 @@
         <div class="col-md-3">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
@@ -104,12 +107,12 @@
         <div class="col-md-3">
             <div class="summary-card collected">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collected</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
             </div>
@@ -119,33 +122,18 @@
         <div class="col-md-3">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.155); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
                         <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Outstanding</div>
+                        <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Collection Rate -->
-        <div class="col-md-3">
-            <div class="summary-card rate">
-                <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
-                        <i class="bi bi-percent fs-3"></i>
-                    </div>
-                    <div>
-                        <div class="card-value fs-3 fw-bold text-white"><span id="collectionRate">@ViewBag.CollectionRate</span>%</div>
-                        <div class="card-label text-muted small text-uppercase fw-bold">Collection Rate</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+        
     <!-- Row 2: Charts -->
     <div class="row g-4">
         <!-- Paid Fines Chart -->
@@ -178,37 +166,41 @@
     </div>
 </div>
 
-<!-- FILTERS SECTION (UPDATED FOR DYNAMIC FILTERS) -->
+<!-- ============================================================ -->
+<!-- FILTERS SECTION (FINES - UPDATED LAYOUT WITH YEAR LEVEL)     -->
+<!-- ============================================================ -->
 <div class="glass-panel p-4 mb-4">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); font-weight: 700; margin: 0;">
             <i class="bi bi-funnel me-2"></i> Filters
         </h5>
-        <a asp-action="Fines" class="btn btn-sm btn-outline-secondary">
+        <a asp-action="Fines" class="btn btn-sm btn-outline-secondary" id="clearFinesFilterBtn">
             <i class="bi bi-x-circle me-1"></i> Clear Filters
         </a>
     </div>
 
-    <form asp-action="Fines" method="get" id="filterForm">
+    <!-- Filter Controls -->
+    <form asp-action="Fines" method="get" id="finesFilterForm">
         <div class="row g-3">
-            <!-- Search -->
+            <!-- Search Filter -->
             <div class="col-md-3">
                 <label class="form-label small text-muted">Search Student</label>
                 <input type="text" id="filterSearch" name="searchString" class="form-control form-control-sm" placeholder="Name or ID..." value="@ViewData["SearchFilter"]">
             </div>
 
-            <!-- Fine Type -->
+            <!-- Fine Type Filter -->
             <div class="col-md-2">
                 <label class="form-label small text-muted">Fine Type</label>
                 <select id="filterFineType" name="fineType" class="form-select form-select-sm">
                     <option value="">All Types</option>
-                    <option value="event" selected="@("event".Equals(ViewData["FineTypeFilter"]))">Event Fines</option>
-                    <option value="manual" selected="@("manual".Equals(ViewData["FineTypeFilter"]))">Manual Fines</option>
+                    <option value="event" selected="@("event".Equals(ViewData["FineTypeFilter"]))">Event</option>
+                    <option value="manual" selected="@("manual".Equals(ViewData["FineTypeFilter"]))">Manual</option>
                 </select>
             </div>
 
             <!-- Dynamic Event Filter -->
-            <div class="col-md-3" id="eventFilterContainer" style="display:none;">
+            <div class="col-md-2" id="eventFilterContainer" style="display:none;">
                 <label class="form-label small text-muted">Event</label>
                 <select id="filterEvent" name="eventId" class="form-select form-select-sm">
                     <option value="">All Events</option>
@@ -220,7 +212,7 @@
             </div>
 
             <!-- Dynamic Reason Filter -->
-            <div class="col-md-3" id="reasonFilterContainer" style="display:none;">
+            <div class="col-md-2" id="reasonFilterContainer" style="display:none;">
                 <label class="form-label small text-muted">Fine Reason</label>
                 <select id="filterReason" name="manualFineReason" class="form-select form-select-sm">
                     <option value="">All Reasons</option>
@@ -231,7 +223,7 @@
                 </select>
             </div>
 
-            <!-- Status -->
+            <!-- Status Filter -->
             <div class="col-md-2">
                 <label class="form-label small text-muted">Status</label>
                 <select id="filterStatus" name="statusFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "Unpaid", "Paid", "Waived" }, (string)ViewData["StatusFilter"]))">
@@ -239,15 +231,27 @@
                 </select>
             </div>
 
-            <!-- Program -->
+            <!-- Program Filter -->
             <div class="col-md-2">
                 <label class="form-label small text-muted">Program</label>
                 <select id="filterProgram" name="programFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "BSIT", "DIT" }, (string)ViewData["ProgramFilter"]))">
                     <option value="">All Programs</option>
                 </select>
             </div>
+
+            <!-- Year Level Filter -->
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Year Level</label>
+                <select id="filterYearLevel" name="yearLevelFilter" class="form-select form-select-sm">
+                    <option value="">All Years</option>
+                    <option value="1" selected="@("1".Equals(ViewData["YearLevelFilter"]))">1st Year</option>
+                    <option value="2" selected="@("2".Equals(ViewData["YearLevelFilter"]))">2nd Year</option>
+                    <option value="3" selected="@("3".Equals(ViewData["YearLevelFilter"]))">3rd Year</option>
+                    <option value="4" selected="@("4".Equals(ViewData["YearLevelFilter"]))">4th Year</option>
+                </select>
+            </div>
         </div>
-        <button type="submit" class="btn btn-gold btn-sm mt-3"><i class="bi bi-search me-1"></i> Apply Filters</button>
+        <!-- Form auto-submits on filter change via JavaScript -->
     </form>
 </div>
 
@@ -272,11 +276,10 @@
                     <th class="text-center" style="width: 50px;"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i></th>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
-                    <th>SECTION</th>
+                    <th>PROGRAM</th>
+                    <th>YEAR LEVEL</th>
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
-                    <th>PAID</th>
-                    <th>BALANCE</th>
                     <th>STATUS</th>
                     <th class="text-center" style="width: 60px;">ACTIONS</th>
                 </tr>
@@ -295,13 +298,24 @@
                     var statusClass = isPaid ? "row-paid" : (isExcused ? "row-excused" : "");
                     var checkboxClass = isPaid ? "status-paid" : (isExcused ? "status-excused" : "status-unpaid");
 
+                    // Extract year level from section (e.g., "1-1" -> "1")
+                    var yearLevel = student?.YearLevelSection?.Split('-').FirstOrDefault() ?? "";
+
+                    // Extract program from section (e.g., "1A" -> "BSIT", "1D" -> "DIT")
+                    var sectionLetter = student?.YearLevelSection?.Length > 1 ? student.YearLevelSection.Substring(1, 1) : "";
+                    var program = (sectionLetter == "D" || sectionLetter == "E" || sectionLetter == "F") ? "DIT" : "BSIT";
+
                     <tr class="fine-row @statusClass"
                         data-fine-id="@fine.FineId"
                         data-student="@student?.FullName?.ToLower()"
                         data-studentnum="@student?.StudentNum?.ToLower()"
                         data-status="@paymentStatus.ToLower()"
                         data-section="@student?.YearLevelSection"
+                        data-yearlevel="@yearLevel"
+                        data-program="@program"
                         data-finetype="@(isEventFine ? "event" : "manual")"
+                        data-event="@(eventRecord?.EventId ?? 0)"
+                        data-reason="@description.ToLower()"
                         data-amount="@(fine.Amount ?? 0)"
                         data-paid="@fine.AmountPaid"
                         data-balance="@remainingBalance">
@@ -325,7 +339,8 @@
                                 <span class="text-danger">Unknown Student</span>
                             }
                         </td>
-                        <td><span class="badge bg-secondary">@(student?.YearLevelSection ?? "-")</span></td>
+                        <td><span>@program</span></td>
+                        <td><span>@yearLevel</span></td>
                         <td>
                             @if (!isEventFine)
                             {
@@ -337,9 +352,7 @@
                             }
                         </td>
                         <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-                        <td class="amount-paid" style="color: #10b981; font-weight: 600;">₱@fine.AmountPaid.ToString("N2")</td>
-                        <td class="balance" style="color: @(remainingBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₱@remainingBalance.ToString("N2")</td>
-                        
+
                         <!-- Status Badge (No Partial - Full Payment Only) -->
                         <td>
                             @if (isPaid)
@@ -355,7 +368,7 @@
                                 <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                             }
                         </td>
-                        
+
                         <!-- Actions Dropdown (Admin: No Payment Status Changes) -->
                         <td class="text-center">
                             @if (!isPaid && !isExcused)
@@ -388,10 +401,6 @@
         </table>
     </div>
 </div>
-
-<!-- REMOVED: Fine Payment/Revoke/Excuse Modals - Admin cannot change payment status -->
-<!-- Payment status changes are handled by Treasurers only -->
-<!-- Excused status is handled by Org Secretary only -->
 
 <!-- ================= MODALS ================= -->
 <!-- Create Fine Modal -->
@@ -542,10 +551,6 @@
     </div>
 </div>
 
-<!-- REMOVED: Mark as Paid, Waive Fine, and Adjust Fine Modals -->
-<!-- Admin cannot change payment status - handled by Treasurers only -->
-<!-- Excused status is handled by Org Secretary only -->
-
 <!-- Delete Fine Modal -->
 <div class="modal fade" id="deleteFineModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -575,8 +580,6 @@
     </div>
 </div>
 
-<!-- REMOVED: Record Fine Payment Modal - Admin cannot change payment status -->
-
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -587,9 +590,6 @@
             paid: @Html.Raw(Json.Serialize(ViewBag.PaidBreakdown ?? new { })),
             unpaid: @Html.Raw(Json.Serialize(ViewBag.UnpaidBreakdown ?? new { }))
         };
-
-        // REMOVED: Admin Fine Payment Modal functions - Admin cannot change payment status
-        // openWaiveModal and openAdjustModal removed - Admin cannot modify payment status
 
         // Modal Helper - Delete only (Admin can delete unpaid fines)
         function openDeleteModal(id, name, amount) {
@@ -603,68 +603,8 @@
         function exportFines() {
             window.location.href = '/Admin/ExportFinesToExcel';
         }
-
-        // ============================================================
-        // DYNAMIC FILTER TOGGLE
-        // ============================================================
-        $(document).ready(function () {
-            const fineTypeSelect = $('#filterFineType');
-            const eventContainer = $('#eventFilterContainer');
-            const reasonContainer = $('#reasonFilterContainer');
-
-            function toggleFilters() {
-                const selected = fineTypeSelect.val();
-                if (selected === 'event') {
-                    eventContainer.show();
-                    reasonContainer.hide();
-                } else if (selected === 'manual') {
-                    eventContainer.hide();
-                    reasonContainer.show();
-                } else {
-                    eventContainer.hide();
-                    reasonContainer.hide();
-                }
-            }
-
-            fineTypeSelect.on('change', toggleFilters);
-            toggleFilters();
-        });
-
-        // ============================================================
-        // REMOVED: CHECKBOX-BASED FINE PAYMENT SYSTEM
-        // Admin cannot change payment status - handled by Treasurers only
-        // Excused status is handled by Org Secretary only
-        // ============================================================
-
-        // Toast notification
-        function showToast(type, message) {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            let container = document.querySelector('.toast-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.className = 'toast-container position-fixed top-0 end-0 p-3';
-                container.style.zIndex = '9999';
-                document.body.appendChild(container);
-            }
-            
-            container.insertAdjacentHTML('beforeend', toastHtml);
-            const toast = container.lastElementChild;
-            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
-            bsToast.show();
-            toast.addEventListener('hidden.bs.toast', () => toast.remove());
-        }
-
     </script>
     <script src="~/js/fines.js" asp-append-version="true"></script>
 }
+
+
