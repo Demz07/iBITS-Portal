@@ -100,7 +100,7 @@
         <div class="col-md-4">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
@@ -130,7 +130,7 @@
         <div class="col-md-4">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(251, 191, 36, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
@@ -289,6 +289,8 @@
                     </th>
                     <th>Ref ID</th>
                     <th>Student Name</th>
+                    <th>Program</th>
+                    <th>Year Level</th>
                     <th>Description</th>
                     <th>Amount</th>
                     <th>Status</th>
@@ -376,6 +378,8 @@
                                     <span class="text-danger">ID: @fee.StudentNum</span>
                                 }
                             </td>
+                            <td>@program</td>
+                            <td class="text-center">@yearLevel</td>
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
 
@@ -413,7 +417,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>

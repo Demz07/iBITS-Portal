@@ -20,7 +20,7 @@
     var pendingRemittanceAmount = allFees.Where(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted).Sum(f => f.Amount ?? 0);
 }
 
-
+<link rel="stylesheet" href="~/css/fines.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
 
 @section Styles {

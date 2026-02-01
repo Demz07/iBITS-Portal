@@ -99,7 +99,7 @@
         <div class="col-md-4">
             <div class="summary-card total">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
@@ -129,7 +129,7 @@
         <div class="col-md-4">
             <div class="summary-card pending">
                 <div class="d-flex align-items-center">
-                    <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #F97316; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div class="card-icon me-3" style="background: rgba(249, 115, 22, 0.15); color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
@@ -304,6 +304,8 @@
                     </th>
                     <th>REF ID</th>
                     <th>STUDENT NAME</th>
+                    <th>PROGRAM</th>
+                    <th>YEAR</th>
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
@@ -311,142 +313,152 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var fine in Model)
+                @if (Model != null && Model.Any())
                 {
-                    var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
-                    var eventRecord = fine.Attendance?.Event;
-                    var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
-                    var dbStatus = fine.FinesStatus; // Use FinesStatus field
-                    var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
-                    var isPendingRemittance = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
-                    var isEventFine = fine.AttendanceId != null;
-                    var isExcused = dbStatus?.ToUpper() == "EXCUSED";
-                    var isPaidByClassTreasurer = dbStatus?.ToUpper() == "PAID" && !isRemitted;
-
-                    // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
-                    // Exception: Excused fines show as Excused immediately.
-                    var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
-
-                    // Visual Data
-                    var displayAmountPaid = isOfficiallyPaid ? (fine.Amount ?? 0) : 0;
-                    var displayBalance = isOfficiallyPaid ? 0 : (isExcused ? 0 : (fine.Amount ?? 0));
-                    var displayStatus = isOfficiallyPaid ? "Paid" : (isExcused ? "Excused" : "Unpaid");
-
-                    // Locking Logic - Can only edit if unpaid and not locked by class treasurer
-                    var isLocked = isPaidByClassTreasurer || isExcused || isOfficiallyPaid;
-                    var canEdit = !isLocked;
-
-                    var statusClass = isOfficiallyPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
-
-                    // Extract year level from YearLevelSection (e.g., "BSIT 3-1" -> "3")
-                    var yearLevel = "";
-                    if (!string.IsNullOrEmpty(student?.YearLevelSection))
+                    foreach (var fine in Model)
                     {
-                        var match = System.Text.RegularExpressions.Regex.Match(student.YearLevelSection, @"\d+");
-                        if (match.Success) yearLevel = match.Value;
-                    }
+                        var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
+                        var eventRecord = fine.Attendance?.Event;
+                        var description = !string.IsNullOrEmpty(fine.Description) ? fine.Description : (eventRecord?.EventName ?? "Unknown");
+                        var dbStatus = fine.FinesStatus; // Use FinesStatus field
+                        var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
+                        var isPendingRemittance = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
+                        var isEventFine = fine.AttendanceId != null;
+                        var isExcused = dbStatus?.ToUpper() == "EXCUSED";
+                        var isPaidByClassTreasurer = dbStatus?.ToUpper() == "PAID" && !isRemitted;
 
-                    <tr class="fine-row @statusClass"
-                        data-fine-id="@fine.FineId"
-                        data-student="@student?.FullName?.ToLower()"
-                        data-studentnum="@student?.StudentNum?.ToLower()"
-                        data-status="@displayStatus.ToLower()"
-                        data-section="@student?.YearLevelSection"
-                        data-program="@student?.Course"
-                        data-year="@yearLevel"
-                        data-finetype="@(isEventFine ? "event" : "manual")"
-                        data-event="@(eventRecord?.EventName?.ToLower() ?? "")"
-                        data-description="@(description?.ToLower() ?? "")"
-                        data-amount="@(fine.Amount ?? 0)"
-                        data-paid="@displayAmountPaid"
-                        data-balance="@displayBalance"
-                        data-is-locked="@isLocked.ToString().ToLower()">
+                        // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
+                        // Exception: Excused fines show as Excused immediately.
+                        var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
 
-                        <!-- Checkbox Column -->
-                        <td class="text-center">
-                            @if (!isLocked)
-                            {
-                                <input type="checkbox" class="form-check-input fine-checkbox" data-fine-id="@fine.FineId">
-                            }
-                            else
-                            {
-                                @if (isPaidByClassTreasurer)
+                        // Visual Data
+                        var displayAmountPaid = isOfficiallyPaid ? (fine.Amount ?? 0) : 0;
+                        var displayBalance = isOfficiallyPaid ? 0 : (isExcused ? 0 : (fine.Amount ?? 0));
+                        var displayStatus = isOfficiallyPaid ? "Paid" : (isExcused ? "Excused" : "Unpaid");
+
+                        // Locking Logic - Can only edit if unpaid and not locked by class treasurer
+                        var isLocked = isPaidByClassTreasurer || isExcused || isOfficiallyPaid;
+                        var canEdit = !isLocked;
+
+                        var statusClass = isOfficiallyPaid ? "row-paid" : (isExcused ? "row-excused" : (isLocked ? "row-locked" : ""));
+
+                        // Extract year level and program
+                        var yearLevel = "";
+                        var program = student?.Course ?? "N/A";
+                        if (!string.IsNullOrEmpty(student?.YearLevelSection))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(student.YearLevelSection, @"\d+");
+                            if (match.Success) yearLevel = match.Value;
+                        }
+
+                        <tr class="fine-row @statusClass"
+                            data-fine-id="@fine.FineId"
+                            data-student="@student?.FullName?.ToLower()"
+                            data-studentnum="@student?.StudentNum?.ToLower()"
+                            data-status="@displayStatus.ToLower()"
+                            data-section="@student?.YearLevelSection"
+                            data-program="@program"
+                            data-year="@yearLevel"
+                            data-finetype="@(isEventFine ? "event" : "manual")"
+                            data-event="@(eventRecord?.EventName?.ToLower() ?? "")"
+                            data-description="@(description?.ToLower() ?? "")"
+                            data-amount="@(fine.Amount ?? 0)"
+                            data-paid="@displayAmountPaid"
+                            data-balance="@displayBalance"
+                            data-is-locked="@isLocked.ToString().ToLower()">
+
+                            <!-- Checkbox Column -->
+                            <td class="text-center">
+                                @if (!isLocked)
                                 {
-                                    <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                    <input type="checkbox" class="form-check-input fine-checkbox" data-fine-id="@fine.FineId">
                                 }
-                                else if (isOfficiallyPaid)
+                                else
                                 {
-                                    <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
+                                    @if (isPaidByClassTreasurer)
+                                    {
+                                        <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                    }
+                                    else if (isOfficiallyPaid)
+                                    {
+                                        <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
+                                    }
+                                    else if (isExcused)
+                                    {
+                                        <i class="bi bi-shield-check text-info" title="Excused"></i>
+                                    }
+                                }
+                            </td>
+
+                            <td class="font-monospace text-muted">#@fine.FineId</td>
+                            <td>
+                                @if (student != null)
+                                {
+                                    <div style="color: var(--text-strong); font-weight: 600;">@student.FullName</div>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">@student.StudentNum</div>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">Unknown Student</span>
+                                }
+                            </td>
+                            <td>@program</td>
+                            <td class="text-center">@yearLevel</td>
+                            <td>
+                                @if (!isEventFine)
+                                {
+                                    <span class="text-gold"><i class="bi bi-pencil-fill me-1" style="font-size: 0.7rem;"></i> @description</span>
+                                }
+                                else
+                                {
+                                    <span>@description</span>
+                                }
+                            </td>
+                            <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
+
+                            <!-- Status Badge -->
+                            <td>
+                                @if (isOfficiallyPaid)
+                                {
+                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
                                 }
                                 else if (isExcused)
                                 {
-                                    <i class="bi bi-shield-check text-info" title="Excused"></i>
+                                    <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
                                 }
-                            }
-                        </td>
+                                else
+                                {
+                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
+                                }
+                            </td>
 
-                        <td class="font-monospace text-muted">#@fine.FineId</td>
-                        <td>
-                            @if (student != null)
-                            {
-                                <div style="color: var(--text-strong); font-weight: 600;">@student.FullName</div>
-                                <div class="small text-muted" style="font-size: 0.75rem;">@student.StudentNum</div>
-                            }
-                            else
-                            {
-                                <span class="text-danger">Unknown Student</span>
-                            }
-                        </td>
-                        <td>
-                            @if (!isEventFine)
-                            {
-                                <span class="text-gold"><i class="bi bi-pencil-fill me-1" style="font-size: 0.7rem;"></i> @description</span>
-                            }
-                            else
-                            {
-                                <span>@description</span>
-                            }
-                        </td>
-                        <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
-
-                        <!-- Status Badge -->
-                        <td>
-                            @if (isOfficiallyPaid)
-                            {
-                                <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
-                            }
-                            else if (isExcused)
-                            {
-                                <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
-                            }
-                            else
-                            {
-                                <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
-                            }
-                        </td>
-
-                        <!-- Actions -->
-                        <td class="text-center">
-                            @if (canEdit)
-                            {
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="markOrgFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as Paid (Full Payment)">
-                                    <i class="bi bi-check-circle"></i>
-                                </button>
-                            }
-                            else if (isPaidByClassTreasurer)
-                            {
-                                <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
-                            }
-                            else if (isOfficiallyPaid)
-                            {
-                                <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
-                            }
-                            else if (isExcused)
-                            {
-                                <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
-                            }
-                        </td>
-                    </tr>
+                            <!-- Actions -->
+                            <td class="text-center">
+                                @if (canEdit)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="markOrgFinePaid(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Mark as Paid (Full Payment)">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                }
+                                else if (isPaidByClassTreasurer)
+                                {
+                                    <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
+                                }
+                                else if (isOfficiallyPaid)
+                                {
+                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
+                                }
+                                else if (isExcused)
+                                {
+                                    <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fine records found.</td></tr>
                 }
             </tbody>
         </table>
