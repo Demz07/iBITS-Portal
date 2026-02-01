@@ -525,6 +525,8 @@
                                     </th>
                                     <th style="width: 40px; color: var(--gold-primary);">#</th>
                                     <th style="color: var(--gold-primary);">Student</th>
+                                    <th style="color: var(--gold-primary);">Program</th>
+                                    <th style="color: var(--gold-primary);">Year & Section</th>
                                     <th style="color: var(--gold-primary);">Amount</th>
                                     <th style="color: var(--gold-primary);">Payment Status</th>
                                     <th style="color: var(--gold-primary);">Remittance</th>
@@ -569,6 +571,12 @@
                                         <td>
                                             <div class="text-white fw-semibold">@(student?.FullName ?? "Unknown")</div>
                                             <small class="text-muted">@(student?.StudentNum ?? fine.StudentNum)</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-size: 0.75rem;">@(student?.Course ?? "N/A")</span>
+                                        </td>
+                                        <td>
+                                            <span class="text-white">@(student?.YearLevelSection ?? "N/A")</span>
                                         </td>
                                         <td class="fw-bold" style="color: var(--gold-primary);">₱@((fine.Amount ?? 0).ToString("N2"))</td>
                                         <td>

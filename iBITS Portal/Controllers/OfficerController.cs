@@ -544,9 +544,10 @@ namespace iBITS_Portal.Controllers
                 // Security check for Class Treasurer
                 if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
                 {
-                    if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                    if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection ||
+                        fine.StudentNumNavigation?.Course != treasurer.Course)
                     {
-                        TempData["Error"] = "Unauthorized: Student belongs to a different section.";
+                        TempData["Error"] = "Unauthorized: Student belongs to a different section or program.";
                         return RedirectToAction("Payments");
                     }
 
@@ -1908,10 +1909,11 @@ namespace iBITS_Portal.Controllers
                     return RedirectToAction("ClassFees");
                 }
 
-                // Verify the fee belongs to a student in the treasurer's section
-                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                // Verify the fee belongs to a student in the treasurer's section AND program
+                if (fee.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection ||
+                    fee.StudentNumNavigation?.Course != treasurer.Course)
                 {
-                    TempData["Error"] = "You can only process payments for students in your section.";
+                    TempData["Error"] = "You can only process payments for students in your section and program.";
                     return RedirectToAction("ClassFees");
                 }
 
@@ -2015,10 +2017,11 @@ namespace iBITS_Portal.Controllers
                     return RedirectToAction("ClassFines");
                 }
 
-                // Verify the fine belongs to a student in the treasurer's section
-                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                // Verify the fine belongs to a student in the treasurer's section AND program
+                if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection ||
+                    fine.StudentNumNavigation?.Course != treasurer.Course)
                 {
-                    TempData["Error"] = "You can only process payments for students in your section.";
+                    TempData["Error"] = "You can only process payments for students in your section and program.";
                     return RedirectToAction("ClassFines");
                 }
 
@@ -2670,10 +2673,17 @@ namespace iBITS_Portal.Controllers
             }
 
             var section = treasurer.YearLevelSection;
+            var program = treasurer.Course;
 
+            // ============================================================
+            // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
+            // This ensures Class Treasurers can ONLY see fees from their exact classmates
+            // (same program, year, and section)
+            // ============================================================
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section 
+                         && f.StudentNumNavigation.Course == program)
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
@@ -2737,12 +2747,15 @@ namespace iBITS_Portal.Controllers
             }
 
             var section = treasurer.YearLevelSection;
+            var program = treasurer.Course;
 
             // ============================================================
-            // FIX: This robust query checks for a matching section via TWO paths:
-            // 1. The direct link: Fine -> Student -> Section (for all new/fixed fines)
-            // 2. The indirect link: Fine -> Attendance -> Student -> Section (as a fallback)
-            // This ensures all relevant fines for the section are displayed.
+            // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
+            // This robust query checks for a matching section via TWO paths:
+            // 1. The direct link: Fine -> Student -> Section AND Course (for all new/fixed fines)
+            // 2. The indirect link: Fine -> Attendance -> Student -> Section AND Course (as a fallback)
+            // This ensures Class Treasurers can ONLY see fines from their exact classmates
+            // (same program, year, and section)
             // ============================================================
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
@@ -2751,8 +2764,8 @@ namespace iBITS_Portal.Controllers
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
                 .Where(f =>
-                    (f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
-                    (f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)
+                    (f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section && f.StudentNumNavigation.Course == program) ||
+                    (f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section && f.Attendance.StudentNumNavigation.Course == program)
                 )
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
@@ -3193,9 +3206,10 @@ namespace iBITS_Portal.Controllers
                 bool isOrgTreasurer = User.IsInRole("Org Treasurer");
                 if (!isOrgTreasurer && User.IsInRole("Class Treasurer"))
                 {
-                    if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection)
+                    if (fine.StudentNumNavigation?.YearLevelSection != treasurer.YearLevelSection ||
+                        fine.StudentNumNavigation?.Course != treasurer.Course)
                     {
-                        return Json(new { success = false, message = "Unauthorized: Student belongs to a different section." });
+                        return Json(new { success = false, message = "Unauthorized: Student belongs to a different section or program." });
                     }
                 }
 
