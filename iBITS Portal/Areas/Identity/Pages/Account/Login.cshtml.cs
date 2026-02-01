@@ -115,9 +115,28 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("User logged in.");
 
-                    // 3. Admin Redirect Check
+                    // 3. Role-based Access Control
                     var currentUser = await _userManager.FindByNameAsync(userName);
-                    if (currentUser != null && await _userManager.IsInRoleAsync(currentUser, "Admin"))
+                    bool isAdmin = currentUser != null && await _userManager.IsInRoleAsync(currentUser, "Admin");
+                    
+                    // Check if user type matches the login route
+                    if (UserType == "Admin" && !isAdmin)
+                    {
+                        // Non-admin trying to access Admin Console
+                        await _signInManager.SignOutAsync();
+                        ModelState.AddModelError(string.Empty, "Access Denied: This login is for Administrators only.");
+                        return Page();
+                    }
+                    else if (UserType == "Member" && isAdmin)
+                    {
+                        // Admin trying to access Member portal
+                        await _signInManager.SignOutAsync();
+                        ModelState.AddModelError(string.Empty, "Access Denied: Administrators must use the Admin Console login.");
+                        return Page();
+                    }
+                    
+                    // Redirect to appropriate dashboard
+                    if (isAdmin)
                     {
                         return RedirectToAction("Index", "Admin");
                     }
