@@ -1254,16 +1254,19 @@ namespace iBITS_Portal.Controllers
             }
 
             var section = treasurer.YearLevelSection;
+            var program = treasurer.Course;
 
-            // Get fees and fines for the section
+            // Get fees and fines for the section AND program (strict filtering)
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section 
+                         && f.StudentNumNavigation.Course == program)
                 .ToListAsync();
 
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section)
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section
+                         && f.StudentNumNavigation.Course == program)
                 .ToListAsync();
 
             // Get paid fees and fines
@@ -1296,8 +1299,9 @@ namespace iBITS_Portal.Controllers
             ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
             
             ViewBag.Section = section;
+            ViewBag.Program = program;
 
-            ViewData["TreasuryTitle"] = $"Section {section} Treasury";
+            ViewData["TreasuryTitle"] = $"{section} Treasury";
 
             return View(fees);
         }
@@ -2708,6 +2712,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.TotalPending = totalPending;
             ViewBag.CollectionRate = collectionRate;
             ViewBag.Section = section;
+            ViewBag.Program = program;
 
             // Get unique fee names for filter dropdown
             ViewBag.FeeNames = fees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
@@ -2791,6 +2796,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.TotalPending = totalPending;
             ViewBag.CollectionRate = collectionRate;
             ViewBag.Section = section;
+            ViewBag.Program = program;
 
             // Get events for filter
             ViewBag.Events = await _context.Events.OrderByDescending(e => e.EventDate).ToListAsync();

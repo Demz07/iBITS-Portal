@@ -3,10 +3,11 @@
 @model IEnumerable<iBITS_Portal.Models.Fee>
 @using iBITS_Portal.Models
 @{
-    ViewData["Title"] = $"Section {ViewBag.Section} Fees Management";
+    ViewData["Title"] = $"{ViewBag.Section} Fees Management";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
 
     var sectionName = ViewBag.Section as string ?? "N/A";
+    var programName = ViewBag.Program as string ?? "N/A";
     var allFees = Model?.ToList() ?? new List<iBITS_Portal.Models.Fee>();
     var totalExp = ViewBag.TotalExpected ?? 0m;
     var totalCol = ViewBag.TotalCollected ?? 0m;
@@ -225,10 +226,10 @@
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin:0;">
-            <i class="bi bi-cash-stack me-2"></i> Section Fees Management
+            <i class="bi bi-cash-stack me-2"></i> Class Fees Management
             <span class="section-badge ms-2">@sectionName</span>
         </h3>
-        <p class="text-muted small mb-0">Collect FULL payments from your section classmates (No partial payments)</p>
+        <p class="text-muted small mb-0">Collect FULL payments from your classmates in @programName - @sectionName (No partial payments)</p>
     </div>
     <div>
         <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
@@ -289,7 +290,7 @@
 <!-- FINANCIAL OVERVIEW -->
 <div class="glass-panel p-4 mb-4">
     <h5 style="color: var(--text-strong); font-weight: 700; margin-bottom: 1.5rem;">
-        <i class="bi bi-graph-up me-2"></i> Section @sectionName - Financial Overview
+        <i class="bi bi-graph-up me-2"></i> @sectionName Financial Overview
     </h5>
 
     <!-- Summary Cards -->
@@ -420,7 +421,7 @@
 <div class="glass-panel p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">
-            <i class="bi bi-list-check me-2"></i> Fee Records - Section @sectionName
+            <i class="bi bi-list-check me-2"></i> Fee Records - @sectionName
         </h5>
         <div>
             <a asp-action="ExportClassFees" class="btn-gold-outline btn-sm">
