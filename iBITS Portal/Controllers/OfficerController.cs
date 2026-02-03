@@ -119,13 +119,7 @@ namespace iBITS_Portal.Controllers
             {
                 var user = await _userManager.GetUserAsync(User);
                 var secretary = await _context.Students.FindAsync(user.UserName);
-                
-                // Display full Program + Year + Section (e.g., "BSIT 3-A" instead of just "3-1")
-                if (secretary != null)
-                {
-                    string fullSection = GetFullSectionDisplay(secretary.Course, secretary.YearLevelSection);
-                    ViewBag.SecretarySection = fullSection;
-                }
+                ViewBag.SecretarySection = secretary?.YearLevelSection;
             }
 
             return View(events);
@@ -1304,7 +1298,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.PendingFees = fees.Where(f => f.FeeStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
             ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
             
-            ViewBag.Section = GetFullSectionDisplay(program, section);
+            ViewBag.Section = section;
             ViewBag.Program = program;
 
             ViewData["TreasuryTitle"] = $"{section} Treasury";
@@ -2366,8 +2360,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var section = treasurer.YearLevelSection;
-            var program = treasurer.Course;
-            ViewBag.Section = GetFullSectionDisplay(program, section);
+            ViewBag.Section = section;
             ViewBag.Type = type ?? "fees"; // Default to fees
 
             if (type == "fines")
@@ -2447,8 +2440,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var section = treasurer.YearLevelSection;
-            var program = treasurer.Course;
-            ViewBag.Section = GetFullSectionDisplay(program, section);
+            ViewBag.Section = section;
             ViewBag.FeeName = feeName;
             ViewBag.TreasurerName = treasurer.FullName;
             ViewBag.Type = type ?? "fee";
@@ -2719,7 +2711,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.TotalCollected = totalCollected;
             ViewBag.TotalPending = totalPending;
             ViewBag.CollectionRate = collectionRate;
-            ViewBag.Section = GetFullSectionDisplay(program, section);
+            ViewBag.Section = section;
             ViewBag.Program = program;
 
             // Get unique fee names for filter dropdown
@@ -2803,7 +2795,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.TotalCollected = totalCollected;
             ViewBag.TotalPending = totalPending;
             ViewBag.CollectionRate = collectionRate;
-            ViewBag.Section = GetFullSectionDisplay(program, section);
+            ViewBag.Section = section;
             ViewBag.Program = program;
 
             // Get events for filter
@@ -3551,7 +3543,7 @@ namespace iBITS_Portal.Controllers
                 .OrderByDescending(r => r.SubmittedDate)
                 .ToListAsync();
 
-            ViewBag.Section = GetFullSectionDisplay(treasurer.Course, treasurer.YearLevelSection);
+            ViewBag.Section = treasurer.YearLevelSection;
 
             return View(remittances);
         }
@@ -4586,44 +4578,6 @@ namespace iBITS_Portal.Controllers
         }
 
         #endregion
-
-        // ============================================================
-        // HELPER METHODS
-        // ============================================================
-        
-        /// <summary>
-        /// Gets full section display for Class Secretary/Treasurer.
-        /// Returns: "BSIT 3-A", "DIT 2-B", etc. instead of just "3-1"
-        /// </summary>
-        private string GetFullSectionDisplay(string course, string yearLevelSection)
-        {
-            if (string.IsNullOrWhiteSpace(course) || string.IsNullOrWhiteSpace(yearLevelSection))
-                return yearLevelSection ?? "Unknown Section";
-
-            // Extract program from course
-            string program = "BSIT"; // default
-            if (!string.IsNullOrWhiteSpace(course))
-            {
-                var courseUpper = course.ToUpper();
-                if (courseUpper.Contains("BSIT")) program = "BSIT";
-                else if (courseUpper.Contains("DIT")) program = "DIT";
-                else if (courseUpper.Contains("BSCS")) program = "BSCS";
-                else if (courseUpper.Contains("ACT")) program = "ACT";
-                else
-                {
-                    // Extract first word as program
-                    var parts = course.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 0) program = parts[0].ToUpper();
-                }
-            }
-
-            // Clean up YearLevelSection (remove program prefix if already there)
-            string cleanSection = yearLevelSection.Trim().ToUpper();
-            cleanSection = cleanSection.Replace("BSIT", "").Replace("DIT", "").Replace("BSCS", "").Replace("ACT", "").Trim();
-
-            // Return formatted: "BSIT 3-A"
-            return $"{program} {cleanSection}";
-        }
 
     }
 

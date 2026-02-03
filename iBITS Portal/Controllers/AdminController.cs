@@ -3826,52 +3826,27 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction(returnAction);
             }
 
-            // =========================================================
-            // ENHANCED VALIDATION: Role Uniqueness Constraints
-            // =========================================================
-            
-            // Org-level roles: Only 1 per entire organization
-            if (newRole == "Org Secretary" || newRole == "Org Treasurer")
-            {
-                var usersInRole = await _userManager.GetUsersInRoleAsync(newRole);
-                var existingOfficer = usersInRole.FirstOrDefault(u => u.UserName != studentNum);
-                
-                if (existingOfficer != null)
-                {
-                    var existingStudent = await _context.Students.AsNoTracking()
-                        .FirstOrDefaultAsync(s => s.StudentNum == existingOfficer.UserName);
-                    
-                    TempData["Error"] = $"Action Denied: There can only be ONE {newRole} for the entire organization. " +
-                        $"Current {newRole}: {existingStudent?.StudentFn} {existingStudent?.StudentLn} ({existingOfficer.UserName})";
-                    return RedirectToAction(returnAction);
-                }
-            }
-            
-            // Class-level roles: Only 1 per Program + Year + Section
+            // UPDATED VALIDATION: Only 1 Class Secretary & 1 Class Treasurer per section
+            // Handles both "3-1" and "BSIT 3-1" formats
             if (newRole == "Class Secretary" || newRole == "Class Treasurer")
             {
-                if (!string.IsNullOrEmpty(student.YearLevelSection) && !string.IsNullOrEmpty(student.Course))
+                if (!string.IsNullOrEmpty(student.YearLevelSection))
                 {
-                    // Extract full section identifier: Program + Year + Section (e.g., "BSIT-3-A")
-                    var studentSectionKey = GetProgramYearSection(student.Course, student.YearLevelSection);
+                    // Extract year-section pattern (e.g., "3-1" from "BSIT 3-1" or "3-1")
+                    var studentSection = ExtractYearSection(student.YearLevelSection);
 
                     var usersInRole = await _userManager.GetUsersInRoleAsync(newRole);
                     foreach (var u in usersInRole)
                     {
                         if (u.UserName == studentNum) continue;
-                        
-                        var otherStudent = await _context.Students.AsNoTracking()
-                            .FirstOrDefaultAsync(s => s.StudentNum == u.UserName);
-                        
-                        if (otherStudent != null && !string.IsNullOrEmpty(otherStudent.YearLevelSection) 
-                            && !string.IsNullOrEmpty(otherStudent.Course))
+                        var otherStudent = await _context.Students.AsNoTracking().FirstOrDefaultAsync(s => s.StudentNum == u.UserName);
+                        if (otherStudent != null && !string.IsNullOrEmpty(otherStudent.YearLevelSection))
                         {
-                            var otherSectionKey = GetProgramYearSection(otherStudent.Course, otherStudent.YearLevelSection);
-                            
-                            if (otherSectionKey == studentSectionKey)
+                            // Compare extracted sections (e.g., "3-1" vs "3-1" even if one is "BSIT 3-1")
+                            var otherSection = ExtractYearSection(otherStudent.YearLevelSection);
+                            if (otherSection == studentSection)
                             {
-                                TempData["Error"] = $"Action Denied: {studentSectionKey} already has a {newRole} " +
-                                    $"({otherStudent.StudentFn} {otherStudent.StudentLn}).";
+                                TempData["Error"] = $"Action Denied: Section {studentSection} already has a {newRole} ({otherStudent.StudentFn} {otherStudent.StudentLn}).";
                                 return RedirectToAction(returnAction);
                             }
                         }
@@ -5024,30 +4999,6 @@ namespace iBITS_Portal.Controllers
             }
 
             return RedirectToAction(nameof(Fines));
-        }
-
-        // =========================================================
-        // HELPER METHODS FOR ROLE MANAGEMENT
-        // =========================================================
-        
-        /// <summary>
-        /// Extracts Program + Year + Section identifier for class officer uniqueness validation.
-        /// Examples: "BSIT-3-A", "DIT-2-B"
-        /// </summary>
-        private string GetProgramYearSection(string course, string yearLevelSection)
-        {
-            if (string.IsNullOrWhiteSpace(course) || string.IsNullOrWhiteSpace(yearLevelSection))
-                return string.Empty;
-
-            // Extract program (BSIT, DIT, etc.)
-            string program = course.ToUpper().Contains("BSIT") ? "BSIT" :
-                           course.ToUpper().Contains("DIT") ? "DIT" :
-                           course.Split(' ')[0].ToUpper();
-
-            // Extract year and section from YearLevelSection
-            var yearSection = ExtractYearSection(yearLevelSection);
-            
-            return $"{program}-{yearSection}";
         }
 
     }
