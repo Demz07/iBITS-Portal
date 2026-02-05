@@ -1,0 +1,1001 @@
+# 📋 iBITS Portal - Complete Implementation Plan
+**Semester System & Time-In/Time-Out Features**
+
+## 🎯 IMPLEMENTATION OVERVIEW
+Complete integration of semester filtering, time-based attendance tracking, QR scanning enhancements, and financial semester awareness across all iBITS Portal features.
+
+---
+
+## ✅ PHASE 0: FOUNDATION (COMPLETED)
+### Database Schema ✅
+- AcademicYears, Semesters, StudentSemesters tables created
+- QRAuditLog table for comprehensive scan tracking  
+- TimeIn, TimeOut, DurationMinutes columns added to Attendance
+- SemesterId columns added to Event, Attendance, Fees, Fines
+- 132 students enrolled in current semester (2025-2026 1st Semester)
+
+### C# Models ✅
+- New entity models in SemesterModels.cs
+- Updated Attendance, Event, Student with new properties
+- PortaliBitsContext configured with all new relationships
+- All foreign key constraints properly established
+
+---
+
+## 🔄 PHASE 1: STUDENT RECORDS SEMESTER FILTERING
+
+### Files to Modify:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\AdminController.cs
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\StudentRecords.cshtml
+```
+
+### AdminController.cs Changes:
+```csharp
+// UPDATE StudentRecords method signature
+public async Task<IActionResult> StudentRecords(
+    string searchString,
+    string programFilter,
+    string yearFilter,
+    string sectionFilter,
+    string typeFilter,
+    string statusFilter,
+    string roleFilter,
+    string semesterFilter,  // NEW PARAMETER
+    string sortOrder,
+    int pageNumber = 1,
+    int pageSize = 10)
+{
+    // Add semester data to ViewBag
+    ViewBag.Semesters = await GetActiveSemesters();
+    ViewBag.SemesterFilter = semesterFilter;
+    
+    // Update filtering query
+    var query = GetFilteredStudentsQuery(
+        searchString, programFilter, yearFilter, sectionFilter,
+        typeFilter, statusFilter, roleFilter, semesterFilter);
+    
+    // Rest of existing logic...
+}
+
+// NEW METHOD: Semester filtering
+private IQueryable<Student> GetFilteredStudentsQuery(
+    string? searchString, string? programFilter, string? yearFilter,
+    string? sectionFilter, string? typeFilter, string? statusFilter,
+    string? roleFilter, string? semesterFilter)
+{
+    var studentsQuery = _context.Students
+        .Include(s => s.StudentSemesters)
+        .ThenInclude(ss => ss.Semester)
+        .Include(s => s.Officer)
+        .AsQueryable();
+    
+    // EXISTING FILTERS (keep all current logic)
+    if (!string.IsNullOrEmpty(searchString))
+        studentsQuery = studentsQuery.Where(s => 
+            s.StudentNum.Contains(searchString) ||
+            s.StudentFn.Contains(searchString) ||
+            s.StudentLn.Contains(searchString) ||
+            s.YearLevelSection.Contains(searchString));
+    
+    if (!string.IsNullOrEmpty(programFilter))
+        studentsQuery = studentsQuery.Where(s => s.Course == programFilter);
+    
+    // NEW: SEMESTER FILTER
+    if (!string.IsNullOrEmpty(semesterFilter))
+    {
+        studentsQuery = studentsQuery.Where(s => 
+            s.StudentSemesters.Any(ss => 
+                ss.Semester.SemesterName == semesterFilter && 
+                ss.IsActive));
+    }
+    
+    // ... other existing filters remain same
+    
+    return studentsQuery;
+}
+
+// NEW HELPER METHOD
+private async Task<List<Semester>> GetActiveSemesters()
+{
+    return await _context.Semesters
+        .Include(s => s.AcademicYear)
+        .Where(s => s.IsActive)
+        .OrderByDescending(s => s.StartDate)
+        .ToListAsync();
+}
+```
+
+### StudentRecords.cshtml Changes:
+```html
+<!-- ADD TO FILTER ROW (after existing filters) -->
+<div class="col-md-2 filter-item" data-filter="semester">
+    <label class="small text-muted mb-1 text-uppercase fw-bold">Semester</label>
+    <select name="semesterFilter" id="semesterFilter" class="form-select select2-enable auto-submit-filter">
+        <option value="">All Semesters</option>
+        @if (ViewBag.Semesters != null)
+        {
+            @foreach (var semester in ViewBag.Semesters)
+            {
+                <option value="@semester.SemesterName" selected="@(ViewBag.SemesterFilter?.ToString() == semester.SemesterName)">
+                    @semester.SemesterName (@semester.AcademicYear.YearName)
+                </option>
+            }
+        }
+    </select>
+</div>
+
+<!-- ADD TO STUDENT TABLE COLUMNS -->
+<th>
+    <a href="#" class="text-white text-decoration-none" onclick="sortTable('Semester')">
+        Semester <i class="bi bi-arrow-down-up ms-1" id="Semester-sort"></i>
+    </a>
+</th>
+
+<!-- ADD TO STUDENT TABLE BODY -->
+<td>
+    @if (student.StudentSemesters.Any(ss => ss.IsActive))
+    {
+        var currentSemester = student.StudentSemesters
+            .FirstOrDefault(ss => ss.IsActive)?.Semester;
+        if (currentSemester != null)
+        {
+            <span class="badge bg-info">
+                @currentSemester.SemesterName
+            </span>
+            <small class="text-muted">(@currentSemester.AcademicYear.YearName)</small>
+        }
+        else
+        {
+            <span class="badge bg-warning">Not Enrolled</span>
+        }
+    }
+    else
+    {
+        <span class="badge bg-danger">No Enrollment</span>
+    }
+</td>
+
+<!-- ADD TO EXPORT FORM -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <label class="form-label">Semester</label>
+        <select name="semesterFilter" id="exportSemesterFilter" class="form-select">
+            <option value="">All Semesters</option>
+            @if (ViewBag.Semesters != null)
+            {
+                @foreach (var semester in ViewBag.Semesters)
+                {
+                    <option value="@semester.SemesterName">@semester.SemesterName (@semester.AcademicYear.YearName)</option>
+                }
+            }
+        </select>
+    </div>
+</div>
+```
+
+---
+
+## 🔄 PHASE 2: EVENT SEMESTER INTEGRATION
+
+### Files to Modify:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\AdminController.cs
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\Events.cshtml
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\_EventCreationModal.cshtml
+```
+
+### AdminController.cs Changes:
+```csharp
+// UPDATE Events method
+public async Task<IActionResult> Events(
+    string semesterFilter,      // NEW PARAMETER
+    string eventTypeFilter,
+    string statusFilter,
+    int pageNumber = 1)
+{
+    // Add semester data to ViewBag
+    ViewBag.Semesters = await GetActiveSemesters();
+    ViewBag.SemesterFilter = semesterFilter;
+    ViewBag.CurrentSemester = await GetCurrentSemester();
+    
+    // UPDATE EVENT QUERY
+    var query = _context.Events
+        .Include(e => e.Semester)
+        .AsQueryable();
+    
+    if (!string.IsNullOrEmpty(semesterFilter))
+    {
+        query = query.Where(e => e.Semester.SemesterName == semesterFilter);
+    }
+    
+    // Rest of existing logic...
+}
+
+// NEW CURRENT SEMESTER HELPER
+private async Task<Semester> GetCurrentSemester()
+{
+    return await _context.Semesters
+        .FirstOrDefaultAsync(s => s.IsCurrent);
+}
+```
+
+### Event Views Changes:
+```html
+<!-- ADD TO CREATE EVENT MODAL -->
+<div class="mb-3">
+    <label class="form-label">Semester <span class="text-danger">*</span></label>
+    <select name="SemesterId" class="form-select" required>
+        <option value="">Select Semester</option>
+        @if (ViewBag.ActiveSemesters != null)
+        {
+            @foreach (var semester in ViewBag.ActiveSemesters)
+            {
+                <option value="@semester.SemesterId" selected="@(ViewBag.CurrentSemester?.SemesterId == semester.SemesterId)">
+                    @semester.SemesterName - @semester.AcademicYear.YearName
+                </option>
+            }
+        }
+    </select>
+</div>
+
+<!-- ADD TO EVENT TABLE -->
+<th>
+    <a href="#" class="text-white text-decoration-none" onclick="sortTable('Semester')">
+        Semester <i class="bi bi-arrow-down-up ms-1" id="Semester-sort"></i>
+    </a>
+</th>
+
+<td>
+    @if (event.Semester != null)
+    {
+        <span class="badge bg-primary">
+            @event.Semester.SemesterName
+        </span>
+        <small class="text-muted">(@event.Semester.AcademicYear.YearName)</small>
+    }
+    else
+    {
+        <span class="text-muted">Not Set</span>
+    }
+</td>
+```
+
+---
+
+## 🔄 PHASE 3: QR TIME-IN/TIME-OUT SCANNING
+
+### Files to Modify:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\OfficerController.cs
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Officer\Scanner.cshtml
+```
+
+### OfficerController.cs Changes:
+```csharp
+// NEW MODEL CLASSES
+public class TimeScanRequest
+{
+    public string ScannedData { get; set; }
+    public string ScanType { get; set; } // "TimeIn" or "TimeOut"
+    public string DeviceInfo { get; set; }
+    public string Location { get; set; }
+}
+
+// NEW TIME SCANNING ENDPOINTS
+[HttpPost]
+public async Task<JsonResult> ProcessTimeScan([FromBody] TimeScanRequest request)
+{
+    var studentNum = ExtractStudentFromQR(request.ScannedData);
+    var student = await _context.Students.FindAsync(studentNum);
+    var currentSemester = await GetCurrentSemester();
+    
+    if (student == null)
+        return Json(new { success = false, message = "Student not found" });
+    
+    // CHECK ENROLLMENT
+    var isEnrolled = await _context.StudentSemesters
+        .AnyAsync(ss => ss.StudentNum == studentNum && 
+                         ss.SemesterId == currentSemester.SemesterId && 
+                         ss.IsActive);
+    
+    if (!isEnrolled)
+        return Json(new { success = false, message = "Student not enrolled in current semester" });
+    
+    // CREATE AUDIT LOG
+    var auditLog = new QRAuditLog
+    {
+        StudentNum = studentNum,
+        QRCodeData = request.ScannedData,
+        ScanTime = DateTime.Now,
+        ScanType = request.ScanType, // "TimeIn" or "TimeOut"
+        ProcessingResult = "Success",
+        SemesterId = currentSemester.SemesterId,
+        ProcessedBy = User.Identity.Name,
+        IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+        Location = request.Location
+    };
+    
+    // HANDLE TIME-IN
+    if (request.ScanType == "TimeIn")
+    {
+        // Check for existing time-in today
+        var existingTimeIn = await _context.Attendances
+            .AnyAsync(a => a.StudentNum == studentNum && 
+                           a.TimeIn.HasValue && 
+                           a.TimeIn.Value.Date == DateTime.Today);
+        
+        if (existingTimeIn)
+            return Json(new { success = false, message = "Student already timed in today" });
+        
+        // CREATE ATTENDANCE RECORD
+        var attendance = new Attendance
+        {
+            StudentNum = studentNum,
+            TimeIn = DateTime.Now,
+            SemesterId = currentSemester.SemesterId,
+            AttendanceStatus = "Present",
+            ScanDevice = request.DeviceInfo
+        };
+        
+        _context.Attendances.Add(attendance);
+        auditLog.AttendanceId = attendance.AttendanceId;
+    }
+    
+    // HANDLE TIME-OUT
+    else if (request.ScanType == "TimeOut")
+    {
+        var attendance = await _context.Attendances
+            .FirstOrDefaultAsync(a => a.StudentNum == studentNum && 
+                                    a.TimeIn.HasValue && 
+                                    a.TimeOut.HasValue == false);
+        
+        if (attendance == null)
+            return Json(new { success = false, message = "No active time-in found" });
+        
+        // UPDATE ATTENDANCE RECORD
+        attendance.TimeOut = DateTime.Now;
+        attendance.DurationMinutes = (int)(DateTime.Now - attendance.TimeIn.Value).TotalMinutes;
+        attendance.ScanDevice = request.DeviceInfo;
+        
+        auditLog.AttendanceId = attendance.AttendanceId;
+    }
+    
+    _context.QRAuditLogs.Add(auditLog);
+    await _context.SaveChangesAsync();
+    
+    return Json(new { 
+        success = true, 
+        message = $"{request.ScanType} recorded successfully",
+        student = new {
+            studentNum = student.StudentNum,
+            name = $"{student.StudentFn} {student.StudentLn}",
+            timeIn = attendance?.TimeIn,
+            timeOut = attendance?.TimeOut,
+            duration = attendance?.DurationMinutes
+        }
+    });
+}
+
+// HELPER METHOD
+private string ExtractStudentFromQR(string qrData)
+{
+    // Existing QR format: "iBITS:StudentNum"
+    return qrData.Replace("iBITS:", "").Trim();
+}
+```
+
+### Scanner.cshtml Changes:
+```html
+<!-- UPDATE SCANNER VIEW -->
+<div class="scanner-container">
+    <!-- MODE SELECTION -->
+    <div class="scanner-modes mb-4">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary scanner-mode-btn active" data-mode="event">
+                <i class="bi bi-calendar-event"></i> Event Attendance
+            </button>
+            <button type="button" class="btn btn-success scanner-mode-btn" data-mode="timein">
+                <i class="bi bi-box-arrow-in-right"></i> Time-In
+            </button>
+            <button type="button" class="btn btn-warning scanner-mode-btn" data-mode="timeout">
+                <i class="bi bi-box-arrow-right"></i> Time-Out
+            </button>
+            <button type="button" class="btn btn-info scanner-mode-btn" data-mode="verifier">
+                <i class="bi bi-shield-check"></i> Verify Status
+            </button>
+        </div>
+    </div>
+    
+    <!-- MODE INFORMATION PANELS -->
+    <div id="timeInPanel" class="alert alert-success d-none">
+        <h5><i class="bi bi-clock-history"></i> Time-In Mode</h5>
+        <p class="mb-0">Scan student QR codes for time-in</p>
+    </div>
+    
+    <div id="timeOutPanel" class="alert alert-warning d-none">
+        <h5><i class="bi bi-clock"></i> Time-Out Mode</h5>
+        <p class="mb-0">Scan student QR codes for time-out</p>
+    </div>
+    
+    <!-- RECENT ACTIVITY DISPLAY -->
+    <div class="recent-activity mt-4">
+        <h6><i class="bi bi-activity"></i> Recent Time Tracking</h6>
+        <div id="recentTimeLogs" class="list-group">
+            <!-- POPULATED VIA AJAX -->
+        </div>
+    </div>
+</div>
+
+<!-- ENHANCED JAVASCRIPT -->
+<script>
+let scannerMode = 'event';
+
+$('.scanner-mode-btn').click(function() {
+    $('.scanner-mode-btn').removeClass('active');
+    $(this).addClass('active');
+    
+    scannerMode = $(this).data('mode');
+    $('.scanner-panel').addClass('d-none');
+    
+    switch(scannerMode) {
+        case 'timein':
+            $('#timeInPanel').removeClass('d-none');
+            break;
+        case 'timeout':
+            $('#timeOutPanel').removeClass('d-none');
+            break;
+        case 'verifier':
+            $('#verifierPanel').removeClass('d-none');
+            break;
+        default:
+            scannerMode = 'event';
+            break;
+    }
+});
+
+// ENHANCED SCAN HANDLER
+function handleScanResult(result, eventId) {
+    if (scannerMode === 'timein' || scannerMode === 'timeout') {
+        processTimeScan(result, scannerMode);
+    } else {
+        // EXISTING EVENT SCAN LOGIC
+        processScan(result, eventId);
+    }
+}
+
+function processTimeScan(qrData, scanType) {
+    $.ajax({
+        url: '/Officer/ProcessTimeScan',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            scannedData: qrData,
+            scanType: scanType,
+            deviceInfo: navigator.userAgent,
+            location: 'Main Office'
+        }),
+        success: function(response) {
+            if (response.success) {
+                showSuccessMessage(response.message);
+                updateRecentActivity(response.student);
+                playSuccessSound();
+                clearScanner();
+            } else {
+                showErrorMessage(response.message);
+                playErrorSound();
+            }
+        },
+        error: function() {
+            showErrorMessage('Scan processing failed');
+        }
+    });
+}
+
+function updateRecentActivity(student) {
+    var activityHtml = `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${student.name}</strong><br>
+                <small class="text-muted">${student.studentNum}</small>
+            </div>
+            <div class="text-end">
+                ${student.timeIn ? `<span class="badge bg-success">In: ${formatTime(student.timeIn)}</span><br>` : ''}
+                ${student.timeOut ? `<span class="badge bg-warning">Out: ${formatTime(student.timeOut)}</span><br>` : ''}
+                ${student.duration ? `<span class="badge bg-info">Duration: ${student.duration}min</span>` : ''}
+            </div>
+        </div>
+    `;
+    
+    $('#recentTimeLogs').prepend(activityHtml);
+    
+    // KEEP ONLY LAST 10 ACTIVITIES
+    if ($('#recentTimeLogs .list-group-item').length > 10) {
+        $('#recentTimeLogs .list-group-item:last').remove();
+    }
+}
+
+function formatTime(dateString) {
+    if (!dateString) return '';
+    var date = new Date(dateString);
+    return date.toLocaleTimeString();
+}
+</script>
+```
+
+---
+
+## 🔄 PHASE 4: FINANCIAL OPERATIONS SEMESTER INTEGRATION
+
+### Files to Modify:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\AdminController.cs
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\Payments.cshtml
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\_PaymentTable.cshtml
+```
+
+### AdminController.cs Changes:
+```csharp
+// UPDATE Payments method
+public async Task<IActionResult> Payments(
+    string semesterFilter,     // NEW PARAMETER
+    string statusFilter,
+    string typeFilter,        // "fee" or "fine"
+    int pageNumber = 1)
+{
+    ViewBag.Semesters = await GetActiveSemesters();
+    ViewBag.SemesterFilter = semesterFilter;
+    
+    // UPDATE FEES QUERY WITH SEMESTER
+    var feesQuery = _context.Fees
+        .Include(f => f.StudentNumNavigation)
+        .ThenInclude(s => s.StudentSemesters)
+        .AsQueryable();
+    
+    if (!string.IsNullOrEmpty(semesterFilter))
+    {
+        feesQuery = feesQuery.Where(f => 
+            f.StudentNumNavigation.StudentSemesters.Any(ss => 
+                ss.Semester.SemesterName == semesterFilter && 
+                ss.IsActive));
+    }
+    
+    // SIMILAR LOGIC FOR FINES
+    var finesQuery = _context.Fines
+        .Include(f => f.StudentNumNavigation)
+        .ThenInclude(s => s.StudentSemesters)
+        .AsQueryable();
+    
+    if (!string.IsNullOrEmpty(semesterFilter))
+    {
+        finesQuery = finesQuery.Where(f => 
+            f.StudentNumNavigation.StudentSemesters.Any(ss => 
+                ss.Semester.SemesterName == semesterFilter && 
+                ss.IsActive));
+    }
+    
+    // Continue with existing logic...
+}
+```
+
+### Payment Views Changes:
+```html
+<!-- ADD SEMESTER FILTER TO PAYMENTS PAGE -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <label class="form-label">Semester Filter</label>
+        <select name="semesterFilter" id="semesterFilter" class="form-select auto-submit-filter">
+            <option value="">All Semesters</option>
+            @foreach (var semester in ViewBag.Semesters)
+            {
+                <option value="@semester.SemesterName">@semester.SemesterName (@semester.AcademicYear.YearName)</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- ADD SEMESTER COLUMN TO FEES TABLE -->
+<th>
+    <a href="#" class="text-white text-decoration-none" onclick="sortTable('Semester')">
+        Semester <i class="bi bi-arrow-down-up ms-1" id="Semester-sort"></i>
+    </a>
+</th>
+
+<td>
+    @{
+        var studentSemester = item.StudentNumNavigation?.StudentSemesters
+            .FirstOrDefault(ss => ss.IsActive)?.Semester;
+    }
+    @if (studentSemester != null)
+    {
+        <span class="badge bg-primary">@studentSemester.SemesterName</span>
+        <small class="text-muted">(@studentSemester.AcademicYear.YearName)</small>
+    }
+</td>
+```
+
+---
+
+## 🔄 PHASE 5: ADMIN DASHBOARD SEMESTER AWARENESS
+
+### Files to Modify:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\AdminController.cs
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\Index.cshtml
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\_DashboardStats.cshtml
+```
+
+### AdminController.cs Changes:
+```csharp
+// UPDATE DASHBOARD METHOD
+public async Task<IActionResult> Index()
+{
+    var currentSemester = await GetCurrentSemester();
+    ViewBag.CurrentSemester = currentSemester;
+    ViewBag.ActiveSemesters = await GetActiveSemesters();
+    
+    // Use current semester as default filter
+    var dashboardData = await BuildDashboardData(currentSemester?.SemesterName);
+    
+    return View(dashboardData);
+}
+
+// UPDATE BUILD DASHBOARD DATA METHOD
+private async Task<DashboardViewModel> BuildDashboardData(
+    string? feeCategory, string? fineCategory, string? semesterFilter)
+{
+    var studentsQuery = _context.Students
+        .Include(s => s.StudentSemesters)
+        .ThenInclude(ss => ss.Semester)
+        .AsQueryable();
+    
+    if (!string.IsNullOrEmpty(semesterFilter))
+    {
+        studentsQuery = studentsQuery.Where(s => 
+            s.StudentSemesters.Any(ss => 
+                ss.Semester.SemesterName == semesterFilter && 
+                ss.IsActive));
+    }
+    
+    // UPDATE ALL OTHER QUERIES WITH SEMESTER FILTER
+    var totalStudents = await studentsQuery.CountAsync();
+    var activeStudents = await studentsQuery.CountAsync(s => 
+        s.IsArchived == false || s.IsArchived == null);
+    
+    return new DashboardViewModel
+    {
+        TotalStudents = totalStudents,
+        ActiveStudents = activeStudents,
+        // ... other properties
+        CurrentSemester = semesterFilter,
+        SemesterFilter = semesterFilter
+    };
+}
+
+// ADD AJAX ENDPOINT FOR DASHBOARD DATA
+[HttpPost]
+public async Task<JsonResult> GetDashboardData(string semesterFilter)
+{
+    var dashboardData = await BuildDashboardData(null, null, semesterFilter);
+    return Json(dashboardData);
+}
+```
+
+### Dashboard Views Changes:
+```html
+<!-- ADD SEMESTER SELECTOR TO DASHBOARD HEADER -->
+<div class="dashboard-header mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2>iBITS Portal Dashboard</h2>
+            @if (ViewBag.CurrentSemester != null)
+            {
+                <p class="text-muted mb-0">
+                    Current Semester: <strong>@ViewBag.CurrentSemester.SemesterName (@ViewBag.CurrentSemester.AcademicYear.YearName)</strong>
+                </p>
+            }
+        </div>
+        <div class="col-md-4">
+            <select id="dashboardSemesterFilter" class="form-select">
+                <option value="">All Time</option>
+                @foreach (var semester in ViewBag.ActiveSemesters)
+                {
+                    <option value="@semester.SemesterName" selected="@(ViewBag.CurrentSemester?.SemesterName == semester.SemesterName)">
+                        @semester.SemesterName (@semester.AcademicYear.YearName)
+                    </option>
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- UPDATE CHARTS TO SHOW SEMESTER DATA -->
+<div class="dashboard-content">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <h5>Total Students</h5>
+                <small>Current Semester</small>
+            </div>
+            <div class="stat-value">@Model.CurrentSemesterStudents</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-header">
+                <h5>Attendance Rate</h5>
+                <small>@Model.SemesterFilter</small>
+            </div>
+            <div class="stat-value">@Model.CurrentSemesterAttendanceRate%</div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD JAVASCRIPT FOR DASHBOARD SEMESTER SWITCHING -->
+<script>
+$('#dashboardSemesterFilter').change(function() {
+    var semester = $(this).val();
+    
+    $.ajax({
+        url: '/Admin/GetDashboardData',
+        type: 'POST',
+        data: { semesterFilter: semester },
+        success: function(data) {
+            updateDashboardStats(data);
+        }
+    });
+});
+
+function updateDashboardStats(data) {
+    $('.stat-value').each(function() {
+        var statName = $(this).data('stat');
+        if (data[statName] !== undefined) {
+            $(this).text(data[statName]);
+        }
+    });
+}
+</script>
+```
+
+---
+
+## 🔄 PHASE 6: SEMESTER MANAGEMENT ADMIN
+
+### Files to Create:
+```
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Controllers\AdminController.cs (add methods)
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\ManageSemesters.cshtml
+C:\Users\Dave\source\repos\iBITS Portal\iBITS Portal\Views\Admin\_SemesterTable.cshtml
+```
+
+### AdminController.cs Additions:
+```csharp
+// SEMESTER MANAGEMENT METHODS
+public async Task<IActionResult> ManageSemesters()
+{
+    var academicYears = await _context.AcademicYears
+        .Include(ay => ay.Semesters)
+        .ThenInclude(s => s.AcademicYear)
+        .OrderByDescending(ay => ay.StartDate)
+        .ToListAsync();
+    
+    return View(academicYears);
+}
+
+[HttpPost]
+public async Task<JsonResult> CreateAcademicYear(string yearName, DateOnly startDate, DateOnly endDate)
+{
+    var academicYearEntity = await _context.AcademicYears
+        .FirstOrDefaultAsync(ay => ay.YearName == yearName);
+    
+    if (academicYearEntity == null)
+    {
+        academicYearEntity = new AcademicYear
+        {
+            YearName = yearName,
+            StartDate = startDate,
+            EndDate = endDate,
+            IsActive = true,
+            CreatedBy = User.Identity.Name
+        };
+        _context.AcademicYears.Add(academicYearEntity);
+    }
+    
+    await _context.SaveChangesAsync();
+    
+    return Json(new { success = true, message = "Academic year created successfully" });
+}
+
+[HttpPost]
+public async Task<JsonResult> CreateSemester(int academicYearId, string semesterName, DateOnly startDate, DateOnly endDate)
+{
+    var semester = new Semester
+    {
+        SemesterName = semesterName,
+        AcademicYearId = academicYearId,
+        StartDate = startDate,
+        EndDate = endDate,
+        IsCurrent = false,
+        IsActive = true,
+        CreatedBy = User.Identity.Name
+    };
+    
+    _context.Semesters.Add(semester);
+    await _context.SaveChangesAsync();
+    
+    return Json(new { success = true, message = "Semester created successfully" });
+}
+
+[HttpPost]
+public async Task<JsonResult> SetCurrentSemester(int semesterId)
+{
+    // Clear all current flags
+    await _context.Semesters.ForEachAsync(s => s.IsCurrent = false);
+    await _context.SaveChangesAsync();
+    
+    // Set new current semester
+    var semester = await _context.Semesters.FindAsync(semesterId);
+    if (semester != null)
+    {
+        semester.IsCurrent = true;
+        await _context.SaveChangesAsync();
+    }
+    
+    return Json(new { success = true, message = "Current semester updated" });
+}
+
+[HttpPost]
+public async Task<JsonResult> EnrollStudentsInSemester(int semesterId, List<string> studentNumbers)
+{
+    foreach (var studentNum in studentNumbers)
+    {
+        var existingEnrollment = await _context.StudentSemesters
+            .FirstOrDefaultAsync(ss => ss.StudentNum == studentNum && ss.SemesterId == semesterId);
+        
+        if (existingEnrollment == null)
+        {
+            var enrollment = new StudentSemester
+            {
+                StudentNum = studentNum,
+                SemesterId = semesterId,
+                IsActive = true,
+                EnrollmentStatus = "Active",
+                EnrollmentDate = DateTime.Now
+            };
+            
+            _context.StudentSemesters.Add(enrollment);
+        }
+    }
+    
+    await _context.SaveChangesAsync();
+    
+    return Json(new { success = true, message = $"{studentNumbers.Count} students enrolled successfully" });
+}
+```
+
+### New Semester Management View:
+```html
+<!-- ManageSemesters.cshtml -->
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Semester Management</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAcademicYearModal">
+                        <i class="bi bi-plus"></i> Academic Year
+                    </button>
+                </div>
+                <div class="card-body">
+                    @foreach (var academicYear in Model)
+                    {
+                        <div class="mb-4">
+                            <h6>@academicYear.YearName (@academicYear.StartDate.ToString("yyyy-MM-dd") - @academicYear.EndDate.ToString("yyyy-MM-dd"))</h6>
+                            <div class="row">
+                                @foreach (var semester in academicYear.Semesters.OrderBy(s => s.StartDate))
+                                {
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 @(semester.IsCurrent ? "border-primary bg-light" : "")">
+                                            <h6>@semester.SemesterName</h6>
+                                            <small>@semester.StartDate.ToString("MMM dd") - @semester.EndDate.ToString("MMM dd")</small>
+                                            <div class="mt-2">
+                                                @if (!semester.IsCurrent)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="setCurrentSemester(@semester.SemesterId)">
+                                                        Set Current
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-primary">Current</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            @await Html.PartialAsync("_QuickActions")
+        </div>
+    </div>
+</div>
+```
+
+---
+
+## 🎯 IMPLEMENTATION PRIORITY & TIMELINE
+
+### WEEK 1: FOUNDATION & STUDENT RECORDS
+- [ ] AdminController.StudentRecords semester filtering
+- [ ] StudentRecords.cshtml semester UI updates
+- [ ] Test semester filtering functionality
+
+### WEEK 2: EVENT INTEGRATION
+- [ ] AdminController.Events semester context
+- [ ] Event creation modal semester selection
+- [ ] Test event semester functionality
+
+### WEEK 3: QR TIME TRACKING
+- [ ] OfficerController time scanning methods
+- [ ] Enhanced Scanner view with time-in/time-out modes
+- [ ] Test QR time tracking functionality
+
+### WEEK 4: FINANCIAL INTEGRATION
+- [ ] Payments/Fines semester filtering
+- [ ] Update financial views with semester context
+- [ ] Test financial semester functionality
+
+### WEEK 5: DASHBOARD & MANAGEMENT
+- [ ] Dashboard semester awareness
+- [ ] Semester management interface
+- [ ] Test complete integration
+
+### WEEK 6: TESTING & DEPLOYMENT
+- [ ] Comprehensive testing of all features
+- [ ] User acceptance testing
+- [ ] Performance optimization
+- [ ] Production deployment
+
+---
+
+## ✅ EXPECTED OUTCOMES
+
+### ENHANCED DATA ORGANIZATION
+- Clear semester-based data segregation
+- Improved historical data access
+- Better academic year management
+
+### IMPROVED ATTENDANCE TRACKING
+- Precise time-in/time-out records
+- Automatic duration calculation
+- Comprehensive audit trail
+
+### ENHANCED USER EXPERIENCE
+- Intuitive semester filtering across all modules
+- Real-time scanning feedback
+- Semester-aware dashboards and reports
+
+### BETTER FINANCIAL MANAGEMENT
+- Semester-based financial reporting
+- Clear fee/fine tracking by period
+- Improved remittance processing
+
+---
+
+## 🚀 READY TO IMPLEMENT
+
+This detailed plan provides:
+1. **Specific code changes** for each file with exact snippets
+2. **UI enhancements** with complete HTML implementations
+3. **Controller logic** with full method implementations
+4. **JavaScript enhancements** for interactive features
+5. **Step-by-step implementation** with clear priorities
+
+The plan builds incrementally, allowing testing at each phase while maintaining existing functionality throughout the process.
+
+**Start with Phase 1** and work through each phase systematically for successful integration!
