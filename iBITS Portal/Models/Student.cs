@@ -51,9 +51,24 @@ public partial class Student
     public virtual ICollection<Fine> Fines { get; set; } = new List<Fine>();
 
     public virtual Officer? Officer { get; set; }
+    
+    // NEW: Semester Navigation Properties
+    public virtual ICollection<StudentSemester> StudentSemesters { get; set; } = new List<StudentSemester>();
+    public virtual ICollection<QRAuditLog> QRAuditLogs { get; set; } = new List<QRAuditLog>();
 
     [NotMapped]
     public decimal Balance { get; set; }
+    
+    // NEW: Computed property to get current semester
+    [NotMapped]
+    public Semester? CurrentSemester 
+    {
+        get
+        {
+            return StudentSemesters?
+                .FirstOrDefault(ss => ss.Semester.IsCurrent && ss.IsActive)?.Semester;
+        }
+    }
 
     [NotMapped]
     public string FullName
