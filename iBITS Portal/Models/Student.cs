@@ -54,7 +54,6 @@ public partial class Student
     
     // NEW: Semester Navigation Properties
     public virtual ICollection<StudentSemester> StudentSemesters { get; set; } = new List<StudentSemester>();
-    public virtual ICollection<QRAuditLog> QRAuditLogs { get; set; } = new List<QRAuditLog>();
 
     [NotMapped]
     public decimal Balance { get; set; }

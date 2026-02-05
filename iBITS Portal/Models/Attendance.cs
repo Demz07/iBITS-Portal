@@ -31,6 +31,6 @@ public partial class Attendance
     // NEW: Semester Navigation Property
     public virtual Semester? Semester { get; set; }
     
-    // NEW: QRAuditLog Navigation
-    public virtual ICollection<QRAuditLog> QRAuditLogs { get; set; } = new List<QRAuditLog>();
+    // QRAuditLog Navigation removed (keyless entity doesn't support navigation)
+    // Use separate audit lookups if needed
 }

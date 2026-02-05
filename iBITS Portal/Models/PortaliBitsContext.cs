@@ -51,9 +51,10 @@ public partial class PortaliBitsContext : DbContext
     public virtual DbSet<StudentSemester> StudentSemesters { get; set; }
     
     // ============================================================
-    // QR AUDIT SYSTEM DbSets
+    // QR AUDIT SYSTEM DbSets (Keyless - no direct navigation)
     // ============================================================
-    public virtual DbSet<QRAuditLog> QRAuditLogs { get; set; }
+    // Note: QRAuditLog is now a keyless entity for audit trail purposes
+    // Use separate lookups for audit data if needed
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -503,70 +504,8 @@ public partial class PortaliBitsContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // QRAuditLog Configuration
-        modelBuilder.Entity<QRAuditLog>(entity =>
-        {
-            entity.ToTable("QRAuditLog");
-            
-            entity.Property(e => e.StudentNum)
-                .IsRequired()
-                .HasMaxLength(450);
-                
-            entity.Property(e => e.QRCodeData)
-                .IsRequired()
-                .HasMaxLength(500);
-                
-            entity.Property(e => e.ScanType)
-                .IsRequired()
-                .HasMaxLength(20);
-                
-            entity.Property(e => e.ProcessingResult)
-                .IsRequired()
-                .HasMaxLength(20);
-                
-            entity.Property(e => e.DeviceFingerprint)
-                .HasMaxLength(500);
-                
-            entity.Property(e => e.IPAddress)
-                .HasMaxLength(45);
-                
-            entity.Property(e => e.Location)
-                .HasMaxLength(200);
-                
-            entity.Property(e => e.ProcessedBy)
-                .HasMaxLength(450);
-                
-            // Foreign keys with NO ACTION to avoid cascade cycles
-            entity.HasOne(d => d.Student)
-                .WithMany()
-                .HasForeignKey(d => d.StudentNum)
-                .HasConstraintName("FK_QRAuditLog_Students")
-                .OnDelete(DeleteBehavior.NoAction);
-                
-            entity.HasOne(d => d.Attendance)
-                .WithMany(p => p.QRAuditLogs)
-                .HasForeignKey(d => d.AttendanceId)
-                .HasConstraintName("FK_QRAuditLog_Attendance")
-                .OnDelete(DeleteBehavior.NoAction);
-                
-            entity.HasOne(d => d.Event)
-                .WithMany(p => p.QRAuditLogs)
-                .HasForeignKey(d => d.EventId)
-                .HasConstraintName("FK_QRAuditLog_Events")
-                .OnDelete(DeleteBehavior.NoAction);
-                
-            entity.HasOne(d => d.Semester)
-                .WithMany(p => p.QRAuditLogs)
-                .HasForeignKey(d => d.SemesterId)
-                .HasConstraintName("FK_QRAuditLog_Semesters")
-                .OnDelete(DeleteBehavior.NoAction);
-                
-            // Indexes for performance
-            entity.HasIndex(e => e.StudentNum);
-            entity.HasIndex(e => e.ScanTime);
-            entity.HasIndex(e => e.EventId);
-            entity.HasIndex(e => e.SemesterId);
-        });
+        // QRAuditLog Configuration removed (keyless entity doesn't support EF navigation)
+        // QRAuditLog is now used only for audit trail purposes via direct SQL
 
         // ============================================================
         // UPDATE EXISTING ENTITIES WITH SEMESTER RELATIONSHIPS
@@ -592,12 +531,8 @@ public partial class PortaliBitsContext : DbContext
                 .HasConstraintName("FK_Attendance_Semesters")
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            // Add QRAuditLog navigation
-            entity.HasMany(d => d.QRAuditLogs)
-                .WithOne(p => p.Attendance)
-                .HasForeignKey(p => p.AttendanceId)
-                .HasConstraintName("FK_QRAuditLog_Attendance")
-                .OnDelete(DeleteBehavior.NoAction);
+            // QRAuditLog navigation removed (since QRAuditLog is now keyless)
+            // Use separate audit lookup if needed
                 
             // Indexes
             entity.HasIndex(e => e.SemesterId);
@@ -617,12 +552,7 @@ public partial class PortaliBitsContext : DbContext
                 .HasConstraintName("FK_Events_Semesters")
                 .OnDelete(DeleteBehavior.SetNull);
                 
-            // Add QRAuditLog navigation
-            entity.HasMany(d => d.QRAuditLogs)
-                .WithOne(p => p.Event)
-                .HasForeignKey(p => p.EventId)
-                .HasConstraintName("FK_QRAuditLog_Events")
-                .OnDelete(DeleteBehavior.NoAction);
+            // QRAuditLog navigation removed (keyless entity doesn't support EF navigation)
                 
             // Index
             entity.HasIndex(e => e.SemesterId);
@@ -638,12 +568,7 @@ public partial class PortaliBitsContext : DbContext
                 .HasConstraintName("FK_StudentSemesters_Students")
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            // Add QRAuditLog navigation
-            entity.HasMany(d => d.QRAuditLogs)
-                .WithOne(p => p.Student)
-                .HasForeignKey(p => p.StudentNum)
-                .HasConstraintName("FK_QRAuditLog_Students")
-                .OnDelete(DeleteBehavior.NoAction);
+// QRAuditLog navigation removed (keyless entity doesn't support EF navigation)
         });
 
         OnModelCreatingPartial(modelBuilder);

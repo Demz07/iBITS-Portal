@@ -138,9 +138,6 @@ public partial class Event
     
     // NEW: Semester Navigation Property
     public virtual Semester? Semester { get; set; }
-    
-    // NEW: QRAuditLog Navigation
-    public virtual ICollection<QRAuditLog> QRAuditLogs { get; set; } = new List<QRAuditLog>();
 
     [NotMapped]
     public bool IsInUse => Attendances.Any();

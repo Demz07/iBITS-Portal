@@ -32,7 +32,6 @@ public partial class Semester
     public virtual ICollection<StudentSemester> StudentSemesters { get; set; } = new List<StudentSemester>();
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
     public virtual ICollection<Event> Events { get; set; } = new List<Event>();
-    public virtual ICollection<QRAuditLog> QRAuditLogs { get; set; } = new List<QRAuditLog>();
 }
 
 public partial class StudentSemester
@@ -52,7 +51,7 @@ public partial class StudentSemester
 
 public partial class QRAuditLog
 {
-    public int AuditId { get; set; }
+    // Keyless entity - AuditId removed since it's now keyless
     public string StudentNum { get; set; } = null!;
     public string QRCodeData { get; set; } = null!;
     public DateTime ScanTime { get; set; }
