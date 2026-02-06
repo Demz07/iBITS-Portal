@@ -414,7 +414,7 @@ $(document).ready(function () {
 
 function resetFilters() {
     $('#searchString').val('');
-    $('#sortOrder, #yearFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter').val('').trigger('change');
+    $('#sortOrder, #yearFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter, #semesterFilter').val('').trigger('change');
     if (window.studentRecordsUrl) {
         window.location.href = window.studentRecordsUrl;
     } else {
@@ -430,7 +430,8 @@ function removeFilterPill(filterName) {
         'year': '#yearFilter',
         'section': '#sectionFilter',
         'type': '#typeFilter',
-        'role': '#roleFilter'
+        'role': '#roleFilter',
+        'semester': '#semesterFilter'
     };
 
     const $element = $(filterMap[filterName]);
@@ -797,10 +798,13 @@ window.confirmUpload = function () {
     bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
     $('#importProcessingOverlay').css('display', 'flex');
 
+    // Get the selected semester ID
+    const semesterId = document.getElementById('importSemesterId') ? document.getElementById('importSemesterId').value : '';
+
     $.ajax({
         url: window.executeImportUrl,
         type: 'POST',
-        data: { fileName: window.currentFileName, map: columnMap },
+        data: { fileName: window.currentFileName, map: columnMap, semesterId: semesterId || null },
         success: function (response) {
             $('#importProcessingOverlay').hide();
             showResultModal(response);

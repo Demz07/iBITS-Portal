@@ -57,6 +57,9 @@ public partial class Fine
     // Property to group manually created fines together
     public string? BatchId { get; set; }
 
+    // NEW: Link fine to a specific semester
+    public int? SemesterId { get; set; }
+
     // ============================================================
     // REMITTANCE TRACKING FIELDS
     // ============================================================
@@ -110,6 +113,12 @@ public partial class Fine
     /// </summary>
     [ForeignKey("CollectedBy")]
     public virtual Student? CollectedByNavigation { get; set; }
+
+    /// <summary>
+    /// Navigation property to Semester
+    /// </summary>
+    [ForeignKey("SemesterId")]
+    public virtual Semester? Semester { get; set; }
 
     // ============================================================
     // Computed Properties for Remittance Logic

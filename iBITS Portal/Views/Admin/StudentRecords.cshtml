@@ -177,6 +177,7 @@
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-year" id="chkYear" checked><label class="form-check-label" for="chkYear">Year</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-type" id="chkType" checked><label class="form-check-label" for="chkType">Student Type</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-role" id="chkRole" checked><label class="form-check-label" for="chkRole">Role</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-semester" id="chkSemester" checked><label class="form-check-label" for="chkSemester">Semester</label></div></li>
 
                         </ul>
                     </div>
@@ -260,6 +261,22 @@
                     <option value="Member" selected="@(ViewBag.RoleFilter == "Member")">Member</option>
                 </select>
             </div>
+            <!-- Semester Filter -->
+            <div class="col-md-2 filter-item" data-filter="semester">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Semester</label>
+                <select name="semesterFilter" id="semesterFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
+                    <option value="">All Semesters</option>
+                    @if (ViewBag.Semesters != null)
+                    {
+                        foreach (var semester in ViewBag.Semesters)
+                        {
+                            <option value="@semester.SemesterName" selected="@(ViewBag.SemesterFilter == semester.SemesterName)">
+                                @semester.SemesterName (@semester.AcademicYear.YearName)
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
 
         </div>
     </form>
@@ -311,6 +328,7 @@
                     <th class="col-year">Year</th>
                     <th class="col-type">Type</th>
                     <th class="col-role">Role</th>
+                    <th class="col-semester">Semester</th>
 
                     <th class="text-end pe-4 col-actions">Actions</th>
                 </tr>
@@ -365,6 +383,25 @@
                                 else
                                 {
                                     <span class="badge badge-blue">Member</span>
+                                }
+                            </td>
+                            <td class="col-semester">
+                                @if (student.StudentSemesters != null && student.StudentSemesters.Any(ss => ss.IsActive))
+                                {
+                                    var currentSemester = student.StudentSemesters.FirstOrDefault(ss => ss.IsActive)?.Semester;
+                                    if (currentSemester != null)
+                                    {
+                                        <span class="badge badge-info">@currentSemester.SemesterName</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">@currentSemester.AcademicYear.YearName</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Not Enrolled</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">N/A</span>
                                 }
                             </td>
 
@@ -487,7 +524,7 @@
                     </div>
 
                     <!-- Row 4: Course, Year & Section, School Year -->
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label">Course/Program</label>
                             <select name="Course" class="form-select select2-modal">
@@ -515,6 +552,34 @@
                                     }
                                 }
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 5: Semester (NEW) -->
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">
+                                <i class="bi bi-calendar-check me-1" style="color: var(--gold-primary);"></i>
+                                Enroll in Semester
+                                <small class="text-muted">(Optional - can be set later)</small>
+                            </label>
+                            <select name="semesterId" class="form-select select2-modal">
+                                <option value="">-- No Semester (Enroll Later) --</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var semester in ViewBag.Semesters)
+                                    {
+                                        var isCurrent = semester.IsCurrent ? " ⭐ CURRENT" : "";
+                                        <option value="@semester.SemesterId">
+                                            @semester.SemesterName - @semester.AcademicYear.YearName@isCurrent
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Select a semester to automatically enroll this student upon registration.
+                            </small>
                         </div>
                     </div>
                 </div>

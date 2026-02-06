@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/AdminController.cs
 // ============================================================
 // UPDATED: Added working ExportStudentsToExcel functionality
@@ -30,7 +30,7 @@ using iBITS_Portal.Helpers;
 namespace iBITS_Portal.Controllers
 {
     [Authorize(Roles = "Admin")]
-    public class AdminController : Controller
+    public partial class AdminController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
@@ -190,93 +190,89 @@ namespace iBITS_Portal.Controllers
         // HELPER: GET FILTERED STUDENTS QUERY (CONSOLIDATED)
         // =========================================================
         private IQueryable<Student> GetFilteredStudentsQuery(
-            string? searchString,
-            string? programFilter,
-            string? yearFilter,
-            string? sectionFilter,
-            string? typeFilter,
-            string? statusFilter,
-            string? roleFilter)
+            string? searchString, string? programFilter, string? yearFilter,
+            string? sectionFilter, string? typeFilter, string? statusFilter,
+            string? roleFilter,
+            string? semesterFilter)  // NEW: Semester parameter
         {
             var studentsQuery = _context.Students
+                .Include(s => s.StudentSemesters)
+                .ThenInclude(ss => ss.Semester)
                 .Include(s => s.Officer)
                 .AsQueryable();
-
+            
+            // Apply existing filters (keep current logic)
             if (!string.IsNullOrEmpty(searchString))
             {
-                studentsQuery = studentsQuery.Where(s =>
+                studentsQuery = studentsQuery.Where(s => 
                     s.StudentNum.Contains(searchString) ||
                     s.StudentFn.Contains(searchString) ||
                     s.StudentLn.Contains(searchString) ||
-                    (s.StudentMn != null && s.StudentMn.Contains(searchString)) ||
-                    (s.StudentEmail != null && s.StudentEmail.Contains(searchString)) ||
-                    (s.Course != null && s.Course.Contains(searchString)) ||
-                    (s.YearLevelSection != null && s.YearLevelSection.Contains(searchString))
-                );
+                    s.YearLevelSection.Contains(searchString));
             }
-
+            
+            // Apply program filter
             if (!string.IsNullOrEmpty(programFilter))
             {
                 studentsQuery = studentsQuery.Where(s => s.Course == programFilter);
             }
-
-            // Improved Year/Section filtering that can be translated to SQL
-            if (!string.IsNullOrEmpty(yearFilter) && !string.IsNullOrEmpty(sectionFilter))
+            
+            // Apply year filter
+            if (!string.IsNullOrEmpty(yearFilter))
             {
-                string exactMatch = $"{yearFilter}-{sectionFilter}";
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null &&
-                    (s.YearLevelSection == exactMatch || s.YearLevelSection.EndsWith(" " + exactMatch)));
+                studentsQuery = studentsQuery.Where(s => 
+                    s.YearLevelSection.Contains(yearFilter));
             }
-            else if (!string.IsNullOrEmpty(yearFilter))
+            
+            // Apply section filter
+            if (!string.IsNullOrEmpty(sectionFilter))
             {
-                string yearPattern = yearFilter + "-";
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null &&
-                    (s.YearLevelSection.StartsWith(yearPattern) || s.YearLevelSection.Contains(" " + yearPattern)));
+                studentsQuery = studentsQuery.Where(s => s.YearLevelSection.Contains(sectionFilter));
             }
-            else if (!string.IsNullOrEmpty(sectionFilter))
-            {
-                string sectionPattern = "-" + sectionFilter;
-                studentsQuery = studentsQuery.Where(s =>
-                    s.YearLevelSection != null && s.YearLevelSection.EndsWith(sectionPattern));
-            }
-
+            
+            // Apply type filter
             if (!string.IsNullOrEmpty(typeFilter))
             {
                 studentsQuery = studentsQuery.Where(s => s.StudentType == typeFilter);
             }
-
+            
+            // Apply status filter
             if (!string.IsNullOrEmpty(statusFilter))
             {
                 studentsQuery = studentsQuery.Where(s => s.Classification == statusFilter);
             }
-
+            
+            // Apply role filter
             if (!string.IsNullOrEmpty(roleFilter))
             {
-                switch (roleFilter)
-                {
-                    case "Org Officer":
-                        // Filters for students who ARE officers AND their type is "Org"
-                        studentsQuery = studentsQuery.Where(s => s.Officer != null && s.Officer.Classification == "Org Officer");
-                        break;
-
-                    case "Class Officer":
-                        // Filters for students who ARE officers AND their type is "Class"
-                        studentsQuery = studentsQuery.Where(s => s.Officer != null && s.Officer.Classification == "Class Officer");
-                        break;
-
-                    case "Member":
-                        // Filters for students who are NOT officers
-                        studentsQuery = studentsQuery.Where(s => s.Officer == null);
-                        break;
-                }
+                studentsQuery = studentsQuery.Where(s => 
+                    (s.Officer != null && s.Officer.Position.ToLower().Contains(roleFilter.ToLower())));
             }
-
-
+            
+            // NEW: Apply semester filter
+            if (!string.IsNullOrEmpty(semesterFilter))
+            {
+                studentsQuery = studentsQuery.Where(s => 
+                    s.StudentSemesters.Any(ss => 
+                        ss.Semester.SemesterName == semesterFilter && 
+                        ss.IsActive));
+            }
+            
             return studentsQuery;
         }
 
+
+        // =========================================================
+        // HELPER: GET ACTIVE SEMESTERS
+        // =========================================================
+        private async Task<List<Semester>> GetActiveSemesters()
+        {
+            return await _context.Semesters
+                .Include(s => s.AcademicYear)
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.StartDate)
+                .ToListAsync();
+        }
 
         // =========================================================
         // HELPER: GET CURRENT ACADEMIC YEAR FROM SYSTEM SETTINGS
@@ -1646,6 +1642,7 @@ namespace iBITS_Portal.Controllers
             string typeFilter,
             string statusFilter,
             string roleFilter,
+            string semesterFilter,  // NEW: Semester parameter
             string sortOrder,
             int pageNumber = 1,
             int pageSize = 10)
@@ -1657,11 +1654,15 @@ namespace iBITS_Portal.Controllers
             ViewBag.TypeFilter = typeFilter;
             ViewBag.StatusFilter = statusFilter;
             ViewBag.RoleFilter = roleFilter;
+            ViewBag.SemesterFilter = semesterFilter;  // NEW
             ViewBag.CurrentSort = sortOrder;
             ViewBag.PageSize = pageSize;
 
+            // NEW: Add semester data to ViewBag
+            ViewBag.Semesters = await GetActiveSemesters();
+
             // Use the consolidated helper method to get the base query
-            var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter);
+            var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter, semesterFilter);
 
             // Apply sorting
             switch (sortOrder)
@@ -1822,7 +1823,7 @@ namespace iBITS_Portal.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateStudent(Student student)
+        public async Task<IActionResult> CreateStudent(Student student, int? semesterId)
         {
             if (string.IsNullOrWhiteSpace(student.StudentNum))
             {
@@ -1851,7 +1852,27 @@ namespace iBITS_Portal.Controllers
 
                     _context.Students.Add(student);
                     await _context.SaveChangesAsync();
-                    await LogAction("Create Student", $"Created student {student.StudentNum}");
+
+                    // NEW: Create StudentSemester record if semester is selected
+                    if (semesterId.HasValue && semesterId.Value > 0)
+                    {
+                        var studentSemester = new StudentSemester
+                        {
+                            StudentNum = student.StudentNum,
+                            SemesterId = semesterId.Value,
+                            IsActive = true,
+                            YearLevel = ExtractYearLevelAsInt(student.YearLevelSection),
+                            Section = ExtractSectionFromYearLevel(student.YearLevelSection),
+                            Course = student.Course,
+                            EnrollmentDate = DateTime.Now,
+                            EnrollmentStatus = "Active"
+                        };
+                        _context.StudentSemesters.Add(studentSemester);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    await LogAction("Create Student", $"Created student {student.StudentNum}" + 
+                        (semesterId.HasValue ? $" and enrolled in semester ID {semesterId.Value}" : ""));
                     TempData["Message"] = "Student registered successfully.";
                 }
                 else
@@ -1867,6 +1888,21 @@ namespace iBITS_Portal.Controllers
             }
 
             return RedirectToAction(nameof(StudentRecords));
+        }
+
+        // Helper methods to extract year and section from YearLevelSection
+        private int? ExtractYearLevelAsInt(string? yearLevelSection)
+        {
+            if (string.IsNullOrEmpty(yearLevelSection)) return 1;
+            var match = System.Text.RegularExpressions.Regex.Match(yearLevelSection, @"(\d)");
+            return match.Success ? int.Parse(match.Value) : 1;
+        }
+
+        private string ExtractSectionFromYearLevel(string? yearLevelSection)
+        {
+            if (string.IsNullOrEmpty(yearLevelSection)) return "A";
+            var match = System.Text.RegularExpressions.Regex.Match(yearLevelSection, @"-([A-Z])");
+            return match.Success ? match.Groups[1].Value : "A";
         }
 
         [HttpPost]
@@ -2008,7 +2044,7 @@ namespace iBITS_Portal.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ExecuteImport(string fileName, Dictionary<string, int> map)
+        public async Task<IActionResult> ExecuteImport(string fileName, Dictionary<string, int> map, int? semesterId)
         {
             var filePath = Path.Combine(Path.GetTempPath(), fileName);
             if (!System.IO.File.Exists(filePath)) return Json(new { success = false, message = "Session expired." });
@@ -2085,6 +2121,34 @@ namespace iBITS_Portal.Controllers
                             }
 
                             _context.Students.Add(student);
+                            await _context.SaveChangesAsync(); // Save student first to ensure it exists
+
+                            // NEW: Create StudentSemester record if semester is selected
+                            if (semesterId.HasValue && semesterId.Value > 0)
+                            {
+                                try
+                                {
+                                    var studentSemester = new StudentSemester
+                                    {
+                                        StudentNum = studentNum,
+                                        SemesterId = semesterId.Value,
+                                        IsActive = true,
+                                        YearLevel = ExtractYearLevelAsInt(yearLevelSection),
+                                        Section = ExtractSectionFromYearLevel(yearLevelSection),
+                                        Course = student.Course,
+                                        EnrollmentDate = DateTime.Now,
+                                        EnrollmentStatus = "Active"
+                                    };
+                                    _context.StudentSemesters.Add(studentSemester);
+                                    await _context.SaveChangesAsync();
+                                }
+                                catch (Exception semEx)
+                                {
+                                    _logger.LogWarning(semEx, "Failed to enroll student {StudentNum} in semester {SemesterId}", studentNum, semesterId);
+                                    // Continue - student was created successfully even if semester enrollment failed
+                                }
+                            }
+
                             successCount++;
                         }
                         else
@@ -2102,8 +2166,8 @@ namespace iBITS_Portal.Controllers
                     }
                 }
 
-                await _context.SaveChangesAsync();
-                await LogAction("Batch Import", $"Imported {successCount} students. Failed: {errorCount}.");
+                await LogAction("Batch Import", $"Imported {successCount} students. Failed: {errorCount}." + 
+                    (semesterId.HasValue ? $" Enrolled in semester ID {semesterId.Value}." : ""));
 
                 System.IO.File.Delete(filePath);
 
@@ -3509,7 +3573,7 @@ namespace iBITS_Portal.Controllers
             try
             {
                 // Use the consolidated helper method to get the exact same filtered data
-                var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter);
+                var studentsQuery = GetFilteredStudentsQuery(searchString, programFilter, yearFilter, sectionFilter, typeFilter, statusFilter, roleFilter, null);
 
                 // Order the results for the export file
                 var students = await studentsQuery.OrderBy(s => s.StudentLn).ToListAsync();

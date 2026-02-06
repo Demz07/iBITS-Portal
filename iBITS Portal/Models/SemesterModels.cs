@@ -44,14 +44,22 @@ public partial class StudentSemester
     public int? YearLevel { get; set; }
     public DateTime EnrollmentDate { get; set; }
     public string EnrollmentStatus { get; set; } = "Active"; // "Active", "Inactive", "Withdrawn"
-
+    
+    // NEW: Attendance tracking fields from database schema
+    public string? Course { get; set; } // Student's major/course
+    public int TotalAbsences { get; set; } = 0;
+    public int TotalTardies { get; set; } = 0;
+    public int TotalEarlyExits { get; set; } = 0;
+    public int TotalLeaves { get; set; } = 0;
+    public decimal AttendancePercentage { get; set; } = 100.00M;
+    
     public virtual Semester Semester { get; set; } = null!;
     public virtual Student Student { get; set; } = null!;
 }
 
 public partial class QRAuditLog
 {
-    // Keyless entity - AuditId removed since it's now keyless
+    public int AuditId { get; set; }
     public string StudentNum { get; set; } = null!;
     public string QRCodeData { get; set; } = null!;
     public DateTime ScanTime { get; set; }

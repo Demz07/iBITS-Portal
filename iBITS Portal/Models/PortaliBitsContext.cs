@@ -51,10 +51,9 @@ public partial class PortaliBitsContext : DbContext
     public virtual DbSet<StudentSemester> StudentSemesters { get; set; }
     
     // ============================================================
-    // QR AUDIT SYSTEM DbSets (Keyless - no direct navigation)
+    // QR AUDIT SYSTEM DbSets
     // ============================================================
-    // Note: QRAuditLog is now a keyless entity for audit trail purposes
-    // Use separate lookups for audit data if needed
+    public virtual DbSet<QRAuditLog> QRAuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -378,6 +377,13 @@ public partial class PortaliBitsContext : DbContext
                 .HasForeignKey(d => d.CollectedBy)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // NEW: Semester relationship
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_Fines_Semester")
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.Property(e => e.RemittanceStatus)
                 .HasMaxLength(20)
                 .HasDefaultValue("NotRemitted");
@@ -504,8 +510,52 @@ public partial class PortaliBitsContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // QRAuditLog Configuration removed (keyless entity doesn't support EF navigation)
-        // QRAuditLog is now used only for audit trail purposes via direct SQL
+        // QRAuditLog Configuration
+        modelBuilder.Entity<QRAuditLog>(entity =>
+        {
+            entity.ToTable("QRAuditLog");
+            entity.HasKey(e => e.AuditId);
+            
+            entity.Property(e => e.AuditId).ValueGeneratedOnAdd();
+            entity.Property(e => e.StudentNum).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.QRCodeData).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ScanTime).HasColumnType("datetime2");
+            entity.Property(e => e.ScanType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProcessingResult).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.AttendanceId);
+            entity.Property(e => e.EventId);
+            entity.Property(e => e.SemesterId);
+            entity.Property(e => e.DeviceFingerprint).HasMaxLength(200);
+            entity.Property(e => e.IPAddress).HasMaxLength(100);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            entity.Property(e => e.ProcessedBy).HasMaxLength(450);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+            
+            // Navigation properties
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .HasConstraintName("FK_QRAuditLog_Student")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Attendance)
+                .WithMany()
+                .HasForeignKey(d => d.AttendanceId)
+                .HasConstraintName("FK_QRAuditLog_Attendance")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Event)
+                .WithMany()
+                .HasForeignKey(d => d.EventId)
+                .HasConstraintName("FK_QRAuditLog_Event")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_QRAuditLog_Semester")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
 
         // ============================================================
         // UPDATE EXISTING ENTITIES WITH SEMESTER RELATIONSHIPS
