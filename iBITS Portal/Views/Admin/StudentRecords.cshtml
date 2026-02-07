@@ -411,7 +411,7 @@
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#" onclick="openEditModal(event, '@student.StudentNum', '@student.StudentFn', '@student.StudentMn', '@student.StudentLn', '@student.StudentEmail', '@student.Course', '@student.YearLevelSection', '@student.StudentType', '@student.Birthday?.ToString("yyyy-MM-dd")', '@student.SchoolYearEnrolled')"><i class="bi bi-pencil-fill me-2"></i> Edit Student</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="openEditModal(event, '@student.StudentNum', '@student.StudentFn', '@student.StudentMn', '@student.StudentLn', '@student.StudentEmail', '@student.Course', '@student.YearLevelSection', '@student.StudentType', '@student.Birthday?.ToString("yyyy-MM-dd")', '@student.SchoolYearEnrolled', '@(student.CurrentSemester?.SemesterId.ToString() ?? "")')"><i class="bi bi-pencil-fill me-2"></i> Edit Student</a></li>
                                         <li><a class="dropdown-item" href="#" onclick="setRoleModal(event, '@student.StudentNum', '@student.FullName', '@(student.Officer?.Position ?? "Member")')"><i class="bi bi-shield-lock-fill me-2"></i> Manage Role</a></li>
                                         <li>
                                             <!-- RESET PASSWORD (Custom Modal) -->

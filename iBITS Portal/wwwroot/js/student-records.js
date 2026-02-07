@@ -552,7 +552,7 @@ function setRoleModal(event, studentId, studentName, currentRole) {
     new bootstrap.Modal(document.getElementById('roleModal')).show();
 }
 
-function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled) {
+function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled, semesterId) {
     if (event) event.stopPropagation();
     const form = $('#editStudentForm');
     form.find('[name="StudentNum"]').val(id);
@@ -578,6 +578,13 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
         $schoolYearSelect.val('').trigger('change');
     }
 
+    const $semesterSelect = $('#editSemester');
+    if (semesterId && semesterId.trim() !== '') {
+        $semesterSelect.val(semesterId).trigger('change');
+    } else {
+        $semesterSelect.val('').trigger('change');
+    }
+
     const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
     editModal.show();
 
@@ -596,6 +603,13 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
             allowClear: false
         });
 
+        $('#editSemester').select2({
+            dropdownParent: $('#editStudentModal'),
+            minimumResultsForSearch: Infinity,
+            placeholder: '-- Select Semester --',
+            allowClear: false
+        });
+
         if (type && type.trim() !== '') {
             $('#editStudentType').val(type).trigger('change');
         }
@@ -610,6 +624,9 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
         }
         if ($('#editSchoolYearEnrolled').hasClass('select2-hidden-accessible')) {
             $('#editSchoolYearEnrolled').select2('destroy');
+        }
+        if ($('#editSemester').hasClass('select2-hidden-accessible')) {
+            $('#editSemester').select2('destroy');
         }
         $('#editStudentModal').off('shown.bs.modal');
         $('#editStudentModal').off('hidden.bs.modal');

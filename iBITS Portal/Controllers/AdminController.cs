@@ -1750,7 +1750,7 @@ namespace iBITS_Portal.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStudent(Student student)
+        public async Task<IActionResult> UpdateStudent(Student student, int? SemesterId)
         {
             if (!ModelState.IsValid)
             {
@@ -1758,7 +1758,10 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction(nameof(StudentRecords));
             }
 
-            var studentToUpdate = await _context.Students.FindAsync(student.StudentNum);
+            var studentToUpdate = await _context.Students
+                .Include(s => s.StudentSemesters)
+                .FirstOrDefaultAsync(s => s.StudentNum == student.StudentNum);
+            
             if (studentToUpdate == null)
             {
                 TempData["Error"] = "Student not found.";
@@ -1773,6 +1776,42 @@ namespace iBITS_Portal.Controllers
             studentToUpdate.YearLevelSection = student.YearLevelSection;
             studentToUpdate.StudentType = student.StudentType;
             studentToUpdate.Birthday = student.Birthday;
+            studentToUpdate.SchoolYearEnrolled = student.SchoolYearEnrolled;
+
+            // Handle Semester Assignment
+            if (SemesterId.HasValue && SemesterId.Value > 0)
+            {
+                // Check if student already has this semester assigned
+                var existingSemester = studentToUpdate.StudentSemesters
+                    .FirstOrDefault(ss => ss.SemesterId == SemesterId.Value);
+
+                if (existingSemester == null)
+                {
+                    // Deactivate all current semesters for this student
+                    foreach (var ss in studentToUpdate.StudentSemesters)
+                    {
+                        ss.IsActive = false;
+                    }
+
+                    // Add new semester assignment
+                    var newStudentSemester = new StudentSemester
+                    {
+                        StudentNum = student.StudentNum,
+                        SemesterId = SemesterId.Value,
+                        EnrollmentDate = DateTime.Now,
+                        IsActive = true
+                    };
+                    _context.StudentSemesters.Add(newStudentSemester);
+                }
+                else
+                {
+                    // Activate the selected semester and deactivate others
+                    foreach (var ss in studentToUpdate.StudentSemesters)
+                    {
+                        ss.IsActive = (ss.SemesterId == SemesterId.Value);
+                    }
+                }
+            }
 
             try
             {

@@ -39,8 +39,8 @@
     <form method="get" asp-action="Events">
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label class="form-label small text-muted">Filter by Semester</label>
-                <select id="semesterFilter" name="semesterFilter" class="form-select" onchange="this.form.submit()">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Semester</label>
+                <select id="semesterFilter" name="semesterFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
                     <option value="">All Semesters</option>
                     @if (ViewBag.Semesters != null)
                     {
@@ -54,8 +54,8 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="button" class="btn btn-outline-light btn-sm w-100" onclick="window.location.href='@Url.Action("Events")'">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                <button type="button" class="btn btn-outline-warning w-100" onclick="window.location.href='@Url.Action("Events")'" title="Reset Filters" style="border-color:var(--gold-primary); color:var(--gold-primary);">
+                    <i class="bi bi-arrow-clockwise"></i> Reset
                 </button>
             </div>
         </div>

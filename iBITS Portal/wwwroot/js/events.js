@@ -8,6 +8,17 @@ $(document).ready(function () {
     // 1. INITIALIZE SELECT2 (Custom Dropdown Theme)
     // =========================================================
 
+    // Initialize Select2 for filter dropdowns
+    $('.select2-enable').select2({
+        minimumResultsForSearch: Infinity,
+        width: '100%'
+    });
+
+    // Auto-submit filter on change
+    $('.auto-submit-filter').on('change', function () {
+        $(this).closest('form').submit();
+    });
+
     // Initialize for Create Modal
     $('#createEventModal').on('shown.bs.modal', function () {
         $(this).find('select').select2({
