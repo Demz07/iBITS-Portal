@@ -244,6 +244,385 @@ namespace iBITS_Portal.Controllers
         public class ScanRequest { public string ScannedData { get; set; } = ""; public int EventId { get; set; } }
 
         // ============================================================
+        // TIME IN/TIME OUT SCANNER WITH SEMESTER SUPPORT
+        // ============================================================
+        
+        /// <summary>
+        /// Get available semesters for TimeIn/TimeOut scanning
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> GetAvailableSemesters()
+        {
+            try
+            {
+                var semesters = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.IsCurrent)
+                    .ThenByDescending(s => s.StartDate)
+                    .Select(s => new
+                    {
+                        semesterId = s.SemesterId,
+                        semesterName = s.SemesterName,
+                        academicYear = s.AcademicYear.YearName,
+                        isCurrent = s.IsCurrent,
+                        displayName = $"{s.SemesterName} - {s.AcademicYear.YearName}"
+                    })
+                    .ToListAsync();
+
+                return Json(new { success = true, semesters });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error loading semesters." });
+            }
+        }
+
+        /// <summary>
+        /// Process TimeIn scan for a student
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> ProcessTimeIn([FromBody] TimeInOutRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.ScannedData))
+                {
+                    return Json(new { success = false, message = "Invalid QR code data." });
+                }
+
+                string studentId = ParseStudentNumFromQr(request.ScannedData);
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    return Json(new { success = false, message = "QR code is not in the correct format." });
+                }
+
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
+                }
+
+                // Get semester (use provided or current)
+                int semesterId = request.SemesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                if (semesterId == 0)
+                {
+                    return Json(new { success = false, message = "No active semester found. Please select a semester." });
+                }
+
+                var semester = await _context.Semesters.Include(s => s.AcademicYear).FirstOrDefaultAsync(s => s.SemesterId == semesterId);
+                if (semester == null)
+                {
+                    return Json(new { success = false, message = "Selected semester not found." });
+                }
+
+                // Security: Check Section for Class Secretary role
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                    }
+                }
+
+                // Check if student is enrolled in this semester
+                var enrollment = await _context.StudentSemesters
+                    .FirstOrDefaultAsync(ss => ss.StudentNum == studentId && ss.SemesterId == semesterId);
+
+                if (enrollment == null)
+                {
+                    return Json(new { success = false, message = $"Student is not enrolled in {semester.SemesterName} - {semester.AcademicYear.YearName}." });
+                }
+
+                var today = DateOnly.FromDateTime(DateTime.Now);
+
+                // Check for existing TimeIn today for this semester (without TimeOut)
+                var existingAttendance = await _context.Attendances
+                    .Where(a => a.StudentNum == studentId 
+                        && a.SemesterId == semesterId
+                        && a.TimeIn.HasValue
+                        && a.TimeIn.Value.Date == DateTime.Now.Date
+                        && !a.TimeOut.HasValue)
+                    .OrderByDescending(a => a.TimeIn)
+                    .FirstOrDefaultAsync();
+
+                if (existingAttendance != null)
+                {
+                    var timeInFormatted = existingAttendance.TimeIn?.ToString("h:mm tt");
+                    return Json(new { 
+                        success = false, 
+                        message = $"{student.FullName} already timed in today at {timeInFormatted}. Please time out first." 
+                    });
+                }
+
+                // Get current user info for audit
+                var currentUser = await _userManager.GetUserAsync(User);
+                string processedBy = currentUser?.UserName ?? "System";
+
+                // Create new TimeIn attendance record
+                var attendance = new Attendance
+                {
+                    StudentNum = studentId,
+                    SemesterId = semesterId,
+                    TimeIn = DateTime.Now,
+                    AttendanceStatus = "Present",
+                    ScanDevice = request.DeviceInfo ?? "Unknown",
+                    Location = request.Location ?? "Campus"
+                };
+
+                _context.Attendances.Add(attendance);
+                await _context.SaveChangesAsync();
+
+                // Create audit log
+                var auditLog = new QRAuditLog
+                {
+                    StudentNum = studentId,
+                    QRCodeData = request.ScannedData,
+                    ScanTime = DateTime.Now,
+                    ScanType = "TimeIn",
+                    ProcessingResult = "Success",
+                    AttendanceId = attendance.AttendanceId,
+                    SemesterId = semesterId,
+                    DeviceFingerprint = request.DeviceInfo,
+                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Location = request.Location,
+                    ProcessedBy = processedBy
+                };
+
+                _context.QRAuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
+
+                // Return rich data for the UI
+                return Json(new
+                {
+                    success = true,
+                    message = "Time In recorded successfully.",
+                    scanTime = DateTime.Now.ToString("h:mm:ss tt"),
+                    studentId = student.StudentNum,
+                    studentName = student.FullName,
+                    profileImage = student.StudentImage,
+                    section = student.YearLevelSection ?? "N/A",
+                    semester = $"{semester.SemesterName} - {semester.AcademicYear.YearName}",
+                    status = "Timed In",
+                    attendanceId = attendance.AttendanceId
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return Json(new { success = false, message = "An unexpected server error occurred during Time In." });
+            }
+        }
+
+        /// <summary>
+        /// Process TimeOut scan for a student
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> ProcessTimeOut([FromBody] TimeInOutRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.ScannedData))
+                {
+                    return Json(new { success = false, message = "Invalid QR code data." });
+                }
+
+                string studentId = ParseStudentNumFromQr(request.ScannedData);
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    return Json(new { success = false, message = "QR code is not in the correct format." });
+                }
+
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
+                }
+
+                // Get semester (use provided or current)
+                int semesterId = request.SemesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                if (semesterId == 0)
+                {
+                    return Json(new { success = false, message = "No active semester found. Please select a semester." });
+                }
+
+                var semester = await _context.Semesters.Include(s => s.AcademicYear).FirstOrDefaultAsync(s => s.SemesterId == semesterId);
+                if (semester == null)
+                {
+                    return Json(new { success = false, message = "Selected semester not found." });
+                }
+
+                // Security: Check Section for Class Secretary role
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                    }
+                }
+
+                // Find the most recent TimeIn record without a TimeOut for today
+                var attendanceRecord = await _context.Attendances
+                    .Where(a => a.StudentNum == studentId 
+                        && a.SemesterId == semesterId
+                        && a.TimeIn.HasValue
+                        && a.TimeIn.Value.Date == DateTime.Now.Date
+                        && !a.TimeOut.HasValue)
+                    .OrderByDescending(a => a.TimeIn)
+                    .FirstOrDefaultAsync();
+
+                if (attendanceRecord == null)
+                {
+                    return Json(new { 
+                        success = false, 
+                        message = $"{student.FullName} has not timed in yet today, or has already timed out." 
+                    });
+                }
+
+                // Get current user info for audit
+                var currentUser = await _userManager.GetUserAsync(User);
+                string processedBy = currentUser?.UserName ?? "System";
+
+                // Update the attendance record with TimeOut
+                attendanceRecord.TimeOut = DateTime.Now;
+                
+                // Calculate duration in minutes (database trigger will also calculate this)
+                if (attendanceRecord.TimeIn.HasValue && attendanceRecord.TimeOut.HasValue)
+                {
+                    var duration = (attendanceRecord.TimeOut.Value - attendanceRecord.TimeIn.Value).TotalMinutes;
+                    attendanceRecord.DurationMinutes = (int)Math.Round(duration);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Create audit log
+                var auditLog = new QRAuditLog
+                {
+                    StudentNum = studentId,
+                    QRCodeData = request.ScannedData,
+                    ScanTime = DateTime.Now,
+                    ScanType = "TimeOut",
+                    ProcessingResult = "Success",
+                    AttendanceId = attendanceRecord.AttendanceId,
+                    SemesterId = semesterId,
+                    DeviceFingerprint = request.DeviceInfo,
+                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Location = request.Location,
+                    ProcessedBy = processedBy
+                };
+
+                _context.QRAuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
+
+                // Format duration for display
+                string durationDisplay = "N/A";
+                if (attendanceRecord.DurationMinutes.HasValue)
+                {
+                    int hours = attendanceRecord.DurationMinutes.Value / 60;
+                    int minutes = attendanceRecord.DurationMinutes.Value % 60;
+                    durationDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+                }
+
+                // Return rich data for the UI
+                return Json(new
+                {
+                    success = true,
+                    message = "Time Out recorded successfully.",
+                    scanTime = DateTime.Now.ToString("h:mm:ss tt"),
+                    studentId = student.StudentNum,
+                    studentName = student.FullName,
+                    profileImage = student.StudentImage,
+                    section = student.YearLevelSection ?? "N/A",
+                    semester = $"{semester.SemesterName} - {semester.AcademicYear.YearName}",
+                    status = "Timed Out",
+                    timeIn = attendanceRecord.TimeIn?.ToString("h:mm tt"),
+                    timeOut = attendanceRecord.TimeOut?.ToString("h:mm tt"),
+                    duration = durationDisplay,
+                    attendanceId = attendanceRecord.AttendanceId
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return Json(new { success = false, message = "An unexpected server error occurred during Time Out." });
+            }
+        }
+
+        /// <summary>
+        /// Get today's TimeIn/TimeOut records for display
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> GetTodayAttendance(int? semesterId)
+        {
+            try
+            {
+                var today = DateTime.Now.Date;
+                
+                // Get semester (use provided or current)
+                int selectedSemesterId = semesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                
+                var query = _context.Attendances
+                    .Include(a => a.StudentNumNavigation)
+                    .Where(a => a.TimeIn.HasValue && a.TimeIn.Value.Date == today);
+
+                if (selectedSemesterId > 0)
+                {
+                    query = query.Where(a => a.SemesterId == selectedSemesterId);
+                }
+
+                // Filter by section for Class Secretary
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var user = await _userManager.GetUserAsync(User);
+                    var secretary = await _context.Students.FindAsync(user.UserName);
+                    if (secretary?.YearLevelSection != null)
+                    {
+                        query = query.Where(a => a.StudentNumNavigation.YearLevelSection == secretary.YearLevelSection);
+                    }
+                }
+
+                var records = await query
+                    .OrderByDescending(a => a.TimeIn)
+                    .Select(a => new
+                    {
+                        attendanceId = a.AttendanceId,
+                        studentNum = a.StudentNum,
+                        studentName = a.StudentNumNavigation.FullName,
+                        section = a.StudentNumNavigation.YearLevelSection ?? "N/A",
+                        profileImage = a.StudentNumNavigation.StudentImage,
+                        timeIn = a.TimeIn,
+                        timeOut = a.TimeOut,
+                        durationMinutes = a.DurationMinutes,
+                        status = a.TimeOut.HasValue ? "Complete" : "Active"
+                    })
+                    .Take(50) // Limit to last 50 records
+                    .ToListAsync();
+
+                return Json(new { success = true, records });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error loading attendance records." });
+            }
+        }
+
+        public class TimeInOutRequest 
+        { 
+            public string ScannedData { get; set; } = ""; 
+            public int? SemesterId { get; set; }
+            public string? DeviceInfo { get; set; }
+            public string? Location { get; set; }
+        }
+
+        // ============================================================
         // TREASURER PAYMENTS DASHBOARD (Unified)
         // ============================================================
         [Authorize(Roles = "Org Treasurer, Class Treasurer")]
@@ -997,6 +1376,8 @@ namespace iBITS_Portal.Controllers
             var query = _context.Attendances
                 .Include(a => a.StudentNumNavigation)
                 .Include(a => a.Event)
+                .Include(a => a.Semester)
+                    .ThenInclude(s => s.AcademicYear)
                 .AsQueryable();
 
             // ============================================================

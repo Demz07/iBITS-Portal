@@ -2,12 +2,17 @@ import QrScanner from "https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.
 
 window.exportToExcel = exportToExcel;
 window.exportToPdf = exportToPdf;
+window.refreshTimeInLog = refreshTimeInLog;
+window.refreshTimeOutLog = refreshTimeOutLog;
 
 document.addEventListener("DOMContentLoaded", function () {
     // --- Elements ---
     const modeLinks = document.querySelectorAll('.nav-link-scanner');
     const livePanel = document.getElementById('live-panel');
     const verifierPanel = document.getElementById('verifier-panel');
+    const timeinPanel = document.getElementById('timein-panel');
+    const timeoutPanel = document.getElementById('timeout-panel');
+    
     const eventSel = document.getElementById('eventSelector');
     const startBtn = document.getElementById('startSessionBtn');
     const liveContainer = document.getElementById('live-scanner-container');
@@ -17,6 +22,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const liveFileInput = document.getElementById('live-file-input');
     const tableBody = document.getElementById('attendance-table-body');
     const emptyState = document.getElementById('empty-state-msg');
+
+    // TimeIn Elements
+    const timeinVideoEl = document.getElementById('timein-video');
+    const timeinOverlayText = document.getElementById('timein-overlay-text');
+    const timeinFileInput = document.getElementById('timein-file-input');
+    const timeinSemesterSelector = document.getElementById('timein-semester-selector');
+    const timeinTableBody = document.getElementById('timein-table-body');
+    const timeinEmptyState = document.getElementById('timein-empty-state');
+
+    // TimeOut Elements
+    const timeoutVideoEl = document.getElementById('timeout-video');
+    const timeoutOverlayText = document.getElementById('timeout-overlay-text');
+    const timeoutFileInput = document.getElementById('timeout-file-input');
+    const timeoutSemesterSelector = document.getElementById('timeout-semester-selector');
+    const timeoutTableBody = document.getElementById('timeout-table-body');
+    const timeoutEmptyState = document.getElementById('timeout-empty-state');
 
     const verifierCard = document.getElementById('verifier-result-card');
     const verifierVideoEl = document.getElementById('verifier-video');
@@ -33,6 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let lastCode = null;
     let lastTime = 0;
     const COOLDOWN = 2500; // Increased cooldown to prevent flicker
+    let currentSemesterId = null;
 
     // --- TEMPLATES (To avoid innerHTML rewrite flicker) ---
     const verifierPromptHTML = `
@@ -60,11 +82,31 @@ document.addEventListener("DOMContentLoaded", function () {
             currentMode = link.dataset.mode;
             modeLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
+            
+            // Hide all panels
+            livePanel.classList.remove('active');
+            verifierPanel.classList.remove('active');
+            if (timeinPanel) timeinPanel.classList.remove('active');
+            if (timeoutPanel) timeoutPanel.classList.remove('active');
+            
+            // Show the active panel and start camera if needed
             if (currentMode === 'live') {
                 livePanel.classList.add('active');
-                verifierPanel.classList.remove('active');
-            } else {
-                livePanel.classList.remove('active');
+            } else if (currentMode === 'timein') {
+                if (timeinPanel) {
+                    timeinPanel.classList.add('active');
+                    loadSemesters('timein');
+                    startCamera();
+                    loadTodayAttendance('timein');
+                }
+            } else if (currentMode === 'timeout') {
+                if (timeoutPanel) {
+                    timeoutPanel.classList.add('active');
+                    loadSemesters('timeout');
+                    startCamera();
+                    loadTodayAttendance('timeout');
+                }
+            } else if (currentMode === 'verifier') {
                 verifierPanel.classList.add('active');
                 resetUI(); // Reset verifier UI when switching
                 startCamera();
@@ -83,6 +125,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (liveFileInput) liveFileInput.addEventListener('change', (e) => handleFileSelect(e));
     if (verifierFileInput) verifierFileInput.addEventListener('change', (e) => handleFileSelect(e));
+    if (timeinFileInput) timeinFileInput.addEventListener('change', (e) => handleFileSelect(e));
+    if (timeoutFileInput) timeoutFileInput.addEventListener('change', (e) => handleFileSelect(e));
+
+    // Semester selector change handlers
+    if (timeinSemesterSelector) {
+        timeinSemesterSelector.addEventListener('change', (e) => {
+            currentSemesterId = parseInt(e.target.value) || null;
+            loadTodayAttendance('timein');
+        });
+    }
+    if (timeoutSemesterSelector) {
+        timeoutSemesterSelector.addEventListener('change', (e) => {
+            currentSemesterId = parseInt(e.target.value) || null;
+            loadTodayAttendance('timeout');
+        });
+    }
 
     // --- CAMERA FUNCTIONS ---
     function startCamera(eventId) {
@@ -91,9 +149,16 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const videoEl = currentMode === 'live' ? liveVideoEl : verifierVideoEl;
+        let videoEl;
         if (currentMode === 'live') {
+            videoEl = liveVideoEl;
             liveContainer.style.display = 'block';
+        } else if (currentMode === 'timein') {
+            videoEl = timeinVideoEl;
+        } else if (currentMode === 'timeout') {
+            videoEl = timeoutVideoEl;
+        } else {
+            videoEl = verifierVideoEl;
         }
 
         isProcessing = false;
@@ -145,6 +210,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (currentMode === 'live') {
             sendLiveScan(decodedText, eventId);
+        } else if (currentMode === 'timein') {
+            sendTimeInScan(decodedText);
+        } else if (currentMode === 'timeout') {
+            sendTimeOutScan(decodedText);
         } else {
             sendVerificationScan(decodedText);
         }
@@ -185,6 +254,96 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.error('Scan error:', err);
                 playSound(audioErr);
                 showLiveFlashCardError('Network or server error.');
+                isProcessing = false;
+            });
+    }
+
+    function sendTimeInScan(code) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const semesterId = timeinSemesterSelector ? parseInt(timeinSemesterSelector.value) : null;
+        
+        fetch('/Officer/ProcessTimeIn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({ 
+                scannedData: code, 
+                semesterId: semesterId,
+                deviceInfo: navigator.userAgent,
+                location: 'Campus Scanner'
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    playSound(audioOk);
+                    showTimeInFlashCard(data);
+                    updateOverlayText("Time In Success!");
+                    updateScannerOverlay('success');
+                    loadTodayAttendance('timein'); // Refresh the log
+                } else {
+                    playSound(audioErr);
+                    showTimeInFlashCardError(data.message);
+                    updateOverlayText("Failed: " + (data.message || 'Time In failed'));
+                    updateScannerOverlay('error');
+                }
+                setTimeout(() => {
+                    isProcessing = false;
+                    resetUI();
+                    hideTimeInFlashCard();
+                }, COOLDOWN);
+            })
+            .catch(err => {
+                console.error('TimeIn error:', err);
+                playSound(audioErr);
+                showTimeInFlashCardError('Network or server error.');
+                isProcessing = false;
+            });
+    }
+
+    function sendTimeOutScan(code) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const semesterId = timeoutSemesterSelector ? parseInt(timeoutSemesterSelector.value) : null;
+        
+        fetch('/Officer/ProcessTimeOut', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({ 
+                scannedData: code, 
+                semesterId: semesterId,
+                deviceInfo: navigator.userAgent,
+                location: 'Campus Scanner'
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    playSound(audioOk);
+                    showTimeOutFlashCard(data);
+                    updateOverlayText("Time Out Success!");
+                    updateScannerOverlay('success');
+                    loadTodayAttendance('timeout'); // Refresh the log
+                } else {
+                    playSound(audioErr);
+                    showTimeOutFlashCardError(data.message);
+                    updateOverlayText("Failed: " + (data.message || 'Time Out failed'));
+                    updateScannerOverlay('error');
+                }
+                setTimeout(() => {
+                    isProcessing = false;
+                    resetUI();
+                    hideTimeOutFlashCard();
+                }, COOLDOWN);
+            })
+            .catch(err => {
+                console.error('TimeOut error:', err);
+                playSound(audioErr);
+                showTimeOutFlashCardError('Network or server error.');
                 isProcessing = false;
             });
     }
@@ -381,12 +540,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateOverlayText(text) {
-        const el = currentMode === 'live' ? liveOverlayText : verifierOverlayText;
+        let el;
+        if (currentMode === 'live') el = liveOverlayText;
+        else if (currentMode === 'timein') el = timeinOverlayText;
+        else if (currentMode === 'timeout') el = timeoutOverlayText;
+        else el = verifierOverlayText;
         if (el) el.textContent = text;
     }
 
     function updateScannerOverlay(status) {
-        const selector = currentMode === 'live' ? '#live-panel .scanner-overlay' : '#verifier-panel .scanner-overlay';
+        let selector;
+        if (currentMode === 'live') selector = '#live-panel .scanner-overlay';
+        else if (currentMode === 'timein') selector = '#timein-panel .scanner-overlay';
+        else if (currentMode === 'timeout') selector = '#timeout-panel .scanner-overlay';
+        else selector = '#verifier-panel .scanner-overlay';
+        
         const overlay = document.querySelector(selector);
         if (!overlay) return;
 
@@ -405,6 +573,258 @@ document.addEventListener("DOMContentLoaded", function () {
         // For both modes, reset the camera overlay
         updateOverlayText("Scanning...");
         updateScannerOverlay('default');
+    }
+
+    // --- TIME IN/OUT FLASH CARDS ---
+    function showTimeInFlashCard(data) {
+        const flashCard = document.getElementById('timein-flash-card');
+        const flashContent = document.getElementById('timein-flash-content');
+        if (!flashCard || !flashContent) return;
+
+        flashContent.innerHTML = `
+            <div class="flash-card-container success">
+                <div class="profile-container">
+                    <img src="${normalizeImagePath(data.profileImage)}" 
+                         class="profile-image" 
+                         alt="Profile" 
+                         onerror="this.src='/images/default-avatar.png'">
+                    <div class="verification-badge" style="background: #28a745;">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                    </div>
+                </div>
+                <div class="profile-divider"></div>
+                <h3 class="profile-name">${data.studentName}</h3>
+                <div class="info-badges">
+                    <div class="info-badge">
+                        <i class="bi bi-person-badge badge-icon"></i>
+                        <span class="badge-text">${data.studentId}</span>
+                    </div>
+                    <div class="info-badge section-badge">
+                        <i class="bi bi-mortarboard-fill badge-icon"></i>
+                        <span class="badge-text">${data.section}</span>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <div class="badge bg-success" style="font-size: 1rem; padding: 8px 16px;">
+                        <i class="bi bi-clock-fill me-2"></i>Time In: ${data.scanTime}
+                    </div>
+                </div>
+            </div>`;
+
+        flashCard.style.display = 'block';
+        flashCard.style.animation = 'slideInUp 0.4s ease-out';
+    }
+
+    function showTimeInFlashCardError(message) {
+        const flashCard = document.getElementById('timein-flash-card');
+        const flashContent = document.getElementById('timein-flash-content');
+        if (!flashCard || !flashContent) return;
+
+        flashContent.innerHTML = `
+            <div class="flash-card-container error">
+                <div class="flash-card-error">
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    <h4 class="fw-bold mt-3 text-danger">Time In Failed</h4>
+                    <p class="text-muted">${message}</p>
+                </div>
+            </div>`;
+
+        flashCard.style.display = 'block';
+        flashCard.style.animation = 'slideInUp 0.4s ease-out';
+    }
+
+    function hideTimeInFlashCard() {
+        const flashCard = document.getElementById('timein-flash-card');
+        if (flashCard) {
+            flashCard.style.animation = 'slideOutDown 0.3s ease-in';
+            setTimeout(() => {
+                flashCard.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    function showTimeOutFlashCard(data) {
+        const flashCard = document.getElementById('timeout-flash-card');
+        const flashContent = document.getElementById('timeout-flash-content');
+        if (!flashCard || !flashContent) return;
+
+        flashContent.innerHTML = `
+            <div class="flash-card-container success">
+                <div class="profile-container">
+                    <img src="${normalizeImagePath(data.profileImage)}" 
+                         class="profile-image" 
+                         alt="Profile" 
+                         onerror="this.src='/images/default-avatar.png'">
+                    <div class="verification-badge" style="background: #dc3545;">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </div>
+                </div>
+                <div class="profile-divider"></div>
+                <h3 class="profile-name">${data.studentName}</h3>
+                <div class="info-badges">
+                    <div class="info-badge">
+                        <i class="bi bi-person-badge badge-icon"></i>
+                        <span class="badge-text">${data.studentId}</span>
+                    </div>
+                    <div class="info-badge section-badge">
+                        <i class="bi bi-mortarboard-fill badge-icon"></i>
+                        <span class="badge-text">${data.section}</span>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <div class="badge bg-info text-dark mb-2" style="font-size: 0.9rem; padding: 6px 12px;">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>${data.timeIn}
+                    </div>
+                    <div class="badge bg-danger" style="font-size: 0.9rem; padding: 6px 12px;">
+                        <i class="bi bi-box-arrow-right me-1"></i>${data.timeOut}
+                    </div>
+                    <div class="mt-2 fw-bold" style="color: var(--gold-text);">
+                        Duration: ${data.duration}
+                    </div>
+                </div>
+            </div>`;
+
+        flashCard.style.display = 'block';
+        flashCard.style.animation = 'slideInUp 0.4s ease-out';
+    }
+
+    function showTimeOutFlashCardError(message) {
+        const flashCard = document.getElementById('timeout-flash-card');
+        const flashContent = document.getElementById('timeout-flash-content');
+        if (!flashCard || !flashContent) return;
+
+        flashContent.innerHTML = `
+            <div class="flash-card-container error">
+                <div class="flash-card-error">
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    <h4 class="fw-bold mt-3 text-danger">Time Out Failed</h4>
+                    <p class="text-muted">${message}</p>
+                </div>
+            </div>`;
+
+        flashCard.style.display = 'block';
+        flashCard.style.animation = 'slideInUp 0.4s ease-out';
+    }
+
+    function hideTimeOutFlashCard() {
+        const flashCard = document.getElementById('timeout-flash-card');
+        if (flashCard) {
+            flashCard.style.animation = 'slideOutDown 0.3s ease-in';
+            setTimeout(() => {
+                flashCard.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // --- LOAD SEMESTERS ---
+    function loadSemesters(mode) {
+        fetch('/Officer/GetAvailableSemesters')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.semesters) {
+                    const selector = mode === 'timein' ? timeinSemesterSelector : timeoutSemesterSelector;
+                    if (!selector) return;
+
+                    selector.innerHTML = '<option value="0">-- Select Semester --</option>';
+                    data.semesters.forEach(sem => {
+                        const option = document.createElement('option');
+                        option.value = sem.semesterId;
+                        option.textContent = sem.displayName + (sem.isCurrent ? ' (Current)' : '');
+                        if (sem.isCurrent) {
+                            option.selected = true;
+                            currentSemesterId = sem.semesterId;
+                        }
+                        selector.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Error loading semesters:', err);
+            });
+    }
+
+    // --- LOAD TODAY'S ATTENDANCE ---
+    function loadTodayAttendance(mode) {
+        const semesterId = currentSemesterId || 0;
+        fetch(`/Officer/GetTodayAttendance?semesterId=${semesterId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.records) {
+                    const tbody = mode === 'timein' ? timeinTableBody : timeoutTableBody;
+                    const emptyState = mode === 'timein' ? timeinEmptyState : timeoutEmptyState;
+                    
+                    if (!tbody) return;
+
+                    tbody.innerHTML = '';
+                    
+                    if (data.records.length === 0) {
+                        if (emptyState) emptyState.style.display = 'block';
+                    } else {
+                        if (emptyState) emptyState.style.display = 'none';
+                        
+                        data.records.forEach(rec => {
+                            const row = document.createElement('tr');
+                            
+                            if (mode === 'timein') {
+                                const timeIn = rec.timeIn ? new Date(rec.timeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                                const statusBadge = rec.status === 'Complete' 
+                                    ? '<span class="badge bg-success">Complete</span>' 
+                                    : '<span class="badge bg-warning text-dark">Active</span>';
+                                
+                                row.innerHTML = `
+                                    <td><span class="text-muted small">${timeIn}</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img src="${normalizeImagePath(rec.profileImage)}" 
+                                                 alt="Profile" 
+                                                 class="table-profile-img" 
+                                                 onerror="this.src='/images/default-avatar.png'"
+                                                 style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                                            <div>
+                                                <div class="fw-bold">${rec.studentName}</div>
+                                                <span class="small text-muted">${rec.section}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${statusBadge}</td>
+                                `;
+                            } else {
+                                const timeIn = rec.timeIn ? new Date(rec.timeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                                const timeOut = rec.timeOut ? new Date(rec.timeOut).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                                const duration = rec.durationMinutes 
+                                    ? (Math.floor(rec.durationMinutes / 60) > 0 
+                                        ? `${Math.floor(rec.durationMinutes / 60)}h ${rec.durationMinutes % 60}m` 
+                                        : `${rec.durationMinutes}m`)
+                                    : 'N/A';
+                                
+                                row.innerHTML = `
+                                    <td><span class="text-muted small">${timeIn}</span></td>
+                                    <td><span class="text-muted small">${timeOut}</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img src="${normalizeImagePath(rec.profileImage)}" 
+                                                 alt="Profile" 
+                                                 class="table-profile-img" 
+                                                 onerror="this.src='/images/default-avatar.png'"
+                                                 style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                                            <div>
+                                                <div class="fw-bold small">${rec.studentName}</div>
+                                                <span class="small text-muted">${rec.section}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-info text-dark">${duration}</span></td>
+                                `;
+                            }
+                            
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error loading today\'s attendance:', err);
+            });
     }
 
     function handleFileSelect(event) {
@@ -475,4 +895,128 @@ function exportToPdf() {
     doc.text("Event Attendance Report", 14, 15);
     doc.autoTable({ html: '#attendance-table', startY: 25 });
     doc.save(`Attendance_Log_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+// Helper functions for refreshing TimeIn/TimeOut logs
+function refreshTimeInLog() {
+    const semesterSelector = document.getElementById('timein-semester-selector');
+    const semesterId = semesterSelector ? parseInt(semesterSelector.value) : null;
+    
+    fetch(`/Officer/GetTodayAttendance?semesterId=${semesterId || 0}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.records) {
+                const tbody = document.getElementById('timein-table-body');
+                const emptyState = document.getElementById('timein-empty-state');
+                
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                
+                if (data.records.length === 0) {
+                    if (emptyState) emptyState.style.display = 'block';
+                } else {
+                    if (emptyState) emptyState.style.display = 'none';
+                    
+                    data.records.forEach(rec => {
+                        const row = document.createElement('tr');
+                        const timeIn = rec.timeIn ? new Date(rec.timeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                        const statusBadge = rec.status === 'Complete' 
+                            ? '<span class="badge bg-success">Complete</span>' 
+                            : '<span class="badge bg-warning text-dark">Active</span>';
+                        
+                        const profileImage = rec.profileImage && rec.profileImage.trim() !== '' 
+                            ? (rec.profileImage.startsWith('/') ? rec.profileImage : `/${rec.profileImage}`)
+                            : '/images/default-avatar.png';
+                        
+                        row.innerHTML = `
+                            <td><span class="text-muted small">${timeIn}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="${profileImage}" 
+                                         alt="Profile" 
+                                         class="table-profile-img" 
+                                         onerror="this.src='/images/default-avatar.png'"
+                                         style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                                    <div>
+                                        <div class="fw-bold">${rec.studentName}</div>
+                                        <span class="small text-muted">${rec.section}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${statusBadge}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error refreshing TimeIn log:', err);
+        });
+}
+
+function refreshTimeOutLog() {
+    const semesterSelector = document.getElementById('timeout-semester-selector');
+    const semesterId = semesterSelector ? parseInt(semesterSelector.value) : null;
+    
+    fetch(`/Officer/GetTodayAttendance?semesterId=${semesterId || 0}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.records) {
+                const tbody = document.getElementById('timeout-table-body');
+                const emptyState = document.getElementById('timeout-empty-state');
+                
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                
+                // Filter only records with TimeOut
+                const completedRecords = data.records.filter(rec => rec.timeOut);
+                
+                if (completedRecords.length === 0) {
+                    if (emptyState) emptyState.style.display = 'block';
+                } else {
+                    if (emptyState) emptyState.style.display = 'none';
+                    
+                    completedRecords.forEach(rec => {
+                        const row = document.createElement('tr');
+                        const timeIn = rec.timeIn ? new Date(rec.timeIn).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                        const timeOut = rec.timeOut ? new Date(rec.timeOut).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A';
+                        const duration = rec.durationMinutes 
+                            ? (Math.floor(rec.durationMinutes / 60) > 0 
+                                ? `${Math.floor(rec.durationMinutes / 60)}h ${rec.durationMinutes % 60}m` 
+                                : `${rec.durationMinutes}m`)
+                            : 'N/A';
+                        
+                        const profileImage = rec.profileImage && rec.profileImage.trim() !== '' 
+                            ? (rec.profileImage.startsWith('/') ? rec.profileImage : `/${rec.profileImage}`)
+                            : '/images/default-avatar.png';
+                        
+                        row.innerHTML = `
+                            <td><span class="text-muted small">${timeIn}</span></td>
+                            <td><span class="text-muted small">${timeOut}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="${profileImage}" 
+                                         alt="Profile" 
+                                         class="table-profile-img" 
+                                         onerror="this.src='/images/default-avatar.png'"
+                                         style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                                    <div>
+                                        <div class="fw-bold small">${rec.studentName}</div>
+                                        <span class="small text-muted">${rec.section}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-info text-dark">${duration}</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error refreshing TimeOut log:', err);
+        });
 }
