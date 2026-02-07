@@ -89,17 +89,43 @@
 }
 
 <!-- ======================= HEADER ======================= -->
-<div class="glass-panel d-flex justify-content-between align-items-center mb-4">
+<div class="glass-panel d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> Class Treasury - @ViewBag.Section</h4>
         <p class="mb-0 small text-muted">Manage fees and fines for your classmates in @ViewBag.Section.</p>
     </div>
 </div>
 
+<!-- SEMESTER FILTER -->
+<div class="glass-panel p-3 mb-4">
+    <form method="get" asp-action="ClassTreasuryDashboard" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label small text-muted">Semester</label>
+            <select name="semesterFilter" class="form-select" onchange="this.form.submit()">
+                <option value="">All Semesters</option>
+                @if (ViewBag.Semesters != null)
+                {
+                    foreach (var sem in ViewBag.Semesters)
+                    {
+                        <option value="@sem.SemesterId" selected="@(ViewBag.SemesterFilter?.ToString() == sem.SemesterId.ToString())">
+                            @sem.SemesterName (@sem.AcademicYear.YearName)
+                        </option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <a class="btn btn-outline-light w-100" href="@Url.Action("ClassTreasuryDashboard")">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+            </a>
+        </div>
+    </form>
+</div>
+
 <!-- ======================= QUICK ACCESS CARDS ======================= -->
 <div class="row mb-4">
     <div class="col-md-6">
-        <a href="@Url.Action("ClassFees", "Officer")" class="text-decoration-none">
+        <a href="@Url.Action("ClassFees", "Officer", new { semesterFilter = ViewBag.SemesterFilter })" class="text-decoration-none">
             <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
                 <div class="d-flex align-items-center">
                     <div class="me-4" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
@@ -117,7 +143,7 @@
         </a>
     </div>
     <div class="col-md-6">
-        <a href="@Url.Action("ClassFines", "Officer")" class="text-decoration-none">
+        <a href="@Url.Action("ClassFines", "Officer", new { semesterFilter = ViewBag.SemesterFilter })" class="text-decoration-none">
             <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
                 <div class="d-flex align-items-center">
                     <div class="me-4" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">

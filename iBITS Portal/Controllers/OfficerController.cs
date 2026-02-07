@@ -40,7 +40,17 @@ namespace iBITS_Portal.Controllers
             return scannedData;
         }
 
-
+        // ============================================================
+        // HELPER: Get Active Semesters
+        // ============================================================
+        private async Task<List<Semester>> GetActiveSemesters()
+        {
+            return await _context.Semesters
+                .Include(s => s.AcademicYear)
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.StartDate)
+                .ToListAsync();
+        }
 
         // ============================================================
         // ANNOUNCEMENTS
@@ -658,11 +668,29 @@ namespace iBITS_Portal.Controllers
         // Only counts VALIDATED remittances (not just paid by Class Treasurer)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgTreasurerDashboard()
+        public async Task<IActionResult> OrgTreasurerDashboard(int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+
             // Get all fees and fines
-            var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
-            var fines = await _context.Fines.Include(f => f.StudentNumNavigation).ToListAsync();
+            var feesQuery = _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            var finesQuery = _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+
+            var fees = await feesQuery.ToListAsync();
+            var fines = await finesQuery.ToListAsync();
 
             // Calculate statistics - ONLY count validated remittances (RemittanceStatus == "Remitted")
             // This ensures only payments that have been validated by Org Treasurer are counted
@@ -919,10 +947,14 @@ namespace iBITS_Portal.Controllers
         // ORG SECRETARY DASHBOARD (WITH DYNAMIC ANALYTICS FILTERS)
         // ============================================================
         [Authorize(Roles = "Org Secretary")]
-        public async Task<IActionResult> OrgSecretaryDashboard(int? eventId, string program, string yearLevel)
+        public async Task<IActionResult> OrgSecretaryDashboard(int? eventId, string program, string yearLevel, int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+
             // --- 1. STATS CARDS & GAUGE LOGIC ---
             var globalQuery = _context.Attendances.Include(a => a.StudentNumNavigation).AsQueryable();
+            if (semesterFilter.HasValue) globalQuery = globalQuery.Where(a => a.SemesterId == semesterFilter.Value);
             if (eventId.HasValue) globalQuery = globalQuery.Where(a => a.EventId == eventId);
             if (!string.IsNullOrEmpty(program)) globalQuery = globalQuery.Where(a => a.StudentNumNavigation.Course == program);
             if (!string.IsNullOrEmpty(yearLevel)) globalQuery = globalQuery.Where(a => a.StudentNumNavigation.YearLevelSection.Contains(yearLevel));
@@ -934,6 +966,8 @@ namespace iBITS_Portal.Controllers
             // --- 2. BAR GRAPH LOGIC (Attendee Breakdown) ---
             var distQuery = _context.Attendances.Include(a => a.StudentNumNavigation)
                 .Where(a => a.AttendanceStatus == "Present");
+
+            if (semesterFilter.HasValue) distQuery = distQuery.Where(a => a.SemesterId == semesterFilter.Value);
 
             if (eventId.HasValue) distQuery = distQuery.Where(a => a.EventId == eventId);
 
@@ -1242,8 +1276,10 @@ namespace iBITS_Portal.Controllers
         // CLASS TREASURY DASHBOARD (Updated with Fines)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassTreasuryDashboard()
+        public async Task<IActionResult> ClassTreasuryDashboard(int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -1257,17 +1293,28 @@ namespace iBITS_Portal.Controllers
             var program = treasurer.Course;
 
             // Get fees and fines for the section AND program (strict filtering)
-            var fees = await _context.Fees
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section 
                          && f.StudentNumNavigation.Course == program)
-                .ToListAsync();
+                .AsQueryable();
 
-            var fines = await _context.Fines
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section
                          && f.StudentNumNavigation.Course == program)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+
+            var fees = await feesQuery.ToListAsync();
+            var fines = await finesQuery.ToListAsync();
 
             // Get paid fees and fines
             var paidFees = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID").ToList();
@@ -1734,10 +1781,22 @@ namespace iBITS_Portal.Controllers
         // ORG TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgFees()
+        public async Task<IActionResult> OrgFees(int? semesterFilter)
         {
-            var fees = await _context.Fees
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fees = await feesQuery
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
@@ -1805,14 +1864,26 @@ namespace iBITS_Portal.Controllers
         // ORG TREASURER - FINES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgFines()
+        public async Task<IActionResult> OrgFines(int? semesterFilter)
         {
-            var fines = await _context.Fines
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            
+            if (semesterFilter.HasValue)
+            {
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fines = await finesQuery
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
@@ -2665,7 +2736,7 @@ namespace iBITS_Portal.Controllers
         // CLASS TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassFees()
+        public async Task<IActionResult> ClassFees(int? semesterFilter)
         {
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
@@ -2678,16 +2749,27 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
             var program = treasurer.Course;
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
 
             // ============================================================
             // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
             // This ensures Class Treasurers can ONLY see fees from their exact classmates
             // (same program, year, and section)
             // ============================================================
-            var fees = await _context.Fees
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section 
-                         && f.StudentNumNavigation.Course == program)
+                         && f.StudentNumNavigation.Course == program);
+            
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fees = await feesQuery
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
@@ -2740,7 +2822,7 @@ namespace iBITS_Portal.Controllers
         // FINAL FIX: Robust query to handle both direct and indirect student links.
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassFines()
+        public async Task<IActionResult> ClassFines(int? semesterFilter)
         {
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
@@ -2753,6 +2835,9 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
             var program = treasurer.Course;
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
 
             // ============================================================
             // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
@@ -2762,16 +2847,24 @@ namespace iBITS_Portal.Controllers
             // This ensures Class Treasurers can ONLY see fines from their exact classmates
             // (same program, year, and section)
             // ============================================================
-            var fines = await _context.Fines
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f =>
                     (f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section && f.StudentNumNavigation.Course == program) ||
                     (f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section && f.Attendance.StudentNumNavigation.Course == program)
-                )
+                );
+            
+            if (semesterFilter.HasValue)
+            {
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fines = await finesQuery
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
@@ -2989,7 +3082,7 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateOrgFee(string feeName, decimal amount, DateOnly? feesDueDate, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateOrgFee(string feeName, decimal amount, DateOnly? feesDueDate, string programFilter, string yearFilter, int? semesterId)
         {
             if (string.IsNullOrWhiteSpace(feeName) || amount <= 0)
             {
@@ -3012,6 +3105,12 @@ namespace iBITS_Portal.Controllers
             var students = await query.ToListAsync();
             var batchId = Guid.NewGuid().ToString();
 
+            var effectiveSemesterId = semesterId;
+            if (!effectiveSemesterId.HasValue)
+            {
+                effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+            }
+
             foreach (var student in students)
             {
                 _context.Fees.Add(new Fee
@@ -3021,7 +3120,8 @@ namespace iBITS_Portal.Controllers
                     FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
                     FeeStatus = "Unpaid",
                     StudentNum = student.StudentNum,
-                    BatchId = batchId
+                    BatchId = batchId,
+                    SemesterId = effectiveSemesterId
                 });
             }
 
@@ -3036,7 +3136,7 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateOrgFine(string fineReason, decimal amount, DateOnly? finesDueDate, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateOrgFine(string fineReason, decimal amount, DateOnly? finesDueDate, string programFilter, string yearFilter, int? semesterId)
         {
             if (string.IsNullOrWhiteSpace(fineReason) || amount <= 0)
             {
@@ -3059,6 +3159,12 @@ namespace iBITS_Portal.Controllers
             var students = await query.ToListAsync();
             var batchId = Guid.NewGuid().ToString();
 
+            var effectiveSemesterId = semesterId;
+            if (!effectiveSemesterId.HasValue)
+            {
+                effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+            }
+
             foreach (var student in students)
             {
                 _context.Fines.Add(new Fine
@@ -3068,7 +3174,8 @@ namespace iBITS_Portal.Controllers
                     FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15)),
                     FinesStatus = "Unpaid",
                     StudentNum = student.StudentNum,
-                    BatchId = batchId
+                    BatchId = batchId,
+                    SemesterId = effectiveSemesterId
                 });
             }
 

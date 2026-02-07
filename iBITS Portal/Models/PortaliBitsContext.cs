@@ -391,6 +391,37 @@ public partial class PortaliBitsContext : DbContext
             entity.HasIndex(e => e.RemittanceStatus);
         });
 
+        // Configure PaymentTransaction entity
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.ToTable("PaymentTransactions");
+
+            entity.HasOne(d => d.Fee)
+                .WithMany()
+                .HasForeignKey(d => d.FeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Treasurer)
+                .WithMany()
+                .HasForeignKey(d => d.ProcessedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // NEW: Semester relationship for single-semester payments
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_PaymentTransactions_Semester")
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.SemesterId);
+            entity.HasIndex(e => e.StudentNum);
+        });
+
         // ============================================================
         // USER ANNOUNCEMENT DISMISSAL CONFIGURATION
         // ============================================================

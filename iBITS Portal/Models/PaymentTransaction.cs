@@ -76,6 +76,9 @@ namespace iBITS_Portal.Models
         [StringLength(20)]
         public string? AcademicYear { get; set; }
 
+       // Semester linking (single-semester payment mode)
+       public int? SemesterId { get; set; }
+
         // Navigation properties
         [ForeignKey("FeeId")]
         public virtual Fee? Fee { get; set; }
@@ -85,6 +88,9 @@ namespace iBITS_Portal.Models
 
         [ForeignKey("ProcessedBy")]
         public virtual Student? Treasurer { get; set; }
+
+        [ForeignKey("SemesterId")]
+        public virtual Semester? Semester { get; set; }
     }
 
     // Additional model for fine payment transactions

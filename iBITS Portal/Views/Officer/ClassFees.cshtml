@@ -414,6 +414,25 @@
                 <option value="unpaid">Pending/Unpaid</option>
             </select>
         </div>
+
+        <!-- Semester Filter -->
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Semester</label>
+            <form method="get" asp-action="ClassFees">
+                <select name="semesterFilter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Semesters</option>
+                    @if (ViewBag.Semesters != null)
+                    {
+                        foreach (var sem in ViewBag.Semesters)
+                        {
+                            <option value="@sem.SemesterId" selected="@(ViewBag.SemesterFilter?.ToString() == sem.SemesterId.ToString())">
+                                @sem.SemesterName (@sem.AcademicYear.YearName)
+                            </option>
+                        }
+                    }
+                </select>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -519,6 +538,7 @@
                                     <th style="color: var(--gold-primary);">Program</th>
                                     <th style="color: var(--gold-primary);">Year & Section</th>
                                     <th style="color: var(--gold-primary);">Amount</th>
+                                    <th style="color: var(--gold-primary);">Semester</th>
                                     <th style="color: var(--gold-primary);">Payment Status</th>
                                     <th style="color: var(--gold-primary);">Remittance</th>
                                     <th style="color: var(--gold-primary); width: 150px;" class="text-center">Action</th>
@@ -568,6 +588,17 @@
                                             <span class="text-white">@(student?.YearLevelSection ?? "N/A")</span>
                                         </td>
                                         <td class="fw-bold" style="color: var(--gold-primary);">₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                        <td>
+                                            @if (fee.Semester != null)
+                                            {
+                                                <span class="badge bg-info" style="font-size:0.75rem;">@fee.Semester.SemesterName</span>
+                                                <small class="text-muted d-block" style="font-size:0.7rem;">@fee.Semester.AcademicYear?.YearName</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
                                         <td>
                                             @if (isPaid)
                                             {

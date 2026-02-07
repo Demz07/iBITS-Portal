@@ -34,6 +34,34 @@
     </div>
 }
 
+<!-- FILTERS -->
+<div class="glass-panel p-4 mb-4">
+    <form method="get" asp-action="Events">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted">Filter by Semester</label>
+                <select id="semesterFilter" name="semesterFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Semesters</option>
+                    @if (ViewBag.Semesters != null)
+                    {
+                        foreach (var sem in ViewBag.Semesters)
+                        {
+                            <option value="@sem.SemesterId" selected="@(ViewBag.SemesterFilter?.ToString() == sem.SemesterId.ToString())">
+                                @sem.SemesterName (@sem.AcademicYear.YearName)
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-light btn-sm w-100" onclick="window.location.href='@Url.Action("Events")'">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
 <!-- EVENTS GRID -->
 <div class="row g-4">
     @if (Model != null && Model.Items != null && Model.Items.Any())
@@ -94,6 +122,16 @@
                     <div class="event-body">
                         <!-- Title -->
                         <h5 class="event-title" title="@item.EventName">@item.EventName</h5>
+                        
+                        <!-- Semester Badge -->
+                        @if (item.Semester != null)
+                        {
+                            <div class="mb-2">
+                                <span class="badge bg-info" style="font-size: 0.7rem;">
+                                    <i class="bi bi-calendar-check me-1"></i>@item.Semester.SemesterName
+                                </span>
+                            </div>
+                        }
 
                         <!-- Meta Info (Time & Location) -->
                         <div class="event-meta">
@@ -228,6 +266,25 @@
                                 <option value="Non-iBITS Event">Non-iBITS Event</option>
                             </select>
                         </div>
+                        
+                        <!-- Semester Selection -->
+                        <div class="col-md-12">
+                            <label class="form-label">Semester</label>
+                            <select name="SemesterId" class="form-select" style="background: rgba(13, 27, 42, 0.55); border: 1px solid rgba(212,175,55,0.45); color: #fff; backdrop-filter: blur(14px); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+                                <option value="">-- No Semester --</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var sem in ViewBag.Semesters)
+                                    {
+                                        var isCurrent = sem.IsCurrent ? " ⭐ CURRENT" : "";
+                                        <option value="@sem.SemesterId" selected="@(sem.IsCurrent)">
+                                            @sem.SemesterName - @sem.AcademicYear.YearName@isCurrent
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <small class="text-muted">Link this event to a specific semester for better tracking.</small>
+                        </div>
 
                         <!-- Row 2: Event Name (Full Width) -->
                         <div class="col-12">
@@ -319,6 +376,24 @@
                             <select id="editEventType" name="EventType" class="form-select select2-modal" required style="width: 100%;">
                                 <option value="iBITS Event">iBITS Event</option>
                                 <option value="Non-iBITS Event">Non-iBITS Event</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Semester Selection -->
+                        <div class="col-md-12">
+                            <label class="form-label">Semester</label>
+                            <select id="editSemesterId" name="SemesterId" class="form-select" style="background: rgba(13, 27, 42, 0.55); border: 1px solid rgba(212,175,55,0.45); color: #fff; backdrop-filter: blur(14px); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+                                <option value="">-- No Semester --</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var sem in ViewBag.Semesters)
+                                    {
+                                        var isCurrent = sem.IsCurrent ? " ⭐ CURRENT" : "";
+                                        <option value="@sem.SemesterId">
+                                            @sem.SemesterName - @sem.AcademicYear.YearName@isCurrent
+                                        </option>
+                                    }
+                                }
                             </select>
                         </div>
 

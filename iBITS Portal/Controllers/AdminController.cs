@@ -2190,13 +2190,22 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // EVENT MANAGEMENT
         // =========================================================
-        public async Task<IActionResult> Events(int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> Events(int? semesterFilter, int pageNumber = 1, int pageSize = 10)
         {
             ViewBag.PageSize = pageSize;
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            
             var eventsQuery = _context.Events
                 .Include(e => e.Attendances)
+                .Include(e => e.Semester).ThenInclude(s => s.AcademicYear)
                 .OrderByDescending(e => e.EventDate)
                 .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                eventsQuery = eventsQuery.Where(e => e.SemesterId == semesterFilter.Value);
+            }
 
             var pagedEvents = await PagedList<Event>.CreateAsync(eventsQuery, pageNumber, pageSize);
             return View(pagedEvents);
@@ -2710,11 +2719,23 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // PAYMENTS PAGE (FEES ONLY) (OPTIMIZED)
         // =========================================================
-        public async Task<IActionResult> Payments()
+        public async Task<IActionResult> Payments(int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            
             // Fetch Fees for the main table view
-            var fees = await _context.Fees
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+
+            var fees = await feesQuery
                 .OrderBy(f => f.FeeStatus)
                 .ThenByDescending(f => f.FeesDueDate)
                 .ToListAsync();
@@ -2816,7 +2837,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         // FINES MANAGEMENT PAGE (FIXED SEARCH & FILTERING)
         // =========================================================
-        public async Task<IActionResult> Fines(string searchString, string fineType, int? eventId, string manualFineReason, string statusFilter, string programFilter, string yearLevelFilter, string overdueFilter)
+        public async Task<IActionResult> Fines(string searchString, string fineType, int? eventId, string manualFineReason, string statusFilter, string programFilter, string yearLevelFilter, string overdueFilter, int? semesterFilter)
         {
             // --- 1. Pass filters to the View ---
             ViewData["SearchFilter"] = searchString;
@@ -2827,6 +2848,9 @@ namespace iBITS_Portal.Controllers
             ViewData["ProgramFilter"] = programFilter;
             ViewData["YearLevelFilter"] = yearLevelFilter;
             ViewData["OverdueFilter"] = overdueFilter;
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
 
             // --- 2. Build the base query ---
             var query = _context.Fines
@@ -2835,6 +2859,7 @@ namespace iBITS_Portal.Controllers
                     .ThenInclude(a => a.StudentNumNavigation) // Event Fines
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event) // Event Fines
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear) // Semester
                 .AsQueryable();
 
             // --- 3. Apply Fine Type & Logic-Based Filters ---
@@ -2861,6 +2886,11 @@ namespace iBITS_Portal.Controllers
             if (!string.IsNullOrEmpty(statusFilter))
             {
                 query = query.Where(f => f.FinesStatus == statusFilter);
+            }
+            
+            if (semesterFilter.HasValue)
+            {
+                query = query.Where(f => f.SemesterId == semesterFilter.Value);
             }
 
             if (!string.IsNullOrEmpty(programFilter))
@@ -3083,7 +3113,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateFine(string FineReason, decimal Amount, DateOnly? FinesDueDate, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateFine(string FineReason, decimal Amount, DateOnly? FinesDueDate, string programFilter, string yearFilter, int? semesterId)
         {
             try
             {
@@ -3101,6 +3131,12 @@ namespace iBITS_Portal.Controllers
                 // Generate a single, unique ID for this entire batch
                 var batchId = Guid.NewGuid().ToString();
 
+                var effectiveSemesterId = semesterId;
+                if (!effectiveSemesterId.HasValue)
+                {
+                    effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+                }
+
                 foreach (var student in students)
                 {
                     var fine = new Fine
@@ -3112,7 +3148,8 @@ namespace iBITS_Portal.Controllers
                         FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
                         FinesDueDate = dueDate,
                         AttendanceId = null,
-                        BatchId = batchId // Assign the same BatchId to all fines in this group
+                        BatchId = batchId, // Assign the same BatchId to all fines in this group
+                        SemesterId = effectiveSemesterId
                     };
                     _context.Fines.Add(fine);
 
@@ -3399,7 +3436,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateFee(string FeeName, decimal Amount, DateOnly? FeesDueDate, string AcadYear, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateFee(string FeeName, decimal Amount, DateOnly? FeesDueDate, string AcadYear, string programFilter, string yearFilter, int? semesterId)
         {
             try
             {
@@ -3415,6 +3452,13 @@ namespace iBITS_Portal.Controllers
                 // Generate unique BatchId for this batch of fees
                 string batchId = $"FEE-{DateTime.Now:yyyyMMddHHmmss}";
 
+                // Determine semester
+                var effectiveSemesterId = semesterId;
+                if (!effectiveSemesterId.HasValue)
+                {
+                    effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+                }
+
                 // Create fee records for each matching student
                 var feesCreated = 0;
                 foreach (var student in students)
@@ -3429,7 +3473,8 @@ namespace iBITS_Portal.Controllers
                         AcadYear = AcadYear,
                         StudentNum = student.StudentNum,
                         BatchId = batchId,  // NEW: Assign BatchId
-                        DateCreated = DateTime.Now  // NEW: Set DateCreated
+                        DateCreated = DateTime.Now,  // NEW: Set DateCreated
+                        SemesterId = effectiveSemesterId
                     };
                     _context.Fees.Add(fee);
                     feesCreated++;
