@@ -1,394 +1,296 @@
-﻿@model IEnumerable<iBITS_Portal.Models.Student>
+@model iBITS_Portal.ViewModels.StudentDetailsViewModel
 
-@{
-    ViewData["Title"] = "Student Management";
-    Layout = "~/Views/Shared/_StudentLayout.cshtml"; // Using your dashboard layout
-}
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/student-dashboard.css" asp-append-version="true" />
-    <style>
-        .glass-table-container {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .table thead {
-            background: rgba(212, 175, 55, 0.15);
-        }
-
-        .table {
-            color: #fff !important;
-            margin-bottom: 0;
-        }
-
-            .table td {
-                vertical-align: middle;
-                border-color: rgba(255,255,255,0.05);
-                padding: 12px 15px;
-            }
-
-        .student-img-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--gold-primary);
-        }
-
-        .btn-action-sm {
-            width: 32px;
-            height: 32px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: 0.2s;
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            background: rgba(255,255,255,0.05);
-        }
-
-            .btn-action-sm:hover {
-                background: var(--gold-primary);
-                color: #000;
-                border-color: var(--gold-primary);
-            }
-
-        .modal-label {
-            color: var(--gold-primary);
-            font-size: 0.75rem;
-            text-uppercase;
-            font-weight: bold;
-            margin-bottom: 2px;
-            display: block;
-        }
-    </style>
-}
-
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="fw-bold text-white mb-0">Student Directory</h2>
-        <p class="text-muted mb-0">Manage and oversee all iBITS members.</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#settingsModal">
-            <i class="bi bi-shield-lock me-2"></i>Security Settings
-        </button>
-        <a asp-action="Create" class="btn btn-gold">
-            <i class="bi bi-plus-lg me-2"></i>Add Student
-        </a>
-    </div>
+<!-- Modal Header -->
+<div class="modal-header">
+    <h5 class="modal-title text-gold">
+        <i class="bi bi-person-circle me-2"></i>
+        Student Details - @Model.FullName
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
 </div>
 
-<div class="glass-table-container">
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th class="border-0">Student Name</th>
-                    <th class="border-0">ID Number</th>
-                    <th class="border-0">Course & Year</th>
-                    <th class="border-0">Type</th>
-                    <th class="border-0 text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center gap-3">
-                                <img src="@(string.IsNullOrEmpty(item.StudentImage) ? "/images/default-avatar.png" : item.StudentImage)" class="student-img-circle" />
-                                <div>
-                                    <div class="fw-bold text-white">@item.StudentLn, @item.StudentFn</div>
-                                    <div class="small text-muted">@item.StudentEmail</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="mono-font text-gold">@item.StudentNum</td>
-                        <td>
-                            <div class="text-white small">@item.Course</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">@item.YearLevelSection</div>
-                        </td>
-                        <td>
-                            <span class="badge @(item.StudentType == "Regular" ? "bg-success" : "bg-info") bg-opacity-25 text-white border border-secondary" style="font-size: 0.7rem;">
-                                @item.StudentType
-                            </span>
-                        </td>
-                        <td class="text-end">
-                            <button onclick="openDetails('@item.StudentNum')" class="btn-action-sm" title="View Details"><i class="bi bi-eye"></i></button>
-                            <a asp-action="Edit" asp-route-id="@item.StudentNum" class="btn-action-sm" title="Edit"><i class="bi bi-pencil"></i></a>
-                            <a asp-action="Delete" asp-route-id="@item.StudentNum" class="btn-action-sm text-danger" title="Delete"><i class="bi bi-trash"></i></a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- MODAL 1: STUDENT DETAILS -->
-<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal" style="background: rgba(15, 15, 15, 0.98); border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-white">Student Profile</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailsContent">
-                <div class="text-center py-5"><div class="spinner-border text-warning"></div></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL 2: ACCOUNT SECURITY SETTINGS -->
-<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal" style="background: rgba(15, 15, 15, 0.98); border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-white"><i class="bi bi-shield-lock me-2 text-gold"></i> Change Password</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="ajaxPasswordForm">
-                    @Html.AntiForgeryToken()
-                    <div id="passwordAlert" class="alert d-none small"></div>
-
-                    <div class="mb-3">
-                        <label class="modal-label">New Password</label>
-                        <input type="password" name="NewPassword" class="form-control bg-dark text-white border-secondary" placeholder="Minimum 6 characters" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="modal-label">Confirm Password</label>
-                        <input type="password" name="ConfirmPassword" class="form-control bg-dark text-white border-secondary" placeholder="Repeat new password" required>
-                    </div>
-                    <button type="submit" class="btn btn-gold w-100" id="btnUpdatePass">Update Security Credentials</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
-    <script>
-        function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
-
-        function loadUpcomingEvents() {
-            const container = document.getElementById('upcomingEventsContent');
-            fetch('/Student/GetAllEventsJson').then(r => r.json()).then(data => {
-                container.innerHTML = '';
-                const today = new Date(); today.setHours(0,0,0,0);
-                const upcoming = data.filter(i => new Date(i.eventDate) >= today && !i.isClosed);
-                if (upcoming.length > 0) upcoming.forEach(i => container.innerHTML += renderEventCard(i, false));
-                else container.innerHTML = '<div class="col-12 text-center py-5 text-muted">No upcoming events.</div>';
-            });
-        }
-
-        function loadEventHistory() {
-            const container = document.getElementById('eventHistoryContent');
-            fetch('/Student/GetAllEventsJson').then(r => r.json()).then(data => {
-                container.innerHTML = '';
-                const today = new Date(); today.setHours(0,0,0,0);
-                const past = data.filter(i => new Date(i.eventDate) < today || i.isClosed).sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
-                if (past.length > 0) past.forEach(i => container.innerHTML += renderEventCard(i, true));
-                else container.innerHTML = '<div class="col-12 text-center py-5 text-muted">No event history.</div>';
-            });
-        }
-
-        // RESTORED: Professional Event Card Layout
-        function renderEventCard(item, isPastEvent) {
-            const eventDate = new Date(item.eventDate);
-            let statusClass = isPastEvent ? (item.isClosed ? "bg-dark" : "bg-secondary") : "badge-upcoming";
-            let statusText = isPastEvent ? (item.isClosed ? "Closed" : "Completed") : "Upcoming";
-
-            return `
-            <div class="col-md-6 col-lg-4">
-                <div class="glass-card h-100" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius:12px; overflow:hidden;">
-                    <div class="event-img-placeholder text-center py-4 position-relative" style="background: rgba(0,0,0,0.2);">
-                        <span class="status-badge ${statusClass}" style="position:absolute; top:10px; right:10px; padding: 4px 10px; border-radius:4px; color:white; font-size:0.75rem; font-weight:bold;">${statusText}</span>
-                        <i class="bi bi-calendar-week" style="font-size: 3rem; color: #D4AF37;"></i>
-                    </div>
-                    <div class="event-body p-4">
-                        <div class="event-date text-gold small fw-bold mb-1 text-uppercase">
-                            ${eventDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}
-                        </div>
-                        <div class="event-title fw-bold text-white mb-2" style="font-size: 1.1rem;">${item.eventName}</div>
-                        <div class="d-flex align-items-center gap-2 text-muted small">
-                            <i class="bi bi-geo-alt-fill text-warning"></i> ${item.eventLocation || 'TBA'}
-                        </div>
-                    </div>
+<!-- Modal Body -->
+<div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+    
+    <!-- Student Info Card -->
+    <div class="glass-panel mb-3" style="background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); padding: 20px; border-radius: 12px;">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Student ID</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@Model.Student.StudentNum</span>
                 </div>
-            </div>`;
-        }
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Email</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.StudentEmail ?? "N/A")</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Program</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.Course ?? "N/A")</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Year & Section</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.YearLevelSection ?? "N/A")</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Role</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">
+                        @if (Model.Role == "Member")
+                        {
+                            <span class="badge bg-secondary">@Model.Role</span>
+                        }
+                        else if (Model.Role.Contains("Org Officer"))
+                        {
+                            <span class="badge" style="background: var(--gold-primary); color: #000;">@Model.Role</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-info">@Model.Role</span>
+                        }
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Student Type</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.StudentType ?? "Regular")</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Universal function to handle the AJAX result and update the UI
-        function handleAjaxResult(formId, alertId, btnId, res) {
-            const btn = document.getElementById(btnId);
-            const alertDiv = document.getElementById(alertId);
+    <!-- Statistics Row -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="stat-card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 15px; border-radius: 10px; text-align: center;">
+                <div class="stat-value" style="font-size: 1.5rem; font-weight: bold; color: #22C55E;">@Model.AttendanceRate.ToString("F1")%</div>
+                <div class="stat-label" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase;">Attendance Rate</div>
+                <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">@Model.EventsAttended / @Model.TotalEvents events</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 15px; border-radius: 10px; text-align: center;">
+                <div class="stat-value" style="font-size: 1.5rem; font-weight: bold; color: #3B82F6;">₱@Model.TotalFees.ToString("N2")</div>
+                <div class="stat-label" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase;">Total Fees</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 10px; text-align: center;">
+                <div class="stat-value" style="font-size: 1.5rem; font-weight: bold; color: #EF4444;">₱@Model.TotalFines.ToString("N2")</div>
+                <div class="stat-label" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase;">Total Fines</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); padding: 15px; border-radius: 10px; text-align: center;">
+                <div class="stat-value" style="font-size: 1.5rem; font-weight: bold; color: var(--gold-primary);">₱@Model.Balance.ToString("N2")</div>
+                <div class="stat-label" style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase;">Balance</div>
+                <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">Paid: ₱@Model.TotalPaid.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
 
-            alertDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="studentDetailsTabs" role="tablist" style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="fees-tab" data-bs-toggle="tab" data-bs-target="#fees-content" type="button" role="tab" style="color: rgba(255,255,255,0.7);">
+                <i class="bi bi-wallet2 me-1"></i> Fees (@Model.Fees.Count)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="fines-tab" data-bs-toggle="tab" data-bs-target="#fines-content" type="button" role="tab" style="color: rgba(255,255,255,0.7);">
+                <i class="bi bi-exclamation-triangle me-1"></i> Fines (@Model.Fines.Count)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-content" type="button" role="tab" style="color: rgba(255,255,255,0.7);">
+                <i class="bi bi-calendar-check me-1"></i> Attendance (@Model.AttendanceHistory.Count)
+            </button>
+        </li>
+    </ul>
 
-            if (res.success) {
-                alertDiv.innerHTML = res.message;
-                alertDiv.classList.add('alert-success');
-
-                // --- INSTANT UI UPDATE LOGIC ---
-                if (res.imagePath) {
-                    const uniqueUrl = res.imagePath + '?t=' + new Date().getTime();
-                    document.getElementById('profilePicturePreview').src = uniqueUrl; // Modal preview
-                    document.querySelector('.profile-pic-wrapper img').src = uniqueUrl; // Offcanvas sidebar
-                    document.querySelector('.profile-icon-img').src = uniqueUrl; // Dashboard header
-                }
-
-                if (formId === 'ajaxEmailForm') {
-                    const newEmailInput = document.getElementById('ajaxEmailForm').querySelector('input[name="NewEmail"]');
-                    const currentEmailDisplay = document.getElementById('currentEmailDisplay');
-                    if (newEmailInput && currentEmailDisplay) {
-                        currentEmailDisplay.value = newEmailInput.value;
-                    }
-                }
-                // --- END INSTANT UI UPDATE LOGIC ---
-
-                // Only clear form fields that are meant to be cleared (e.g., password, new email, new phone)
-                if (formId === 'ajaxPasswordForm' || formId === 'ajaxEmailForm') {
-                     document.getElementById(formId).reset();
-                }
-
-            } else {
-                alertDiv.innerHTML = res.message;
-                alertDiv.classList.add('alert-danger');
+    <!-- Tab Content -->
+    <div class="tab-content" id="studentDetailsTabContent">
+        <!-- Fees Tab -->
+        <div class="tab-pane fade show active" id="fees-content" role="tabpanel">
+            @if (Model.Fees.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark table-hover">
+                        <thead style="background: rgba(212, 175, 55, 0.15);">
+                            <tr>
+                                <th>Fee Name</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var fee in Model.Fees)
+                            {
+                                <tr>
+                                    <td>@(fee.FeeName ?? "N/A")</td>
+                                    <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                    <td>
+                                        @if (fee.FeeStatus == "Paid" || fee.FeeStatus == "Completed")
+                                        {
+                                            <span class="badge bg-success">@fee.FeeStatus</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">@(fee.FeeStatus ?? "Pending")</span>
+                                        }
+                                    </td>
+                                    <td>@(fee.FeesDueDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-
-            // RESET BUTTON STATE: Simply re-enable the button
-            btn.disabled = false;
-        }
-
-        // Core AJAX Submission Handler
-        function submitFormAjax(formId, url, btnId, alertId, isFileUpload) {
-            const form = document.getElementById(formId);
-            const btn = document.getElementById(btnId);
-            const alertDiv = document.getElementById(alertId);
-
-            const formData = isFileUpload ? new FormData(form) : new URLSearchParams(new FormData(form));
-
-            // Set loading state: ONLY DISABLE THE BUTTON
-            btn.disabled = true;
-            alertDiv.classList.add('d-none');
-
-            const headers = {};
-            if (!isFileUpload) {
-                const token = new FormData(form).get('__RequestVerificationToken');
-                headers['RequestVerificationToken'] = token;
+            else
+            {
+                <div class="text-center py-4" style="color: rgba(255,255,255,0.5);">
+                    <i class="bi bi-inbox fs-1"></i>
+                    <p class="mt-2">No fees assigned</p>
+                </div>
             }
+        </div>
 
-            fetch(url, {
-                method: 'POST',
-                headers: isFileUpload ? {} : headers,
-                body: formData
-            })
-            .then(r => r.json())
-            .then(res => { handleAjaxResult(formId, alertId, btnId, res); })
-            .catch(err => {
-                // CRITICAL FIX: Ensure button is re-enabled on network/server error
-                handleAjaxResult(formId, alertId, btnId, { success: false, message: "A network or server error occurred. Please check the Console (F12)." });
-                console.error(err);
-            });
-        }
-
-        // Universal function to trigger the custom confirmation modal
-        function confirmAndSubmit(e, formId, url, btnId, alertId, isFileUpload = false) {
-            e.preventDefault();
-
-            // Set the button text to show the spinner/processing state before opening modal
-            const originalButtonText = document.getElementById(btnId).innerHTML;
-            const btn = document.getElementById(btnId);
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Processing...`;
-            btn.disabled = true; // Disable button while modal is open
-
-            // Store form data to be executed on confirmation
-            const confirmButton = document.getElementById('confirmActionButton');
-
-            // Set the onclick logic to submit the form
-            confirmButton.onclick = () => {
-                const confirmModalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-                confirmModalInstance.hide();
-                submitFormAjax(formId, url, btnId, alertId, isFileUpload);
-            };
-
-            // When the confirmation modal is hidden, reset the form button.
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-            confirmModal.show();
-
-            const settingsModal = document.getElementById('settingsModal');
-            settingsModal.addEventListener('hidden.bs.modal', function() {
-                btn.innerHTML = originalButtonText;
-                btn.disabled = false;
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-
-            // --- UI/TAB LOGIC ---
-            var triggerEl = document.getElementById('accountSettingsTabs');
-            if(triggerEl) {
-                triggerEl.addEventListener('shown.bs.tab', function (event) {
-                    document.querySelectorAll('#accountSettingsTabs .nav-link').forEach(link => {
-                        link.style.background = 'none';
-                        link.style.color = 'white';
-                    });
-                    event.target.style.background = 'var(--gold-primary)';
-                    event.target.style.color = 'black';
-                });
-                document.getElementById('profile-tab').style.background = 'var(--gold-primary)';
-                document.getElementById('profile-tab').style.color = 'black';
+        <!-- Fines Tab -->
+        <div class="tab-pane fade" id="fines-content" role="tabpanel">
+            @if (Model.Fines.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark table-hover">
+                        <thead style="background: rgba(239, 68, 68, 0.15);">
+                            <tr>
+                                <th>Event/Reason</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var fine in Model.Fines)
+                            {
+                                <tr>
+                                    <td>@fine.EventName</td>
+                                    <td>₱@fine.Amount.ToString("N2")</td>
+                                    <td>
+                                        @if (fine.Status == "Paid")
+                                        {
+                                            <span class="badge bg-success">Paid</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">@fine.Status</span>
+                                        }
+                                    </td>
+                                    <td>@(fine.DueDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-            // --- END UI/TAB LOGIC ---
-
-
-            // --- IMAGE PREVIEW LOGIC (Profile Tab) ---
-            const profilePictureInput = document.getElementById('profilePictureInput');
-            const profilePicturePreview = document.getElementById('profilePicturePreview');
-            if (profilePictureInput && profilePicturePreview) {
-                profilePictureInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        profilePicturePreview.src = URL.createObjectURL(file);
-                    }
-                });
+            else
+            {
+                <div class="text-center py-4" style="color: rgba(255,255,255,0.5);">
+                    <i class="bi bi-inbox fs-1"></i>
+                    <p class="mt-2">No fines recorded</p>
+                </div>
             }
+        </div>
 
-
-            // --- PROFILE FORM SUBMISSION ---
-            const profileForm = document.getElementById('ajaxProfileForm');
-            if (profileForm) {
-                profileForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxProfileForm', '/Account/UpdateProfileAjax', 'btnUpdateProfile', 'profileAlert', true); // True for File Upload
-                });
+        <!-- Attendance Tab -->
+        <div class="tab-pane fade" id="attendance-content" role="tabpanel">
+            @if (Model.AttendanceHistory.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-dark table-hover">
+                        <thead style="background: rgba(59, 130, 246, 0.15);">
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Fine</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in Model.AttendanceHistory)
+                            {
+                                <tr>
+                                    <td>@record.EventName</td>
+                                    <td>@(record.Date?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                    <td>
+                                        @if (record.Status == "Present")
+                                        {
+                                            <span class="badge bg-success">Present</span>
+                                        }
+                                        else if (record.Status == "Absent")
+                                        {
+                                            <span class="badge bg-danger">Absent</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@record.Status</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (record.HasFine)
+                                        {
+                                            <i class="bi bi-exclamation-circle text-warning"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-
-            // --- EMAIL FORM SUBMISSION ---
-            const emailForm = document.getElementById('ajaxEmailForm');
-            if (emailForm) {
-                emailForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxEmailForm', '/Account/UpdateEmailAjax', 'btnUpdateEmail', 'emailAlert', false);
-                });
+            else
+            {
+                <div class="text-center py-4" style="color: rgba(255,255,255,0.5);">
+                    <i class="bi bi-inbox fs-1"></i>
+                    <p class="mt-2">No attendance records</p>
+                </div>
             }
+        </div>
+    </div>
+</div>
 
-            // --- PASSWORD FORM SUBMISSION ---
-            const passwordForm = document.getElementById('ajaxPasswordForm');
-            if (passwordForm) {
-                passwordForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxPasswordForm', '/Account/ChangePasswordAjax', 'btnUpdatePass', 'passwordAlert', false);
-                });
-            }
-        });
-    </script>
-}
+<!-- Modal Footer -->
+<div class="modal-footer" style="border-top: 1px solid rgba(255, 255, 255, 0.1);">
+    <a href="@Url.Action("StudentRecords", "Admin")?searchString=@Model.Student.StudentNum" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-right-circle me-1"></i> Go to Student Records
+    </a>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>
 
+<style>
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--gold-primary) !important;
+        border-bottom-color: var(--gold-primary);
+        background: rgba(212, 175, 55, 0.1);
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--gold-primary) !important;
+    }
+</style>
