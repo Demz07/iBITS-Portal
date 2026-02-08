@@ -38,5 +38,25 @@ namespace iBITS_Portal.Models
         /// Expiry date for the announcement. After this date, the announcement will be automatically hidden.
         /// </summary>
         public DateTime? ExpiryDate { get; set; }
+
+        /// <summary>
+        /// Soft delete flag - if true, the announcement is in trash
+        /// </summary>
+        public bool IsDeleted { get; set; } = false;
+
+        /// <summary>
+        /// Date when the announcement was deleted (moved to trash)
+        /// </summary>
+        public DateTime? DeletedDate { get; set; }
+
+        /// <summary>
+        /// View count - how many times this announcement has been viewed
+        /// </summary>
+        public int ViewCount { get; set; } = 0;
+
+        /// <summary>
+        /// Number of students this announcement was sent to
+        /// </summary>
+        public int RecipientCount { get; set; } = 0;
     }
 }
