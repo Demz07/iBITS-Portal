@@ -12,15 +12,65 @@
 <!-- Modal Body -->
 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
     
-    <!-- Student Info Card -->
+    <!-- Student Info Card with Profile Picture -->
     <div class="glass-panel mb-3" style="background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); padding: 20px; border-radius: 12px;">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="info-item">
-                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Student ID</span>
-                    <span class="info-value" style="color: #fff; font-size: 1rem;">@Model.Student.StudentNum</span>
+        <div class="row g-3 align-items-center mb-3">
+            <div class="col-auto text-center">
+                @{
+                    var hasImage = !string.IsNullOrEmpty(Model.Student.StudentImage);
+                    var profilePicPath = hasImage ? Model.Student.StudentImage : "";
+                }
+                @if (hasImage)
+                {
+                    <div class="position-relative" style="cursor: pointer;" onclick="openProfileImageViewerNow('@Html.Raw(profilePicPath)', '@Html.Raw(Model.FullName)')">
+                        <img src="@profilePicPath" 
+                             alt="@Model.FullName" 
+                             class="student-profile-picture"
+                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold-primary); box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3); transition: transform 0.3s ease, box-shadow 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 15px rgba(212, 175, 55, 0.5)';"
+                             onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 10px rgba(212, 175, 55, 0.3)';">
+                        <div class="position-absolute bottom-0 end-0" style="background: var(--gold-primary); color: #000; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 2px solid #0B1A33;">
+                            <i class="bi bi-zoom-in" style="font-size: 0.9rem;"></i>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="student-default-avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--gold-primary); background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05)); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);">
+                        <i class="bi bi-person-circle" style="font-size: 5rem; color: var(--gold-primary); opacity: 0.6;"></i>
+                    </div>
+                }
+                <div class="mt-2">
+                    <small class="text-muted" style="font-size: 0.7rem;">@Model.Student.StudentNum</small>
+                    @if (hasImage)
+                    {
+                        <br>
+                        <small class="text-gold" style="font-size: 0.65rem;"><i class="bi bi-hand-index"></i> Click to expand</small>
+                    }
                 </div>
             </div>
+            <div class="col">
+                <h5 class="text-gold mb-2" style="font-size: 1.25rem; font-weight: 600;">@Model.FullName</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    @if (Model.Role == "Member")
+                    {
+                        <span class="badge bg-secondary">@Model.Role</span>
+                    }
+                    else if (Model.Role.Contains("Org Officer"))
+                    {
+                        <span class="badge" style="background: var(--gold-primary); color: #000;">@Model.Role</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-info">@Model.Role</span>
+                    }
+                    <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #3B82F6; border: 1px solid #3B82F6;">@(Model.Student.Course ?? "N/A")</span>
+                    <span class="badge" style="background: rgba(255, 255, 255, 0.1); color: #fff;">@(Model.Student.YearLevelSection ?? "N/A")</span>
+                </div>
+            </div>
+        </div>
+        <hr style="border-color: rgba(212, 175, 55, 0.3); margin: 15px 0;">
+        <div class="row g-3">
             <div class="col-md-6">
                 <div class="info-item">
                     <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Email</span>
@@ -29,33 +79,8 @@
             </div>
             <div class="col-md-6">
                 <div class="info-item">
-                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Program</span>
-                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.Course ?? "N/A")</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="info-item">
-                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Year & Section</span>
-                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.YearLevelSection ?? "N/A")</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="info-item">
-                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Role</span>
-                    <span class="info-value" style="color: #fff; font-size: 1rem;">
-                        @if (Model.Role == "Member")
-                        {
-                            <span class="badge bg-secondary">@Model.Role</span>
-                        }
-                        else if (Model.Role.Contains("Org Officer"))
-                        {
-                            <span class="badge" style="background: var(--gold-primary); color: #000;">@Model.Role</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-info">@Model.Role</span>
-                        }
-                    </span>
+                    <span class="info-label" style="color: var(--gold-primary); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 5px;">Birthday</span>
+                    <span class="info-value" style="color: #fff; font-size: 1rem;">@(Model.Student.Birthday?.ToString("MMMM dd, yyyy") ?? "N/A")</span>
                 </div>
             </div>
             <div class="col-md-6">
@@ -273,10 +298,25 @@
 
 <!-- Modal Footer -->
 <div class="modal-footer" style="border-top: 1px solid rgba(255, 255, 255, 0.1);">
-    <a href="@Url.Action("StudentRecords", "Admin")?searchString=@Model.Student.StudentNum" class="btn btn-sm btn-outline-light">
+    <a href="@Url.Action("StudentRecords", "Admin")?searchString=@Model.Student.StudentNum" class="btn btn-sm btn-outline-light me-auto">
         <i class="bi bi-arrow-right-circle me-1"></i> Go to Student Records
     </a>
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>
+
+<!-- Profile Image Viewer Modal -->
+<div id="profileImageViewerModal" class="profile-image-viewer" onclick="closeProfileImageViewer(event)">
+    <div class="profile-image-viewer-content">
+        <button class="profile-image-viewer-close" onclick="closeProfileImageViewer(event)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="profile-image-viewer-header">
+            <h5 id="profileImageViewerName" class="mb-0"></h5>
+        </div>
+        <div class="profile-image-viewer-body">
+            <img id="profileImageViewerImg" src="" alt="Profile Picture">
+        </div>
+    </div>
 </div>
 
 <style>
@@ -293,4 +333,141 @@
     .nav-tabs .nav-link:hover {
         color: var(--gold-primary) !important;
     }
+    
+    /* Profile Image Viewer Styles */
+    .profile-image-viewer {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .profile-image-viewer.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .profile-image-viewer-content {
+        position: relative;
+        max-width: 90%;
+        max-height: 90vh;
+        animation: zoomIn 0.3s ease;
+    }
+    
+    .profile-image-viewer-close {
+        position: absolute;
+        top: -50px;
+        right: 0;
+        background: var(--gold-primary);
+        color: #000;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.5);
+        z-index: 10000;
+    }
+    
+    .profile-image-viewer-close:hover {
+        transform: rotate(90deg) scale(1.1);
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.7);
+    }
+    
+    .profile-image-viewer-header {
+        position: absolute;
+        top: -50px;
+        left: 0;
+        color: var(--gold-primary);
+        font-size: 1.2rem;
+        font-weight: 600;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+    
+    .profile-image-viewer-body {
+        background: linear-gradient(135deg, rgba(11, 26, 51, 0.9), rgba(26, 42, 75, 0.9));
+        padding: 20px;
+        border-radius: 15px;
+        border: 2px solid var(--gold-primary);
+        box-shadow: 0 10px 40px rgba(212, 175, 55, 0.3);
+    }
+    
+    .profile-image-viewer-body img {
+        display: block;
+        max-width: 600px;
+        max-height: 600px;
+        width: auto;
+        height: auto;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @@keyframes zoomIn {
+        from {
+            transform: scale(0.5);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
 </style>
+
+<script>
+    function openProfileImageViewerNow(imagePath, studentName) {
+        console.log('Opening viewer with:', imagePath, studentName); // Debug
+        const viewer = document.getElementById('profileImageViewerModal');
+        const img = document.getElementById('profileImageViewerImg');
+        const name = document.getElementById('profileImageViewerName');
+        
+        if (!viewer) {
+            console.error('Viewer modal not found!');
+            return;
+        }
+        
+        img.src = imagePath;
+        name.textContent = studentName;
+        viewer.classList.add('active');
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeProfileImageViewer(event) {
+        event.stopPropagation();
+        const viewer = document.getElementById('profileImageViewerModal');
+        viewer.classList.remove('active');
+        
+        // Restore body scroll
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Close on ESC key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const viewer = document.getElementById('profileImageViewerModal');
+            if (viewer && viewer.classList.contains('active')) {
+                viewer.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        }
+    });
+</script>
