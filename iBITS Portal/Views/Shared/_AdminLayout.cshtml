@@ -275,7 +275,52 @@
     </div>
 
     @* INACTIVITY & SESSION MODALS *@
-    <!-- (No changes here, code omitted for brevity) -->
+    <!-- INACTIVITY WARNING MODAL -->
+    <div class="modal fade" id="inactivityWarning" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Session Timeout Warning
+                    </h5>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="bi bi-clock-history text-warning mb-3" style="font-size: 3rem;"></i>
+                    <h5 style="color: var(--text-strong);">Your session is about to expire</h5>
+                    <p class="text-muted">
+                        You have been inactive for 4 minutes. You will be automatically logged out in 1 minute unless you resume activity.
+                    </p>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-warning fw-bold px-4" onclick="resetTimer()">
+                            <i class="bi bi-arrow-clockwise me-2"></i> Keep Me Logged In
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SESSION EXPIRED MODAL (SOFT LOCK) -->
+    <div class="modal fade" id="sessionExpiredModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal text-center p-4" style="border: 1px solid var(--gold-primary);">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <i class="bi bi-shield-lock-fill text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="fw-bold" style="color:var(--text-strong);">Session Expired</h4>
+                    <p class="text-muted mb-4">
+                        For security reasons, your session has been locked due to extended inactivity.
+                        <br>Please log in again to continue.
+                    </p>
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-gold w-100 py-2 fw-bold">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Log In Again
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
