@@ -14,8 +14,18 @@
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin:0;"><i class="bi bi-calendar-event me-2"></i> Events</h3>
         <p class="text-muted small mb-0">Manage organization activities and schedules.</p>
+        @if (ViewBag.IsHistoricalMode == true)
+        {
+            <div class="alert alert-warning mt-2 mb-0 py-2 px-3" style="font-size: 0.85rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                <strong>Historical Mode:</strong> Viewing past semester data (read-only)
+            </div>
+        }
     </div>
-    <button class="btn-gold" data-bs-toggle="modal" data-bs-target="#createEventModal"><i class="bi bi-plus-lg"></i> Create New Event</button>
+    @if (ViewBag.IsHistoricalMode != true)
+    {
+        <button class="btn-gold" data-bs-toggle="modal" data-bs-target="#createEventModal"><i class="bi bi-plus-lg"></i> Create New Event</button>
+    }
 </div>
 
 <!-- ALERT MESSAGES -->
@@ -157,8 +167,8 @@
                             </div>
 
                             <div class="d-flex gap-2">
-                                <!-- Only show Close button if not already completed -->
-                                @if (statusText != "Completed")
+                                <!-- Only show Close button if not already completed and not in historical mode -->
+                                @if (statusText != "Completed" && ViewBag.IsHistoricalMode != true)
                                 {
                                     <button class="btn btn-sm btn-glass text-danger"
                                             title="Close Event & Assign Fines"
@@ -169,10 +179,12 @@
                                     </button>
                                 }
 
-                                <button class="btn btn-sm btn-manage-event"
-                                        style="font-size: 0.75rem; padding: 5px 12px;"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editEventModal"
+                                @if (ViewBag.IsHistoricalMode != true)
+                                {
+                                    <button class="btn btn-sm btn-manage-event"
+                                            style="font-size: 0.75rem; padding: 5px 12px;"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editEventModal"
                                         data-event-id="@item.EventId"
                                         data-event-name="@item.EventName"
                                         data-event-location="@item.EventLocation"
@@ -190,8 +202,15 @@
                                         data-non-ibits-fine-member="@item.NonIbitsFineForMember"
                                         data-non-ibits-fine-class-officer="@item.NonIbitsFineForClassOfficer"
                                         data-non-ibits-fine-org-officer="@item.NonIbitsFineForOrgOfficer">
-                                    Manage
-                                </button>
+                                        Manage
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                        <i class="bi bi-eye-fill me-1"></i> View Only
+                                    </span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -205,10 +224,22 @@
             <div class="glass-panel p-5 d-inline-block">
                 <i class="bi bi-calendar-event text-muted" style="font-size: 3rem; opacity:0.5;"></i>
                 <h5 class="text-muted mt-3 fw-bold">No Events Found</h5>
-                <p class="small text-muted mb-3">Create your first event to start tracking.</p>
-                <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createEventModal">
-                    <i class="bi bi-plus-lg me-1"></i> Create Event
-                </button>
+                <p class="small text-muted mb-3">
+                    @if (ViewBag.IsHistoricalMode == true)
+                    {
+                        <text>No events in this semester.</text>
+                    }
+                    else
+                    {
+                        <text>Create your first event to start tracking.</text>
+                    }
+                </p>
+                @if (ViewBag.IsHistoricalMode != true)
+                {
+                    <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createEventModal">
+                        <i class="bi bi-plus-lg me-1"></i> Create Event
+                    </button>
+                }
             </div>
         </div>
     }

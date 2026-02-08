@@ -7,6 +7,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,12 +22,14 @@ namespace iBITS_Portal.Controllers
     {
         private readonly PortaliBitsContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly ISemesterContextService _semesterContext;
         private const string QR_PREFIX = "iBITS:";
 
-        public OfficerController(PortaliBitsContext context, UserManager<IdentityUser> userManager)
+        public OfficerController(PortaliBitsContext context, UserManager<IdentityUser> userManager, ISemesterContextService semesterContext)
         {
             _context = context;
             _userManager = userManager;
+            _semesterContext = semesterContext;
         }
 
         // ============================================================
@@ -1599,6 +1602,10 @@ namespace iBITS_Portal.Controllers
 
             var students = await studentsQuery.ToListAsync();
 
+            // Auto-assign current semester
+            var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+            var semesterId = currentSemester?.SemesterId;
+
             foreach (var student in students)
             {
                 _context.Fees.Add(new Fee
@@ -1607,7 +1614,8 @@ namespace iBITS_Portal.Controllers
                     Amount = amount,
                     FeesDueDate = dueDate,
                     FeeStatus = "Unpaid",
-                    StudentNum = student.StudentNum
+                    StudentNum = student.StudentNum,
+                    SemesterId = semesterId
                 });
             }
 
@@ -1637,13 +1645,17 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction("CreateManualFine");
             }
 
+            // Auto-assign current semester
+            var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+            
             var fine = new Fine
             {
                 StudentNum = studentNum,
                 Amount = amount,
                 FinesDueDate = dueDate,
                 FinesStatus = "Unpaid",
-                Description = reason
+                Description = reason,
+                SemesterId = currentSemester?.SemesterId
             };
 
             _context.Fines.Add(fine);
@@ -2164,8 +2176,17 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgFees(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             ViewBag.Semesters = await GetActiveSemesters();
             ViewBag.SemesterFilter = semesterFilter;
+            ViewBag.SelectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            ViewBag.IsHistoricalMode = await _semesterContext.IsHistoricalModeAsync();
             
             var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
@@ -2247,8 +2268,17 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgFines(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             ViewBag.Semesters = await GetActiveSemesters();
             ViewBag.SemesterFilter = semesterFilter;
+            ViewBag.SelectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            ViewBag.IsHistoricalMode = await _semesterContext.IsHistoricalModeAsync();
             
             var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
@@ -3119,6 +3149,13 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Class Treasurer")]
         public async Task<IActionResult> ClassFees(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -3205,6 +3242,13 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Class Treasurer")]
         public async Task<IActionResult> ClassFines(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -5067,6 +5111,79 @@ namespace iBITS_Portal.Controllers
 
         #endregion
 
+        // ============================================================
+        // SEMESTER SELECTOR ENDPOINTS (For Officers)
+        // ============================================================
+
+        /// <summary>
+        /// Get all semesters for dropdown selector (Officers)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllSemestersForDropdown()
+        {
+            try
+            {
+                var semesters = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.StartDate)
+                    .Select(s => new
+                    {
+                        s.SemesterId,
+                        s.SemesterName,
+                        AcademicYear = s.AcademicYear.YearName,
+                        s.IsCurrent,
+                        DisplayName = s.AcademicYear.YearName + " - " + s.SemesterName
+                    })
+                    .ToListAsync();
+
+                return Json(semesters);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Set viewing semester for officers
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SetViewingSemester(int? semesterId)
+        {
+            try
+            {
+                if (semesterId.HasValue)
+                {
+                    var semester = await _context.Semesters
+                        .Include(s => s.AcademicYear)
+                        .FirstOrDefaultAsync(s => s.SemesterId == semesterId.Value);
+
+                    if (semester == null)
+                        return Json(new { success = false, message = "Semester not found" });
+
+                    HttpContext.Session.SetInt32("ViewingSemesterId", semesterId.Value);
+
+                    return Json(new
+                    {
+                        success = true,
+                        semesterName = semester.SemesterName,
+                        academicYear = semester.AcademicYear.YearName,
+                        isHistorical = !semester.IsCurrent,
+                        displayName = $"{semester.AcademicYear.YearName} - {semester.SemesterName}"
+                    });
+                }
+                else
+                {
+                    HttpContext.Session.Remove("ViewingSemesterId");
+                    return Json(new { success = true, message = "Viewing current semester" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 
     // ============================================================
@@ -5082,7 +5199,5 @@ namespace iBITS_Portal.Controllers
     {
         public List<int> FeeIds { get; set; }
         public string Category { get; set; }
-    }   
-
-
+    }
 }

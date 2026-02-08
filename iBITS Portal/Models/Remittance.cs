@@ -120,6 +120,11 @@ namespace iBITS_Portal.Models
         public string? AcademicYear { get; set; }
 
         /// <summary>
+        /// Semester ID for historical record tracking
+        /// </summary>
+        public int? SemesterId { get; set; }
+
+        /// <summary>
         /// Record creation timestamp
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -149,6 +154,12 @@ namespace iBITS_Portal.Models
         /// </summary>
         [ForeignKey("ValidatedBy")]
         public virtual Student? ValidatedByNavigation { get; set; }
+
+        /// <summary>
+        /// Navigation property to Semester
+        /// </summary>
+        [ForeignKey("SemesterId")]
+        public virtual Semester? Semester { get; set; }
 
         // ============================================================
         // Computed Properties

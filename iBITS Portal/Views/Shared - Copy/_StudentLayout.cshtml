@@ -37,12 +37,6 @@
     {
         displayRole = "Officer";
     }
-    
-    // Determine if user is an officer who can switch semesters
-    bool canSwitchSemester = User.IsInRole("Org Treasurer") 
-        || User.IsInRole("Class Treasurer") 
-        || User.IsInRole("Org Secretary") 
-        || User.IsInRole("Class Secretary");
 }
 
 <!DOCTYPE html>
@@ -128,58 +122,6 @@
         /* Light theme for nav section headers */
         [data-theme="light"] .nav-section-header {
             border-top-color: rgba(0, 0, 0, 0.08);
-        }
-
-        /* Semester Selector for Officers */
-        .semester-selector-wrapper {
-            background: rgba(11, 26, 51, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 12px;
-            padding: 10px 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .semester-selector-wrapper.historical-mode {
-            border-color: rgba(255, 193, 7, 0.6);
-            background: rgba(255, 193, 7, 0.1);
-        }
-
-        .semester-dropdown {
-            background: transparent !important;
-            border: none !important;
-            color: var(--gold-primary) !important;
-            font-weight: 700;
-            font-size: 0.95rem;
-            min-width: 260px;
-        }
-
-        .semester-dropdown option {
-            background: var(--bg-primary);
-            color: var(--text-strong);
-        }
-
-        /* Light theme adjustments */
-        [data-theme="light"] .semester-selector-wrapper {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-color: rgba(212, 175, 55, 0.5);
-        }
-
-        [data-theme="light"] .semester-dropdown {
-            color: #b8860b !important;
-        }
-
-        #historicalModeIndicator {
-            animation: fadeInSlide 0.3s ease;
-        }
-
-        @@keyframes fadeInSlide {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 
@@ -327,33 +269,13 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    @if (canSwitchSemester)
-                    {
-                        <!-- Semester Selector for Officers -->
-                        <div class="semester-selector-wrapper d-none d-md-flex align-items-center gap-2">
-                            <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
-                            <select id="semesterSelect" class="form-select semester-dropdown" title="Select Semester">
-                                <option value="">Loading semesters...</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Historical Mode Indicator -->
-                        <div id="historicalModeIndicator" class="d-none align-items-center gap-2">
-                            <span class="badge bg-warning text-dark">
-                                <i class="bi bi-lock-fill"></i> Historical View
-                            </span>
-                        </div>
-                    }
-                    else
-                    {
-                        <!-- Read-Only Badge for Regular Students -->
-                        <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Semester">
-                            <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
-                            <span id="currentSemesterDisplay" class="academic-year-text">
-                                Loading...
-                            </span>
-                        </div>
-                    }
+                    <!-- Academic Year Display (Read-Only for Students) -->
+                    <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Academic Year">
+                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
+                        <span id="currentAcademicYear" class="academic-year-text">
+                            @(ViewBag.CurrentAcademicYear ?? $"A.Y. {DateTime.Now.Year}-{DateTime.Now.Year + 1}")
+                        </span>
+                    </div>
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
                         <div style="font-weight:bold; color:var(--text-strong);">@User.Identity?.Name</div>
@@ -437,104 +359,6 @@
 
     <!-- CUSTOM SCRIPTS -->
     <script src="~/js/portal-layout.js"></script>
-
-    @if (canSwitchSemester)
-    {
-        <script>
-            // Semester Selector Logic for Officers
-            $(document).ready(function() {
-                loadSemesters();
-                
-                $('#semesterSelect').on('change', function () {
-                    var semesterId = $(this).val();
-                    switchSemester(semesterId);
-                });
-            });
-
-            function loadSemesters() {
-                $.ajax({
-                    url: '@Url.Action("GetAllSemestersForDropdown", "Officer")',
-                    type: 'GET',
-                    success: function(data) {
-                        var dropdown = $('#semesterSelect');
-                        dropdown.empty();
-                        
-                        if (data.error) {
-                            dropdown.append('<option value="">Error loading semesters</option>');
-                            return;
-                        }
-                        
-                        $.each(data, function(i, semester) {
-                            var option = $('<option>')
-                                .val(semester.semesterId)
-                                .text(semester.displayName);
-                            
-                            if (semester.isCurrent) {
-                                option.attr('selected', 'selected');
-                                option.prepend('⭐ ');
-                            }
-                            
-                            dropdown.append(option);
-                        });
-                        
-                        checkHistoricalMode();
-                    },
-                    error: function() {
-                        $('#semesterSelect').append('<option value="">Failed to load</option>');
-                    }
-                });
-            }
-
-            function switchSemester(semesterId) {
-                $.ajax({
-                    url: '@Url.Action("SetViewingSemester", "Officer")',
-                    type: 'POST',
-                    data: { semesterId: semesterId },
-                    success: function (response) {
-                        if (response.success) {
-                            if (response.isHistorical) {
-                                $('.semester-selector-wrapper').addClass('historical-mode');
-                                $('#historicalModeIndicator').removeClass('d-none').css('display', 'flex');
-                            } else {
-                                $('.semester-selector-wrapper').removeClass('historical-mode');
-                                $('#historicalModeIndicator').addClass('d-none');
-                            }
-                            
-                            // Reload to refresh data
-                            setTimeout(function() {
-                                location.reload();
-                            }, 800);
-                        }
-                    }
-                });
-            }
-
-            function checkHistoricalMode() {
-                var selected = $('#semesterSelect option:selected');
-                if (selected.text().indexOf('⭐') === -1 && selected.val() !== '') {
-                    $('.semester-selector-wrapper').addClass('historical-mode');
-                    $('#historicalModeIndicator').removeClass('d-none').css('display', 'flex');
-                }
-            }
-        </script>
-    }
-    else
-    {
-        <script>
-            // Load current semester display for regular students
-            $(document).ready(function() {
-                $.ajax({
-                    url: '@Url.Action("GetCurrentSemesterDisplay", "Student")',
-                    type: 'GET',
-                    success: function(data) {
-                        if (data.displayName) {
-                            $('#currentSemesterDisplay').text(data.displayName);
-                        }
-                    }
-                });
-            });
-        </script>
-    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

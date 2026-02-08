@@ -1,0 +1,326 @@
+@* Views/Shared/_AdminLayout.cshtml *@
+
+@{
+    Layout = null;
+}
+@using iBITS_Portal.ViewModels
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - iBITS Admin</title>
+
+    <!-- CSS LIBRARIES -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- CUSTOM STYLES -->
+    <link rel="stylesheet" href="~/css/portal-layout.css" />
+
+    <!-- STYLES FOR FINANCIAL DROPDOWN & ACADEMIC YEAR SELECTOR -->
+    <style>
+        /* This makes the link the positioning parent for the arrow */
+        #sidebar ul li a.dropdown-toggle {
+            position: relative;
+        }
+
+            /* Style for the dropdown arrow */
+            #sidebar ul li a.dropdown-toggle::after {
+                display: block;
+                position: absolute;
+                top: 50%;
+                right: 20px;
+                transform: translateY(-50%) rotate(-90deg);
+                transition: all 0.3s;
+                font-family: 'bootstrap-icons';
+                content: "\f282"; /* Bootstrap Icons chevron-down */
+                font-size: 0.8em;
+                line-height: 1;
+            }
+
+            #sidebar ul li a.dropdown-toggle[aria-expanded="true"]::after {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+        /* Styling for the submenu items */
+        #sidebar ul ul a {
+            font-size: 0.9em !important;
+            padding-left: 45px !important; /* Indent the submenu links */
+            background: rgba(0,0,0,0.15); /* Slightly darker background for submenu */
+        }
+
+            #sidebar ul ul a:hover {
+                background: rgba(0,0,0,0.25);
+            }
+
+        /* Ensure active submenu item AND the expanded main tab are highlighted */
+        #sidebar ul ul li.active > a,
+        #sidebar ul li.active > a[aria-expanded="true"],
+        #sidebar ul li.active > a.dropdown-toggle {
+            color: #fff !important;
+            background: rgba(212, 175, 55, 0.2) !important;
+        }
+
+        /* Light mode override for parent dropdown */
+        [data-theme="light"] #sidebar ul li.active > a[aria-expanded="true"],
+        [data-theme="light"] #sidebar ul li.active > a.dropdown-toggle {
+            color: var(--text-strong) !important;
+            background: linear-gradient(90deg, rgba(194, 157, 43, 0.15) 0%, transparent 100%) !important;
+            border-left-color: #c29d2b !important;
+            font-weight: 600 !important;
+        }
+
+        /* Academic Year Dropdown Styles */
+        .academic-year-selector {
+            background: rgba(11, 26, 51, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 12px;
+            padding: 10px 16px;
+        }
+
+        .academic-year-dropdown {
+            background: transparent !important;
+            border: none !important;
+            color: var(--gold-primary) !important;
+            font-weight: 700;
+        }
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Anti-Forgery Token for AJAX requests -->
+    @Html.AntiForgeryToken()
+
+    <div class="wrapper">
+        <!-- SIDEBAR -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <img src="~/images/logo.png" alt="iBITS Logo" class="sidebar-logo-img">
+                <div class="sidebar-brand">iBITS <span>PORTAL</span></div>
+                <div class="sidebar-role">Administrator Console</div>
+            </div>
+            <ul class="list-unstyled components">
+                @{
+                    string? action = ViewContext.RouteData.Values["Action"]?.ToString();
+                    string? controller = ViewContext.RouteData.Values["Controller"]?.ToString();
+                }
+                <!-- Dashboard Link -->
+                <li class="@(action == "Index" && controller == "Admin" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Index">
+                        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                    </a>
+                </li>
+
+                <!-- Student Records Link -->
+                <li class="@(action == "StudentRecords" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="StudentRecords">
+                        <i class="bi bi-people-fill"></i> Student Records
+                    </a>
+                </li>
+
+                <!-- Events Link -->
+                <li class="@(action == "Events" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="Events">
+                        <i class="bi bi-calendar-check-fill"></i> Events
+                    </a>
+                </li>
+
+                <!-- ============================================= -->
+                <!-- FINANCIALS DROPDOWN STARTS HERE               -->
+                <!-- ============================================= -->
+                @{
+                    // This C# logic adds the "active" class to the main tab
+                    // if you are on either the Fees or Fines page.
+                    bool isFinancialActive = (action == "Payments" || action == "Fines");
+                }
+                <li class="@(isFinancialActive ? "active" : "")">
+                    <!-- Main collapsible button. Text changed to "Financials" -->
+                    <a href="#financialSubmenu" data-bs-toggle="collapse" aria-expanded="@(isFinancialActive ? "true" : "false")" class="dropdown-toggle @(isFinancialActive ? "" : "collapsed")">
+                        <i class="bi bi-cash-coin"></i> Financials
+                    </a>
+
+                    <!-- Submenu -->
+                    <ul class="collapse list-unstyled @(isFinancialActive ? "show" : "")" id="financialSubmenu">
+                        <!-- Fees Link. Text changed from "Payments" to "Fees" -->
+                        <li class="@(action == "Payments" ? "active" : "")">
+                            <a asp-controller="Admin" asp-action="Payments">
+                                <i class="bi bi-wallet2"></i> Fees
+                            </a>
+                        </li>
+                        <!-- Fines Link -->
+                        <li class="@(action == "Fines" ? "active" : "")">
+                            <a asp-controller="Admin" asp-action="Fines">
+                                <i class="bi bi-exclamation-triangle"></i> Fines
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Archive Link -->
+                <li class="@(controller == "Archive" ? "active" : "")">
+                    <a asp-controller="Archive" asp-action="Index">
+                        <i class="bi bi-archive"></i> Archive
+                    </a>
+                </li>
+
+                <!-- Admin Settings Link -->
+                <li class="@(controller == "AdminSettings" ? "active" : "")">
+                    <a asp-controller="AdminSettings" asp-action="Index">
+                        <i class="bi bi-gear-fill"></i> Settings
+                    </a>
+                </li>
+
+                <li class="@(action == "ActivityLogs" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="ActivityLogs">
+                        <i class="bi bi-activity"></i> Activity Logs
+                    </a>
+                </li>
+            </ul>
+
+            <div style="padding: 20px;">
+                <form id="logoutForm" class="form-inline d-none" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"></form>
+                <button type="button" class="btn-logout-custom" data-bs-toggle="modal" data-bs-target="#confirmLogoutModal">
+                    <i class="bi bi-box-arrow-left"></i> Sign Out
+                </button>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT WRAPPER -->
+        <div id="content">
+            <!-- Fixed Navbar -->
+            <div class="admin-navbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" id="sidebarCollapse" class="btn-toggle"><i class="bi bi-list"></i></button>
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="~/images/pup-logo.png" alt="PUP Logo" class="pup-nav-logo">
+                        <div class="d-none d-sm-block">
+                            <div class="pup-nav-title">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</div>
+                            <div class="pup-nav-sub">LOPEZ, QUEZON CAMPUS</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Academic Year Selector -->
+                    <div class="academic-year-selector d-none d-md-flex align-items-center gap-2">
+                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
+                        <select id="academicYearSelect" class="form-select academic-year-dropdown" title="Set Current Academic Year">
+                            @{
+                                int currentYear = DateTime.Now.Year;
+                                string currentAY = ViewBag.CurrentAcademicYear ?? $"A.Y. {currentYear}-{currentYear + 1}";
+                                for (int year = currentYear + 1; year >= currentYear - 5; year--)
+                                {
+                                    string ayValue = $"A.Y. {year}-{year + 1}";
+                                    <option value="@ayValue" selected="@(currentAY == ayValue)">@ayValue</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
+                    <div class="d-none d-md-block text-end">
+                        <div style="font-weight:bold; color:var(--text-strong);">Administrator</div>
+                        <div style="font-size:0.75rem; color:var(--gold-text);">System Access</div>
+                    </div>
+                    <button type="button" id="themeToggle" class="btn-toggle theme-btn" title="Toggle Theme">
+                        <i class="bi bi-sun-fill" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scrollable Content Area -->
+            <div class="scrollable-content">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    @* --- MODALS AND SCRIPTS (No changes needed below this line) --- *@
+
+    @* HIDDEN FLASH MESSAGES *@
+    @if (TempData["Error"] != null)
+    {
+        <div id="flash-error-msg" data-message="@TempData["Error"]" style="display:none;"></div>
+    }
+    @if (TempData["Message"] != null)
+    {
+        <div id="flash-success-msg" data-message="@TempData["Message"]" style="display:none;"></div>
+    }
+
+    @* LOGOUT MODAL *@
+    @{
+        var logoutModal = new ConfirmationModalViewModel
+        {
+            ModalId = "confirmLogoutModal",
+            ModalTitle = "Confirm Sign Out",
+            ModalBody = "Are you sure you want to end your current session?",
+            ConfirmButtonText = "Sign Out",
+            ConfirmButtonClass = "btn btn-danger"
+        };
+    }
+    <partial name="_ConfirmationModal" model="logoutModal" />
+
+    @* GLOBAL STATUS MESSAGE MODAL *@
+    <div class="modal fade" id="statusMessageModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header border-0"><h5 class="modal-title fw-bold" id="statusModalTitle">Notification</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body text-center p-4"><i id="statusModalIcon" class="bi" style="font-size: 3rem; display: block; margin-bottom: 15px;"></i><p id="statusModalBody" class="fs-6"></p></div>
+                <div class="modal-footer border-0 justify-content-center"><button type="button" class="btn btn-gold px-4" data-bs-dismiss="modal">Okay</button></div>
+            </div>
+        </div>
+    </div>
+
+    @* INACTIVITY & SESSION MODALS *@
+    <!-- (No changes here, code omitted for brevity) -->
+    <!-- SCRIPTS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/portal-layout.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Flash message logic
+            var errorMsg = $('#flash-error-msg').data('message');
+            if (errorMsg) {
+                $('#statusModalTitle').text('Action Failed').css('color', '#ff6b6b');
+                $('#statusModalBody').text(errorMsg);
+                $('#statusModalIcon').removeClass().addClass('bi bi-x-circle-fill text-danger');
+                new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
+            }
+            var successMsg = $('#flash-success-msg').data('message');
+            if (successMsg) {
+                $('#statusModalTitle').text('Success').css('color', '#34d399');
+                $('#statusModalBody').text(successMsg);
+                $('#statusModalIcon').removeClass().addClass('bi bi-check-circle-fill text-success');
+                new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
+            }
+            
+
+            // Academic Year AJAX logic
+            $('#academicYearSelect').on('change', function () {
+                var selectedYear = $(this).val();
+                $.ajax({
+                    url: '@Url.Action("SetCurrentAcademicYear", "Admin")',
+                    type: 'POST',
+                    data: { academicYear: selectedYear },
+                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                    success: function (response) {
+                        if (response.success && typeof showToast === 'function') {
+                            showToast('Academic year updated to ' + selectedYear, 'success');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

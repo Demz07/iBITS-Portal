@@ -38,5 +38,15 @@ namespace iBITS_Portal.Models
         /// Expiry date for the announcement. After this date, the announcement will be automatically hidden.
         /// </summary>
         public DateTime? ExpiryDate { get; set; }
+
+        /// <summary>
+        /// Semester ID for historical record tracking
+        /// </summary>
+        public int? SemesterId { get; set; }
+
+        /// <summary>
+        /// Navigation property to Semester
+        /// </summary>
+        public virtual Semester? Semester { get; set; }
     }
 }

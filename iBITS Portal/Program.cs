@@ -26,7 +26,24 @@ namespace iBITS_Portal
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            // 2. FEATURE: Password Protection & Role Management
+            // 2. FEATURE: Session Support for Semester Selector
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromHours(2);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
+            // 3. FEATURE: Memory Cache for Performance
+            builder.Services.AddMemoryCache();
+
+            // 4. FEATURE: HTTP Context Accessor (needed for session in services)
+            builder.Services.AddHttpContextAccessor();
+
+            // 5. FEATURE: Semester Context Service
+            builder.Services.AddScoped<iBITS_Portal.Services.ISemesterContextService, iBITS_Portal.Services.SemesterContextService>();
+
+            // 6. FEATURE: Password Protection & Role Management
             builder.Services.AddDefaultIdentity<IdentityUser>(options => {
                 options.SignIn.RequireConfirmedAccount = false;
 
@@ -73,6 +90,9 @@ namespace iBITS_Portal
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            // Enable session before authorization
+            app.UseSession();
 
             app.UseAuthorization();
 

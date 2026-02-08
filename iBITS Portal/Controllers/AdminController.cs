@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using iBITS_Portal.Models;
 using iBITS_Portal.ViewModels;
+using iBITS_Portal.Services;
 using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
@@ -38,6 +39,7 @@ namespace iBITS_Portal.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly IWebHostEnvironment _env;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly ISemesterContextService _semesterContext;
 
         public AdminController(
             UserManager<IdentityUser> userManager,
@@ -45,7 +47,8 @@ namespace iBITS_Portal.Controllers
             PortaliBitsContext context,
             ILogger<AdminController> logger,
             IWebHostEnvironment env,
-            SignInManager<IdentityUser> signInManager)
+            SignInManager<IdentityUser> signInManager,
+            ISemesterContextService semesterContext)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -53,6 +56,7 @@ namespace iBITS_Portal.Controllers
             _logger = logger;
             _env = env;
             _signInManager = signInManager;
+            _semesterContext = semesterContext;
         }
 
         // =========================================================
@@ -422,6 +426,15 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         public async Task<IActionResult> Index()
         {
+            // Get selected semester for filtering
+            var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+            var isHistoricalMode = await _semesterContext.IsHistoricalModeAsync();
+            
+            ViewBag.SelectedSemester = selectedSemester;
+            ViewBag.CurrentSemester = currentSemester;
+            ViewBag.IsHistoricalMode = isHistoricalMode;
+            
             await PopulateDashboardData();
             return View();
         }
@@ -1475,12 +1488,23 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         private async Task<DashboardDataModel> BuildDashboardData(string? feeCategory, string? fineCategory)
         {
-            // 1. FETCH ALL STUDENTS (Unfiltered for Enrollment Section)
-            // This ensures Student Enrollment numbers NEVER change based on fee filters
-            var allStudents = await _context.Students.Where(s => s.IsArchived != true).ToListAsync();
+            // Get selected semester for filtering
+            var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            var selectedSemesterId = selectedSemester?.SemesterId;
+            
+            // 1. FETCH ALL STUDENTS (Filtered by selected semester)
+            // Filter students based on semester enrollment
+            var allStudents = await _context.Students
+                .Where(s => s.IsArchived != true)
+                .Where(s => selectedSemesterId == null || 
+                    s.StudentSemesters.Any(ss => ss.SemesterId == selectedSemesterId && ss.IsActive))
+                .ToListAsync();
 
-            // 2. FETCH FINANCIAL DATA (Filtered)
-            var feesQuery = _context.Fees.Include(f => f.StudentNumNavigation).AsQueryable();
+            // 2. FETCH FINANCIAL DATA (Filtered by semester)
+            var feesQuery = _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => selectedSemesterId == null || f.SemesterId == selectedSemesterId)
+                .AsQueryable();
             if (!string.IsNullOrEmpty(feeCategory) && feeCategory != "all")
             {
                 feesQuery = feesQuery.Where(f => f.FeeName == feeCategory);
@@ -1491,6 +1515,7 @@ namespace iBITS_Portal.Controllers
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance).ThenInclude(a => a.StudentNumNavigation)
                 .Include(f => f.Attendance).ThenInclude(a => a.Event)
+                .Where(f => selectedSemesterId == null || f.SemesterId == selectedSemesterId)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(fineCategory) && fineCategory != "all")
@@ -1892,13 +1917,23 @@ namespace iBITS_Portal.Controllers
                     _context.Students.Add(student);
                     await _context.SaveChangesAsync();
 
-                    // NEW: Create StudentSemester record if semester is selected
-                    if (semesterId.HasValue && semesterId.Value > 0)
+                    // NEW: Create StudentSemester record - auto-assign current semester if not specified
+                    var targetSemesterId = semesterId;
+                    if (!targetSemesterId.HasValue || targetSemesterId.Value <= 0)
+                    {
+                        var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+                        if (currentSemester != null)
+                        {
+                            targetSemesterId = currentSemester.SemesterId;
+                        }
+                    }
+                    
+                    if (targetSemesterId.HasValue && targetSemesterId.Value > 0)
                     {
                         var studentSemester = new StudentSemester
                         {
                             StudentNum = student.StudentNum,
-                            SemesterId = semesterId.Value,
+                            SemesterId = targetSemesterId.Value,
                             IsActive = true,
                             YearLevel = ExtractYearLevelAsInt(student.YearLevelSection),
                             Section = ExtractSectionFromYearLevel(student.YearLevelSection),
@@ -1911,7 +1946,7 @@ namespace iBITS_Portal.Controllers
                     }
 
                     await LogAction("Create Student", $"Created student {student.StudentNum}" + 
-                        (semesterId.HasValue ? $" and enrolled in semester ID {semesterId.Value}" : ""));
+                        (targetSemesterId.HasValue ? $" and enrolled in semester ID {targetSemesterId.Value}" : ""));
                     TempData["Message"] = "Student registered successfully.";
                 }
                 else
@@ -2258,6 +2293,16 @@ namespace iBITS_Portal.Controllers
             {
                 try
                 {
+                    // Auto-assign current semester if not specified
+                    if (newEvent.SemesterId == null)
+                    {
+                        var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+                        if (currentSemester != null)
+                        {
+                            newEvent.SemesterId = currentSemester.SemesterId;
+                        }
+                    }
+                    
                     newEvent.FineForMember ??= 0;
                     newEvent.FineForClassOfficer ??= 0;
                     newEvent.FineForOrgOfficer ??= 0;

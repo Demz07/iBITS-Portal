@@ -338,5 +338,144 @@ namespace iBITS_Portal.Controllers
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
+        // ============================================================
+        // SEMESTER SELECTOR ENDPOINTS (For Historical View)
+        // ============================================================
+
+        /// <summary>
+        /// Get all semesters for dropdown selector
+        /// Returns semesters with academic year information
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllSemestersForDropdown()
+        {
+            try
+            {
+                var semesters = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.StartDate)
+                    .Select(s => new
+                    {
+                        s.SemesterId,
+                        s.SemesterName,
+                        AcademicYear = s.AcademicYear.YearName,
+                        s.IsCurrent,
+                        DisplayName = s.AcademicYear.YearName + " - " + s.SemesterName
+                    })
+                    .ToListAsync();
+
+                return Json(semesters);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Create a new semester via AJAX from dropdown
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateNewSemester(string academicYear, string semesterName, DateTime startDate, DateTime endDate, bool setAsCurrent)
+        {
+            try
+            {
+                // Find or create Academic Year
+                var academicYearEntity = await _context.AcademicYears
+                    .FirstOrDefaultAsync(ay => ay.YearName == academicYear);
+
+                if (academicYearEntity == null)
+                {
+                    academicYearEntity = new AcademicYear
+                    {
+                        YearName = academicYear,
+                        IsActive = true
+                    };
+                    _context.AcademicYears.Add(academicYearEntity);
+                    await _context.SaveChangesAsync();
+                }
+
+                // If setting as current, mark all existing semesters as not current
+                if (setAsCurrent)
+                {
+                    var existingSemesters = await _context.Semesters.ToListAsync();
+                    foreach (var sem in existingSemesters)
+                    {
+                        sem.IsCurrent = false;
+                    }
+                }
+
+                // Create new semester
+                var newSemester = new Semester
+                {
+                    AcademicYearId = academicYearEntity.AcademicYearId,
+                    SemesterName = semesterName,
+                    StartDate = DateOnly.FromDateTime(startDate),
+                    EndDate = DateOnly.FromDateTime(endDate),
+                    IsCurrent = setAsCurrent,
+                    IsActive = true
+                };
+
+                _context.Semesters.Add(newSemester);
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Semester created successfully",
+                    semesterId = newSemester.SemesterId,
+                    displayName = $"{academicYear} - {semesterName}"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Set the viewing semester for current user session
+        /// Enables historical data viewing
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SetViewingSemester(int? semesterId)
+        {
+            try
+            {
+                if (semesterId.HasValue)
+                {
+                    var semester = await _context.Semesters
+                        .Include(s => s.AcademicYear)
+                        .FirstOrDefaultAsync(s => s.SemesterId == semesterId.Value);
+
+                    if (semester == null)
+                        return Json(new { success = false, message = "Semester not found" });
+
+                    // Store in session
+                    HttpContext.Session.SetInt32("ViewingSemesterId", semesterId.Value);
+
+                    return Json(new
+                    {
+                        success = true,
+                        semesterName = semester.SemesterName,
+                        academicYear = semester.AcademicYear.YearName,
+                        isHistorical = !semester.IsCurrent,
+                        displayName = $"{semester.AcademicYear.YearName} - {semester.SemesterName}"
+                    });
+                }
+                else
+                {
+                    // Clear session (revert to current)
+                    HttpContext.Session.Remove("ViewingSemesterId");
+                    return Json(new { success = true, message = "Viewing current semester" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
     }
 }
