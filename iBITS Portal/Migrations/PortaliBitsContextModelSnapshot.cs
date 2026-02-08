@@ -69,21 +69,9 @@ namespace iBITS_Portal.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("PostedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RecipientCount")
-                        .HasColumnType("int");
 
                     b.Property<string>("TargetAudience")
                         .HasMaxLength(100)
@@ -95,9 +83,6 @@ namespace iBITS_Portal.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ViewCount")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -346,18 +331,8 @@ namespace iBITS_Portal.Migrations
                     b.Property<decimal?>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("AmountPaid")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("BatchId")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CollectedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("CollectionDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -374,30 +349,11 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateOnly?>("FeesStartDate")
                         .HasColumnType("date");
 
-                    b.Property<DateTime?>("OfficialPaymentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RemittanceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RemittanceStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NotRemitted");
-
                     b.Property<string>("StudentNum")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("FeeId");
-
-                    b.HasIndex("CollectedBy");
-
-                    b.HasIndex("RemittanceId");
-
-                    b.HasIndex("RemittanceStatus");
 
                     b.HasIndex("StudentNum");
 
@@ -415,21 +371,11 @@ namespace iBITS_Portal.Migrations
                     b.Property<decimal?>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("AmountPaid")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int?>("AttendanceId")
                         .HasColumnType("int");
 
                     b.Property<string>("BatchId")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CollectedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("CollectionDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -443,31 +389,12 @@ namespace iBITS_Portal.Migrations
                     b.Property<string>("FinesStatus")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("OfficialPaymentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RemittanceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RemittanceStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NotRemitted");
-
                     b.Property<string>("StudentNum")
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("FineId");
 
                     b.HasIndex("AttendanceId");
-
-                    b.HasIndex("CollectedBy");
-
-                    b.HasIndex("RemittanceId");
-
-                    b.HasIndex("RemittanceStatus");
 
                     b.HasIndex("StudentNum");
 
@@ -698,160 +625,6 @@ namespace iBITS_Portal.Migrations
                     b.ToTable("PendingRoleChanges", (string)null);
                 });
 
-            modelBuilder.Entity("iBITS_Portal.Models.Remittance", b =>
-                {
-                    b.Property<int>("RemittanceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RemittanceId"));
-
-                    b.Property<string>("AcademicYear")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("BatchCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<string>("FeeName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FineCategory")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("RemittanceType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Section")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Pending");
-
-                    b.Property<string>("SubmittedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("SubmittedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TotalStudents")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ValidatedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("ValidationDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ValidationNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.HasKey("RemittanceId");
-
-                    b.HasIndex("BatchCode")
-                        .IsUnique();
-
-                    b.HasIndex("Section");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("SubmittedBy");
-
-                    b.HasIndex("ValidatedBy");
-
-                    b.ToTable("Remittances", (string)null);
-                });
-
-            modelBuilder.Entity("iBITS_Portal.Models.RemittanceItem", b =>
-                {
-                    b.Property<int>("RemittanceItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RemittanceItemId"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CollectionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("FeeId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("FineId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("RemittanceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StudentName")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("StudentNum")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("TransactionRef")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("RemittanceItemId");
-
-                    b.HasIndex("FeeId");
-
-                    b.HasIndex("FineId");
-
-                    b.HasIndex("RemittanceId");
-
-                    b.HasIndex("StudentNum");
-
-                    b.ToTable("RemittanceItems", (string)null);
-                });
-
             modelBuilder.Entity("iBITS_Portal.Models.Student", b =>
                 {
                     b.Property<string>("StudentNum")
@@ -948,36 +721,6 @@ namespace iBITS_Portal.Migrations
                     b.ToTable("SystemSettings", (string)null);
                 });
 
-            modelBuilder.Entity("iBITS_Portal.Models.UserAnnouncementDismissal", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AnnouncementId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DismissedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("StudentNum")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnnouncementId");
-
-                    b.HasIndex("StudentNum", "AnnouncementId")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_StudentAnnouncement");
-
-                    b.ToTable("UserAnnouncementDismissals", (string)null);
-                });
-
             modelBuilder.Entity("iBITS_Portal.Models.Attendance", b =>
                 {
                     b.HasOne("iBITS_Portal.Models.Event", "Event")
@@ -1000,26 +743,12 @@ namespace iBITS_Portal.Migrations
 
             modelBuilder.Entity("iBITS_Portal.Models.Fee", b =>
                 {
-                    b.HasOne("iBITS_Portal.Models.Student", "CollectedByNavigation")
-                        .WithMany()
-                        .HasForeignKey("CollectedBy")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("iBITS_Portal.Models.Remittance", "Remittance")
-                        .WithMany()
-                        .HasForeignKey("RemittanceId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("iBITS_Portal.Models.Student", "StudentNumNavigation")
                         .WithMany("Fees")
                         .HasForeignKey("StudentNum")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_Fees_Student");
-
-                    b.Navigation("CollectedByNavigation");
-
-                    b.Navigation("Remittance");
 
                     b.Navigation("StudentNumNavigation");
                 });
@@ -1032,16 +761,6 @@ namespace iBITS_Portal.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("FK_Fines_Attendance");
 
-                    b.HasOne("iBITS_Portal.Models.Student", "CollectedByNavigation")
-                        .WithMany()
-                        .HasForeignKey("CollectedBy")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("iBITS_Portal.Models.Remittance", "Remittance")
-                        .WithMany()
-                        .HasForeignKey("RemittanceId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("iBITS_Portal.Models.Student", "StudentNumNavigation")
                         .WithMany("Fines")
                         .HasForeignKey("StudentNum")
@@ -1049,10 +768,6 @@ namespace iBITS_Portal.Migrations
                         .HasConstraintName("FK_Fines_Student");
 
                     b.Navigation("Attendance");
-
-                    b.Navigation("CollectedByNavigation");
-
-                    b.Navigation("Remittance");
 
                     b.Navigation("StudentNumNavigation");
                 });
@@ -1123,57 +838,6 @@ namespace iBITS_Portal.Migrations
                     b.Navigation("Treasurer");
                 });
 
-            modelBuilder.Entity("iBITS_Portal.Models.Remittance", b =>
-                {
-                    b.HasOne("iBITS_Portal.Models.Student", "SubmittedByNavigation")
-                        .WithMany()
-                        .HasForeignKey("SubmittedBy")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("iBITS_Portal.Models.Student", "ValidatedByNavigation")
-                        .WithMany()
-                        .HasForeignKey("ValidatedBy")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("SubmittedByNavigation");
-
-                    b.Navigation("ValidatedByNavigation");
-                });
-
-            modelBuilder.Entity("iBITS_Portal.Models.RemittanceItem", b =>
-                {
-                    b.HasOne("iBITS_Portal.Models.Fee", "Fee")
-                        .WithMany()
-                        .HasForeignKey("FeeId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("iBITS_Portal.Models.Fine", "Fine")
-                        .WithMany()
-                        .HasForeignKey("FineId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("iBITS_Portal.Models.Remittance", "Remittance")
-                        .WithMany("RemittanceItems")
-                        .HasForeignKey("RemittanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("iBITS_Portal.Models.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentNum")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Fee");
-
-                    b.Navigation("Fine");
-
-                    b.Navigation("Remittance");
-
-                    b.Navigation("Student");
-                });
-
             modelBuilder.Entity("iBITS_Portal.Models.Student", b =>
                 {
                     b.HasOne("iBITS_Portal.Models.Officer", "Officer")
@@ -1183,27 +847,6 @@ namespace iBITS_Portal.Migrations
                         .HasConstraintName("Fk_Officer");
 
                     b.Navigation("Officer");
-                });
-
-            modelBuilder.Entity("iBITS_Portal.Models.UserAnnouncementDismissal", b =>
-                {
-                    b.HasOne("iBITS_Portal.Models.Announcement", "Announcement")
-                        .WithMany()
-                        .HasForeignKey("AnnouncementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_UserAnnouncementDismissal_Announcement");
-
-                    b.HasOne("iBITS_Portal.Models.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentNum")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_UserAnnouncementDismissal_Student");
-
-                    b.Navigation("Announcement");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("iBITS_Portal.Models.Attendance", b =>
@@ -1219,11 +862,6 @@ namespace iBITS_Portal.Migrations
             modelBuilder.Entity("iBITS_Portal.Models.Officer", b =>
                 {
                     b.Navigation("Students");
-                });
-
-            modelBuilder.Entity("iBITS_Portal.Models.Remittance", b =>
-                {
-                    b.Navigation("RemittanceItems");
                 });
 
             modelBuilder.Entity("iBITS_Portal.Models.Student", b =>
