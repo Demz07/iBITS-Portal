@@ -234,6 +234,25 @@
                 <option value="paid">Paid</option>
             </select>
         </div>
+
+        <!-- Semester Filter -->
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Semester</label>
+            <form method="get" asp-action="OrgFines">
+                <select name="semesterFilter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Semesters</option>
+                    @if (ViewBag.Semesters != null)
+                    {
+                        foreach (var sem in ViewBag.Semesters)
+                        {
+                            <option value="@sem.SemesterId" selected="@(ViewBag.SemesterFilter?.ToString() == sem.SemesterId.ToString())">
+                                @sem.SemesterName (@sem.AcademicYear.YearName)
+                            </option>
+                        }
+                    }
+                </select>
+            </form>
+        </div>
     </div>
 
     <!-- Second Row of Filters (Conditional) -->
@@ -308,6 +327,7 @@
                     <th>YEAR</th>
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
+                    <th>SEMESTER</th>
                     <th>STATUS</th>
                     <th class="text-center" style="width: 100px;">ACTION</th>
                 </tr>
@@ -415,6 +435,19 @@
                                 }
                             </td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
+                            
+                            <!-- Semester Column -->
+                            <td>
+                                @if (fine.Semester != null)
+                                {
+                                    <span class="badge bg-info" style="font-size:0.75rem;">@fine.Semester.SemesterName</span>
+                                    <small class="text-muted d-block" style="font-size:0.7rem;">@fine.Semester.AcademicYear?.YearName</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
 
                             <!-- Status Badge -->
                             <td>
@@ -458,7 +491,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fine records found.</td></tr>
+                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fine records found.</td></tr>
                 }
             </tbody>
         </table>
@@ -490,6 +523,24 @@
                             <div class="col-md-4">
                                 <label class="form-label">Amount (₱) <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="0.00" required />
+                            </div>
+                        </div>
+
+                        <!-- NEW: Semester Selection -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Semester</label>
+                                <select name="semesterId" class="form-select" style="background: rgba(13, 27, 42, 0.55); border: 1px solid rgba(212,175,55,0.35); color: #fff; backdrop-filter: blur(14px); border-radius: 10px;">
+                                    <option value="">-- Auto (Current Semester) --</option>
+                                    @if (ViewBag.Semesters != null)
+                                    {
+                                        foreach (var sem in ViewBag.Semesters)
+                                        {
+                                            var isCurrent = sem.IsCurrent ? " ⭐ CURRENT" : "";
+                                            <option value="@sem.SemesterId" selected="@(sem.IsCurrent)">@sem.SemesterName (@sem.AcademicYear.YearName)@isCurrent</option>
+                                        }
+                                    }
+                                </select>
                             </div>
                         </div>
 

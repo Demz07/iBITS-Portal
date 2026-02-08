@@ -1,0 +1,60 @@
+Phase 2 – Fines per Semester (Planning and Checklist)
+
+Status Legend:
+[ ] Pending   [~] In Progress   [x] Done
+
+CSV Import – Semester (Phase 1.1)
+[x] Add semester selector to CSV Import mapping modal (_ImportModals.cshtml)
+[x] Pass semesterId from client in confirmUpload (wwwroot/js/student-records.js)
+[x] AdminController.ExecuteImport accepts semesterId
+[x] On import, create StudentSemester records for each new student
+[x] Safe parsing of YearLevel/Section from YearLevelSection
+[x] Log batch import and semester enrollment
+
+Phase 2 – Ensure fines are assigned to the correct accounts
+
+Domain decisions to confirm
+[ ] How is the “correct account” identified? (StudentNum primary, Email fallback?)
+[ ] Are fines created per student directly, or derived from attendance/fees events?
+[ ] When multiple active semesters exist, which semester should a fine attach to? (Selected UI semester, current semester, or the Attendance’s SemesterId)
+[ ] Should fines be allowed for non‑enrolled students? (likely No)
+
+Data model and persistence
+[x] Add SemesterId (nullable) to Fine model (Models/Fine.cs)
+[x] Add navigation property Fine.Semester
+[x] Configure FK to Semester in PortaliBitsContext (FK_Fines_Semester, OnDelete SetNull)
+[ ] Add indexes on Fine(StudentNum), Fine(SemesterId) for reporting
+
+Creation/update flows (Controller/UI)
+[ ] When creating a fine manually, require StudentNum and auto‑resolve the Student entity
+[ ] If an attendance is linked, inherit StudentNum and SemesterId from Attendance
+[ ] If created from Fees/Batch tools, map each row to Student by StudentNum; validate existence
+[ ] Validate student has a StudentSemester for the selected SemesterId (warn/block if not)
+[ ] If SemesterId omitted, default to current active semester (configurable)
+
+Validation and safety
+[ ] Server‑side validation: Student exists, amount > 0, reason not empty, semester valid
+[ ] Prevent fines against archived students unless explicitly allowed
+[ ] Ensure idempotency for batch creation (optional: BatchId + StudentNum uniqueness)
+
+Views and UX
+[ ] Add Semester filter to Fines page
+[ ] Show Semester and AY on fines table and details
+[ ] When creating a fine, include a Semester dropdown (default current)
+[ ] If creating from attendance detail, lock the semester to the attendance’s semester
+
+Reporting
+[ ] Update Fines reports to filter/group by Semester
+[ ] Show per‑semester totals per Student and per Course/Year/Section
+
+Testing
+[ ] Unit test: manual fine creation assigns to correct Student and Semester
+[ ] Integration test: batch fines map to correct accounts by StudentNum
+[ ] Edge cases: missing semester, non‑existent student, archived student, duplicate batch
+
+Migration/Deployment
+[ ] If using EF migrations, create and apply migration for Fine.SemesterId
+[ ] Backfill plan (optional): set SemesterId on recent fines based on Attendance links
+
+Notes
+- If there is an existing Fines UI not in the current repository, please point me to its location or provide the intended flows so I can wire SemesterId and account mapping properly.

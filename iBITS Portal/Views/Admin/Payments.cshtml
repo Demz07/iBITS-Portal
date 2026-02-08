@@ -265,7 +265,23 @@
                 <option value="pending">Pending/Unpaid</option>
             </select>
         </div>
-
+        
+        <!-- Semester Filter -->
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Semester</label>
+            <select id="semesterFilter" name="semesterFilter" class="form-select form-select-sm auto-submit-filter">
+                <option value="">All Semesters</option>
+                @if (ViewBag.Semesters != null)
+                {
+                    foreach (var sem in ViewBag.Semesters)
+                    {
+                        <option value="@sem.SemesterId" selected="@(ViewBag.SemesterFilter?.ToString() == sem.SemesterId.ToString())">
+                            @sem.SemesterName (@sem.AcademicYear.YearName)
+                        </option>
+                    }
+                }
+            </select>
+        </div>
 
     </div>
 </div>
@@ -298,6 +314,7 @@
                     <th>YEAR LEVEL</th>
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
+                    <th>SEMESTER</th>
                     <th>STATUS</th>
                     <th class="text-center" style="width: 60px;">ACTIONS</th>
                 </tr>
@@ -358,6 +375,18 @@
                             <td>@fee.FeeName</td>
                             <td style="color: var(--gold-primary); font-weight: bold;">₱@(fee.Amount?.ToString("N2") ?? "0.00")</td>
 
+                            <!-- Semester Column -->
+                            <td>
+                                @if (fee.Semester != null)
+                                {
+                                    <span class="badge bg-info">@fee.Semester.SemesterName</span>
+                                    <small class="text-muted d-block">@fee.Semester.AcademicYear?.YearName</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
 
                             <!-- Status Badge (No Partial - Full Payment Only) -->
                             <td>
@@ -472,6 +501,25 @@
                             <div class="col-md-8">
                                 <label class="form-label">Fee Name / Description <span class="text-danger">*</span></label>
                                 <input type="text" name="FeeName" class="form-control" placeholder="e.g., Membership Fee, T-Shirt Payment" required />
+                            </div>
+                        </div>
+
+                        <!-- NEW: Semester Selection -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Semester</label>
+                                <select name="semesterId" class="form-select" style="background: rgba(13, 27, 42, 0.55); border: 1px solid rgba(212,175,55,0.35); color: #fff; backdrop-filter: blur(14px); border-radius: 10px;">
+                                    <option value="">-- Auto (Current Semester) --</option>
+                                    @if (ViewBag.Semesters != null)
+                                    {
+                                        foreach (var sem in ViewBag.Semesters)
+                                        {
+                                            var isCurrent = sem.IsCurrent ? " ⭐ CURRENT" : "";
+                                            <option value="@sem.SemesterId" selected="@(sem.IsCurrent)">@sem.SemesterName (@sem.AcademicYear.YearName)@isCurrent</option>
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted">If not selected, system will use the current semester.</small>
                             </div>
                         </div>
 

@@ -7,6 +7,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,12 +22,14 @@ namespace iBITS_Portal.Controllers
     {
         private readonly PortaliBitsContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly ISemesterContextService _semesterContext;
         private const string QR_PREFIX = "iBITS:";
 
-        public OfficerController(PortaliBitsContext context, UserManager<IdentityUser> userManager)
+        public OfficerController(PortaliBitsContext context, UserManager<IdentityUser> userManager, ISemesterContextService semesterContext)
         {
             _context = context;
             _userManager = userManager;
+            _semesterContext = semesterContext;
         }
 
         // ============================================================
@@ -40,7 +43,17 @@ namespace iBITS_Portal.Controllers
             return scannedData;
         }
 
-
+        // ============================================================
+        // HELPER: Get Active Semesters
+        // ============================================================
+        private async Task<List<Semester>> GetActiveSemesters()
+        {
+            return await _context.Semesters
+                .Include(s => s.AcademicYear)
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.StartDate)
+                .ToListAsync();
+        }
 
         // ============================================================
         // ANNOUNCEMENTS
@@ -232,6 +245,385 @@ namespace iBITS_Portal.Controllers
 
         public class VerifyRequest { public string ScannedData { get; set; } = ""; }
         public class ScanRequest { public string ScannedData { get; set; } = ""; public int EventId { get; set; } }
+
+        // ============================================================
+        // TIME IN/TIME OUT SCANNER WITH SEMESTER SUPPORT
+        // ============================================================
+        
+        /// <summary>
+        /// Get available semesters for TimeIn/TimeOut scanning
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> GetAvailableSemesters()
+        {
+            try
+            {
+                var semesters = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.IsCurrent)
+                    .ThenByDescending(s => s.StartDate)
+                    .Select(s => new
+                    {
+                        semesterId = s.SemesterId,
+                        semesterName = s.SemesterName,
+                        academicYear = s.AcademicYear.YearName,
+                        isCurrent = s.IsCurrent,
+                        displayName = $"{s.SemesterName} - {s.AcademicYear.YearName}"
+                    })
+                    .ToListAsync();
+
+                return Json(new { success = true, semesters });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error loading semesters." });
+            }
+        }
+
+        /// <summary>
+        /// Process TimeIn scan for a student
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> ProcessTimeIn([FromBody] TimeInOutRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.ScannedData))
+                {
+                    return Json(new { success = false, message = "Invalid QR code data." });
+                }
+
+                string studentId = ParseStudentNumFromQr(request.ScannedData);
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    return Json(new { success = false, message = "QR code is not in the correct format." });
+                }
+
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
+                }
+
+                // Get semester (use provided or current)
+                int semesterId = request.SemesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                if (semesterId == 0)
+                {
+                    return Json(new { success = false, message = "No active semester found. Please select a semester." });
+                }
+
+                var semester = await _context.Semesters.Include(s => s.AcademicYear).FirstOrDefaultAsync(s => s.SemesterId == semesterId);
+                if (semester == null)
+                {
+                    return Json(new { success = false, message = "Selected semester not found." });
+                }
+
+                // Security: Check Section for Class Secretary role
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                    }
+                }
+
+                // Check if student is enrolled in this semester
+                var enrollment = await _context.StudentSemesters
+                    .FirstOrDefaultAsync(ss => ss.StudentNum == studentId && ss.SemesterId == semesterId);
+
+                if (enrollment == null)
+                {
+                    return Json(new { success = false, message = $"Student is not enrolled in {semester.SemesterName} - {semester.AcademicYear.YearName}." });
+                }
+
+                var today = DateOnly.FromDateTime(DateTime.Now);
+
+                // Check for existing TimeIn today for this semester (without TimeOut)
+                var existingAttendance = await _context.Attendances
+                    .Where(a => a.StudentNum == studentId 
+                        && a.SemesterId == semesterId
+                        && a.TimeIn.HasValue
+                        && a.TimeIn.Value.Date == DateTime.Now.Date
+                        && !a.TimeOut.HasValue)
+                    .OrderByDescending(a => a.TimeIn)
+                    .FirstOrDefaultAsync();
+
+                if (existingAttendance != null)
+                {
+                    var timeInFormatted = existingAttendance.TimeIn?.ToString("h:mm tt");
+                    return Json(new { 
+                        success = false, 
+                        message = $"{student.FullName} already timed in today at {timeInFormatted}. Please time out first." 
+                    });
+                }
+
+                // Get current user info for audit
+                var currentUser = await _userManager.GetUserAsync(User);
+                string processedBy = currentUser?.UserName ?? "System";
+
+                // Create new TimeIn attendance record
+                var attendance = new Attendance
+                {
+                    StudentNum = studentId,
+                    SemesterId = semesterId,
+                    TimeIn = DateTime.Now,
+                    AttendanceStatus = "Present",
+                    ScanDevice = request.DeviceInfo ?? "Unknown",
+                    Location = request.Location ?? "Campus"
+                };
+
+                _context.Attendances.Add(attendance);
+                await _context.SaveChangesAsync();
+
+                // Create audit log
+                var auditLog = new QRAuditLog
+                {
+                    StudentNum = studentId,
+                    QRCodeData = request.ScannedData,
+                    ScanTime = DateTime.Now,
+                    ScanType = "TimeIn",
+                    ProcessingResult = "Success",
+                    AttendanceId = attendance.AttendanceId,
+                    SemesterId = semesterId,
+                    DeviceFingerprint = request.DeviceInfo,
+                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Location = request.Location,
+                    ProcessedBy = processedBy
+                };
+
+                _context.QRAuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
+
+                // Return rich data for the UI
+                return Json(new
+                {
+                    success = true,
+                    message = "Time In recorded successfully.",
+                    scanTime = DateTime.Now.ToString("h:mm:ss tt"),
+                    studentId = student.StudentNum,
+                    studentName = student.FullName,
+                    profileImage = student.StudentImage,
+                    section = student.YearLevelSection ?? "N/A",
+                    semester = $"{semester.SemesterName} - {semester.AcademicYear.YearName}",
+                    status = "Timed In",
+                    attendanceId = attendance.AttendanceId
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return Json(new { success = false, message = "An unexpected server error occurred during Time In." });
+            }
+        }
+
+        /// <summary>
+        /// Process TimeOut scan for a student
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> ProcessTimeOut([FromBody] TimeInOutRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrEmpty(request.ScannedData))
+                {
+                    return Json(new { success = false, message = "Invalid QR code data." });
+                }
+
+                string studentId = ParseStudentNumFromQr(request.ScannedData);
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    return Json(new { success = false, message = "QR code is not in the correct format." });
+                }
+
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
+                }
+
+                // Get semester (use provided or current)
+                int semesterId = request.SemesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                if (semesterId == 0)
+                {
+                    return Json(new { success = false, message = "No active semester found. Please select a semester." });
+                }
+
+                var semester = await _context.Semesters.Include(s => s.AcademicYear).FirstOrDefaultAsync(s => s.SemesterId == semesterId);
+                if (semester == null)
+                {
+                    return Json(new { success = false, message = "Selected semester not found." });
+                }
+
+                // Security: Check Section for Class Secretary role
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                    {
+                        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                    }
+                }
+
+                // Find the most recent TimeIn record without a TimeOut for today
+                var attendanceRecord = await _context.Attendances
+                    .Where(a => a.StudentNum == studentId 
+                        && a.SemesterId == semesterId
+                        && a.TimeIn.HasValue
+                        && a.TimeIn.Value.Date == DateTime.Now.Date
+                        && !a.TimeOut.HasValue)
+                    .OrderByDescending(a => a.TimeIn)
+                    .FirstOrDefaultAsync();
+
+                if (attendanceRecord == null)
+                {
+                    return Json(new { 
+                        success = false, 
+                        message = $"{student.FullName} has not timed in yet today, or has already timed out." 
+                    });
+                }
+
+                // Get current user info for audit
+                var currentUser = await _userManager.GetUserAsync(User);
+                string processedBy = currentUser?.UserName ?? "System";
+
+                // Update the attendance record with TimeOut
+                attendanceRecord.TimeOut = DateTime.Now;
+                
+                // Calculate duration in minutes (database trigger will also calculate this)
+                if (attendanceRecord.TimeIn.HasValue && attendanceRecord.TimeOut.HasValue)
+                {
+                    var duration = (attendanceRecord.TimeOut.Value - attendanceRecord.TimeIn.Value).TotalMinutes;
+                    attendanceRecord.DurationMinutes = (int)Math.Round(duration);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Create audit log
+                var auditLog = new QRAuditLog
+                {
+                    StudentNum = studentId,
+                    QRCodeData = request.ScannedData,
+                    ScanTime = DateTime.Now,
+                    ScanType = "TimeOut",
+                    ProcessingResult = "Success",
+                    AttendanceId = attendanceRecord.AttendanceId,
+                    SemesterId = semesterId,
+                    DeviceFingerprint = request.DeviceInfo,
+                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Location = request.Location,
+                    ProcessedBy = processedBy
+                };
+
+                _context.QRAuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
+
+                // Format duration for display
+                string durationDisplay = "N/A";
+                if (attendanceRecord.DurationMinutes.HasValue)
+                {
+                    int hours = attendanceRecord.DurationMinutes.Value / 60;
+                    int minutes = attendanceRecord.DurationMinutes.Value % 60;
+                    durationDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+                }
+
+                // Return rich data for the UI
+                return Json(new
+                {
+                    success = true,
+                    message = "Time Out recorded successfully.",
+                    scanTime = DateTime.Now.ToString("h:mm:ss tt"),
+                    studentId = student.StudentNum,
+                    studentName = student.FullName,
+                    profileImage = student.StudentImage,
+                    section = student.YearLevelSection ?? "N/A",
+                    semester = $"{semester.SemesterName} - {semester.AcademicYear.YearName}",
+                    status = "Timed Out",
+                    timeIn = attendanceRecord.TimeIn?.ToString("h:mm tt"),
+                    timeOut = attendanceRecord.TimeOut?.ToString("h:mm tt"),
+                    duration = durationDisplay,
+                    attendanceId = attendanceRecord.AttendanceId
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return Json(new { success = false, message = "An unexpected server error occurred during Time Out." });
+            }
+        }
+
+        /// <summary>
+        /// Get today's TimeIn/TimeOut records for display
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Org Secretary, Class Secretary")]
+        public async Task<JsonResult> GetTodayAttendance(int? semesterId)
+        {
+            try
+            {
+                var today = DateTime.Now.Date;
+                
+                // Get semester (use provided or current)
+                int selectedSemesterId = semesterId ?? (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId ?? 0;
+                
+                var query = _context.Attendances
+                    .Include(a => a.StudentNumNavigation)
+                    .Where(a => a.TimeIn.HasValue && a.TimeIn.Value.Date == today);
+
+                if (selectedSemesterId > 0)
+                {
+                    query = query.Where(a => a.SemesterId == selectedSemesterId);
+                }
+
+                // Filter by section for Class Secretary
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var user = await _userManager.GetUserAsync(User);
+                    var secretary = await _context.Students.FindAsync(user.UserName);
+                    if (secretary?.YearLevelSection != null)
+                    {
+                        query = query.Where(a => a.StudentNumNavigation.YearLevelSection == secretary.YearLevelSection);
+                    }
+                }
+
+                var records = await query
+                    .OrderByDescending(a => a.TimeIn)
+                    .Select(a => new
+                    {
+                        attendanceId = a.AttendanceId,
+                        studentNum = a.StudentNum,
+                        studentName = a.StudentNumNavigation.FullName,
+                        section = a.StudentNumNavigation.YearLevelSection ?? "N/A",
+                        profileImage = a.StudentNumNavigation.StudentImage,
+                        timeIn = a.TimeIn,
+                        timeOut = a.TimeOut,
+                        durationMinutes = a.DurationMinutes,
+                        status = a.TimeOut.HasValue ? "Complete" : "Active"
+                    })
+                    .Take(50) // Limit to last 50 records
+                    .ToListAsync();
+
+                return Json(new { success = true, records });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error loading attendance records." });
+            }
+        }
+
+        public class TimeInOutRequest 
+        { 
+            public string ScannedData { get; set; } = ""; 
+            public int? SemesterId { get; set; }
+            public string? DeviceInfo { get; set; }
+            public string? Location { get; set; }
+        }
 
         // ============================================================
         // TREASURER PAYMENTS DASHBOARD (Unified)
@@ -658,11 +1050,29 @@ namespace iBITS_Portal.Controllers
         // Only counts VALIDATED remittances (not just paid by Class Treasurer)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgTreasurerDashboard()
+        public async Task<IActionResult> OrgTreasurerDashboard(int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+
             // Get all fees and fines
-            var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
-            var fines = await _context.Fines.Include(f => f.StudentNumNavigation).ToListAsync();
+            var feesQuery = _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            var finesQuery = _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+
+            var fees = await feesQuery.ToListAsync();
+            var fines = await finesQuery.ToListAsync();
 
             // Calculate statistics - ONLY count validated remittances (RemittanceStatus == "Remitted")
             // This ensures only payments that have been validated by Org Treasurer are counted
@@ -919,10 +1329,14 @@ namespace iBITS_Portal.Controllers
         // ORG SECRETARY DASHBOARD (WITH DYNAMIC ANALYTICS FILTERS)
         // ============================================================
         [Authorize(Roles = "Org Secretary")]
-        public async Task<IActionResult> OrgSecretaryDashboard(int? eventId, string program, string yearLevel)
+        public async Task<IActionResult> OrgSecretaryDashboard(int? eventId, string program, string yearLevel, int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+
             // --- 1. STATS CARDS & GAUGE LOGIC ---
             var globalQuery = _context.Attendances.Include(a => a.StudentNumNavigation).AsQueryable();
+            if (semesterFilter.HasValue) globalQuery = globalQuery.Where(a => a.SemesterId == semesterFilter.Value);
             if (eventId.HasValue) globalQuery = globalQuery.Where(a => a.EventId == eventId);
             if (!string.IsNullOrEmpty(program)) globalQuery = globalQuery.Where(a => a.StudentNumNavigation.Course == program);
             if (!string.IsNullOrEmpty(yearLevel)) globalQuery = globalQuery.Where(a => a.StudentNumNavigation.YearLevelSection.Contains(yearLevel));
@@ -934,6 +1348,8 @@ namespace iBITS_Portal.Controllers
             // --- 2. BAR GRAPH LOGIC (Attendee Breakdown) ---
             var distQuery = _context.Attendances.Include(a => a.StudentNumNavigation)
                 .Where(a => a.AttendanceStatus == "Present");
+
+            if (semesterFilter.HasValue) distQuery = distQuery.Where(a => a.SemesterId == semesterFilter.Value);
 
             if (eventId.HasValue) distQuery = distQuery.Where(a => a.EventId == eventId);
 
@@ -963,6 +1379,8 @@ namespace iBITS_Portal.Controllers
             var query = _context.Attendances
                 .Include(a => a.StudentNumNavigation)
                 .Include(a => a.Event)
+                .Include(a => a.Semester)
+                    .ThenInclude(s => s.AcademicYear)
                 .AsQueryable();
 
             // ============================================================
@@ -1184,6 +1602,10 @@ namespace iBITS_Portal.Controllers
 
             var students = await studentsQuery.ToListAsync();
 
+            // Auto-assign current semester
+            var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+            var semesterId = currentSemester?.SemesterId;
+
             foreach (var student in students)
             {
                 _context.Fees.Add(new Fee
@@ -1192,7 +1614,8 @@ namespace iBITS_Portal.Controllers
                     Amount = amount,
                     FeesDueDate = dueDate,
                     FeeStatus = "Unpaid",
-                    StudentNum = student.StudentNum
+                    StudentNum = student.StudentNum,
+                    SemesterId = semesterId
                 });
             }
 
@@ -1222,13 +1645,17 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction("CreateManualFine");
             }
 
+            // Auto-assign current semester
+            var currentSemester = await _semesterContext.GetCurrentSemesterAsync();
+            
             var fine = new Fine
             {
                 StudentNum = studentNum,
                 Amount = amount,
                 FinesDueDate = dueDate,
                 FinesStatus = "Unpaid",
-                Description = reason
+                Description = reason,
+                SemesterId = currentSemester?.SemesterId
             };
 
             _context.Fines.Add(fine);
@@ -1242,8 +1669,10 @@ namespace iBITS_Portal.Controllers
         // CLASS TREASURY DASHBOARD (Updated with Fines)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassTreasuryDashboard()
+        public async Task<IActionResult> ClassTreasuryDashboard(int? semesterFilter)
         {
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -1257,17 +1686,28 @@ namespace iBITS_Portal.Controllers
             var program = treasurer.Course;
 
             // Get fees and fines for the section AND program (strict filtering)
-            var fees = await _context.Fees
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section 
                          && f.StudentNumNavigation.Course == program)
-                .ToListAsync();
+                .AsQueryable();
 
-            var fines = await _context.Fines
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section
                          && f.StudentNumNavigation.Course == program)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+
+            var fees = await feesQuery.ToListAsync();
+            var fines = await finesQuery.ToListAsync();
 
             // Get paid fees and fines
             var paidFees = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID").ToList();
@@ -1734,10 +2174,31 @@ namespace iBITS_Portal.Controllers
         // ORG TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgFees()
+        public async Task<IActionResult> OrgFees(int? semesterFilter)
         {
-            var fees = await _context.Fees
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            ViewBag.SelectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            ViewBag.IsHistoricalMode = await _semesterContext.IsHistoricalModeAsync();
+            
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fees = await feesQuery
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
@@ -1805,14 +2266,35 @@ namespace iBITS_Portal.Controllers
         // ORG TREASURER - FINES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> OrgFines()
+        public async Task<IActionResult> OrgFines(int? semesterFilter)
         {
-            var fines = await _context.Fines
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
+            ViewBag.SelectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+            ViewBag.IsHistoricalMode = await _semesterContext.IsHistoricalModeAsync();
+            
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
+                .AsQueryable();
+            
+            if (semesterFilter.HasValue)
+            {
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fines = await finesQuery
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
@@ -2665,8 +3147,15 @@ namespace iBITS_Portal.Controllers
         // CLASS TREASURER - FEES MANAGEMENT (Admin-style UI)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassFees()
+        public async Task<IActionResult> ClassFees(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -2678,16 +3167,27 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
             var program = treasurer.Course;
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
 
             // ============================================================
             // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
             // This ensures Class Treasurers can ONLY see fees from their exact classmates
             // (same program, year, and section)
             // ============================================================
-            var fees = await _context.Fees
+            var feesQuery = _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f => f.StudentNumNavigation.YearLevelSection == section 
-                         && f.StudentNumNavigation.Course == program)
+                         && f.StudentNumNavigation.Course == program);
+            
+            if (semesterFilter.HasValue)
+            {
+                feesQuery = feesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fees = await feesQuery
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
@@ -2740,8 +3240,15 @@ namespace iBITS_Portal.Controllers
         // FINAL FIX: Robust query to handle both direct and indirect student links.
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> ClassFines()
+        public async Task<IActionResult> ClassFines(int? semesterFilter)
         {
+            // Use semester context if no filter provided
+            if (!semesterFilter.HasValue)
+            {
+                var selectedSemester = await _semesterContext.GetSelectedSemesterAsync();
+                semesterFilter = selectedSemester?.SemesterId;
+            }
+            
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user.UserName);
 
@@ -2753,6 +3260,9 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
             var program = treasurer.Course;
+            
+            ViewBag.Semesters = await GetActiveSemesters();
+            ViewBag.SemesterFilter = semesterFilter;
 
             // ============================================================
             // STRICT ACCESS CONTROL: Filter by BOTH Course (Program) AND YearLevelSection
@@ -2762,16 +3272,24 @@ namespace iBITS_Portal.Controllers
             // This ensures Class Treasurers can ONLY see fines from their exact classmates
             // (same program, year, and section)
             // ============================================================
-            var fines = await _context.Fines
+            var finesQuery = _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.StudentNumNavigation)
+                .Include(f => f.Semester).ThenInclude(s => s.AcademicYear)
                 .Where(f =>
                     (f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section && f.StudentNumNavigation.Course == program) ||
                     (f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section && f.Attendance.StudentNumNavigation.Course == program)
-                )
+                );
+            
+            if (semesterFilter.HasValue)
+            {
+                finesQuery = finesQuery.Where(f => f.SemesterId == semesterFilter.Value);
+            }
+            
+            var fines = await finesQuery
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
@@ -2989,7 +3507,7 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateOrgFee(string feeName, decimal amount, DateOnly? feesDueDate, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateOrgFee(string feeName, decimal amount, DateOnly? feesDueDate, string programFilter, string yearFilter, int? semesterId)
         {
             if (string.IsNullOrWhiteSpace(feeName) || amount <= 0)
             {
@@ -3012,6 +3530,12 @@ namespace iBITS_Portal.Controllers
             var students = await query.ToListAsync();
             var batchId = Guid.NewGuid().ToString();
 
+            var effectiveSemesterId = semesterId;
+            if (!effectiveSemesterId.HasValue)
+            {
+                effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+            }
+
             foreach (var student in students)
             {
                 _context.Fees.Add(new Fee
@@ -3021,7 +3545,8 @@ namespace iBITS_Portal.Controllers
                     FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
                     FeeStatus = "Unpaid",
                     StudentNum = student.StudentNum,
-                    BatchId = batchId
+                    BatchId = batchId,
+                    SemesterId = effectiveSemesterId
                 });
             }
 
@@ -3036,7 +3561,7 @@ namespace iBITS_Portal.Controllers
         [HttpPost]
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateOrgFine(string fineReason, decimal amount, DateOnly? finesDueDate, string programFilter, string yearFilter)
+        public async Task<IActionResult> CreateOrgFine(string fineReason, decimal amount, DateOnly? finesDueDate, string programFilter, string yearFilter, int? semesterId)
         {
             if (string.IsNullOrWhiteSpace(fineReason) || amount <= 0)
             {
@@ -3059,6 +3584,12 @@ namespace iBITS_Portal.Controllers
             var students = await query.ToListAsync();
             var batchId = Guid.NewGuid().ToString();
 
+            var effectiveSemesterId = semesterId;
+            if (!effectiveSemesterId.HasValue)
+            {
+                effectiveSemesterId = (await _context.Semesters.FirstOrDefaultAsync(s => s.IsCurrent))?.SemesterId;
+            }
+
             foreach (var student in students)
             {
                 _context.Fines.Add(new Fine
@@ -3068,7 +3599,8 @@ namespace iBITS_Portal.Controllers
                     FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15)),
                     FinesStatus = "Unpaid",
                     StudentNum = student.StudentNum,
-                    BatchId = batchId
+                    BatchId = batchId,
+                    SemesterId = effectiveSemesterId
                 });
             }
 
@@ -4579,6 +5111,79 @@ namespace iBITS_Portal.Controllers
 
         #endregion
 
+        // ============================================================
+        // SEMESTER SELECTOR ENDPOINTS (For Officers)
+        // ============================================================
+
+        /// <summary>
+        /// Get all semesters for dropdown selector (Officers)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllSemestersForDropdown()
+        {
+            try
+            {
+                var semesters = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.StartDate)
+                    .Select(s => new
+                    {
+                        s.SemesterId,
+                        s.SemesterName,
+                        AcademicYear = s.AcademicYear.YearName,
+                        s.IsCurrent,
+                        DisplayName = s.AcademicYear.YearName + " - " + s.SemesterName
+                    })
+                    .ToListAsync();
+
+                return Json(semesters);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Set viewing semester for officers
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SetViewingSemester(int? semesterId)
+        {
+            try
+            {
+                if (semesterId.HasValue)
+                {
+                    var semester = await _context.Semesters
+                        .Include(s => s.AcademicYear)
+                        .FirstOrDefaultAsync(s => s.SemesterId == semesterId.Value);
+
+                    if (semester == null)
+                        return Json(new { success = false, message = "Semester not found" });
+
+                    HttpContext.Session.SetInt32("ViewingSemesterId", semesterId.Value);
+
+                    return Json(new
+                    {
+                        success = true,
+                        semesterName = semester.SemesterName,
+                        academicYear = semester.AcademicYear.YearName,
+                        isHistorical = !semester.IsCurrent,
+                        displayName = $"{semester.AcademicYear.YearName} - {semester.SemesterName}"
+                    });
+                }
+                else
+                {
+                    HttpContext.Session.Remove("ViewingSemesterId");
+                    return Json(new { success = true, message = "Viewing current semester" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 
     // ============================================================
@@ -4594,7 +5199,5 @@ namespace iBITS_Portal.Controllers
     {
         public List<int> FeeIds { get; set; }
         public string Category { get; set; }
-    }   
-
-
+    }
 }

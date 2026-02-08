@@ -109,6 +109,12 @@ public partial class Fee
     [ForeignKey("CollectedBy")]
     public virtual Student? CollectedByNavigation { get; set; }
 
+    // NEW: Semester linking for semesterized fees/payments
+    public int? SemesterId { get; set; }
+    
+    [ForeignKey("SemesterId")]
+    public virtual Semester? Semester { get; set; }
+
     // ============================================================
     // Computed Properties for Remittance Logic
     // ============================================================

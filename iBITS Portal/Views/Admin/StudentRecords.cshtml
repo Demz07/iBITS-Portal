@@ -26,15 +26,25 @@
             <i class="bi bi-people-fill me-2" style="color:var(--gold-primary)"></i> Student Records
         </h4>
         <p class="mb-0" style="color: var(--text-main); font-size: 0.95rem;">Manage registered students, update roles, and monitor status.</p>
+        @if (ViewBag.IsHistoricalMode == true)
+        {
+            <div class="alert alert-warning mt-2 mb-0 py-2 px-3" style="font-size: 0.85rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                <strong>Historical Mode:</strong> Viewing past semester data (read-only)
+            </div>
+        }
     </div>
     <div class="d-flex align-items-center gap-3">
         <div class="d-flex gap-2">
             <button type="button" id="btnExportExcel" class="btn btn-success" onclick="exportToExcelWithColumns()">
                 <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
             </button>
-            <button class="btn-gold" data-bs-toggle="modal" data-bs-target="#createStudentModal">
-                <i class="bi bi-person-plus-fill me-2"></i> Add New Student
-            </button>
+            @if (ViewBag.IsHistoricalMode != true)
+            {
+                <button class="btn-gold" data-bs-toggle="modal" data-bs-target="#createStudentModal">
+                    <i class="bi bi-person-plus-fill me-2"></i> Add New Student
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -177,6 +187,7 @@
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-year" id="chkYear" checked><label class="form-check-label" for="chkYear">Year</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-type" id="chkType" checked><label class="form-check-label" for="chkType">Student Type</label></div></li>
                             <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-role" id="chkRole" checked><label class="form-check-label" for="chkRole">Role</label></div></li>
+                            <li><div class="form-check my-2"><input class="form-check-input col-toggle" type="checkbox" value="col-semester" id="chkSemester" checked><label class="form-check-label" for="chkSemester">Semester</label></div></li>
 
                         </ul>
                     </div>
@@ -260,6 +271,22 @@
                     <option value="Member" selected="@(ViewBag.RoleFilter == "Member")">Member</option>
                 </select>
             </div>
+            <!-- Semester Filter -->
+            <div class="col-md-2 filter-item" data-filter="semester">
+                <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Semester</label>
+                <select name="semesterFilter" id="semesterFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
+                    <option value="">All Semesters</option>
+                    @if (ViewBag.Semesters != null)
+                    {
+                        foreach (var semester in ViewBag.Semesters)
+                        {
+                            <option value="@semester.SemesterName" selected="@(ViewBag.SemesterFilter == semester.SemesterName)">
+                                @semester.SemesterName (@semester.AcademicYear.YearName)
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
 
         </div>
     </form>
@@ -311,6 +338,7 @@
                     <th class="col-year">Year</th>
                     <th class="col-type">Type</th>
                     <th class="col-role">Role</th>
+                    <th class="col-semester">Semester</th>
 
                     <th class="text-end pe-4 col-actions">Actions</th>
                 </tr>
@@ -367,20 +395,41 @@
                                     <span class="badge badge-blue">Member</span>
                                 }
                             </td>
+                            <td class="col-semester">
+                                @if (student.StudentSemesters != null && student.StudentSemesters.Any(ss => ss.IsActive))
+                                {
+                                    var currentSemester = student.StudentSemesters.FirstOrDefault(ss => ss.IsActive)?.Semester;
+                                    if (currentSemester != null)
+                                    {
+                                        <span class="badge badge-info">@currentSemester.SemesterName</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">@currentSemester.AcademicYear.YearName</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Not Enrolled</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">N/A</span>
+                                }
+                            </td>
 
                             <td class="text-end pe-4 col-actions">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-icon-only" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#" onclick="openEditModal(event, '@student.StudentNum', '@student.StudentFn', '@student.StudentMn', '@student.StudentLn', '@student.StudentEmail', '@student.Course', '@student.YearLevelSection', '@student.StudentType', '@student.Birthday?.ToString("yyyy-MM-dd")', '@student.SchoolYearEnrolled')"><i class="bi bi-pencil-fill me-2"></i> Edit Student</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="setRoleModal(event, '@student.StudentNum', '@student.FullName', '@(student.Officer?.Position ?? "Member")')"><i class="bi bi-shield-lock-fill me-2"></i> Manage Role</a></li>
-                                        <li>
-                                            <!-- RESET PASSWORD (Custom Modal) -->
-                                            <a class="dropdown-item" href="#" onclick="openResetPasswordModal(event, '@student.StudentNum', '@student.FullName')">
-                                                <i class="bi bi-key-fill me-2"></i> Reset Password
-                                            </a>
+                                @if (ViewBag.IsHistoricalMode != true)
+                                {
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-icon-only" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" onclick="openEditModal(event, '@student.StudentNum', '@student.StudentFn', '@student.StudentMn', '@student.StudentLn', '@student.StudentEmail', '@student.Course', '@student.YearLevelSection', '@student.StudentType', '@student.Birthday?.ToString("yyyy-MM-dd")', '@student.SchoolYearEnrolled', '@(student.CurrentSemester?.SemesterId.ToString() ?? "")')"><i class="bi bi-pencil-fill me-2"></i> Edit Student</a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="setRoleModal(event, '@student.StudentNum', '@student.FullName', '@(student.Officer?.Position ?? "Member")')"><i class="bi bi-shield-lock-fill me-2"></i> Manage Role</a></li>
+                                            <li>
+                                                <!-- RESET PASSWORD (Custom Modal) -->
+                                                <a class="dropdown-item" href="#" onclick="openResetPasswordModal(event, '@student.StudentNum', '@student.FullName')">
+                                                    <i class="bi bi-key-fill me-2"></i> Reset Password
+                                                </a>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
@@ -391,6 +440,13 @@
                                         </li>
                                     </ul>
                                 </div>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                        <i class="bi bi-lock-fill"></i> Read Only
+                                    </span>
+                                }
                             </td>
                         </tr>
                     }
@@ -487,7 +543,7 @@
                     </div>
 
                     <!-- Row 4: Course, Year & Section, School Year -->
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label">Course/Program</label>
                             <select name="Course" class="form-select select2-modal">
@@ -515,6 +571,34 @@
                                     }
                                 }
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 5: Semester (NEW) -->
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">
+                                <i class="bi bi-calendar-check me-1" style="color: var(--gold-primary);"></i>
+                                Enroll in Semester
+                                <small class="text-muted">(Optional - can be set later)</small>
+                            </label>
+                            <select name="semesterId" class="form-select select2-modal">
+                                <option value="">-- No Semester (Enroll Later) --</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var semester in ViewBag.Semesters)
+                                    {
+                                        var isCurrent = semester.IsCurrent ? " ⭐ CURRENT" : "";
+                                        <option value="@semester.SemesterId">
+                                            @semester.SemesterName - @semester.AcademicYear.YearName@isCurrent
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Select a semester to automatically enroll this student upon registration.
+                            </small>
                         </div>
                     </div>
                 </div>

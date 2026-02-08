@@ -26,6 +26,30 @@
                             <tbody id="mappingTableBody"></tbody>
                         </table>
                     </div>
+
+                    <!-- NEW: Semester Selection -->
+                    <div class="mt-4 p-3" style="background: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold-primary); border-radius: 8px;">
+                        <label class="form-label fw-bold" style="color: var(--gold-primary);">
+                            <i class="bi bi-calendar-check me-2"></i>Enroll imported students in semester (Optional)
+                        </label>
+                        <select id="importSemesterId" class="form-select" style="background: var(--bg-secondary); color: var(--text-strong); border-color: var(--border-color);">
+                            <option value="">-- No Semester (Enroll Later) --</option>
+                            @if (ViewBag.Semesters != null)
+                            {
+                                foreach (var semester in ViewBag.Semesters)
+                                {
+                                    var isCurrent = semester.IsCurrent ? " ⭐ CURRENT" : "";
+                                    <option value="@semester.SemesterId">
+                                        @semester.SemesterName - @semester.AcademicYear.YearName@isCurrent
+                                    </option>
+                                }
+                            }
+                        </select>
+                        <small class="text-muted d-block mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            If selected, all imported students will be automatically enrolled in this semester.
+                        </small>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer border-0">

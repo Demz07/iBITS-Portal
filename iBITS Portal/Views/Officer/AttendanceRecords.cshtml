@@ -22,7 +22,7 @@
     <style>
         .table-glass {
             table-layout: fixed !important;
-            min-width: 1250px !important;
+            min-width: 1700px !important;
             width: 100%;
         }
 
@@ -31,31 +31,47 @@
         }
 
         .col-id {
-            width: 150px;
+            width: 130px;
         }
 
         .col-name {
-            width: 220px;
-        }
-
-        .col-program {
-            width: 130px;
-        }
-
-        .col-year {
-            width: 100px;
-        }
-
-        .col-event {
             width: 180px;
         }
 
+        .col-program {
+            width: 100px;
+        }
+
+        .col-year {
+            width: 90px;
+        }
+
+        .col-semester {
+            width: 150px;
+        }
+
+        .col-event {
+            width: 150px;
+        }
+
         .col-date {
-            width: 130px;
+            width: 110px;
+        }
+
+        .col-timein {
+            width: 100px;
+        }
+
+        .col-timeout {
+            width: 100px;
+        }
+
+        .col-duration {
+            width: 90px;
         }
 
         .col-status {
-            width: 120px;
+            width: 110px;
         }
 
         .col-action {
@@ -235,8 +251,12 @@
                     <th class="col-name">Full Name</th>
                     <th class="col-program">Program</th>
                     <th class="col-year">Year</th>
+                    <th class="col-semester">Semester</th>
                     <th class="col-event">Event</th>
                     <th class="col-date">Date</th>
+                    <th class="col-timein">Time In</th>
+                    <th class="col-timeout">Time Out</th>
+                    <th class="col-duration">Duration</th>
                     <th class="col-status text-center">Status</th>
                     @if (canEdit)
                     {
@@ -247,6 +267,19 @@
             <tbody>
                 @foreach (var attendance in Model)
                 {
+                    var semesterDisplay = attendance.Semester != null 
+                        ? $"{attendance.Semester.SemesterName} - {attendance.Semester.AcademicYear?.YearName}" 
+                        : "N/A";
+                    var timeInDisplay = attendance.TimeIn?.ToString("h:mm tt") ?? "-";
+                    var timeOutDisplay = attendance.TimeOut?.ToString("h:mm tt") ?? "-";
+                    var durationDisplay = "-";
+                    if (attendance.DurationMinutes.HasValue && attendance.DurationMinutes > 0)
+                    {
+                        int hours = attendance.DurationMinutes.Value / 60;
+                        int minutes = attendance.DurationMinutes.Value % 60;
+                        durationDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+                    }
+
                     <tr>
                         @if (canEdit)
                         {
@@ -256,8 +289,21 @@
                         <td class="col-name fw-bold text-strong">@attendance.StudentNumNavigation?.StudentFn @attendance.StudentNumNavigation?.StudentLn</td>
                         <td>@attendance.StudentNumNavigation?.Course</td>
                         <td>@attendance.StudentNumNavigation?.YearLevelSection</td>
-                        <td>@attendance.Event?.EventName</td>
-                        <td>@attendance.Event?.EventDate?.ToString("MMM dd")</td>
+                        <td class="small text-muted">@semesterDisplay</td>
+                        <td>@(attendance.Event?.EventName ?? "-")</td>
+                        <td>@(attendance.Event?.EventDate?.ToString("MMM dd") ?? "-")</td>
+                        <td class="small">@timeInDisplay</td>
+                        <td class="small">@timeOutDisplay</td>
+                        <td class="small text-center">
+                            @if (durationDisplay != "-")
+                            {
+                                <span class="badge bg-info text-dark">@durationDisplay</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">@durationDisplay</span>
+                            }
+                        </td>
                         <td class="text-center">
                             <span class="@(attendance.AttendanceStatus?.ToUpper() switch { "PRESENT" => "badge-green", "ABSENT" => "badge-red", "EXCUSED" => "badge-info", _ => "badge-gray" })">
                                 @attendance.AttendanceStatus

@@ -49,8 +49,10 @@
         }
     </div>
     <ul class="nav nav-pills" style="background: var(--bg-glass); border: 1px solid var(--border-color); border-radius: 12px; padding: 5px;">
-        <li class="nav-item"><a class="nav-link nav-link-scanner active rounded-pill px-4" data-mode="live">Live Attendance</a></li>
-        <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-4" data-mode="verifier">Verifier</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-scanner active rounded-pill px-3" data-mode="live">Event Attendance</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-3" data-mode="timein">Time In</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-3" data-mode="timeout">Time Out</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-scanner rounded-pill px-3" data-mode="verifier">Verifier</a></li>
     </ul>
 </div>
 
@@ -178,6 +180,141 @@
                     <div id="empty-state-msg" class="text-center mt-5" style="color: var(--text-muted);">
                         <i class="bi bi-table" style="font-size: 2rem;"></i>
                         <p>Waiting for scans...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TIME IN MODE -->
+<div id="timein-panel" class="scanner-mode-panel">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="glass-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--text-strong);">
+                        <i class="bi bi-box-arrow-in-right me-2" style="color: #28a745;"></i>Time In Scanner
+                    </h5>
+                    <select id="timein-semester-selector" class="form-select form-select-sm" style="max-width: 300px;">
+                        <option value="0">Loading semesters...</option>
+                    </select>
+                </div>
+
+                <div id="timein-scanner-container">
+                    <div class="reader-container">
+                        <video id="timein-video"></video>
+                        <div class="scanner-overlay"><p class="overlay-text" id="timein-overlay-text">Starting Camera...</p></div>
+                        <div class="heartbeat" id="timein-heartbeat"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button class="btn btn-sm" style="background-color:var(--gold-dim); color:var(--gold-text);" onclick="document.getElementById('timein-file-input').click()">
+                            <i class="bi bi-image"></i> Upload Image
+                        </button>
+                        <span class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>Students will be marked as timed in
+                        </span>
+                    </div>
+                    <input type="file" id="timein-file-input" hidden accept="image/*">
+                </div>
+            </div>
+
+            <div id="timein-flash-card" class="glass-panel mt-3" style="display: none;">
+                <div id="timein-flash-content" class="text-center position-relative"></div>
+            </div>
+        </div>
+
+        <!-- TODAY'S TIME IN LOG -->
+        <div class="col-lg-5">
+            <div class="glass-panel d-flex flex-column" style="height: 100%; max-height: 600px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--text-strong);">Today's Time In</h5>
+                    <button onclick="refreshTimeInLog()" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                <div class="table-responsive" style="overflow-y: auto; flex-grow: 1;">
+                    <table class="table table-hover table-borderless align-middle" id="timein-table">
+                        <thead style="position: sticky; top: 0; background: var(--bg-glass); backdrop-filter: blur(10px); z-index: 2;">
+                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--gold-text);">
+                                <th>Time</th>
+                                <th>Student</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timein-table-body" style="color: var(--text-main);"></tbody>
+                    </table>
+                    <div id="timein-empty-state" class="text-center mt-5" style="color: var(--text-muted);">
+                        <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
+                        <p>No time-ins yet today...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TIME OUT MODE -->
+<div id="timeout-panel" class="scanner-mode-panel">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="glass-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--text-strong);">
+                        <i class="bi bi-box-arrow-right me-2" style="color: #dc3545;"></i>Time Out Scanner
+                    </h5>
+                    <select id="timeout-semester-selector" class="form-select form-select-sm" style="max-width: 300px;">
+                        <option value="0">Loading semesters...</option>
+                    </select>
+                </div>
+
+                <div id="timeout-scanner-container">
+                    <div class="reader-container">
+                        <video id="timeout-video"></video>
+                        <div class="scanner-overlay"><p class="overlay-text" id="timeout-overlay-text">Starting Camera...</p></div>
+                        <div class="heartbeat" id="timeout-heartbeat"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button class="btn btn-sm" style="background-color:var(--gold-dim); color:var(--gold-text);" onclick="document.getElementById('timeout-file-input').click()">
+                            <i class="bi bi-image"></i> Upload Image
+                        </button>
+                        <span class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>Students will be marked as timed out
+                        </span>
+                    </div>
+                    <input type="file" id="timeout-file-input" hidden accept="image/*">
+                </div>
+            </div>
+
+            <div id="timeout-flash-card" class="glass-panel mt-3" style="display: none;">
+                <div id="timeout-flash-content" class="text-center position-relative"></div>
+            </div>
+        </div>
+
+        <!-- TODAY'S TIME OUT LOG -->
+        <div class="col-lg-5">
+            <div class="glass-panel d-flex flex-column" style="height: 100%; max-height: 600px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: var(--text-strong);">Today's Time Out</h5>
+                    <button onclick="refreshTimeOutLog()" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                <div class="table-responsive" style="overflow-y: auto; flex-grow: 1;">
+                    <table class="table table-hover table-borderless align-middle" id="timeout-table">
+                        <thead style="position: sticky; top: 0; background: var(--bg-glass); backdrop-filter: blur(10px); z-index: 2;">
+                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--gold-text);">
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Student</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timeout-table-body" style="color: var(--text-main);"></tbody>
+                    </table>
+                    <div id="timeout-empty-state" class="text-center mt-5" style="color: var(--text-muted);">
+                        <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
+                        <p>No time-outs yet today...</p>
                     </div>
                 </div>
             </div>

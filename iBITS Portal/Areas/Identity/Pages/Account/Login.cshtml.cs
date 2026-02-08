@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Areas/Identity/Pages/Account/Login.cshtml.cs
 // ============================================================
 // UPDATED: Added pending role change check after successful login.
@@ -59,6 +59,20 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
         [TempData]
         public string ErrorMessage { get; set; }
 
+        [TempData]
+        public int? FailedAttempts { get; set; }
+
+        [TempData]
+        public DateTime? LockoutEnd { get; set; }
+
+        public bool IsLockedOut { get; set; }
+
+        public TimeSpan? RemainingLockoutTime { get; set; }
+
+        public int TotalRemainingSeconds { get; set; }
+
+        public bool ShowLockoutTimer { get; set; }
+
         public class InputModel
         {
             [Required]
@@ -86,6 +100,37 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
+            // Check for lockout status
+            if (!string.IsNullOrEmpty(Input?.Email))
+            {
+                var userName = Input.Email;
+                if (userName.Contains("@"))
+                {
+                    var userObj = await _userManager.FindByEmailAsync(Input.Email);
+                    if (userObj != null)
+                    {
+                        userName = userObj.UserName;
+                    }
+                }
+
+                var user = await _userManager.FindByNameAsync(userName);
+                if (user != null)
+                {
+                    IsLockedOut = await _userManager.IsLockedOutAsync(user);
+                    if (IsLockedOut)
+                    {
+                        var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                        if (lockoutEnd.HasValue)
+                        {
+                            LockoutEnd = lockoutEnd.Value.UtcDateTime;
+                            RemainingLockoutTime = lockoutEnd.Value - DateTimeOffset.UtcNow;
+                            TotalRemainingSeconds = (int)Math.Ceiling(RemainingLockoutTime?.TotalSeconds ?? 0);
+                            ShowLockoutTimer = TotalRemainingSeconds > 0;
+                        }
+                    }
+                }
+            }
+
             ReturnUrl = returnUrl;
         }
 
@@ -109,7 +154,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 }
 
                 // 2. Attempt Login
-                var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
@@ -169,11 +214,52 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 if (result.IsLockedOut)
                 {
                     _logger.LogWarning("User account locked out.");
-                    return RedirectToPage("./Lockout");
+                    
+                    var lockedUser = await _userManager.FindByNameAsync(userName);
+                    if (lockedUser != null)
+                    {
+                        var lockoutEnd = await _userManager.GetLockoutEndDateAsync(lockedUser);
+                        if (lockoutEnd.HasValue)
+                        {
+                            LockoutEnd = lockoutEnd.Value.UtcDateTime;
+                            RemainingLockoutTime = lockoutEnd.Value - DateTimeOffset.UtcNow;
+                            TotalRemainingSeconds = (int)Math.Ceiling(RemainingLockoutTime?.TotalSeconds ?? 0);
+                            ShowLockoutTimer = TotalRemainingSeconds > 0;
+                            
+                            // Store failed attempts count for display
+                            var accessFailedCount = await _userManager.GetAccessFailedCountAsync(lockedUser);
+                            FailedAttempts = accessFailedCount;
+                        }
+                    }
+                    
+                    return Page();
                 }
                 else
                 {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    // Track failed attempts for better user feedback
+                    var attemptedUser = await _userManager.FindByNameAsync(userName);
+                    if (attemptedUser != null)
+                    {
+                        var accessFailedCount = await _userManager.GetAccessFailedCountAsync(attemptedUser);
+                        var remainingAttempts = 5 - accessFailedCount;
+                        
+                        if (remainingAttempts <= 2)
+                        {
+                            ModelState.AddModelError(string.Empty, 
+                                $"Invalid login attempt. {remainingAttempts} attempts remaining before account lockout.");
+                        }
+                        else
+                        {
+                            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                        }
+                        
+                        FailedAttempts = accessFailedCount;
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    }
+                    
                     return Page();
                 }
             }

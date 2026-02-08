@@ -414,7 +414,7 @@ $(document).ready(function () {
 
 function resetFilters() {
     $('#searchString').val('');
-    $('#sortOrder, #yearFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter').val('').trigger('change');
+    $('#sortOrder, #yearFilter, #roleFilter, #programFilter, #sectionFilter, #typeFilter, #semesterFilter').val('').trigger('change');
     if (window.studentRecordsUrl) {
         window.location.href = window.studentRecordsUrl;
     } else {
@@ -430,7 +430,8 @@ function removeFilterPill(filterName) {
         'year': '#yearFilter',
         'section': '#sectionFilter',
         'type': '#typeFilter',
-        'role': '#roleFilter'
+        'role': '#roleFilter',
+        'semester': '#semesterFilter'
     };
 
     const $element = $(filterMap[filterName]);
@@ -551,7 +552,7 @@ function setRoleModal(event, studentId, studentName, currentRole) {
     new bootstrap.Modal(document.getElementById('roleModal')).show();
 }
 
-function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled) {
+function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled, semesterId) {
     if (event) event.stopPropagation();
     const form = $('#editStudentForm');
     form.find('[name="StudentNum"]').val(id);
@@ -577,6 +578,13 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
         $schoolYearSelect.val('').trigger('change');
     }
 
+    const $semesterSelect = $('#editSemester');
+    if (semesterId && semesterId.trim() !== '') {
+        $semesterSelect.val(semesterId).trigger('change');
+    } else {
+        $semesterSelect.val('').trigger('change');
+    }
+
     const editModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
     editModal.show();
 
@@ -595,6 +603,13 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
             allowClear: false
         });
 
+        $('#editSemester').select2({
+            dropdownParent: $('#editStudentModal'),
+            minimumResultsForSearch: Infinity,
+            placeholder: '-- Select Semester --',
+            allowClear: false
+        });
+
         if (type && type.trim() !== '') {
             $('#editStudentType').val(type).trigger('change');
         }
@@ -609,6 +624,9 @@ function openEditModal(event, id, fn, mn, ln, email, course, section, type, birt
         }
         if ($('#editSchoolYearEnrolled').hasClass('select2-hidden-accessible')) {
             $('#editSchoolYearEnrolled').select2('destroy');
+        }
+        if ($('#editSemester').hasClass('select2-hidden-accessible')) {
+            $('#editSemester').select2('destroy');
         }
         $('#editStudentModal').off('shown.bs.modal');
         $('#editStudentModal').off('hidden.bs.modal');
@@ -797,10 +815,13 @@ window.confirmUpload = function () {
     bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
     $('#importProcessingOverlay').css('display', 'flex');
 
+    // Get the selected semester ID
+    const semesterId = document.getElementById('importSemesterId') ? document.getElementById('importSemesterId').value : '';
+
     $.ajax({
         url: window.executeImportUrl,
         type: 'POST',
-        data: { fileName: window.currentFileName, map: columnMap },
+        data: { fileName: window.currentFileName, map: columnMap, semesterId: semesterId || null },
         success: function (response) {
             $('#importProcessingOverlay').hide();
             showResultModal(response);

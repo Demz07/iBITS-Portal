@@ -73,20 +73,41 @@
             font-weight: 600 !important;
         }
 
-        /* Academic Year Dropdown Styles */
-        .academic-year-selector {
+        /* Semester Dropdown Styles */
+        .semester-selector-wrapper {
             background: rgba(11, 26, 51, 0.6);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(212, 175, 55, 0.4);
             border-radius: 12px;
             padding: 10px 16px;
+            transition: all 0.3s ease;
         }
 
-        .academic-year-dropdown {
+        .semester-selector-wrapper.historical-mode {
+            border-color: rgba(255, 193, 7, 0.6);
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .semester-dropdown {
             background: transparent !important;
             border: none !important;
             color: var(--gold-primary) !important;
             font-weight: 700;
+            min-width: 280px;
+        }
+
+        .semester-dropdown option {
+            background: var(--bg-primary);
+            color: var(--text-strong);
+        }
+
+        #historicalModeIndicator {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 
@@ -205,21 +226,36 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Selector -->
-                    <div class="academic-year-selector d-none d-md-flex align-items-center gap-2">
+                    <!-- Semester + Academic Year Selector -->
+                    <div class="semester-selector-wrapper d-none d-md-flex align-items-center gap-2">
                         <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
-                        <select id="academicYearSelect" class="form-select academic-year-dropdown" title="Set Current Academic Year">
-                            @{
-                                int currentYear = DateTime.Now.Year;
-                                string currentAY = ViewBag.CurrentAcademicYear ?? $"A.Y. {currentYear}-{currentYear + 1}";
-                                for (int year = currentYear + 1; year >= currentYear - 5; year--)
-                                {
-                                    string ayValue = $"A.Y. {year}-{year + 1}";
-                                    <option value="@ayValue" selected="@(currentAY == ayValue)">@ayValue</option>
-                                }
-                            }
+                        <select id="semesterSelect" class="form-select semester-dropdown" title="Select Semester">
+                            <option value="">Loading semesters...</option>
                         </select>
                     </div>
+                    
+                    <!-- Create New Semester Button -->
+                    <button id="btnCreateNewSemester" class="btn btn-sm d-none d-md-flex align-items-center gap-1" 
+                            style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.2)); 
+                                   border: 1px solid var(--gold-primary); 
+                                   color: var(--gold-primary); 
+                                   font-weight: 600;
+                                   padding: 6px 12px;
+                                   border-radius: 8px;
+                                   transition: all 0.3s ease;"
+                            onmouseover="this.style.background='linear-gradient(135deg, var(--gold-primary), #b8860b)'; this.style.color='#0b1a33';"
+                            onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.2))'; this.style.color='var(--gold-primary)';"
+                            title="Create New Semester">
+                        <i class="bi bi-plus-circle"></i> New Semester
+                    </button>
+                    
+                    <!-- Historical Mode Indicator -->
+                    <div id="historicalModeIndicator" class="d-none align-items-center gap-2" style="display: none;">
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-eye"></i> Historical View
+                        </span>
+                    </div>
+                    
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
                         <div style="font-weight:bold; color:var(--text-strong);">Administrator</div>
@@ -239,6 +275,75 @@
     </div>
 
     @* --- MODALS AND SCRIPTS (No changes needed below this line) --- *@
+
+    @* CREATE NEW SEMESTER MODAL *@
+    <div class="modal fade" id="createSemesterModal" tabindex="-1" aria-labelledby="createSemesterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createSemesterModalLabel">
+                        <i class="bi bi-calendar-plus"></i> Create New Semester
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createSemesterForm">
+                        <div class="mb-3">
+                            <label for="newAcademicYear" class="form-label">Academic Year</label>
+                            <div class="input-group">
+                                <span class="input-group-text">A.Y.</span>
+                                <input type="number" class="form-control" id="startYear" placeholder="2025" min="2020" max="2050" required style="max-width: 100px;">
+                                <span class="input-group-text">-</span>
+                                <input type="number" class="form-control" id="endYear" placeholder="2026" min="2020" max="2050" required style="max-width: 100px;" readonly>
+                            </div>
+                            <small class="text-muted">Start year will auto-calculate end year (e.g., 2025 → 2026)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="newSemesterName" class="form-label">Semester</label>
+                            <select class="form-control" id="newSemesterName" required>
+                                <option value="">Select Semester</option>
+                                <option value="1st Semester">1st Semester</option>
+                                <option value="2nd Semester">2nd Semester</option>
+                                <option value="Summer">Summer</option>
+                            </select>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="newStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="newStartDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="newEndDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="newEndDate" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="setAsCurrent" checked>
+                                <label class="form-check-label" for="setAsCurrent">
+                                    Set as current semester (archives the current one)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Note:</strong> Creating a new semester will keep all old records in their original semester. The new semester will start fresh.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveNewSemester">
+                        <i class="bi bi-check-circle"></i> Create Semester
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @* HIDDEN FLASH MESSAGES *@
     @if (TempData["Error"] != null)
@@ -301,23 +406,208 @@
                 new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
             }
             
-
-            // Academic Year AJAX logic
-            $('#academicYearSelect').on('change', function () {
-                var selectedYear = $(this).val();
-                $.ajax({
-                    url: '@Url.Action("SetCurrentAcademicYear", "Admin")',
-                    type: 'POST',
-                    data: { academicYear: selectedYear },
-                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                    success: function (response) {
-                        if (response.success && typeof showToast === 'function') {
-                            showToast('Academic year updated to ' + selectedYear, 'success');
-                        }
-                    }
-                });
+            
+            // Semester Selector Logic
+            loadSemesters();
+            
+            $('#semesterSelect').on('change', function () {
+                var semesterId = $(this).val();
+                switchSemester(semesterId);
+            });
+            
+            // Create New Semester Button
+            $('#btnCreateNewSemester').on('click', function() {
+                // Set default dates (today + 6 months)
+                var today = new Date();
+                var endDate = new Date();
+                endDate.setMonth(endDate.getMonth() + 6);
+                
+                $('#newStartDate').val(today.toISOString().split('T')[0]);
+                $('#newEndDate').val(endDate.toISOString().split('T')[0]);
+                
+                // Set default start year to current year
+                var currentYear = new Date().getFullYear();
+                $('#startYear').val(currentYear);
+                $('#endYear').val(currentYear + 1);
+                
+                // Show modal
+                $('#createSemesterModal').modal('show');
+            });
+            
+            // Auto-calculate end year when start year changes
+            $('#startYear').on('input', function() {
+                var startYear = parseInt($(this).val());
+                if (startYear) {
+                    $('#endYear').val(startYear + 1);
+                }
+            });
+            
+            // Save New Semester
+            $('#btnSaveNewSemester').on('click', function() {
+                createNewSemester();
             });
         });
+
+        function loadSemesters() {
+            $.ajax({
+                url: '@Url.Action("GetAllSemestersForDropdown", "Admin")',
+                type: 'GET',
+                success: function(data) {
+                    var dropdown = $('#semesterSelect');
+                    dropdown.empty();
+                    
+                    if (data.error) {
+                        dropdown.append('<option value="">Error loading semesters</option>');
+                        return;
+                    }
+                    
+                    if (data.length === 0) {
+                        dropdown.append('<option value="">No semesters available</option>');
+                        return;
+                    }
+                    
+                    var hasSelection = false;
+                    
+                    $.each(data, function(i, semester) {
+                        var option = $('<option>')
+                            .val(semester.semesterId)
+                            .text(semester.displayName);
+                        
+                        if (semester.isCurrent) {
+                            option.attr('selected', 'selected');
+                            option.prepend('⭐ '); // Mark current semester
+                            hasSelection = true;
+                        }
+                        
+                        dropdown.append(option);
+                    });
+                    
+                    // If no current semester, select the first one
+                    if (!hasSelection && data.length > 0) {
+                        dropdown.find('option:first').attr('selected', 'selected');
+                    }
+                    
+                    // Check if current selection is historical
+                    checkHistoricalMode();
+                },
+                error: function() {
+                    $('#semesterSelect').append('<option value="">Failed to load semesters</option>');
+                }
+            });
+        }
+
+        function switchSemester(semesterId) {
+            $.ajax({
+                url: '@Url.Action("SetViewingSemester", "Admin")',
+                type: 'POST',
+                data: { semesterId: semesterId },
+                headers: { 
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() 
+                },
+                success: function (response) {
+                    if (response.success) {
+                        // Update UI based on historical mode
+                        if (response.isHistorical) {
+                            $('.semester-selector-wrapper').addClass('historical-mode');
+                            $('#historicalModeIndicator').removeClass('d-none').css('display', 'flex');
+                            
+                            if (typeof showToast === 'function') {
+                                showToast('Viewing historical data: ' + response.displayName, 'warning');
+                            }
+                        } else {
+                            $('.semester-selector-wrapper').removeClass('historical-mode');
+                            $('#historicalModeIndicator').addClass('d-none');
+                            
+                            if (typeof showToast === 'function') {
+                                showToast('Viewing current semester: ' + response.displayName, 'success');
+                            }
+                        }
+                        
+                        // Reload page to refresh data
+                        setTimeout(function() {
+                            location.reload();
+                        }, 800);
+                    } else {
+                        if (typeof showToast === 'function') {
+                            showToast('Error: ' + response.message, 'error');
+                        }
+                    }
+                },
+                error: function() {
+                    if (typeof showToast === 'function') {
+                        showToast('Failed to switch semester', 'error');
+                    }
+                }
+            });
+        }
+
+        function checkHistoricalMode() {
+            var selected = $('#semesterSelect option:selected');
+            if (selected.text().indexOf('⭐') === -1 && selected.val() !== '') {
+                $('.semester-selector-wrapper').addClass('historical-mode');
+                $('#historicalModeIndicator').removeClass('d-none').css('display', 'flex');
+            }
+        }
+
+        function createNewSemester() {
+            // Build academic year from start and end year
+            var startYear = $('#startYear').val();
+            var endYear = $('#endYear').val();
+            var academicYear = 'A.Y. ' + startYear + '-' + endYear;
+            
+            var semesterName = $('#newSemesterName').val();
+            var startDate = $('#newStartDate').val();
+            var endDate = $('#newEndDate').val();
+            var setAsCurrent = $('#setAsCurrent').is(':checked');
+            
+            if (!startYear || !endYear || !semesterName || !startDate || !endDate) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Disable button
+            $('#btnSaveNewSemester').prop('disabled', true).html('<i class="spinner-border spinner-border-sm"></i> Creating...');
+            
+            $.ajax({
+                url: '@Url.Action("CreateNewSemester", "Admin")',
+                type: 'POST',
+                data: {
+                    academicYear: academicYear,
+                    semesterName: semesterName,
+                    startDate: startDate,
+                    endDate: endDate,
+                    setAsCurrent: setAsCurrent
+                },
+                headers: { 
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() 
+                },
+                success: function(response) {
+                    if (response.success) {
+                        if (typeof showToast === 'function') {
+                            showToast('Semester created successfully!', 'success');
+                        }
+                        
+                        // Close modal
+                        $('#createSemesterModal').modal('hide');
+                        
+                        // Reload semesters
+                        loadSemesters();
+                        
+                        // Reload page to show new semester
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + response.message);
+                        $('#btnSaveNewSemester').prop('disabled', false).html('<i class="bi bi-check-circle"></i> Create Semester');
+                    }
+                },
+                error: function() {
+                    alert('Failed to create semester');
+                    $('#btnSaveNewSemester').prop('disabled', false).html('<i class="bi bi-check-circle"></i> Create Semester');
+                }
+            });
+        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

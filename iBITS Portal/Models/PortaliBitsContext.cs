@@ -42,6 +42,18 @@ public partial class PortaliBitsContext : DbContext
     // ANNOUNCEMENT DISMISSAL TRACKING
     // ============================================================
     public virtual DbSet<UserAnnouncementDismissal> UserAnnouncementDismissals { get; set; }
+    
+    // ============================================================
+    // SEMESTER SYSTEM DbSets
+    // ============================================================
+    public virtual DbSet<AcademicYear> AcademicYears { get; set; }
+    public virtual DbSet<Semester> Semesters { get; set; }
+    public virtual DbSet<StudentSemester> StudentSemesters { get; set; }
+    
+    // ============================================================
+    // QR AUDIT SYSTEM DbSets
+    // ============================================================
+    public virtual DbSet<QRAuditLog> QRAuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -365,11 +377,49 @@ public partial class PortaliBitsContext : DbContext
                 .HasForeignKey(d => d.CollectedBy)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // NEW: Semester relationship
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_Fines_Semester")
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.Property(e => e.RemittanceStatus)
                 .HasMaxLength(20)
                 .HasDefaultValue("NotRemitted");
 
             entity.HasIndex(e => e.RemittanceStatus);
+        });
+
+        // Configure PaymentTransaction entity
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.ToTable("PaymentTransactions");
+
+            entity.HasOne(d => d.Fee)
+                .WithMany()
+                .HasForeignKey(d => d.FeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Treasurer)
+                .WithMany()
+                .HasForeignKey(d => d.ProcessedBy)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // NEW: Semester relationship for single-semester payments
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_PaymentTransactions_Semester")
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.SemesterId);
+            entity.HasIndex(e => e.StudentNum);
         });
 
         // ============================================================
@@ -399,6 +449,207 @@ public partial class PortaliBitsContext : DbContext
                   .HasForeignKey(d => d.AnnouncementId)
                   .HasConstraintName("FK_UserAnnouncementDismissal_Announcement")
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================
+        // SEMESTER SYSTEM CONFIGURATION
+        // ============================================================
+        
+        // AcademicYear Configuration
+        modelBuilder.Entity<AcademicYear>(entity =>
+        {
+            entity.ToTable("AcademicYears");
+            
+            entity.Property(e => e.YearName)
+                .IsRequired()
+                .HasMaxLength(20);
+                
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETDATE()");
+                
+            entity.Property(e => e.CreatedBy)
+                .HasMaxLength(450);
+                
+            // Unique constraint on YearName
+            entity.HasIndex(e => e.YearName)
+                .IsUnique();
+        });
+
+        // Semester Configuration
+        modelBuilder.Entity<Semester>(entity =>
+        {
+            entity.ToTable("Semesters");
+            
+            entity.Property(e => e.SemesterName)
+                .IsRequired()
+                .HasMaxLength(50);
+                
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETDATE()");
+                
+            entity.Property(e => e.CreatedBy)
+                .HasMaxLength(450);
+                
+            // Unique constraint on AcademicYearId + SemesterName
+            entity.HasIndex(e => new { e.AcademicYearId, e.SemesterName })
+                .IsUnique();
+                
+            // Foreign key to AcademicYear
+            entity.HasOne(d => d.AcademicYear)
+                .WithMany(p => p.Semesters)
+                .HasForeignKey(d => d.AcademicYearId)
+                .HasConstraintName("FK_Semesters_AcademicYears")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // StudentSemester Configuration
+        modelBuilder.Entity<StudentSemester>(entity =>
+        {
+            entity.ToTable("StudentSemesters");
+            
+            entity.Property(e => e.StudentNum)
+                .IsRequired()
+                .HasMaxLength(450);
+                
+            entity.Property(e => e.Section)
+                .HasMaxLength(100);
+                
+            entity.Property(e => e.EnrollmentDate)
+                .HasDefaultValueSql("GETDATE()");
+                
+            entity.Property(e => e.EnrollmentStatus)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Active");
+                
+            // Unique constraint on StudentNum + SemesterId
+            entity.HasIndex(e => new { e.StudentNum, e.SemesterId })
+                .IsUnique();
+                
+            // Foreign key to Student
+            entity.HasOne(d => d.Student)
+                .WithMany(p => p.StudentSemesters)
+                .HasForeignKey(d => d.StudentNum)
+                .HasConstraintName("FK_StudentSemesters_Students")
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            // Foreign key to Semester
+            entity.HasOne(d => d.Semester)
+                .WithMany(p => p.StudentSemesters)
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_StudentSemesters_Semesters")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // QRAuditLog Configuration
+        modelBuilder.Entity<QRAuditLog>(entity =>
+        {
+            entity.ToTable("QRAuditLog");
+            entity.HasKey(e => e.AuditId);
+            
+            entity.Property(e => e.AuditId).ValueGeneratedOnAdd();
+            entity.Property(e => e.StudentNum).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.QRCodeData).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ScanTime).HasColumnType("datetime2");
+            entity.Property(e => e.ScanType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ProcessingResult).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.AttendanceId);
+            entity.Property(e => e.EventId);
+            entity.Property(e => e.SemesterId);
+            entity.Property(e => e.DeviceFingerprint).HasMaxLength(200);
+            entity.Property(e => e.IPAddress).HasMaxLength(100);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            entity.Property(e => e.ProcessedBy).HasMaxLength(450);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+            
+            // Navigation properties
+            entity.HasOne(d => d.Student)
+                .WithMany()
+                .HasForeignKey(d => d.StudentNum)
+                .HasConstraintName("FK_QRAuditLog_Student")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Attendance)
+                .WithMany()
+                .HasForeignKey(d => d.AttendanceId)
+                .HasConstraintName("FK_QRAuditLog_Attendance")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Event)
+                .WithMany()
+                .HasForeignKey(d => d.EventId)
+                .HasConstraintName("FK_QRAuditLog_Event")
+                .OnDelete(DeleteBehavior.NoAction);
+                
+            entity.HasOne(d => d.Semester)
+                .WithMany()
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_QRAuditLog_Semester")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ============================================================
+        // UPDATE EXISTING ENTITIES WITH SEMESTER RELATIONSHIPS
+        // ============================================================
+        
+        // Update Attendance with SemesterId
+        modelBuilder.Entity<Attendance>(entity =>
+        {
+            // Add SemesterId column mapping
+            entity.Property(e => e.SemesterId);
+            
+            // Add TimeIn/TimeOut properties
+            entity.Property(e => e.TimeIn);
+            entity.Property(e => e.TimeOut);
+            entity.Property(e => e.DurationMinutes); // Computed column
+            entity.Property(e => e.ScanDevice).HasMaxLength(50);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            
+            // Add Semester navigation
+            entity.HasOne(d => d.Semester)
+                .WithMany(p => p.Attendances)
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_Attendance_Semesters")
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            // QRAuditLog navigation removed (since QRAuditLog is now keyless)
+            // Use separate audit lookup if needed
+                
+            // Indexes
+            entity.HasIndex(e => e.SemesterId);
+            entity.HasIndex(e => e.TimeIn);
+        });
+
+        // Update Event with SemesterId
+        modelBuilder.Entity<Event>(entity =>
+        {
+            // Add SemesterId column mapping
+            entity.Property(e => e.SemesterId);
+            
+            // Add Semester navigation
+            entity.HasOne(d => d.Semester)
+                .WithMany(p => p.Events)
+                .HasForeignKey(d => d.SemesterId)
+                .HasConstraintName("FK_Events_Semesters")
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            // QRAuditLog navigation removed (keyless entity doesn't support EF navigation)
+                
+            // Index
+            entity.HasIndex(e => e.SemesterId);
+        });
+
+        // Update Student with Semester relationships
+        modelBuilder.Entity<Student>(entity =>
+        {
+            // Add StudentSemester navigation
+            entity.HasMany(d => d.StudentSemesters)
+                .WithOne(p => p.Student)
+                .HasForeignKey(p => p.StudentNum)
+                .HasConstraintName("FK_StudentSemesters_Students")
+                .OnDelete(DeleteBehavior.Cascade);
+                
+// QRAuditLog navigation removed (keyless entity doesn't support EF navigation)
         });
 
         OnModelCreatingPartial(modelBuilder);

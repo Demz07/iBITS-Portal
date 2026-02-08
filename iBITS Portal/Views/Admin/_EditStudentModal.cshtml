@@ -86,6 +86,21 @@
                                 }
                             </select>
                         </div>
+
+                        <!-- NEW: Semester Field -->
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Semester <span class="text-danger">*</span></label>
+                            <select id="editSemester" name="SemesterId" class="form-select select2-modal" style="width: 100%;" required>
+                                <option value="">-- Select Semester --</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var semester in ViewBag.Semesters)
+                                    {
+                                        <option value="@semester.SemesterId">@semester.SemesterName (@semester.SchoolYear)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -130,8 +130,14 @@ public partial class Event
     public decimal? NonIbitsFineForOrgOfficer { get; set; }
 
     public bool IsClosed { get; set; }
-
+    
+    // NEW: Semester Field
+    public int? SemesterId { get; set; }
+    
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+    
+    // NEW: Semester Navigation Property
+    public virtual Semester? Semester { get; set; }
 
     [NotMapped]
     public bool IsInUse => Attendances.Any();

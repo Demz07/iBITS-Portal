@@ -241,6 +241,42 @@ namespace iBITS_Portal.Controllers
                 course = student != null ? $"{student.Course} | {student.YearLevelSection}" : ""
             });
         }
+
+        // ============================================================
+        // SEMESTER DISPLAY FOR STUDENTS
+        // ============================================================
+
+        /// <summary>
+        /// Get current semester display for regular students (read-only)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetCurrentSemesterDisplay()
+        {
+            try
+            {
+                var currentSemester = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .FirstOrDefaultAsync(s => s.IsCurrent && s.IsActive);
+
+                if (currentSemester == null)
+                {
+                    return Json(new { displayName = "No active semester" });
+                }
+
+                string displayName = $"{currentSemester.AcademicYear.YearName} - {currentSemester.SemesterName}";
+
+                return Json(new
+                {
+                    displayName = displayName,
+                    semesterName = currentSemester.SemesterName,
+                    academicYear = currentSemester.AcademicYear.YearName
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { displayName = "Error loading semester" });
+            }
+        }
     }
 }
 
