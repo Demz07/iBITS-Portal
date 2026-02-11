@@ -209,9 +209,9 @@
                             <td><i class="bi bi-hourglass-split text-warning me-2"></i> Total Pending</td>
                             <td class="text-end fw-bold text-warning">₱@((pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
-                        <tr class="table-active">
-                            <td><i class="bi bi-calculator me-2"></i> Grand Total</td>
-                            <td class="text-end fw-bold text-white">₱@((totalCollections + pendingFees + pendingFines).ToString("N2"))</td>
+                        <tr class="table-active" style="background-color: rgba(255, 215, 0, 0.1);">
+                            <td class="text-white"><i class="bi bi-calculator-fill me-2" style="color: #FFD700;"></i> <strong>Grand Total</strong></td>
+                            <td class="text-end fw-bold" style="color: #FFD700; font-size: 1.1rem;">₱@((totalCollections + pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
                     </tbody>
                 </table>
@@ -240,7 +240,9 @@
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends (Current Academic Year)
             </h5>
-            <canvas id="trendsChart" style="max-height: 300px;"></canvas>
+            <div style="position: relative; height: 350px;">
+                <canvas id="trendsChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -281,8 +283,23 @@
                                 <h6 class="text-danger mb-0">₱@programYearUnpaid.ToString("N2")</h6>
                             </div>
                         </div>
-                        <div class="progress mt-3" style="height: 8px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F1"))%"></div>
+                        @{
+                            var paidPercent = programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0;
+                            var unpaidPercent = programYearTotal > 0 ? (programYearUnpaid / programYearTotal * 100) : 0;
+                        }
+                        <div class="progress mt-3" style="height: 30px; position: relative; background-color: rgba(220, 53, 69, 0.3);">
+                            <div class="progress-bar bg-success d-flex align-items-center justify-content-center" role="progressbar" style="width: @paidPercent.ToString("F1")%">
+                                @if (paidPercent > 5)
+                                {
+                                    <span class="text-white fw-bold small">@paidPercent.ToString("F1")% Paid</span>
+                                }
+                            </div>
+                            @if (unpaidPercent > 5)
+                            {
+                                <span class="position-absolute text-white fw-bold small" style="right: 10px; top: 50%; transform: translateY(-50%);">
+                                    @unpaidPercent.ToString("F1")% Unpaid
+                                </span>
+                            }
                         </div>
                     </div>
                 }
@@ -302,66 +319,115 @@
         const trendsCtx = document.getElementById('trendsChart').getContext('2d');
         const monthlyTrends = @Html.Raw(Json.Serialize(ViewBag.MonthlyTrends ?? new List<object>()));
         
-        new Chart(trendsCtx, {
-            type: 'line',
-            data: {
-                labels: monthlyTrends.map(t => t.Month),
-                datasets: [
-                    {
-                        label: 'Fees Collected',
-                        data: monthlyTrends.map(t => t.FeesCollected),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+        // Debug: Log the data
+        console.log('Monthly Trends Data:', monthlyTrends);
+        console.log('Number of months:', monthlyTrends.length);
+        
+        // Check if we have data
+        if (monthlyTrends && monthlyTrends.length > 0) {
+            new Chart(trendsCtx, {
+                type: 'line',
+                data: {
+                    labels: monthlyTrends.map(t => t.Month),
+                    datasets: [
+                        {
+                            label: 'Fees Collected',
+                            data: monthlyTrends.map(t => t.FeesCollected),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'Fines Collected',
+                            data: monthlyTrends.map(t => t.FinesCollected),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#f59e0b',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { 
+                                color: '#fff', 
+                                font: { size: 14, weight: 'bold' },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#FFD700',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                }
+                            }
+                        }
                     },
-                    {
-                        label: 'Fines Collected',
-                        data: monthlyTrends.map(t => t.FinesCollected),
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        labels: { color: '#fff', font: { size: 12 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { 
+                                color: '#fff',
+                                font: { size: 12 },
+                                callback: function(value) {
+                                    return '₱' + value.toLocaleString();
+                                }
+                            },
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: { 
+                                color: '#fff',
+                                font: { size: 11 },
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
                             }
                         }
                     }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { 
-                            color: '#fff',
-                            callback: function(value) {
-                                return '₱' + value.toLocaleString();
-                            }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    },
-                    x: {
-                        ticks: { color: '#fff' },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    }
                 }
-            }
-        });
+            });
+        } else {
+            // Show message if no data
+            const canvas = document.getElementById('trendsChart');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('No collection data available for the current academic year', canvas.width / 2, canvas.height / 2);
+            console.warn('No monthly trends data available');
+        }
 
         // Financial Doughnut Chart
         const ctx = document.getElementById('financialChart').getContext('2d');

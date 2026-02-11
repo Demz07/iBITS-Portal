@@ -660,25 +660,31 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgTreasurerDashboard()
         {
-            // Get all fees and fines
-            var fees = await _context.Fees.Include(f => f.StudentNumNavigation).ToListAsync();
-            var fines = await _context.Fines.Include(f => f.StudentNumNavigation).ToListAsync();
+            // Get all fees and fines with student navigation
+            var fees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation != null)
+                .ToListAsync();
+            
+            var fines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation != null)
+                .ToListAsync();
 
-            // Calculate statistics - ONLY count validated remittances (RemittanceStatus == "Remitted")
-            // This ensures only payments that have been validated by Org Treasurer are counted
+            // Calculate statistics - count all PAID fees/fines
             ViewBag.TotalFeesCollected = fees
-                .Where(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                .Where(f => f.FeeStatus?.ToUpper() == "PAID")
                 .Sum(f => f.Amount ?? 0);
             ViewBag.TotalFinesCollected = fines
-                .Where(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                .Where(f => f.FinesStatus?.ToUpper() == "PAID")
                 .Sum(f => f.Amount ?? 0);
             
-            // Pending includes: unpaid + paid but not yet remitted/validated
+            // Pending includes: unpaid fees/fines
             ViewBag.PendingFees = fees
-                .Where(f => f.FeeStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
+                .Where(f => f.FeeStatus?.ToUpper() != "PAID")
                 .Sum(f => f.Amount ?? 0);
             ViewBag.PendingFines = fines
-                .Where(f => f.FinesStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
+                .Where(f => f.FinesStatus?.ToUpper() != "PAID")
                 .Sum(f => f.Amount ?? 0);
             
             ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
@@ -687,16 +693,68 @@ namespace iBITS_Portal.Controllers
             ViewBag.PendingRemittanceCount = await _context.Remittances
                 .CountAsync(r => r.Status == RemittanceStatus.Pending);
 
-            // Section breakdown - only count validated remittances as "Paid"
-            var sectionStats = fees.GroupBy(f => f.StudentNumNavigation?.YearLevelSection ?? "Unknown")
+            // Program-Year-Section breakdown (e.g., "BSIT Year 3 Section 1")
+            var programYearStats = fees
+                .Where(f => !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection) 
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.Course))
+                .GroupBy(f => {
+                    var course = f.StudentNumNavigation.Course ?? "Unknown"; // e.g., "BSIT"
+                    var section = f.StudentNumNavigation.YearLevelSection; // e.g., "3-1"
+                    var parts = section.Split('-');
+                    
+                    if (parts.Length >= 2)
+                    {
+                        var year = parts[0]; // e.g., "3"
+                        var sectionNum = parts[1]; // e.g., "1"
+                        return $"{course} Year {year} Section {sectionNum}"; // e.g., "BSIT Year 3 Section 1"
+                    }
+                    return "Unknown";
+                })
                 .Select(g => new
                 {
-                    Section = g.Key,
+                    ProgramYear = g.Key,
                     TotalFees = g.Sum(f => f.Amount ?? 0),
-                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0)
-                }).ToList();
+                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0)
+                })
+                .OrderBy(s => s.ProgramYear)
+                .ToList();
 
-            ViewBag.SectionStats = sectionStats;
+            ViewBag.ProgramYearStats = programYearStats;
+
+            // Calculate monthly trends for current academic year (Aug - Present)
+            var currentYear = DateTime.Now.Year;
+            var academicYearStart = DateTime.Now.Month >= 8 
+                ? new DateTime(currentYear, 8, 1) 
+                : new DateTime(currentYear - 1, 8, 1);
+
+            var monthsCount = (DateTime.Now.Year - academicYearStart.Year) * 12 + DateTime.Now.Month - academicYearStart.Month + 1;
+            var monthlyTrends = Enumerable.Range(0, monthsCount)
+                .Select(offset => {
+                    var month = academicYearStart.AddMonths(offset);
+                    var monthStart = new DateTime(month.Year, month.Month, 1);
+                    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+
+                    var feesInMonth = fees.Where(f => 
+                        f.CollectionDate.HasValue && 
+                        f.CollectionDate >= monthStart && 
+                        f.CollectionDate <= monthEnd && 
+                        f.FeeStatus?.ToUpper() == "PAID");
+                    
+                    var finesInMonth = fines.Where(f => 
+                        f.CollectionDate.HasValue && 
+                        f.CollectionDate >= monthStart && 
+                        f.CollectionDate <= monthEnd && 
+                        f.FinesStatus?.ToUpper() == "PAID");
+
+                    return new {
+                        Month = month.ToString("MMM yyyy"),
+                        FeesCollected = feesInMonth.Sum(f => f.Amount ?? 0),
+                        FinesCollected = finesInMonth.Sum(f => f.Amount ?? 0)
+                    };
+                })
+                .ToList();
+
+            ViewBag.MonthlyTrends = monthlyTrends;
 
             return View();
         }
