@@ -760,6 +760,10 @@ namespace iBITS_Portal.Controllers
 
             ViewBag.MonthlyTrends = monthlyTrends;
 
+            // Count pending remittances for notification badge
+            ViewBag.PendingRemittanceCount = await _context.Remittances
+                .CountAsync(r => r.Status == RemittanceStatus.Pending);
+
             return View();
         }
 

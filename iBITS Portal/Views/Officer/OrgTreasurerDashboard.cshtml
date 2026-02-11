@@ -47,6 +47,24 @@
                 transform: translateX(5px);
                 background: rgba(255,255,255,0.08);
             }
+
+        /* Notification Badge Pulse Animation */
+        .pulse-notification {
+            animation: pulse-glow 2s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 1);
+        }
+
+        @@keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
     </style>
 }
 
@@ -96,7 +114,15 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <a href="@Url.Action("PendingRemittances", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.4);">
+            <div class="glass-panel p-4 h-100 position-relative" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.4);">
+                @if (ViewBag.PendingRemittanceCount != null && ViewBag.PendingRemittanceCount > 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger pulse-notification" 
+                          style="font-size: 0.85rem; padding: 0.5em 0.75em; z-index: 10;">
+                        @ViewBag.PendingRemittanceCount
+                        <span class="visually-hidden">pending remittances</span>
+                    </span>
+                }
                 <div class="d-flex align-items-center">
                     <div class="me-4" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
                         <i class="bi bi-hourglass-split fs-1"></i>
