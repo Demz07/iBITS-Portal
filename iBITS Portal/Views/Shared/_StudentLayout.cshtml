@@ -1,41 +1,27 @@
-@* ============================================================ *@
+﻿@* ============================================================ *@
 @* FILE PATH: Views/Shared/_StudentLayout.cshtml                *@
-@* ============================================================ *@
-@* FIXED: Added spaces to all User.IsInRole() checks to match *@
-@* the official role names (e.g., "Org Secretary").             *@
 @* ============================================================ *@
 
 @using Microsoft.AspNetCore.Identity
 @using iBITS_Portal.ViewModels
 @inject SignInManager<IdentityUser> SignInManager
+
 @{
     Layout = null;
+
     string displayRole = "Member";
-    
-    // Priority order: Most specific roles first
-    if (User.IsInRole("Admin"))
+    if (User.IsInRole("Admin")) { displayRole = "Admin"; }
+    else if (User.IsInRole("Org Treasurer")) { displayRole = "Org Treasurer"; }
+    else if (User.IsInRole("Class Treasurer")) { displayRole = "Class Treasurer"; }
+    else if (User.IsInRole("Org Secretary")) { displayRole = "Org Secretary"; }
+    else if (User.IsInRole("Class Secretary")) { displayRole = "Class Secretary"; }
+    else if (User.IsInRole("Officer")) { displayRole = "Officer"; }
+
+    // Avatar for navbar (provided by controller via ViewBag.StudentImage)
+    var headerProfileImage = ViewBag.StudentImage as string;
+    if (string.IsNullOrWhiteSpace(headerProfileImage))
     {
-        displayRole = "Admin";
-    }
-    else if (User.IsInRole("Org Treasurer"))
-    {
-        displayRole = "Org Treasurer";
-    }
-    else if (User.IsInRole("Class Treasurer"))
-    {
-        displayRole = "Class Treasurer";
-    }
-    else if (User.IsInRole("Org Secretary"))
-    {
-        displayRole = "Org Secretary";
-    }
-    else if (User.IsInRole("Class Secretary"))
-    {
-        displayRole = "Class Secretary";
-    }
-    else if (User.IsInRole("Officer"))
-    {
-        displayRole = "Officer";
+        headerProfileImage = Url.Content("~/images/default-avatar.png");
     }
 }
 
@@ -55,7 +41,7 @@
     <!-- CUSTOM STYLES -->
     <link rel="stylesheet" href="~/css/portal-layout.css" />
 
-    <!-- Academic Year Badge Styles (Read-Only for Students) - Glass Blur Effect -->
+    <!-- Academic Year Badge Styles -->
     <style>
         .academic-year-badge {
             background: rgba(11, 26, 51, 0.6);
@@ -73,28 +59,11 @@
                 box-shadow: 0 6px 25px rgba(212, 175, 55, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
             }
 
-            .academic-year-badge i {
-                font-size: 1.3rem !important;
-            }
-
         .academic-year-text {
             color: var(--gold-primary);
             font-weight: 700;
             font-size: 1rem;
             letter-spacing: 0.5px;
-        }
-
-        /* Light theme adjustments */
-        [data-theme="light"] .academic-year-badge {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-color: rgba(212, 175, 55, 0.5);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-        }
-
-        [data-theme="light"] .academic-year-text {
-            color: #b8860b;
         }
 
         /* Navigation Section Headers */
@@ -118,11 +87,6 @@
                 .nav-section-header span i {
                     font-size: 0.65rem;
                 }
-
-        /* Light theme for nav section headers */
-        [data-theme="light"] .nav-section-header {
-            border-top-color: rgba(0, 0, 0, 0.08);
-        }
     </style>
 
     @await RenderSectionAsync("Styles", required: false)
@@ -153,9 +117,7 @@
                     <a asp-controller="Student" asp-action="Financials"><i class="bi bi-wallet2"></i> My Financials</a>
                 </li>
 
-
                 <!-- ================== ROLE-BASED OFFICER LINKS (Dynamically Shown) ================== -->
-                <!-- ORG TREASURER FEATURES -->
                 @if (User.IsInRole("Org Treasurer"))
                 {
                     <li class="nav-section-header">
@@ -175,7 +137,6 @@
                     </li>
                 }
 
-                <!-- CLASS TREASURER FEATURES (Only show if NOT Org Treasurer to avoid duplicate) -->
                 @if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
                 {
                     <li class="nav-section-header">
@@ -192,16 +153,12 @@
                     </li>
                 }
 
-                <!-- SECRETARY FEATURES (Combined) -->
-                @* Find the Secretary Features section in your sidebar and replace it with this *@
-
                 @if (User.IsInRole("Class Secretary") || User.IsInRole("Org Secretary"))
                 {
                     <li class="nav-section-header">
                         <span class="text-gold small text-uppercase fw-bold"><i class="bi bi-clipboard-check me-1"></i> Attendance</span>
                     </li>
 
-                    @* 1. Dashboard: Visible ONLY to Org Secretary *@
                     @if (User.IsInRole("Org Secretary"))
                     {
                         <li class="@(controller == "Officer" && action == "OrgSecretaryDashboard" ? "active" : "")">
@@ -211,43 +168,27 @@
                         </li>
                     }
 
-                    @* 2. Scanner: Visible to BOTH *@
                     <li class="@(controller == "Officer" && action == "Scanner" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="Scanner">
                             <i class="bi bi-qr-code-scan"></i> QR Attendance Scanner
                         </a>
                     </li>
-
-                    @* 3. Attendance Records: Visible to BOTH (Placed here so it appears only once) *@
                     <li class="@(controller == "Officer" && action == "AttendanceRecords" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="AttendanceRecords">
                             <i class="bi bi-list-check"></i> Attendance Records
                         </a>
                     </li>
                 }
-
-                @* IMPORTANT: Scroll down to where your "ORG SECRETARY ONLY FEATURES" block was *@
-                @* Make sure "Attendance Records" is NOT listed there again. It should look like this: *@
-
-                @if (User.IsInRole("Org Secretary"))
-                {
-                    @* Keep only other Org Secretary specific links here, like Manual Fees/Fines if you still have them *@
-                    @* Do NOT put Attendance Records here because it is already listed above *@
-                }
-
-
-
-
-               
-
-                <!-- ADMIN / SYSTEM FEATURES -->
             </ul>
 
             <div style="padding: 20px;">
-                <!-- The hidden form that will be triggered by the modal -->
-                <form id="logoutForm" class="form-inline d-none" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"></form>
+                <!-- Hidden logout form -->
+                <form id="logoutForm" class="form-inline d-none"
+                      asp-area="Identity"
+                      asp-page="/Account/Logout"
+                      asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"></form>
 
-                <!-- The button that the user clicks, which now opens the modal -->
+                <!-- Logout button (opens modal) -->
                 <button type="button" class="btn-logout-custom" data-bs-toggle="modal" data-bs-target="#confirmLogoutModal">
                     <i class="bi bi-box-arrow-left"></i> Sign Out
                 </button>
@@ -268,19 +209,20 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Display (Read-Only for Students) -->
+                    <!-- Academic Year Display -->
                     <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Academic Year">
                         <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
                         <span id="currentAcademicYear" class="academic-year-text">
                             @(ViewBag.CurrentAcademicYear ?? $"A.Y. {DateTime.Now.Year}-{DateTime.Now.Year + 1}")
                         </span>
                     </div>
+
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
-                    <div class="d-none d-md-block text-end">
-                        <div style="font-weight:bold; color:var(--text-strong);">@User.Identity?.Name</div>
-                        <div style="font-size:0.75rem; color:var(--gold-text);">@displayRole</div>
-                    </div>
+
+                    <!-- ✅ Header Avatar only (chip/name removed) -->
+           
                     <button type="button" id="themeToggle" class="btn-toggle theme-btn" title="Toggle Theme">
                         <i class="bi bi-sun-fill" id="themeIcon"></i>
                     </button>
@@ -290,6 +232,32 @@
             <!-- Scrollable Content Area -->
             <div class="scrollable-content">
                 @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    @* HIDDEN FLASH MESSAGES *@
+    @if (TempData["Error"] != null)
+    {
+        <div id="flash-error-msg" data-message="@TempData["Error"]" style="display:none;"></div>
+    }
+    @if (TempData["Message"] != null)
+    {
+        <div id="flash-success-msg" data-message="@TempData["Message"]" style="display:none;"></div>
+    }
+
+    @* GLOBAL STATUS MESSAGE MODAL *@
+    <div class="modal fade" id="statusMessageModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold" id="statusModalTitle">Notification</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center" id="statusModalBody"></div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-gold" data-bs-dismiss="modal">OK</button>
+                </div>
             </div>
         </div>
     </div>
@@ -342,7 +310,7 @@
                     <h4 class="fw-bold" style="color:var(--text-strong);">Session Expired</h4>
                     <p class="text-muted mb-4">
                         For security reasons, your session has been locked due to extended inactivity.
-                        <br>Please log in again to continue.
+                        <br />Please log in again to continue.
                     </p>
                     <a href="@Url.Action("Index", "Home")" class="btn btn-gold w-100 py-2 fw-bold">
                         <i class="bi bi-box-arrow-in-right me-2"></i> Log In Again
@@ -359,6 +327,25 @@
 
     <!-- CUSTOM SCRIPTS -->
     <script src="~/js/portal-layout.js"></script>
+
+    <!-- FLASH MESSAGE HANDLER -->
+    <script>
+        $(document).ready(function () {
+            const successMsg = $('#flash-success-msg').data('message');
+            if (successMsg) {
+                $('#statusModalTitle').html('<i class="bi bi-check-circle-fill text-success me-2"></i>Success');
+                $('#statusModalBody').html('<div class="py-3"><i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i><h5 class="mt-3">' + successMsg + '</h5></div>');
+                $('#statusMessageModal').modal('show');
+            }
+
+            const errorMsg = $('#flash-error-msg').data('message');
+            if (errorMsg) {
+                $('#statusModalTitle').html('<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Error');
+                $('#statusModalBody').html('<div class="py-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i><h5 class="mt-3">' + errorMsg + '</h5></div>');
+                $('#statusMessageModal').modal('show');
+            }
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

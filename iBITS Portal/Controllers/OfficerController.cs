@@ -112,7 +112,9 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> Scanner()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var events = await _context.Events.Where(e => e.EventDate >= today).OrderBy(e => e.EventDate).ToListAsync();
+
+            //naedit == dapat 1
+            var events = await _context.Events.Where(e => e.EventDate == today).OrderBy(e => e.EventDate).ToListAsync();
 
             // Pass section info for Class Secretary
             if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
@@ -149,13 +151,30 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
                 }
 
-                // Security: Check Section for Class Secretary role
+                //// Security: Check Section for Class Secretary role
+                //if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                //{
+                //    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                //    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                //    {
+                //        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                //    }
+                //}
+
+                // nadagdag 2 Security: Check Course and Section for Class Secretary role
                 if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
                 {
                     var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
-                    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
+                    if (secretaryUser != null)
                     {
-                        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
+                        // Tinitingnan kung parehong Course (BSIT vs DIT) at Section (Year Level)
+                        bool isSameCourse = string.Equals(secretaryUser.Course?.Trim(), student.Course?.Trim(), StringComparison.OrdinalIgnoreCase);
+                        bool isSameSection = string.Equals(secretaryUser.YearLevelSection?.Trim(), student.YearLevelSection?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+                        if (!isSameCourse || !isSameSection)
+                        {
+                            return Json(new { success = false, message = $"Scan failed: Student belongs to a different program ({student.Course}) or section." });
+                        }
                     }
                 }
 
@@ -211,6 +230,20 @@ namespace iBITS_Portal.Controllers
                 if (student == null)
                 {
                     return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
+                }
+
+                // Nadagdag 3 Security: Class Secretary cannot verify students from other courses
+                if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+                {
+                    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
+                    if (secretaryUser != null)
+                    {
+                        if (!string.Equals(secretaryUser.Course?.Trim(), student.Course?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                            !string.Equals(secretaryUser.YearLevelSection?.Trim(), student.YearLevelSection?.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            return Json(new { success = false, message = "Access Denied: Student is from a different course or section." });
+                        }
+                    }
                 }
 
                 // Return rich data for the UI
@@ -410,7 +443,7 @@ namespace iBITS_Portal.Controllers
 
                 // Update fee status - use explicit "Paid" with capital P for consistency
                 fee.FeeStatus = "Paid";
-                
+
                 // Track collection metadata based on role
                 if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
                 {
@@ -428,7 +461,7 @@ namespace iBITS_Portal.Controllers
                     fee.OfficialPaymentDate = DateTime.Now; // Official record date
                     fee.RemittanceId = null; // Not part of batch remittance
                 }
-                
+
                 _context.Fees.Update(fee);
 
                 // Create payment transaction record for audit trail
@@ -582,7 +615,7 @@ namespace iBITS_Portal.Controllers
 
                 // Update fine status - use explicit "Paid" with capital P for consistency
                 fine.FinesStatus = "Paid";
-                
+
                 // Track collection metadata based on role
                 if (User.IsInRole("Class Treasurer") && !User.IsInRole("Org Treasurer"))
                 {
@@ -600,7 +633,7 @@ namespace iBITS_Portal.Controllers
                     fine.OfficialPaymentDate = DateTime.Now; // Official record date
                     fine.RemittanceId = null; // Not part of batch remittance
                 }
-                
+
                 _context.Fines.Update(fine);
 
                 // Create fine payment transaction record
@@ -672,7 +705,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.TotalFinesCollected = fines
                 .Where(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
                 .Sum(f => f.Amount ?? 0);
-            
+
             // Pending includes: unpaid + paid but not yet remitted/validated
             ViewBag.PendingFees = fees
                 .Where(f => f.FeeStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
@@ -680,7 +713,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.PendingFines = fines
                 .Where(f => f.FinesStatus?.ToUpper() != "PAID" || f.RemittanceStatus != FeeRemittanceStatus.Remitted)
                 .Sum(f => f.Amount ?? 0);
-            
+
             ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
 
             // Count pending remittances awaiting validation
@@ -724,7 +757,7 @@ namespace iBITS_Portal.Controllers
             string posterName = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
             var existingReminders = await _context.Announcements
-                .Where(a => a.AnnouncementType == "Payment Reminder" 
+                .Where(a => a.AnnouncementType == "Payment Reminder"
                          && a.PostedBy == posterName
                          && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now))
                 .OrderByDescending(a => a.Timestamp)
@@ -742,9 +775,9 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PostPaymentReminder(
-            string content, 
-            string targetAudience, 
-            string reminderTitle, 
+            string content,
+            string targetAudience,
+            string reminderTitle,
             string reminderType,
             int expiryDays = 30)
         {
@@ -777,7 +810,7 @@ namespace iBITS_Portal.Controllers
 
             // Send individual notifications to targeted students
             var targetedStudents = await GetTargetedStudents(targetAudience);
-            
+
             foreach (var student in targetedStudents)
             {
                 var notification = new Notification
@@ -843,7 +876,7 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> DeletePaymentReminder(int id)
         {
             var announcement = await _context.Announcements.FindAsync(id);
-            
+
             if (announcement == null)
             {
                 TempData["Error"] = "Reminder not found.";
@@ -1259,7 +1292,7 @@ namespace iBITS_Portal.Controllers
             // Get fees and fines for the section AND program (strict filtering)
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section 
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section
                          && f.StudentNumNavigation.Course == program)
                 .ToListAsync();
 
@@ -1297,7 +1330,7 @@ namespace iBITS_Portal.Controllers
             // Unpaid amounts
             ViewBag.PendingFees = fees.Where(f => f.FeeStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
             ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
-            
+
             ViewBag.Section = section;
             ViewBag.Program = program;
 
@@ -1422,7 +1455,7 @@ namespace iBITS_Portal.Controllers
                 // Validate status
                 // Excused is only valid for event-based fines (those with AttendanceId)
                 bool isEventFine = fine.AttendanceId != null;
-                
+
                 if (newStatus == "Excused" && !isEventFine)
                 {
                     TempData["Error"] = "Only event-based fines can be marked as 'Excused'. Manual fines can only be 'Paid' or 'Unpaid'.";
@@ -1499,7 +1532,7 @@ namespace iBITS_Portal.Controllers
                 // Notify student
                 var currentUser = await _userManager.GetUserAsync(User);
                 var currentTreasurer = await _context.Students.FindAsync(currentUser.UserName);
-                
+
                 if (!string.IsNullOrEmpty(fine.StudentNum))
                 {
                     _context.Notifications.Add(new Notification
@@ -2372,7 +2405,7 @@ namespace iBITS_Portal.Controllers
                         .ThenInclude(a => a.Event)
                     .Include(f => f.Attendance)
                         .ThenInclude(a => a.StudentNumNavigation)
-                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) && 
+                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) &&
                                 ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
                                  (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
                                 f.FinesStatus == "Paid" &&
@@ -2585,7 +2618,7 @@ namespace iBITS_Portal.Controllers
                         // Get StudentNum from either direct reference (manual fines) or Attendance (event fines)
                         var studentNum = fine.StudentNum ?? fine.Attendance?.StudentNum ?? string.Empty;
                         var studentName = fine.StudentNumNavigation?.FullName ?? fine.Attendance?.StudentNumNavigation?.FullName;
-                        
+
                         var item = new RemittanceItem
                         {
                             RemittanceId = remittance.RemittanceId,
@@ -2686,14 +2719,14 @@ namespace iBITS_Portal.Controllers
             // ============================================================
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
-                .Where(f => f.StudentNumNavigation.YearLevelSection == section 
+                .Where(f => f.StudentNumNavigation.YearLevelSection == section
                          && f.StudentNumNavigation.Course == program)
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
             // Get validated remittances for this section to determine which categories are closed
             var validatedCategories = await _context.Remittances
-                .Where(r => r.Section == section 
+                .Where(r => r.Section == section
                     && r.RemittanceType == RemittanceType.Fee
                     && r.Status == RemittanceStatus.Validated)
                 .Select(r => r.FeeName)
@@ -3117,7 +3150,7 @@ namespace iBITS_Portal.Controllers
                 if (markAsPaid)
                 {
                     var remainingBalance = (fee.Amount ?? 0) - fee.AmountPaid;
-                    
+
                     if (remainingBalance <= 0)
                     {
                         return Json(new { success = false, message = "This fee is already fully paid." });
@@ -3156,8 +3189,9 @@ namespace iBITS_Portal.Controllers
 
                     await _context.SaveChangesAsync();
 
-                    return Json(new { 
-                        success = true, 
+                    return Json(new
+                    {
+                        success = true,
                         message = "Payment confirmed successfully.",
                         newStatus = "Paid",
                         amountPaid = fee.AmountPaid,
@@ -3222,7 +3256,7 @@ namespace iBITS_Portal.Controllers
                 if (markAsPaid)
                 {
                     var remainingBalance = (fine.Amount ?? 0) - fine.AmountPaid;
-                    
+
                     if (remainingBalance <= 0)
                     {
                         return Json(new { success = false, message = "This fine is already fully paid." });
@@ -3261,8 +3295,9 @@ namespace iBITS_Portal.Controllers
 
                     await _context.SaveChangesAsync();
 
-                    return Json(new { 
-                        success = true, 
+                    return Json(new
+                    {
+                        success = true,
                         message = "Fine payment confirmed successfully.",
                         newStatus = "Paid",
                         amountPaid = fine.AmountPaid,
@@ -3344,8 +3379,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = "Fine has been marked as excused.",
                     newStatus = "Excused"
                 });
@@ -3454,8 +3490,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Payment collected from {fee.StudentNumNavigation?.FullName}.",
                     studentName = fee.StudentNumNavigation?.FullName,
                     amount = fee.Amount
@@ -3909,7 +3946,7 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "Cannot edit: This fee is already marked as PAID. Only UNPAID records can be modified." });
                 }
 
-                if (fee.RemittanceStatus == FeeRemittanceStatus.Remitted || 
+                if (fee.RemittanceStatus == FeeRemittanceStatus.Remitted ||
                     fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance)
                 {
                     return Json(new { success = false, message = "Cannot edit: This fee has been remitted or is pending remittance." });
@@ -3978,7 +4015,7 @@ namespace iBITS_Portal.Controllers
                 .Include(f => f.StudentNumNavigation)
                 .Where(f => f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
                 .ToListAsync();
-            
+
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
                 .Where(f => f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
@@ -4068,8 +4105,8 @@ namespace iBITS_Portal.Controllers
 
             // Calculate monthly trends for current academic year (Aug - Present)
             var currentYear = DateTime.Now.Year;
-            var academicYearStart = DateTime.Now.Month >= 8 
-                ? new DateTime(currentYear, 8, 1) 
+            var academicYearStart = DateTime.Now.Month >= 8
+                ? new DateTime(currentYear, 8, 1)
                 : new DateTime(currentYear - 1, 8, 1);
 
             var monthlyTrends = Enumerable.Range(0, (DateTime.Now.Year - academicYearStart.Year) * 12 + DateTime.Now.Month - academicYearStart.Month + 1)
@@ -4081,7 +4118,8 @@ namespace iBITS_Portal.Controllers
                     var feesInMonth = fees.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FeeStatus?.ToUpper() == "PAID");
                     var finesInMonth = fines.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FinesStatus?.ToUpper() == "PAID");
 
-                    return new {
+                    return new
+                    {
                         Month = month.ToString("MMM yyyy"),
                         FeesCollected = feesInMonth.Sum(f => f.Amount ?? 0),
                         FinesCollected = finesInMonth.Sum(f => f.Amount ?? 0)
@@ -4098,7 +4136,7 @@ namespace iBITS_Portal.Controllers
         // ============================================================
         // BULK ACTIONS FOR CLASS TREASURER - FINES
         // ============================================================
-        
+
         [HttpPost]
         [Authorize(Roles = "Class Treasurer")]
         public async Task<IActionResult> BulkMarkFinesAsPaid([FromBody] BulkFineActionRequest request)
@@ -4158,8 +4196,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully marked {successCount} fine(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4203,8 +4242,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully revoked {successCount} fine payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4275,8 +4315,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully marked {successCount} fee(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4320,8 +4361,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully revoked {successCount} fee payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4397,8 +4439,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully marked {successCount} fine(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4444,8 +4487,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully revoked {successCount} fine payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4519,8 +4563,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully marked {successCount} fee(s) as paid" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4566,8 +4611,9 @@ namespace iBITS_Portal.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = $"Successfully revoked {successCount} fee payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
                 });
             }
@@ -4594,7 +4640,9 @@ namespace iBITS_Portal.Controllers
     {
         public List<int> FeeIds { get; set; }
         public string Category { get; set; }
-    }   
+    }
 
 
 }
+
+
