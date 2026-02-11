@@ -238,8 +238,134 @@
     <div class="col-12">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
-                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends (Current Academic Year)
+                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends
             </h5>
+
+            <!-- Filter Tabs -->
+            <ul class="nav nav-tabs mb-3" id="filterTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="quick-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#quick-filter" type="button" role="tab">
+                        <i class="bi bi-lightning-charge me-1"></i> Quick Filter
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="month-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#month-filter" type="button" role="tab">
+                        <i class="bi bi-calendar-month me-1"></i> By Month
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="daterange-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#daterange-filter" type="button" role="tab">
+                        <i class="bi bi-calendar-range me-1"></i> Date Range
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mb-3" id="filterTabContent">
+                <!-- Quick Filter Tab -->
+                <div class="tab-pane fade show active" id="quick-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Time Range</label>
+                            <select id="quickRange" class="form-select form-select-sm">
+                                <option value="lastWeek">Last Week</option>
+                                <option value="lastMonth">Last Month</option>
+                                <option value="last3Months" selected>Last 3 Months</option>
+                                <option value="last6Months">Last 6 Months</option>
+                                <option value="currentSemester">Current Semester</option>
+                                <option value="fullYear">Full Academic Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Academic Year</label>
+                            <select id="academicYear" class="form-select form-select-sm">
+                                <option value="2025-2026" selected>2025-2026</option>
+                                <option value="2024-2025">2024-2025</option>
+                                <option value="2023-2024">2023-2024</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- By Month Tab -->
+                <div class="tab-pane fade" id="month-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Month</label>
+                            <select id="monthSelect" class="form-select form-select-sm">
+                                <option value="1">January</option>
+                                <option value="2" selected>February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Year</label>
+                            <select id="yearSelect" class="form-select form-select-sm">
+                                <option value="2026" selected>2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Range Tab -->
+                <div class="tab-pane fade" id="daterange-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">From Date</label>
+                            <input type="date" id="fromDate" class="form-control form-control-sm" 
+                                   value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">To Date</label>
+                            <input type="date" id="toDate" class="form-control form-control-sm" 
+                                   value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Filter Label -->
+            <div class="mb-2">
+                <small class="text-muted">
+                    <i class="bi bi-filter-circle me-1"></i> 
+                    Showing: <span id="currentFilterLabel" class="text-gold fw-bold">Last 3 Months</span>
+                </small>
+            </div>
+
+            <!-- Chart -->
             <div style="position: relative; height: 350px;">
                 <canvas id="trendsChart"></canvas>
             </div>
@@ -320,19 +446,62 @@
         const monthlyTrends = @Html.Raw(Json.Serialize(ViewBag.MonthlyTrends ?? new List<object>()));
         
         // Debug: Log the data
-        console.log('Monthly Trends Data:', monthlyTrends);
+        console.log('Initial Monthly Trends Data:', monthlyTrends);
         console.log('Number of months:', monthlyTrends.length);
         
-        // Check if we have data
-        if (monthlyTrends && monthlyTrends.length > 0) {
-            new Chart(trendsCtx, {
+        // Global chart variable
+        let trendsChart = null;
+        
+        // Initialize chart
+        function initializeTrendsChart(data) {
+            // Destroy existing chart if any
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+
+            // Check if we have data
+            if (!data || data.length === 0) {
+                // Show no data message
+                const canvas = document.getElementById('trendsChart');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No collection data available for the selected period', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // Debug: Log raw data first
+            console.log('Raw data received:', data);
+            console.log('First item:', data[0]);
+            console.log('Property names:', data[0] ? Object.keys(data[0]) : 'no data');
+
+            // Calculate max value for Y-axis scale
+            const feesData = data.map(t => t.feesCollected || t.FeesCollected || 0);
+            const finesData = data.map(t => t.finesCollected || t.FinesCollected || 0);
+            const labels = data.map(t => t.month || t.Month || 'Unknown');
+            const maxFees = Math.max(...feesData);
+            const maxFines = Math.max(...finesData);
+            const maxValue = Math.max(maxFees, maxFines);
+            const suggestedMaxValue = maxValue > 0 ? maxValue * 1.2 : 100;
+
+            console.log('Processed Chart Data:', {
+                labels: labels,
+                feesData: feesData,
+                finesData: finesData,
+                maxValue: maxValue,
+                suggestedMax: suggestedMaxValue
+            });
+
+            trendsChart = new Chart(trendsCtx, {
                 type: 'line',
                 data: {
-                    labels: monthlyTrends.map(t => t.Month),
+                    labels: labels,
                     datasets: [
                         {
                             label: 'Fees Collected',
-                            data: monthlyTrends.map(t => t.FeesCollected),
+                            data: feesData,
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             borderWidth: 3,
@@ -346,7 +515,7 @@
                         },
                         {
                             label: 'Fines Collected',
-                            data: monthlyTrends.map(t => t.FinesCollected),
+                            data: finesData,
                             borderColor: '#f59e0b',
                             backgroundColor: 'rgba(245, 158, 11, 0.1)',
                             borderWidth: 3,
@@ -391,43 +560,123 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            suggestedMax: suggestedMaxValue,
                             ticks: { 
                                 color: '#fff',
-                                font: { size: 12 },
+                                font: { size: 12, weight: 'bold' },
+                                padding: 10,
                                 callback: function(value) {
-                                    return '₱' + value.toLocaleString();
+                                    // Format large numbers with K/M suffix
+                                    if (value >= 1000000) {
+                                        return '₱' + (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return '₱' + (value / 1000).toFixed(1) + 'K';
+                                    }
+                                    return '₱' + value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
                                 }
                             },
                             grid: { 
-                                color: 'rgba(255, 255, 255, 0.1)',
-                                drawBorder: false
+                                color: 'rgba(255, 255, 255, 0.15)',
+                                drawBorder: true,
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                borderWidth: 2
                             }
                         },
                         x: {
+                            display: true,
+                            position: 'bottom',
                             ticks: { 
                                 color: '#fff',
-                                font: { size: 11 },
-                                maxRotation: 45,
-                                minRotation: 45
+                                font: { size: 12, weight: 'bold' },
+                                padding: 10,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                autoSkip: false
                             },
                             grid: { 
-                                color: 'rgba(255, 255, 255, 0.1)',
-                                drawBorder: false
+                                display: false,
+                                drawBorder: true,
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                borderWidth: 2
                             }
                         }
                     }
                 }
             });
-        } else {
-            // Show message if no data
-            const canvas = document.getElementById('trendsChart');
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#fff';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('No collection data available for the current academic year', canvas.width / 2, canvas.height / 2);
-            console.warn('No monthly trends data available');
         }
+
+        // Apply Filter Function
+        function applyFilter() {
+            // Determine which tab is active
+            const activeTab = document.querySelector('#filterTabs .nav-link.active').id;
+            let params = {};
+            
+            if (activeTab === 'quick-filter-tab') {
+                // Quick Filter mode
+                params = {
+                    filterType: 'quick',
+                    quickRange: document.getElementById('quickRange').value,
+                    academicYear: document.getElementById('academicYear').value
+                };
+            } else if (activeTab === 'month-filter-tab') {
+                // By Month mode
+                params = {
+                    filterType: 'month',
+                    month: document.getElementById('monthSelect').value,
+                    year: document.getElementById('yearSelect').value
+                };
+            } else if (activeTab === 'daterange-filter-tab') {
+                // Date Range mode
+                const fromDate = document.getElementById('fromDate').value;
+                const toDate = document.getElementById('toDate').value;
+                
+                // Validation
+                if (!fromDate || !toDate) {
+                    alert('Please select both From Date and To Date');
+                    return;
+                }
+                
+                if (new Date(toDate) < new Date(fromDate)) {
+                    alert('To Date must be after From Date');
+                    return;
+                }
+                
+                params = {
+                    filterType: 'daterange',
+                    fromDate: fromDate,
+                    toDate: toDate
+                };
+            }
+            
+            // Show loading indicator
+            document.getElementById('currentFilterLabel').innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Loading...';
+            
+            // Make AJAX call
+            fetch('/Officer/GetMonthlyTrends?' + new URLSearchParams(params))
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Filter Result:', result);
+                    
+                    if (result.success) {
+                        // Update filter label
+                        document.getElementById('currentFilterLabel').textContent = result.filterLabel;
+                        
+                        // Update chart
+                        initializeTrendsChart(result.data);
+                    } else {
+                        alert('Error: ' + result.message);
+                        document.getElementById('currentFilterLabel').textContent = 'Error loading data';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching trends:', error);
+                    alert('Failed to load data. Please try again.');
+                    document.getElementById('currentFilterLabel').textContent = 'Error';
+                });
+        }
+
+        // Initialize chart with default data on page load
+        initializeTrendsChart(monthlyTrends);
 
         // Financial Doughnut Chart
         const ctx = document.getElementById('financialChart').getContext('2d');
