@@ -2632,16 +2632,19 @@ namespace iBITS_Portal.Controllers
                         return RedirectToAction("PendingCollections");
                     }
 
-                    // Mark all fees as pending remittance
-                    foreach (var fee in fees)
-                    {
-                        fee.RemittanceStatus = FeeRemittanceStatus.PendingRemittance;
-                    }
+                    // Get academic year
+                    var acadYearForFees = await _context.SystemSettings
+                        .Where(s => s.SettingKey == "CurrentAcademicYear")
+                        .Select(s => s.SettingValue)
+                        .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+
+                    // Generate batch code
+                    var batchCodeForFees = await GenerateRemittanceBatchCode();
 
                     // Create remittance record
                     var remittance = new Remittance
                     {
-                        BatchCode = $"RMT-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+                        BatchCode = batchCodeForFees,
                         Section = section,
                         FeeName = feeName,
                         TotalAmount = fees.Sum(f => f.Amount ?? 0),
@@ -2649,14 +2652,39 @@ namespace iBITS_Portal.Controllers
                         SubmittedBy = treasurer.StudentNum,
                         SubmittedDate = DateTime.Now,
                         Status = RemittanceStatus.Pending,
-                        RemittanceType = RemittanceType.Fee
+                        RemittanceType = RemittanceType.Fee,
+                        AcademicYear = acadYearForFees
                     };
 
                     _context.Remittances.Add(remittance);
+                    await _context.SaveChangesAsync(); // Save to get RemittanceId
+
+                    // Create remittance items and update fee statuses
+                    foreach (var fee in fees)
+                    {
+                        // Create remittance item
+                        var item = new RemittanceItem
+                        {
+                            RemittanceId = remittance.RemittanceId,
+                            FeeId = fee.FeeId,
+                            StudentNum = fee.StudentNum,
+                            StudentName = fee.StudentNumNavigation?.FullName,
+                            Amount = fee.Amount ?? 0,
+                            CollectionDate = fee.CollectionDate ?? DateTime.Now,
+                            PaymentMethod = "Cash" // Default, could be enhanced
+                        };
+                        _context.RemittanceItems.Add(item);
+
+                        // Update fee - mark as pending remittance (LOCKED)
+                        fee.RemittanceStatus = FeeRemittanceStatus.PendingRemittance;
+                        fee.RemittanceId = remittance.RemittanceId;
+                        _context.Fees.Update(fee);
+                    }
+
                     await _context.SaveChangesAsync();
 
-                    TempData["Message"] = $"✅ Remittance submitted successfully! {fees.Count} payment(s) for '{feeName}' (₱{remittance.TotalAmount:N2}) sent to Org Treasurer for validation.";
-                    return RedirectToAction("ClassFees");
+                    TempData["Message"] = $"Remittance {batchCodeForFees} submitted successfully! Total: ₱{remittance.TotalAmount:N2} from {remittance.TotalStudents} students. Awaiting Org Treasurer validation.";
+                    return RedirectToAction("RemittanceHistory");
                 }
             }
             catch (Exception ex)
@@ -3564,6 +3592,7 @@ namespace iBITS_Portal.Controllers
                 .Include(r => r.ValidatedByNavigation)
                 .Include(r => r.RemittanceItems)
                     .ThenInclude(i => i.Student)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(r => r.RemittanceId == id);
 
             if (remittance == null)

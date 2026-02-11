@@ -6,6 +6,12 @@
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     var currentSection = ViewBag.Section as string ?? "N/A";
     
+    // Parse section into Year and Section (e.g., "3-1" -> Year: 3, Section: 1)
+    var sectionParts = currentSection.Split('-');
+    var yearLevel = sectionParts.Length > 0 ? sectionParts[0] : "N/A";
+    var sectionNumber = sectionParts.Length > 1 ? sectionParts[1] : "N/A";
+    var program = "BSIT"; // Default program - can be enhanced to get from student data
+    
     // Fees data
     var fees = ViewBag.PendingFees as List<Fee> ?? new List<Fee>();
     var feeNames = ViewBag.FeeNames as List<string> ?? new List<string>();
@@ -274,7 +280,12 @@
             <i class="bi bi-collection me-2"></i> Pending Collections
             <span class="badge bg-warning text-dark ms-2">@totalCount payments</span>
         </h3>
-        <p class="text-muted small mb-0">Section @currentSection - All payments collected but not yet remitted to Org Treasurer</p>
+        <p class="text-muted small mb-0">
+            <span class="badge me-1" style="background-color: #FFD700; color: #000000;">@program</span>
+            <span class="badge me-1" style="background-color: #FFD700; color: #000000;">Year @yearLevel</span>
+            <span class="badge me-2" style="background-color: #FFD700; color: #000000;">Section @sectionNumber</span>
+            All payments collected but not yet remitted to Org Treasurer
+        </p>
     </div>
     <div>
         <button id="export-excel-btn" class="btn btn-success btn-sm me-2" title="Export current view to Excel">

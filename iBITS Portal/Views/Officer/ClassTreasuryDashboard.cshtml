@@ -6,6 +6,13 @@
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     
     var treasurerSection = ViewBag.Section as string ?? "N/A";
+    
+    // Parse section into Year and Section (e.g., "3-1" -> Year: 3, Section: 1)
+    var sectionParts = treasurerSection.Split('-');
+    var yearLevel = sectionParts.Length > 0 ? sectionParts[0] : "N/A";
+    var sectionNumber = sectionParts.Length > 1 ? sectionParts[1] : "N/A";
+    var program = "BSIT"; // Default program - can be enhanced to get from student data
+    
     var totalFeesCollected = ViewBag.TotalFeesCollected ?? 0m;
     var totalFinesCollected = ViewBag.TotalFinesCollected ?? 0m;
     var pendingFees = ViewBag.PendingFees ?? 0m;
@@ -91,8 +98,13 @@
 <!-- ======================= HEADER ======================= -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> Class Treasury - @ViewBag.Section</h4>
-        <p class="mb-0 small text-muted">Manage fees and fines for your classmates in @ViewBag.Section.</p>
+        <h4 class="glass-header-title"><i class="bi bi-cash-coin me-2 text-gold"></i> Class Treasury</h4>
+        <p class="mb-0 small text-muted">
+            <span class="badge me-1" style="background-color: #FFD700; color: #000000;">@program</span>
+            <span class="badge me-1" style="background-color: #FFD700; color: #000000;">Year @yearLevel</span>
+            <span class="badge me-2" style="background-color: #FFD700; color: #000000;">Section @sectionNumber</span>
+            Manage fees and fines for your classmates
+        </p>
     </div>
 </div>
 
