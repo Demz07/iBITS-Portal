@@ -3832,7 +3832,8 @@ namespace iBITS_Portal.Controllers
 
                 _context.Remittances.Update(remittance);
 
-                // Unlock the fees - return them to NotRemitted so Class Treasurer can edit
+                // Unlock the fees/fines - return them to NotRemitted so Class Treasurer can re-submit
+                // IMPORTANT: Keep FeeStatus/FinesStatus as "Paid" - students who paid should remain marked as paid
                 if (remittance.RemittanceType == RemittanceType.Fee)
                 {
                     var feeIds = remittance.RemittanceItems.Where(i => i.FeeId.HasValue).Select(i => i.FeeId.Value).ToList();
@@ -3840,8 +3841,16 @@ namespace iBITS_Portal.Controllers
 
                     foreach (var fee in fees)
                     {
+                        // Unlock remittance status - allows Class Treasurer to re-submit
                         fee.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
                         fee.RemittanceId = null;
+                        
+                        // KEEP FeeStatus as "Paid" - don't change it
+                        // The student already paid, rejection doesn't mean they didn't pay
+                        
+                        // KEEP CollectionDate and CollectedBy - preserve payment history
+                        // KEEP AmountPaid - preserve payment amount
+                        
                         _context.Fees.Update(fee);
                     }
                 }
@@ -3852,8 +3861,16 @@ namespace iBITS_Portal.Controllers
 
                     foreach (var fine in fines)
                     {
+                        // Unlock remittance status - allows Class Treasurer to re-submit
                         fine.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
                         fine.RemittanceId = null;
+                        
+                        // KEEP FinesStatus as "Paid" - don't change it
+                        // The student already paid, rejection doesn't mean they didn't pay
+                        
+                        // KEEP CollectionDate and CollectedBy - preserve payment history
+                        // KEEP AmountPaid - preserve payment amount
+                        
                         _context.Fines.Update(fine);
                     }
                 }
