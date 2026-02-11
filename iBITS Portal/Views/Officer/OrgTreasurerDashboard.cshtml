@@ -58,52 +58,39 @@
         </h4>
         <p class="mb-0 small text-muted">Complete financial overview for all students</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         <a href="@Url.Action("PaymentReminders", "Officer")" class="btn btn-warning">
             <i class="bi bi-megaphone me-1"></i> Post Reminder
         </a>
+        <div class="dropdown">
+            <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                <i class="bi bi-download me-2"></i> Export Dashboard
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" style="background-color: rgba(30, 30, 30, 0.95); border: 1px solid rgba(255, 215, 0, 0.3);">
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportChartImages(); return false;">
+                        <i class="bi bi-image me-2 text-info"></i> Export Charts as Images (PNG)
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" style="border-color: rgba(255, 255, 255, 0.1);"></li>
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportAsPDF(); return false;">
+                        <i class="bi bi-file-pdf me-2 text-danger"></i> Export as PDF Report
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" style="border-color: rgba(255, 255, 255, 0.1);"></li>
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportToExcel(); return false;">
+                        <i class="bi bi-file-excel me-2 text-success"></i> Export Data as Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 
-<!-- QUICK ACCESS CARDS -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <a href="@Url.Action("OrgFees", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
-                <div class="d-flex align-items-center">
-                    <div class="me-4" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
-                        <i class="bi bi-cash-stack fs-1"></i>
-                    </div>
-                    <div>
-                        <h5 class="text-white mb-1 fw-bold">Fees Management</h5>
-                        <p class="text-muted mb-0 small">View all fees, create new fees, and track collections across all sections</p>
-                    </div>
-                    <div class="ms-auto">
-                        <i class="bi bi-chevron-right text-gold fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6">
-        <a href="@Url.Action("OrgFines", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
-                <div class="d-flex align-items-center">
-                    <div class="me-4" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
-                        <i class="bi bi-exclamation-triangle fs-1"></i>
-                    </div>
-                    <div>
-                        <h5 class="text-white mb-1 fw-bold">Fines Management</h5>
-                        <p class="text-muted mb-0 small">View all fines, create new fines, and monitor penalty collections</p>
-                    </div>
-                    <div class="ms-auto">
-                        <i class="bi bi-chevron-right text-gold fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
+<!-- QUICK ACCESS CARDS REMOVED -->
 
 <!-- REMITTANCE MANAGEMENT CARDS -->
 <div class="row mb-4">
@@ -379,9 +366,6 @@
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Paid/Unpaid by Program-Year
-                <button class="btn btn-sm btn-outline-light float-end" onclick="exportProgramYearData()">
-                    <i class="bi bi-download me-1"></i> Export
-                </button>
             </h5>
             @if (ViewBag.ProgramYearStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearStats).Any())
             {
@@ -439,7 +423,18 @@
 </div>
 
 @section Scripts {
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2canvas - For capturing DOM elements as images -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <!-- jsPDF - For PDF generation -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    
+    <!-- SheetJS - For Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
     <script>
         // Monthly Trends Line Chart
         const trendsCtx = document.getElementById('trendsChart').getContext('2d');
@@ -713,5 +708,150 @@
                 }
             }
         });
+
+        // ============================================================
+        // EXPORT FUNCTIONS
+        // ============================================================
+
+        // Export Charts as Images (PNG)
+        async function exportChartImages() {
+            try {
+                alert('Generating images... This may take a few seconds.');
+
+                // Capture Collection Trends chart
+                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
+                const trendsCanvas = await html2canvas(trendsSection, {
+                    backgroundColor: '#1a1a2e',
+                    scale: 2
+                });
+                
+                // Download Collection Trends image
+                const trendsImg = trendsCanvas.toDataURL('image/png');
+                const link1 = document.createElement('a');
+                link1.href = trendsImg;
+                link1.download = 'collection_trends_' + new Date().toISOString().split('T')[0] + '.png';
+                document.body.appendChild(link1);
+                link1.click();
+                document.body.removeChild(link1);
+
+                // Small delay before next export
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Capture Program-Year section
+                const programYearSection = document.querySelectorAll('.glass-panel')[document.querySelectorAll('.glass-panel').length - 1];
+                const pyCanvas = await html2canvas(programYearSection, {
+                    backgroundColor: '#1a1a2e',
+                    scale: 2
+                });
+                
+                const pyImg = pyCanvas.toDataURL('image/png');
+                const link2 = document.createElement('a');
+                link2.href = pyImg;
+                link2.download = 'program_year_stats_' + new Date().toISOString().split('T')[0] + '.png';
+                document.body.appendChild(link2);
+                link2.click();
+                document.body.removeChild(link2);
+
+                alert('Images exported successfully!');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export images: ' + error.message);
+            }
+        }
+
+        // Export as PDF Report
+        async function exportAsPDF() {
+            try {
+                alert('Generating PDF... This may take a few seconds.');
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('portrait', 'mm', 'a4');
+                
+                // Header
+                pdf.setFontSize(20);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Organization Treasury Dashboard', 20, 20);
+                
+                pdf.setFontSize(10);
+                pdf.setTextColor(150, 150, 150);
+                pdf.text('Generated: ' + new Date().toLocaleString(), 20, 28);
+                
+                // Quick Stats
+                pdf.setFontSize(14);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Financial Summary', 20, 40);
+                
+                pdf.setFontSize(10);
+                pdf.setTextColor(0, 0, 0);
+                pdf.text('Total Fees Collected: PHP ' + (@totalFeesCollected).toLocaleString(), 20, 48);
+                pdf.text('Total Fines Collected: PHP ' + (@totalFinesCollected).toLocaleString(), 20, 55);
+                pdf.text('Pending Fees: PHP ' + (@pendingFees).toLocaleString(), 20, 62);
+                pdf.text('Pending Fines: PHP ' + (@pendingFines).toLocaleString(), 20, 69);
+                pdf.text('Grand Total: PHP ' + (@(totalCollections + pendingFees + pendingFines)).toLocaleString(), 20, 76);
+
+                // Add Collection Trends chart
+                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
+                const trendsCanvas = await html2canvas(trendsSection, { scale: 1 });
+                const trendsImg = trendsCanvas.toDataURL('image/jpeg', 0.7);
+                pdf.addImage(trendsImg, 'JPEG', 20, 85, 170, 80);
+
+                // Page 2
+                pdf.addPage();
+                pdf.setFontSize(14);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Program-Year Breakdown', 20, 20);
+
+                const programYearSection = document.querySelectorAll('.glass-panel')[document.querySelectorAll('.glass-panel').length - 1];
+                const pyCanvas = await html2canvas(programYearSection, { scale: 1 });
+                const pyImg = pyCanvas.toDataURL('image/jpeg', 0.7);
+                pdf.addImage(pyImg, 'JPEG', 20, 30, 170, 100);
+
+                pdf.save('OrgTreasury_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+                alert('PDF exported successfully!');
+            } catch (error) {
+                console.error('PDF export error:', error);
+                alert('Failed to export PDF: ' + error.message);
+            }
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+
+                // Sheet 1: Quick Stats
+                const statsData = [
+                    ['Organization Treasury Dashboard'],
+                    ['Generated: ' + new Date().toLocaleString()],
+                    [],
+                    ['Metric', 'Amount'],
+                    ['Total Fees Collected', @totalFeesCollected],
+                    ['Total Fines Collected', @totalFinesCollected],
+                    ['Pending Fees', @pendingFees],
+                    ['Pending Fines', @pendingFines],
+                    ['Grand Total', @(totalCollections + pendingFees + pendingFines)]
+                ];
+                const ws1 = XLSX.utils.aoa_to_sheet(statsData);
+                XLSX.utils.book_append_sheet(wb, ws1, 'Quick Stats');
+
+                // Sheet 2: Monthly Trends
+                if (monthlyTrends && monthlyTrends.length > 0) {
+                    const monthlyData = monthlyTrends.map(item => ({
+                        Month: item.Month || item.month || 'Unknown',
+                        'Fees Collected': item.FeesCollected || item.feesCollected || 0,
+                        'Fines Collected': item.FinesCollected || item.finesCollected || 0,
+                        'Total': (item.FeesCollected || item.feesCollected || 0) + (item.FinesCollected || item.finesCollected || 0)
+                    }));
+                    const ws2 = XLSX.utils.json_to_sheet(monthlyData);
+                    XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Trends');
+                }
+
+                XLSX.writeFile(wb, 'OrgTreasury_Data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+                alert('Excel file exported successfully!');
+            } catch (error) {
+                console.error('Excel export error:', error);
+                alert('Failed to export Excel: ' + error.message);
+            }
+        }
     </script>
 }
