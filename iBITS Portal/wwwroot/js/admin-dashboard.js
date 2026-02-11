@@ -991,7 +991,7 @@ function exportFinancialModalData() {
 }
 
 // ==========================================
-// SEND NOTICE FUNCTIONS
+// SEND NOTICE FUNCTIONS (UPDATED)
 // ==========================================
 
 function sendNoticeToEnrollmentStudents() {
@@ -1012,7 +1012,64 @@ function openSendNoticeModal(contextTitle) {
         subjectInput.value = `Regarding: ${contextTitle}`;
     }
 
+    updateRecipientCount(); // Initial count
     sendNoticeModal.show();
+}
+
+$(document).ready(function () {
+    // 1. Handle Radio/Select Changes to update Recipient Count
+    $('input[name="recipientFilter"], #noticeProgram, #noticeYear').on('change', function () {
+        const val = $('input[name="recipientFilter"]:checked').val();
+
+        // Show/Hide filter rows based on selection
+        $('#programFilterRow').toggle(val === 'program' || val === 'year');
+        $('#yearFilterRow').toggle(val === 'year');
+
+        updateRecipientCount();
+    });
+
+    // 2. AJAX Form Submission
+    $('#sendNoticeForm').on('submit', function (e) {
+        e.preventDefault();
+
+        const btn = $('#sendNoticeBtn');
+        const originalText = btn.html();
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+        $.ajax({
+            url: window.sendNotificationUrl, // Defined in Index.cshtml
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (response) {
+                if (response.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('sendNoticeModal')).hide();
+                    alert(response.message); // Replace with a toast if you have one
+                    $('#sendNoticeForm')[0].reset();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function () {
+                alert('Connection error. Please try again.');
+            },
+            complete: function () {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+
+// Helper to update the "X students will receive this" text in the modal
+function updateRecipientCount() {
+    const filter = $('input[name="recipientFilter"]:checked').val();
+    const program = $('#noticeProgram').val();
+    const year = $('#noticeYear').val();
+
+    $.get(window.notificationPreviewUrl, { filter, program, year }, function (data) {
+        $('#recipientCount').text(data.count);
+        $('#recipientSample').text(data.sample);
+    });
 }
 
 // ==========================================
@@ -1154,5 +1211,6 @@ async function handleSendNotice(e) {
         submitBtn.innerHTML = originalBtnText;
     }
 }
+
 
 

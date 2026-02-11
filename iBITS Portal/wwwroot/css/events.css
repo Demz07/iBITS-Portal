@@ -419,3 +419,80 @@
         border-color: var(--text-main) transparent transparent transparent !important;
         top: 60% !important;
     }
+
+/* =========================================
+   FIX: LOCKED / DISABLED INPUT VISIBILITY
+   ========================================= */
+
+/* Target all disabled inputs, selects, and textareas inside the modal */
+fieldset:disabled .form-control,
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+    background-color: rgba(255, 255, 255, 0.05) !important; /* Subtle background change */
+    color: #ffffff !important; /* FORCE BRIGHT WHITE TEXT */
+    opacity: 1 !important; /* Remove browser default fading (critical) */
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    cursor: not-allowed; /* Show 'stop' cursor */
+    font-weight: 500; /* Make font slightly bolder for readability */
+}
+
+/* Specific fix for the Select2 dropdown when disabled */
+.select2-container--default.select2-container--disabled .select2-selection--single {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    cursor: not-allowed;
+}
+
+.select2-container--default.select2-container--disabled .select2-selection__rendered {
+    color: #ffffff !important; /* Force white text in dropdown */
+    opacity: 1 !important;
+}
+
+/* Remove the 'x' clear button in some browsers for disabled inputs */
+input:disabled::-webkit-search-cancel-button {
+    display: none;
+}
+
+/* FORCE 'NOT-ALLOWED' CURSOR ON DISABLED SELECT2 */
+.select2-container--default.select2-container--disabled,
+.select2-container--default.select2-container--disabled .select2-selection--single,
+.select2-container--default.select2-container--disabled .select2-selection__rendered,
+.select2-container--default.select2-container--disabled .select2-selection__arrow {
+    cursor: not-allowed !important;
+}
+
+    /* Optional: remove any hover effects on the disabled dropdown to make it feel truly locked */
+    .select2-container--default.select2-container--disabled .select2-selection--single:hover {
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: none !important;
+    }
+
+/* --- VIEW DETAILS BUTTON STYLE (Silver/Glass Outline) --- */
+.btn-view-details {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important; /* Visible white border */
+    color: #ffffff !important;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+    .btn-view-details:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #ffffff !important; /* Brightens border on hover */
+        color: #ffffff !important;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+    }
+
+/* Optional: If you want a Gold border instead of White, use this: */
+/*
+.btn-view-details {
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid var(--gold-primary) !important;
+    color: var(--gold-primary) !important;
+}
+*/
+

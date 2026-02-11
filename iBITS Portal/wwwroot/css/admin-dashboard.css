@@ -1851,3 +1851,53 @@
         transform: scale(1.05); /* Visual feedback when hovering */
         box-shadow: 0 0 10px rgba(212, 175, 55, 0.5); /* Gold glow */
     }
+
+
+
+/*    RIGHT CSS code form QUICK ACTIONS*/
+/* --- FIX 1: Allow dropdowns to exit the container --- */
+.dashboard-section {
+    /* Change overflow from hidden to visible */
+    overflow: visible !important;
+    position: relative;
+    /* ... rest of your styles ... */
+}
+
+/* --- FIX 2: Ensure the Quick Actions panel is on top --- */
+.quick-actions-panel {
+    margin-bottom: 24px;
+    padding: 0;
+    /* Change overflow from hidden to visible */
+    overflow: visible !important;
+    position: relative;
+    z-index: 20; /* Ensure it sits above the enrollment section */
+}
+
+/* --- FIX 3: Fix the Dropdown Menu positioning and visibility --- */
+.quick-action-card .dropdown-menu {
+    min-width: 220px;
+    padding: 8px;
+    background: rgba(11, 26, 51, 0.98) !important; /* Slightly more solid for readability */
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 12px;
+    /* Force it to stay on top of everything */
+    z-index: 9999 !important;
+    margin-top: 5px !important;
+}
+
+/* --- FIX 4: Make the entire card area clickable --- */
+.quick-action-card.dropdown {
+    padding: 0 !important; /* Remove padding from parent */
+    display: block; /* Change from flex to block */
+}
+
+.dropdown-trigger-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}

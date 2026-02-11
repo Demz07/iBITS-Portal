@@ -15,17 +15,18 @@
 // - Added EscapeCsvField() helper method for CSV export
 // ============================================================
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using ClosedXML.Excel;
+using iBITS_Portal.Helpers;
 using iBITS_Portal.Models;
 using iBITS_Portal.ViewModels;
-using System.Linq;
-using System.Threading.Tasks;
-using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.IO;
-using iBITS_Portal.Helpers;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace iBITS_Portal.Controllers
 {
@@ -1021,6 +1022,12 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
+                // Get Admin info for the "PostedBy" field
+                var adminUser = await _userManager.GetUserAsync(User);
+                var adminProfile = await _context.Students.FindAsync(adminUser?.UserName);
+                string posterName = adminProfile != null ? $"{adminProfile.StudentFn} {adminProfile.StudentLn}" : "Administrator";
+
+                // Helper for year level extraction
                 int ExtractYearLevel(string? yls)
                 {
                     if (string.IsNullOrWhiteSpace(yls)) return 0;
@@ -1038,15 +1045,20 @@ namespace iBITS_Portal.Controllers
                     .Where(s => s.IsArchived != true && !string.IsNullOrEmpty(s.StudentEmail))
                     .ToListAsync();
 
-                // Apply filters
+                string targetAudienceLabel = "All Students";
+
+                // Apply filters & set Target Audience Label
                 if (recipientFilter == "program" && !string.IsNullOrEmpty(programFilter))
                 {
                     students = students.Where(s => s.Course != null && s.Course.ToUpper().Contains(programFilter.ToUpper())).ToList();
+                    targetAudienceLabel = $"{programFilter} Students";
                 }
                 else if (recipientFilter == "year" && !string.IsNullOrEmpty(programFilter) && !string.IsNullOrEmpty(yearFilter))
                 {
                     int.TryParse(yearFilter, out int year);
                     students = students.Where(s => s.Course != null && s.Course.ToUpper().Contains(programFilter.ToUpper()) && ExtractYearLevel(s.YearLevelSection) == year).ToList();
+                    string suffix = year == 1 ? "st" : year == 2 ? "nd" : year == 3 ? "rd" : "th";
+                    targetAudienceLabel = $"{programFilter} - {year}{suffix} Year";
                 }
                 else if (recipientFilter == "pending")
                 {
@@ -1056,6 +1068,7 @@ namespace iBITS_Portal.Controllers
                         .Distinct()
                         .ToListAsync();
                     students = students.Where(s => feesWithPending.Contains(s.StudentNum)).ToList();
+                    targetAudienceLabel = "Students with Pending Balances";
                 }
 
                 if (!students.Any())
@@ -1063,8 +1076,20 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = "No students found matching the criteria." });
                 }
 
-                // Create notification records for each student
-                var notificationCount = 0;
+                // --- 1. CREATE ANNOUNCEMENT (For Dashboard Feed) ---
+                var announcement = new Announcement
+                {
+                    Title = subject,
+                    Content = message,
+                    PostedBy = posterName,
+                    Timestamp = DateTime.Now,
+                    AnnouncementType = "Admin Notice",
+                    TargetAudience = targetAudienceLabel,
+                    ExpiryDate = DateTime.Now.AddDays(30) // Set default expiry to 30 days
+                };
+                _context.Announcements.Add(announcement);
+
+                // --- 2. CREATE INDIVIDUAL NOTIFICATIONS (For Private Alerts) ---
                 foreach (var student in students)
                 {
                     var notification = new Notification
@@ -1074,21 +1099,19 @@ namespace iBITS_Portal.Controllers
                         Message = message,
                         NotificationDate = DateTime.Now,
                         IsRead = false,
-                        NotificationType = "Admin"
+                        NotificationType = "Admin Notice",
+                        SentBy = posterName
                     };
                     _context.Notifications.Add(notification);
-                    notificationCount++;
                 }
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"Notification sent: '{subject}' to {notificationCount} students");
-
                 return Json(new
                 {
                     success = true,
-                    message = $"Notification sent successfully to {notificationCount} students.",
-                    recipientCount = notificationCount
+                    message = $"Notice posted and sent successfully to {students.Count} students.",
+                    recipientCount = students.Count
                 });
             }
             catch (Exception ex)
@@ -1106,24 +1129,12 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                int ExtractYearLevel(string? yls)
-                {
-                    if (string.IsNullOrWhiteSpace(yls)) return 0;
-                    var input = yls.Trim().ToUpper();
-                    if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
-                    if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
-                    if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
-                    if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
-                    foreach (char c in input)
-                        if (char.IsDigit(c) && c >= '1' && c <= '4') return c - '0';
-                    return 0;
-                }
-
+                // Use the shared private method instead of defining it inside here
                 var students = await _context.Students
                     .Where(s => s.IsArchived != true)
                     .ToListAsync();
 
-                // Apply filters
+                // Apply filters (Ensure this is 1:1 with SendNotification)
                 if (recipientFilter == "program" && !string.IsNullOrEmpty(programFilter))
                 {
                     students = students.Where(s => s.Course != null && s.Course.ToUpper().Contains(programFilter.ToUpper())).ToList();
@@ -1158,6 +1169,22 @@ namespace iBITS_Portal.Controllers
                 _logger.LogError(ex, "Error getting notification preview");
                 return Json(new { success = false, count = 0 });
             }
+        }
+
+        // =========================================================
+        // SHARED HELPER METHOD (Put this at the bottom of the class)
+        // =========================================================
+        private int ExtractYearLevel(string? yls)
+        {
+            if (string.IsNullOrWhiteSpace(yls)) return 0;
+            var input = yls.Trim().ToUpper();
+            if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
+            if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
+            if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
+            if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
+            foreach (char c in input)
+                if (char.IsDigit(c) && c >= '1' && c <= '4') return c - '0';
+            return 0;
         }
 
         // =========================================================
@@ -2123,11 +2150,18 @@ namespace iBITS_Portal.Controllers
             return null;
         }
 
+
         // =========================================================
         // EVENT MANAGEMENT
         // =========================================================
+        [HttpGet]
         public async Task<IActionResult> Events(int pageNumber = 1, int pageSize = 10)
         {
+            // --- ADDITION: Run the Auto-Close Logic ---
+            // This checks for expired events and assigns fines immediately when the page loads.
+            await ProcessAutoCloseEvents();
+            // ------------------------------------------
+
             ViewBag.PageSize = pageSize;
             var eventsQuery = _context.Events
                 .Include(e => e.Attendances)
@@ -2136,6 +2170,76 @@ namespace iBITS_Portal.Controllers
 
             var pagedEvents = await PagedList<Event>.CreateAsync(eventsQuery, pageNumber, pageSize);
             return View(pagedEvents);
+        }
+
+        private async Task ProcessAutoCloseEvents()
+        {
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
+            var timeNow = TimeOnly.FromDateTime(now);
+
+            // 1. Find events that are NOT closed yet, but SHOULD be.
+            // Logic: (EndDate is in the past) OR (EndDate is today AND EndTime has passed)
+            // Note: If EndDate is null, we fallback to EventDate.
+            var eventsToClose = await _context.Events
+                .Where(e => !e.IsClosed &&
+                       ((e.EndDate ?? e.EventDate) < today ||
+                       ((e.EndDate ?? e.EventDate) == today && e.EndTime < timeNow)))
+                .ToListAsync();
+
+            if (!eventsToClose.Any()) return; // No events to process
+
+            // 2. Get all active students (Same filter as your CloseEvent action)
+            var activeStudents = await _context.Students
+                .Where(s => s.IsArchived != true && (s.Classification == null || s.Classification == "Active"))
+                .ToListAsync();
+
+            int totalFinesGenerated = 0;
+
+            foreach (var evt in eventsToClose)
+            {
+                // Get existing attendance for this specific event
+                var existingAttendance = await _context.Attendances
+                    .Where(a => a.EventId == evt.EventId)
+                    .ToListAsync();
+
+                foreach (var student in activeStudents)
+                {
+                    var attendance = existingAttendance.FirstOrDefault(a => a.StudentNum == student.StudentNum);
+
+                    // A. If no record exists, create one as "Absent"
+                    if (attendance == null)
+                    {
+                        attendance = new Attendance
+                        {
+                            StudentNum = student.StudentNum,
+                            EventId = evt.EventId,
+                            AttendanceStatus = "Absent"
+                        };
+                        _context.Attendances.Add(attendance);
+                        // We save immediately so we get an AttendanceId for the fine generation
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // B. Generate fine if status is "Absent"
+                    // We assume GenerateFineForAttendance exists in your controller based on your provided code
+                    if (attendance.AttendanceStatus == "Absent" || attendance.AttendanceStatus == "Excused")
+                    {
+                        bool fineCreated = await GenerateFineForAttendance(attendance.AttendanceId, notifyStudent: true);
+                        if (fineCreated) totalFinesGenerated++;
+                    }
+                }
+
+                // C. Mark the event as closed in DB so we don't process it again
+                evt.IsClosed = true;
+                _context.Events.Update(evt);
+
+                // Log the auto-closure
+                await LogAction("Auto-Close Event", $"System automatically closed event '{evt.EventName}' and assigned fines.");
+            }
+
+            // Final save to commit the IsClosed status
+            await _context.SaveChangesAsync();
         }
 
         [HttpPost]
@@ -2255,6 +2359,7 @@ namespace iBITS_Portal.Controllers
             return RedirectToAction("Events");
         }
 
+
         // =========================================================
         // ACTION: CLOSE EVENT & ASSIGN FINES
         // =========================================================
@@ -2353,6 +2458,8 @@ namespace iBITS_Portal.Controllers
 
             return RedirectToAction("Events");
         }
+
+
         // =========================================================
         // FINE MANAGEMENT - ENHANCED AUTO-GENERATION
         // =========================================================
@@ -2729,7 +2836,7 @@ namespace iBITS_Portal.Controllers
             // DISABLED: Admin cannot change payment status - Treasurers handle this
             TempData["Error"] = "Admin cannot change payment status. Payment collection is handled by Class Treasurers and validated by Org Treasurer.";
             return RedirectToAction(nameof(Fines));
-            
+
             /* ORIGINAL CODE - DISABLED
             var fine = await _context.Fines.FindAsync(fineId);
             if (fine == null)
@@ -3828,29 +3935,82 @@ namespace iBITS_Portal.Controllers
 
             // UPDATED VALIDATION: Only 1 Class Secretary & 1 Class Treasurer per section
             // Handles both "3-1" and "BSIT 3-1" formats
+            // UPDATED VALIDATION: Only 1 Class Secretary & 1 Class Treasurer per Program + Section
             if (newRole == "Class Secretary" || newRole == "Class Treasurer")
             {
-                if (!string.IsNullOrEmpty(student.YearLevelSection))
+                if (!string.IsNullOrEmpty(student.YearLevelSection) && !string.IsNullOrEmpty(student.Course))
                 {
-                    // Extract year-section pattern (e.g., "3-1" from "BSIT 3-1" or "3-1")
+                    // 1. Get current student's details
                     var studentSection = ExtractYearSection(student.YearLevelSection);
+                    var studentProgram = student.Course; // e.g., "BSIT" or "DIT"
 
+                    // 2. Get all users who currently hold this role in the Identity system
                     var usersInRole = await _userManager.GetUsersInRoleAsync(newRole);
+
                     foreach (var u in usersInRole)
                     {
-                        if (u.UserName == studentNum) continue;
-                        var otherStudent = await _context.Students.AsNoTracking().FirstOrDefaultAsync(s => s.StudentNum == u.UserName);
-                        if (otherStudent != null && !string.IsNullOrEmpty(otherStudent.YearLevelSection))
+                        if (u.UserName == studentNum) continue; // Skip the student being edited
+
+                        // 3. Fetch the Student profile for the other officer to compare Program and Section
+                        var otherStudent = await _context.Students
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(s => s.StudentNum == u.UserName);
+
+                        if (otherStudent != null)
                         {
-                            // Compare extracted sections (e.g., "3-1" vs "3-1" even if one is "BSIT 3-1")
                             var otherSection = ExtractYearSection(otherStudent.YearLevelSection);
-                            if (otherSection == studentSection)
+                            var otherProgram = otherStudent.Course;
+
+                            // 4. CRITICAL CHECK: Does the Program AND the Section match?
+                            if (otherProgram == studentProgram && otherSection == studentSection)
                             {
-                                TempData["Error"] = $"Action Denied: Section {studentSection} already has a {newRole} ({otherStudent.StudentFn} {otherStudent.StudentLn}).";
+                                TempData["Error"] = $"Action Denied: {studentProgram} {studentSection} already has a {newRole} ({otherStudent.StudentFn} {otherStudent.StudentLn}).";
                                 return RedirectToAction(returnAction);
                             }
                         }
                     }
+
+                    // 5. Check for PENDING role changes
+                    // We use .ToListAsync() to bring the small list into memory so we can use ExtractYearSection
+                    var pendingChanges = await _context.PendingRoleChanges
+                        .Where(p => p.NewRole == newRole && !p.IsConfirmed && !p.IsDeclined && p.StudentNumber != studentNum)
+                        .Join(_context.Students, p => p.StudentNumber, s => s.StudentNum, (p, s) => s)
+                        .ToListAsync(); // Move to memory here
+
+                    var pendingConflict = pendingChanges
+                        .FirstOrDefault(s => s.Course == studentProgram && ExtractYearSection(s.YearLevelSection) == studentSection);
+
+                    if (pendingConflict != null)
+                    {
+                        TempData["Error"] = $"Action Denied: A role change for {newRole} in {studentProgram} {studentSection} is already pending for {pendingConflict.StudentFn} {pendingConflict.StudentLn}.";
+                        return RedirectToAction(returnAction);
+                    }
+                }
+            }
+
+            if (newRole == "Org Secretary" || newRole == "Org Treasurer")
+            {
+                // 1. Check Confirmed Officers (Already assigned in Identity)
+                var usersInOrgRole = await _userManager.GetUsersInRoleAsync(newRole);
+                var existingConfirmed = usersInOrgRole.FirstOrDefault(u => u.UserName != studentNum);
+
+                if (existingConfirmed != null)
+                {
+                    var otherS = await _context.Students.AsNoTracking().FirstOrDefaultAsync(s => s.StudentNum == existingConfirmed.UserName);
+                    TempData["Error"] = $"Action Denied: The organization already has a confirmed {newRole} ({otherS?.StudentFn} {otherS?.StudentLn}).";
+                    return RedirectToAction(returnAction);
+                }
+
+                // 2. Check Pending Changes (Assigned but not yet confirmed by the student)
+                var pendingOrgConflict = await _context.PendingRoleChanges
+                    .Where(p => p.NewRole == newRole && !p.IsConfirmed && !p.IsDeclined && p.StudentNumber != studentNum)
+                    .Join(_context.Students, p => p.StudentNumber, s => s.StudentNum, (p, s) => s)
+                    .FirstOrDefaultAsync();
+
+                if (pendingOrgConflict != null)
+                {
+                    TempData["Error"] = $"Action Denied: A role change for {newRole} is already pending for {pendingOrgConflict.StudentFn} {pendingOrgConflict.StudentLn}.";
+                    return RedirectToAction(returnAction);
                 }
             }
 
@@ -4129,7 +4289,7 @@ namespace iBITS_Portal.Controllers
             // DISABLED: Admin cannot change payment status - Treasurers handle this
             TempData["Error"] = "Admin cannot change payment status. Payment collection is handled by Class Treasurers and validated by Org Treasurer.";
             return RedirectToAction(nameof(Payments));
-            
+
             /* ORIGINAL CODE - DISABLED
             var fee = await _context.Fees.Include(f => f.StudentNumNavigation).FirstOrDefaultAsync(f => f.FeeId == feeId);
             if (fee == null)
@@ -4212,7 +4372,7 @@ namespace iBITS_Portal.Controllers
             // DISABLED: Admin cannot record payments and partial payments are removed
             TempData["Error"] = "Admin cannot record payments. Payment collection is handled by Class Treasurers (full payment only) and validated by Org Treasurer.";
             return RedirectToAction(nameof(Payments));
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4314,7 +4474,7 @@ namespace iBITS_Portal.Controllers
             // DISABLED: Admin cannot record payments and partial payments are removed
             TempData["Error"] = "Admin cannot record payments. Payment collection is handled by Class Treasurers (full payment only) and validated by Org Treasurer.";
             return RedirectToAction(nameof(Fines));
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4514,7 +4674,7 @@ namespace iBITS_Portal.Controllers
         {
             // DISABLED: Admin cannot change payment status - Treasurers handle this
             return Json(new { success = false, message = "Admin cannot change payment status. Please contact the Org Treasurer." });
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4607,7 +4767,7 @@ namespace iBITS_Portal.Controllers
         {
             // DISABLED: Admin cannot revoke payments - Class Treasurers handle this
             return Json(new { success = false, message = "Admin cannot revoke payments. Please contact the Class Treasurer." });
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4684,7 +4844,7 @@ namespace iBITS_Portal.Controllers
         {
             // DISABLED: Admin cannot change payment status - Treasurers handle this
             return Json(new { success = false, message = "Admin cannot change payment status. Please contact the Org Treasurer." });
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4782,7 +4942,7 @@ namespace iBITS_Portal.Controllers
         {
             // DISABLED: Admin cannot revoke payments - Class Treasurers handle this
             return Json(new { success = false, message = "Admin cannot revoke payments. Please contact the Class Treasurer." });
-            
+
             /* ORIGINAL CODE - DISABLED
             try
             {
@@ -4908,8 +5068,9 @@ namespace iBITS_Portal.Controllers
                 await _context.SaveChangesAsync();
                 await LogAction("Mark Fine Excused", $"Marked fine ID {fineId} as Excused. Reason: {reason ?? "Not specified"}");
 
-                return Json(new { 
-                    success = true, 
+                return Json(new
+                {
+                    success = true,
                     message = "Fine has been marked as excused.",
                     newStatus = "Excused"
                 });
@@ -5001,6 +5162,33 @@ namespace iBITS_Portal.Controllers
             return RedirectToAction(nameof(Fines));
         }
 
+
+
+        //ACTION EXPORT ACTIVITY LOGS
+        [HttpGet]
+        public IActionResult ExportActivityLogs()
+        {
+            // 1. Fetch the data from your database
+            // Replace '_context.ActivityLogs' with your actual database call
+            var logs = _context.ActivityLogs.OrderByDescending(x => x.Timestamp).ToList();
+
+            // 2. Create the CSV Content
+            var builder = new StringBuilder();
+            builder.AppendLine("Timestamp,Action,Description,Performed By,IP Address");
+
+            foreach (var log in logs)
+            {
+                // Use quotes to handle commas within descriptions
+                builder.AppendLine($"\"{log.Timestamp:yyyy-MM-dd HH:mm:ss}\",\"{log.Action}\",\"{log.Description}\",\"{log.PerformedBy}\",\"{log.IpAddress ?? "Unknown"}\"");
+            }
+
+            // 3. Return the file
+            var csvData = Encoding.UTF8.GetBytes(builder.ToString());
+            var fileName = $"ActivityLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+
+            return File(csvData, "text/csv", fileName);
+        }
+
     }
 
     public class ManualFineBatchViewModel
@@ -5021,3 +5209,5 @@ namespace iBITS_Portal.Controllers
         public int StudentCount { get; set; }
     }
 }
+
+

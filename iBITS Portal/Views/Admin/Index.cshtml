@@ -27,6 +27,7 @@
                 </h4>
                 <p class="dashboard-subtitle mb-0">Overview of student statistics and analytics</p>
             </div>
+
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <div class="date-display">
                     <i class="bi bi-calendar3 me-2"></i>
@@ -89,14 +90,16 @@
 
                 <!-- Export Reports -->
                 <div class="quick-action-card dropdown">
-                    <div class="action-icon export-reports" data-bs-toggle="dropdown">
-                        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                    <div class="dropdown-trigger-area" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="action-icon export-reports">
+                            <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                        </div>
+                        <div class="action-content">
+                            <span class="action-title">Export Reports</span>
+                            <span class="action-desc">Download data</span>
+                        </div>
                     </div>
-                    <div class="action-content" data-bs-toggle="dropdown">
-                        <span class="action-title">Export Reports</span>
-                        <span class="action-desc">Download data</span>
-                    </div>
-                    <ul class="dropdown-menu dropdown-menu-dark">
+                    <ul class="dropdown-menu dropdown-menu-dark shadow-lg">
                         <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=students"><i class="bi bi-people me-2"></i>Student List (Excel)</a></li>
                         <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=financial"><i class="bi bi-cash-stack me-2"></i>Financial Report (Excel)</a></li>
                         <li><a class="dropdown-item" href="@Url.Action("ExportDashboardReport", "Admin")?format=excel&reportType=attendance"><i class="bi bi-calendar-check me-2"></i>Attendance Report (Excel)</a></li>
@@ -716,8 +719,11 @@
             window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
             window.notificationPreviewUrl = '@Url.Action("GetNotificationPreview", "Admin")';
             window.sendNotificationUrl = '@Url.Action("SendNotification", "Admin")';
+
+
         </script>
         <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
 }
+
 
 
