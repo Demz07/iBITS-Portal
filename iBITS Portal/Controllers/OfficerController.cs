@@ -2345,10 +2345,10 @@ namespace iBITS_Portal.Controllers
         }
 
         // ============================================================
-        // PENDING COLLECTIONS - Shows fees/fines ready for remittance (Class Treasurer)
+        // PENDING COLLECTIONS - Shows both fees and fines ready for remittance (Class Treasurer)
         // ============================================================
         [Authorize(Roles = "Class Treasurer")]
-        public async Task<IActionResult> PendingCollections(string? type)
+        public async Task<IActionResult> PendingCollections()
         {
             var user = await _userManager.GetUserAsync(User);
             var treasurer = await _context.Students.FindAsync(user?.UserName);
@@ -2361,61 +2361,66 @@ namespace iBITS_Portal.Controllers
 
             var section = treasurer.YearLevelSection;
             ViewBag.Section = section;
-            ViewBag.Type = type ?? "fees"; // Default to fees
 
-            if (type == "fines")
-            {
-                // Get fines ready for remittance (paid but not yet remitted)
-                var pendingFines = await _context.Fines
-                    .Include(f => f.StudentNumNavigation)
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.Event)
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.StudentNumNavigation)
-                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) && 
-                                ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
-                                 (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
-                                f.FinesStatus == "Paid" &&
-                                f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
-                    .OrderBy(f => f.Description)
-                    .ThenBy(f => f.StudentNumNavigation != null ? f.StudentNumNavigation.StudentLn : f.Attendance.StudentNumNavigation.StudentLn)
-                    .ToListAsync();
+            // Get FEES ready for remittance (paid but not yet remitted)
+            var pendingFees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .Where(f => f.StudentNumNavigation != null &&
+                            f.StudentNumNavigation.YearLevelSection == section &&
+                            f.FeeStatus == "Paid" &&
+                            f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                .OrderBy(f => f.FeeName)
+                .ThenBy(f => f.StudentNumNavigation.StudentLn)
+                .ToListAsync();
 
-                // Group by description/category
-                var fineCategories = pendingFines
-                    .GroupBy(f => f.Description ?? "Other")
-                    .Select(g => g.Key)
-                    .OrderBy(c => c)
-                    .ToList();
+            // Get unique fee names
+            var feeNames = pendingFees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
 
-                ViewBag.FineNames = fineCategories;
-                ViewBag.TotalPendingAmount = pendingFines.Sum(f => f.Amount ?? 0);
-                ViewBag.TotalPendingCount = pendingFines.Count;
+            ViewBag.PendingFees = pendingFees;
+            ViewBag.FeeNames = feeNames;
+            ViewBag.TotalFeesAmount = pendingFees.Sum(f => f.Amount ?? 0);
+            ViewBag.TotalFeesCount = pendingFees.Count;
 
-                return View(pendingFines);
-            }
-            else
-            {
-                // Get fees ready for remittance (paid but not yet remitted)
-                var pendingFees = await _context.Fees
-                    .Include(f => f.StudentNumNavigation)
-                    .Where(f => f.StudentNumNavigation != null &&
-                                f.StudentNumNavigation.YearLevelSection == section &&
-                                f.FeeStatus == "Paid" &&
-                                f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
-                    .OrderBy(f => f.FeeName)
-                    .ThenBy(f => f.StudentNumNavigation.StudentLn)
-                    .ToListAsync();
+            // Get FINES ready for remittance (paid but not yet remitted)
+            var pendingFines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.Event)
+                .Include(f => f.Attendance)
+                    .ThenInclude(a => a.StudentNumNavigation)
+                .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) && 
+                            ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
+                             (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
+                            f.FinesStatus == "Paid" &&
+                            f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                .OrderBy(f => f.Description)
+                .ThenBy(f => f.StudentNumNavigation != null ? f.StudentNumNavigation.StudentLn : f.Attendance.StudentNumNavigation.StudentLn)
+                .ToListAsync();
 
-                // Get unique fee names
-                var feeNames = pendingFees.Select(f => f.FeeName).Distinct().OrderBy(n => n).ToList();
+            // Group fines by description/category (matching view logic)
+            var fineCategories = pendingFines
+                .GroupBy(f => {
+                    if (!string.IsNullOrEmpty(f.Description))
+                        return f.Description;
+                    else if (f.Attendance?.Event?.EventName != null)
+                        return f.Attendance.Event.EventName;
+                    else
+                        return "Other";
+                })
+                .Select(g => g.Key)
+                .OrderBy(c => c)
+                .ToList();
 
-                ViewBag.FeeNames = feeNames;
-                ViewBag.TotalPendingAmount = pendingFees.Sum(f => f.Amount ?? 0);
-                ViewBag.TotalPendingCount = pendingFees.Count;
+            ViewBag.PendingFines = pendingFines;
+            ViewBag.FineNames = fineCategories;
+            ViewBag.TotalFinesAmount = pendingFines.Sum(f => f.Amount ?? 0);
+            ViewBag.TotalFinesCount = pendingFines.Count;
 
-                return View(pendingFees);
-            }
+            // Pass combined totals
+            ViewBag.TotalPendingAmount = ViewBag.TotalFeesAmount + ViewBag.TotalFinesAmount;
+            ViewBag.TotalPendingCount = ViewBag.TotalFeesCount + ViewBag.TotalFinesCount;
+
+            return View();
         }
 
         // ============================================================

@@ -1,20 +1,26 @@
 @* FILE PATH: Views/Officer/PendingCollections.cshtml *@
-@* CLASS TREASURER - View payments ready for remittance (Fees & Fines) *@
-@model dynamic
+@* CLASS TREASURER - View payments ready for remittance (Fees & Fines) with Tabs *@
 @using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Pending Collections";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
     var currentSection = ViewBag.Section as string ?? "N/A";
-    var type = ViewBag.Type as string ?? "fees";
-    var isFines = type == "fines";
-    var categoryNames = ViewBag.FeeNames as List<string> ?? (ViewBag.FineNames as List<string> ?? new List<string>());
+    
+    // Fees data
+    var fees = ViewBag.PendingFees as List<Fee> ?? new List<Fee>();
+    var feeNames = ViewBag.FeeNames as List<string> ?? new List<string>();
+    var totalFeesAmount = ViewBag.TotalFeesAmount as decimal? ?? 0;
+    var totalFeesCount = ViewBag.TotalFeesCount as int? ?? 0;
+    
+    // Fines data
+    var fines = ViewBag.PendingFines as List<Fine> ?? new List<Fine>();
+    var fineNames = ViewBag.FineNames as List<string> ?? new List<string>();
+    var totalFinesAmount = ViewBag.TotalFinesAmount as decimal? ?? 0;
+    var totalFinesCount = ViewBag.TotalFinesCount as int? ?? 0;
+    
+    // Combined totals
     var totalAmount = ViewBag.TotalPendingAmount as decimal? ?? 0;
     var totalCount = ViewBag.TotalPendingCount as int? ?? 0;
-    
-    // Cast model to appropriate type
-    var fees = !isFines ? (Model as IEnumerable<Fee>)?.ToList() ?? new List<Fee>() : new List<Fee>();
-    var fines = isFines ? (Model as IEnumerable<Fine>)?.ToList() ?? new List<Fine>() : new List<Fine>();
 }
 
 <link rel="stylesheet" href="~/css/officer-treasury.css" asp-append-version="true" />
@@ -60,6 +66,204 @@
         font-size: 0.75rem;
         font-weight: 600;
     }
+    /* Tab Styles */
+    .nav-tabs {
+        border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+        margin-bottom: 2rem;
+    }
+    .nav-tabs .nav-link {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 1rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--gold-primary);
+        border-bottom-color: rgba(212, 175, 55, 0.5);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--gold-primary);
+        background: rgba(212, 175, 55, 0.1);
+        border-bottom-color: var(--gold-primary);
+    }
+    
+    /* Phase 1 - Search Bar */
+    .search-container {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .search-input {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    .search-input:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: var(--gold-primary);
+        color: white;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    }
+    .search-input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+    }
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.5);
+    }
+    .clear-search {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border: none;
+        padding: 0.25rem 0.75rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .clear-search:hover {
+        background: rgba(239, 68, 68, 0.3);
+    }
+    
+    /* Phase 1 - Sort Dropdown */
+    .sort-select {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 2.5rem 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    .sort-select:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: var(--gold-primary);
+        color: white;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    }
+    .sort-select option {
+        background: #1a1a2e;
+        color: white;
+    }
+    
+    /* Phase 1 - Collection Date Badges */
+    .date-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .date-badge-today {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+    }
+    .date-badge-recent {
+        background: rgba(234, 179, 8, 0.2);
+        color: #fbbf24;
+    }
+    .date-badge-warning {
+        background: rgba(249, 115, 22, 0.2);
+        color: #fb923c;
+    }
+    .date-badge-urgent {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+    }
+    
+    /* Phase 1 - Quick Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        border-color: var(--gold-primary);
+        transform: translateY(-2px);
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gold-primary);
+        margin-bottom: 0.25rem;
+    }
+    .stat-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stat-icon {
+        font-size: 1.25rem;
+        opacity: 0.5;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Phase 3 - View Toggle & Compact View */
+    .view-compact .table {
+        font-size: 0.85rem;
+    }
+    .view-compact .table td,
+    .view-compact .table th {
+        padding: 0.25rem 0.5rem;
+    }
+    .view-compact .date-badge {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+    }
+    
+    .view-list .fee-category-card {
+        margin-bottom: 0.5rem;
+    }
+    .view-list .category-content {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 0.5rem;
+    }
+    
+    /* Category collapse animation */
+    .category-content {
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        overflow: hidden;
+    }
+    .category-content.collapsed {
+        max-height: 0 !important;
+        opacity: 0;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .collapse-category-btn i {
+        transition: transform 0.3s ease;
+    }
+    .collapse-category-btn.collapsed i {
+        transform: rotate(-90deg);
+    }
 </style>
 }
 
@@ -67,14 +271,17 @@
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4 mt-2 p-4">
     <div>
         <h3 style="color: var(--text-strong); font-weight: 700; margin: 0;">
-            <i class="bi bi-collection me-2"></i> Pending @(isFines ? "Fine" : "Fee") Collections
+            <i class="bi bi-collection me-2"></i> Pending Collections
             <span class="badge bg-warning text-dark ms-2">@totalCount payments</span>
         </h3>
-        <p class="text-muted small mb-0">Section @currentSection - @(isFines ? "Fine" : "Fee") payments collected but not yet remitted to Org Treasurer</p>
+        <p class="text-muted small mb-0">Section @currentSection - All payments collected but not yet remitted to Org Treasurer</p>
     </div>
     <div>
-        <a asp-action="@(isFines ? "ClassFines" : "ClassFees")" class="btn btn-outline-light btn-sm me-2">
-            <i class="bi bi-arrow-left me-1"></i> Back to @(isFines ? "Fines" : "Fees")
+        <button id="export-excel-btn" class="btn btn-success btn-sm me-2" title="Export current view to Excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
+        </button>
+        <a asp-action="ClassTreasuryDashboard" class="btn btn-outline-light btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
         </a>
         <a asp-action="RemittanceHistory" class="btn btn-outline-warning btn-sm">
             <i class="bi bi-clock-history me-1"></i> Remittance History
@@ -114,142 +321,540 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="fs-2 fw-bold" style="color: var(--gold-primary);">₱@totalAmount.ToString("N2")</div>
-            <small class="text-muted">from @totalCount students</small>
+            <small class="text-muted">@totalFeesCount fees + @totalFinesCount fines = @totalCount total</small>
         </div>
     </div>
 </div>
 
-<!-- INFO MESSAGE -->
-@if (totalCount == 0)
-{
-    <div class="glass-panel p-5 text-center">
-        <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-        <h5 class="text-white">No Pending @(isFines ? "Fine" : "Fee") Collections</h5>
-        <p class="text-muted">All @(isFines ? "fine" : "fee") payments have been remitted or there are no collected payments yet.</p>
-        <a asp-action="@(isFines ? "ClassFines" : "ClassFees")" class="btn btn-outline-light mt-3">
-            <i class="bi bi-arrow-left me-1"></i> Back to @(isFines ? "Fines" : "Fees") Management
-        </a>
+<!-- BULK ACTION BAR (Hidden by default, shown when items selected) -->
+<div id="bulk-action-bar" class="glass-panel p-3 mb-4" style="display: none; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1)); border: 2px solid rgba(16, 185, 129, 0.4);">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <span class="text-white fw-bold" id="selected-count">0 items selected</span>
+            <span class="text-muted ms-2">|</span>
+            <span class="text-white ms-2">Total: <strong id="selected-total" style="color: var(--gold-primary);">₱0.00</strong></span>
+        </div>
+        <div>
+            <button type="button" id="view-selected-btn" class="btn btn-sm btn-outline-light me-2">
+                <i class="bi bi-list-check me-1"></i> View Selected (<span id="selected-count-badge">0</span>)
+            </button>
+            <button type="button" id="bulk-remit-btn" class="btn btn-sm btn-success me-2">
+                <i class="bi bi-send-fill me-1"></i> Bulk Remit Selected
+            </button>
+            <button type="button" id="cancel-selection-btn" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-x-circle me-1"></i> Cancel Selection
+            </button>
+        </div>
     </div>
-}
+</div>
 
-<!-- CATEGORIES GROUPED -->
-@if (totalCount > 0)
-{
-    <div class="row g-4">
-        @if (isFines)
+<!-- TABS NAVIGATION -->
+<ul class="nav nav-tabs" id="collectionsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="fees-tab" data-bs-toggle="tab" data-bs-target="#fees-content" type="button" role="tab">
+            <i class="bi bi-cash-stack me-2"></i>Pending Fee Collections
+            <span class="badge bg-success ms-2" id="fees-count-badge">@totalFeesCount</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="fines-tab" data-bs-toggle="tab" data-bs-target="#fines-content" type="button" role="tab">
+            <i class="bi bi-exclamation-triangle me-2"></i>Pending Fines Collections
+            <span class="badge bg-danger ms-2" id="fines-count-badge">@totalFinesCount</span>
+        </button>
+    </li>
+</ul>
+
+<!-- TAB CONTENT -->
+<div class="tab-content" id="collectionsTabContent">
+    
+    <!-- ======================= FEES TAB ======================= -->
+    <div class="tab-pane fade show active" id="fees-content" role="tabpanel">
+        @if (totalFeesCount == 0)
         {
-            // Group fines by Description (manual fines) or Event Name (event fines)
-            var groupedByFine = fines.GroupBy(f => {
-                if (!string.IsNullOrEmpty(f.Description))
-                    return f.Description;
-                else if (f.Attendance?.Event?.EventName != null)
-                    return f.Attendance.Event.EventName;
-                else
-                    return "Other";
-            }).OrderBy(g => g.Key);
-            
-            @foreach (var group in groupedByFine)
-            {
-                var categoryName = group.Key;
-                var groupTotal = group.Sum(f => f.Amount ?? 0);
-                var groupCount = group.Count();
-                
-                <div class="col-12">
-                    <div class="fee-category-card">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h5 class="text-white mb-1">@categoryName</h5>
-                                <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
-                            </div>
-                            <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit">
-                                <i class="bi bi-send me-1"></i> Remit to Org Treasurer
-                            </a>
-                        </div>
-                        
-                        <!-- Student List -->
-                        <div class="table-responsive">
-                            <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                        <th style="color: var(--gold-primary);">Student</th>
-                                        <th style="color: var(--gold-primary);">Student #</th>
-                                        <th style="color: var(--gold-primary);">Amount</th>
-                                        <th style="color: var(--gold-primary);">Collected</th>
-                                        <th style="color: var(--gold-primary);">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var fine in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
-                                    {
-                                        <tr>
-                                            <td>@fine.StudentNumNavigation?.FullName</td>
-                                            <td><code>@fine.StudentNum</code></td>
-                                            <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
-                                            <td>@(fine.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
-                                            <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            }
+            <div class="glass-panel p-5 text-center mt-3">
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <h5 class="text-white">No Pending Fee Collections</h5>
+                <p class="text-muted">All fee payments have been remitted or there are no collected payments yet.</p>
+            </div>
         }
         else
         {
-            var groupedByFee = fees.GroupBy(f => f.FeeName ?? "Other").OrderBy(g => g.Key);
-            
-            @foreach (var group in groupedByFee)
-            {
-                var feeName = group.Key;
-                var groupTotal = group.Sum(f => f.Amount ?? 0);
-                var groupCount = group.Count();
-                
-                <div class="col-12">
-                    <div class="fee-category-card">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h5 class="text-white mb-1">@feeName</h5>
-                                <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
-                            </div>
-                            <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
-                                <i class="bi bi-send me-1"></i> Remit to Org Treasurer
-                            </a>
+            <!-- Search Bar and Sort -->
+            <div class="search-container">
+                <div class="row g-3 align-items-center mb-3">
+                    <div class="col-md-5">
+                        <div class="position-relative">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" 
+                                   id="fees-search" 
+                                   class="search-input" 
+                                   placeholder="🔍 Search by student name or student number...">
+                            <button type="button" id="fees-clear-search" class="clear-search" style="display: none;">
+                                <i class="bi bi-x-lg"></i> Clear
+                            </button>
                         </div>
-                        
-                        <!-- Student List -->
-                        <div class="table-responsive">
-                            <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                        <th style="color: var(--gold-primary);">Student</th>
-                                        <th style="color: var(--gold-primary);">Student #</th>
-                                        <th style="color: var(--gold-primary);">Amount</th>
-                                        <th style="color: var(--gold-primary);">Collected</th>
-                                        <th style="color: var(--gold-primary);">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
-                                    {
-                                        <tr>
-                                            <td>@fee.StudentNumNavigation?.FullName</td>
-                                            <td><code>@fee.StudentNum</code></td>
-                                            <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
-                                            <td>@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</td>
-                                            <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-funnel text-muted"></i>
+                            <select id="fees-category-filter" class="sort-select form-select">
+                                <option value="all" selected>All Categories</option>
+                                @foreach (var feeName in feeNames)
+                                {
+                                    <option value="@feeName">@feeName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-sort-down text-muted"></i>
+                            <select id="fees-sort" class="sort-select form-select">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="amount-asc">Amount (↑)</option>
+                                <option value="amount-desc">Amount (↓)</option>
+                                <option value="date-desc" selected>Date (New)</option>
+                                <option value="date-asc">Date (Old)</option>
+                            </select>
                         </div>
                     </div>
                 </div>
-            }
+                
+                <!-- Date Range Filter -->
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-12">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <i class="bi bi-calendar-range text-muted"></i>
+                            <span class="text-muted small">Collection Period:</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="0">Today</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="7">Last 7 Days</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="30">Last 30 Days</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset active" data-days="all">All Time</button>
+                            <span class="text-muted mx-2">|</span>
+                            <label class="text-muted small">From:</label>
+                            <input type="date" id="fees-date-from" class="form-control form-control-sm" style="width: auto; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <label class="text-muted small">To:</label>
+                            <input type="date" id="fees-date-to" class="form-control form-control-sm" style="width: auto; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <button type="button" id="fees-clear-dates" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Clear Dates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Amount Range & View Toggle -->
+                <div class="row g-3 align-items-center mt-2">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-cash text-muted"></i>
+                            <span class="text-muted small">Amount Range:</span>
+                            <label class="text-muted small">Min:</label>
+                            <input type="number" id="fees-amount-min" class="form-control form-control-sm" placeholder="0" style="width: 100px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <label class="text-muted small">Max:</label>
+                            <input type="number" id="fees-amount-max" class="form-control form-control-sm" placeholder="9999" style="width: 100px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <button type="button" id="fees-clear-amount" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-grouped" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary" for="fees-view-grouped">
+                                <i class="bi bi-grid-3x3-gap"></i> Grouped
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-list" autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="fees-view-list">
+                                <i class="bi bi-list-ul"></i> List
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-compact" autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="fees-view-compact">
+                                <i class="bi bi-layout-text-sidebar"></i> Compact
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="stat-value" id="fees-total-amount">₱@totalFeesAmount.ToString("N2")</div>
+                    <div class="stat-label">Total Amount</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-people"></i></div>
+                    <div class="stat-value" id="fees-student-count">@totalFeesCount</div>
+                    <div class="stat-label">Total Payments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-calculator"></i></div>
+                    <div class="stat-value" id="fees-avg-amount">₱@((totalFeesCount > 0 ? totalFeesAmount / totalFeesCount : 0).ToString("N2"))</div>
+                    <div class="stat-label">Average Payment</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                    <div class="stat-value" id="fees-oldest-date">@(fees.Any() ? fees.Min(f => f.CollectionDate)?.ToString("MMM dd") ?? "N/A" : "N/A")</div>
+                    <div class="stat-label">Oldest Collection</div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mt-1" id="fees-categories-container">
+                @{
+                    var groupedByFee = fees.GroupBy(f => f.FeeName ?? "Other").OrderBy(g => g.Key);
+                    
+                    foreach (var group in groupedByFee)
+                    {
+                        var feeName = group.Key;
+                        var groupTotal = group.Sum(f => f.Amount ?? 0);
+                        var groupCount = group.Count();
+                        
+                        <div class="col-12">
+                            <div class="fee-category-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary collapse-category-btn" 
+                                                data-target="fees-category-@feeName.Replace(" ", "-")"
+                                                title="Collapse/Expand">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <div class="form-check">
+                                            <input class="form-check-input select-all-category" type="checkbox" 
+                                                   id="select-all-@feeName.Replace(" ", "-")" 
+                                                   data-category="@feeName">
+                                            <label class="form-check-label text-muted small" for="select-all-@feeName.Replace(" ", "-")">
+                                                Select All
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <h5 class="text-white mb-1">@feeName</h5>
+                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                                        </div>
+                                    </div>
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
+                                        <i class="bi bi-send me-1"></i> Remit to Org Treasurer
+                                    </a>
+                                </div>
+                                
+                                <!-- Student List -->
+                                <div class="table-responsive category-content" id="fees-category-@feeName.Replace(" ", "-")">
+                                    <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                                <th style="color: var(--gold-primary); width: 40px;"><i class="bi bi-check-square"></i></th>
+                                                <th style="color: var(--gold-primary);">Student</th>
+                                                <th style="color: var(--gold-primary);">Student #</th>
+                                                <th style="color: var(--gold-primary);">Amount</th>
+                                                <th style="color: var(--gold-primary);">Collected</th>
+                                                <th style="color: var(--gold-primary);">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+                                            {
+                                                var daysAgo = fee.CollectionDate.HasValue ? (DateTime.Now - fee.CollectionDate.Value).Days : 999;
+                                                var badgeClass = daysAgo == 0 ? "date-badge-today" : 
+                                                                 daysAgo <= 7 ? "date-badge-recent" : 
+                                                                 daysAgo <= 14 ? "date-badge-warning" : "date-badge-urgent";
+                                                var badgeIcon = daysAgo == 0 ? "bi-brightness-high" : 
+                                                               daysAgo <= 7 ? "bi-clock" : 
+                                                               daysAgo <= 14 ? "bi-exclamation-circle" : "bi-exclamation-triangle";
+                                                var badgeText = daysAgo == 0 ? "Today" : 
+                                                               daysAgo == 1 ? "Yesterday" : 
+                                                               daysAgo <= 30 ? $"{daysAgo}d ago" : 
+                                                               fee.CollectionDate?.ToString("MMM dd") ?? "N/A";
+                                                
+                                                <tr class="fee-row" 
+                                                    data-student-name="@fee.StudentNumNavigation?.FullName?.ToLower()" 
+                                                    data-student-num="@fee.StudentNum?.ToLower()" 
+                                                    data-amount="@(fee.Amount ?? 0)"
+                                                    data-collection-date="@(fee.CollectionDate?.ToString("yyyy-MM-dd") ?? "")"
+                                                    data-category="@feeName"
+                                                    data-fee-id="@fee.FeeId">
+                                                    <td>
+                                                        <input type="checkbox" class="form-check-input fee-checkbox" 
+                                                               data-category="@feeName"
+                                                               data-fee-id="@fee.FeeId"
+                                                               data-student-name="@fee.StudentNumNavigation?.FullName"
+                                                               data-student-num="@fee.StudentNum"
+                                                               data-amount="@(fee.Amount ?? 0)">
+                                                    </td>
+                                                    <td>@fee.StudentNumNavigation?.FullName</td>
+                                                    <td><code>@fee.StudentNum</code></td>
+                                                    <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>
+                                                        <span class="date-badge @badgeClass">
+                                                            <i class="bi @badgeIcon"></i>
+                                                            @badgeText
+                                                        </span>
+                                                    </td>
+                                                    <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
         }
     </div>
-}
+    
+    <!-- ======================= FINES TAB ======================= -->
+    <div class="tab-pane fade" id="fines-content" role="tabpanel">
+        @if (totalFinesCount == 0)
+        {
+            <div class="glass-panel p-5 text-center mt-3">
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <h5 class="text-white">No Pending Fines Collections</h5>
+                <p class="text-muted">All fine payments have been remitted or there are no collected payments yet.</p>
+            </div>
+        }
+        else
+        {
+            <!-- Search Bar and Sort -->
+            <div class="search-container">
+                <div class="row g-3 align-items-center mb-3">
+                    <div class="col-md-5">
+                        <div class="position-relative">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" 
+                                   id="fines-search" 
+                                   class="search-input" 
+                                   placeholder="🔍 Search by student name or student number...">
+                            <button type="button" id="fines-clear-search" class="clear-search" style="display: none;">
+                                <i class="bi bi-x-lg"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-funnel text-muted"></i>
+                            <select id="fines-category-filter" class="sort-select form-select">
+                                <option value="all" selected>All Categories</option>
+                                @foreach (var fineName in fineNames)
+                                {
+                                    <option value="@fineName">@fineName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-sort-down text-muted"></i>
+                            <select id="fines-sort" class="sort-select form-select">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="amount-asc">Amount (↑)</option>
+                                <option value="amount-desc">Amount (↓)</option>
+                                <option value="date-desc" selected>Date (New)</option>
+                                <option value="date-asc">Date (Old)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Date Range Filter -->
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-12">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <i class="bi bi-calendar-range text-muted"></i>
+                            <span class="text-muted small">Collection Period:</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="0">Today</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="7">Last 7 Days</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset" data-days="30">Last 30 Days</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary date-preset active" data-days="all">All Time</button>
+                            <span class="text-muted mx-2">|</span>
+                            <label class="text-muted small">From:</label>
+                            <input type="date" id="fines-date-from" class="form-control form-control-sm" style="width: auto; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <label class="text-muted small">To:</label>
+                            <input type="date" id="fines-date-to" class="form-control form-control-sm" style="width: auto; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <button type="button" id="fines-clear-dates" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Clear Dates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Amount Range & View Toggle -->
+                <div class="row g-3 align-items-center mt-2">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-cash text-muted"></i>
+                            <span class="text-muted small">Amount Range:</span>
+                            <label class="text-muted small">Min:</label>
+                            <input type="number" id="fines-amount-min" class="form-control form-control-sm" placeholder="0" style="width: 100px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <label class="text-muted small">Max:</label>
+                            <input type="number" id="fines-amount-max" class="form-control form-control-sm" placeholder="9999" style="width: 100px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            <button type="button" id="fines-clear-amount" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-grouped" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary" for="fines-view-grouped">
+                                <i class="bi bi-grid-3x3-gap"></i> Grouped
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-list" autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="fines-view-list">
+                                <i class="bi bi-list-ul"></i> List
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-compact" autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="fines-view-compact">
+                                <i class="bi bi-layout-text-sidebar"></i> Compact
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="stat-value" id="fines-total-amount">₱@totalFinesAmount.ToString("N2")</div>
+                    <div class="stat-label">Total Amount</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-people"></i></div>
+                    <div class="stat-value" id="fines-student-count">@totalFinesCount</div>
+                    <div class="stat-label">Total Payments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-calculator"></i></div>
+                    <div class="stat-value" id="fines-avg-amount">₱@((totalFinesCount > 0 ? totalFinesAmount / totalFinesCount : 0).ToString("N2"))</div>
+                    <div class="stat-label">Average Payment</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                    <div class="stat-value" id="fines-oldest-date">@(fines.Any() ? fines.Min(f => f.CollectionDate)?.ToString("MMM dd") ?? "N/A" : "N/A")</div>
+                    <div class="stat-label">Oldest Collection</div>
+                </div>
+            </div>
+            
+            <div class="row g-4 mt-1" id="fines-categories-container">
+                @{
+                    // Group fines by Description (manual fines) or Event Name (event fines)
+                    var groupedByFine = fines.GroupBy(f => {
+                        if (!string.IsNullOrEmpty(f.Description))
+                            return f.Description;
+                        else if (f.Attendance?.Event?.EventName != null)
+                            return f.Attendance.Event.EventName;
+                        else
+                            return "Other";
+                    }).OrderBy(g => g.Key);
+                    
+                    foreach (var group in groupedByFine)
+                    {
+                        var categoryName = group.Key;
+                        var groupTotal = group.Sum(f => f.Amount ?? 0);
+                        var groupCount = group.Count();
+                        
+                        <div class="col-12">
+                            <div class="fee-category-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary collapse-category-btn" 
+                                                data-target="fines-category-@categoryName.Replace(" ", "-")"
+                                                title="Collapse/Expand">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <div class="form-check">
+                                            <input class="form-check-input select-all-category-fine" type="checkbox" 
+                                                   id="select-all-fine-@categoryName.Replace(" ", "-")" 
+                                                   data-category="@categoryName">
+                                            <label class="form-check-label text-muted small" for="select-all-fine-@categoryName.Replace(" ", "-")">
+                                                Select All
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <h5 class="text-white mb-1">@categoryName</h5>
+                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                                        </div>
+                                    </div>
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit">
+                                        <i class="bi bi-send me-1"></i> Remit to Org Treasurer
+                                    </a>
+                                </div>
+                                
+                                <!-- Student List -->
+                                <div class="table-responsive category-content" id="fines-category-@categoryName.Replace(" ", "-")">
+                                    <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                                <th style="color: var(--gold-primary); width: 40px;"><i class="bi bi-check-square"></i></th>
+                                                <th style="color: var(--gold-primary);">Student</th>
+                                                <th style="color: var(--gold-primary);">Student #</th>
+                                                <th style="color: var(--gold-primary);">Amount</th>
+                                                <th style="color: var(--gold-primary);">Collected</th>
+                                                <th style="color: var(--gold-primary);">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var fine in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
+                                            {
+                                                var daysAgo = fine.CollectionDate.HasValue ? (DateTime.Now - fine.CollectionDate.Value).Days : 999;
+                                                var badgeClass = daysAgo == 0 ? "date-badge-today" : 
+                                                                 daysAgo <= 7 ? "date-badge-recent" : 
+                                                                 daysAgo <= 14 ? "date-badge-warning" : "date-badge-urgent";
+                                                var badgeIcon = daysAgo == 0 ? "bi-brightness-high" : 
+                                                               daysAgo <= 7 ? "bi-clock" : 
+                                                               daysAgo <= 14 ? "bi-exclamation-circle" : "bi-exclamation-triangle";
+                                                var badgeText = daysAgo == 0 ? "Today" : 
+                                                               daysAgo == 1 ? "Yesterday" : 
+                                                               daysAgo <= 30 ? $"{daysAgo}d ago" : 
+                                                               fine.CollectionDate?.ToString("MMM dd") ?? "N/A";
+                                                
+                                                <tr class="fine-row" 
+                                                    data-student-name="@fine.StudentNumNavigation?.FullName?.ToLower()" 
+                                                    data-student-num="@fine.StudentNum?.ToLower()" 
+                                                    data-amount="@(fine.Amount ?? 0)"
+                                                    data-collection-date="@(fine.CollectionDate?.ToString("yyyy-MM-dd") ?? "")"
+                                                    data-category="@categoryName"
+                                                    data-fine-id="@fine.FineId">
+                                                    <td>
+                                                        <input type="checkbox" class="form-check-input fine-checkbox" 
+                                                               data-category="@categoryName"
+                                                               data-fine-id="@fine.FineId"
+                                                               data-student-name="@fine.StudentNumNavigation?.FullName"
+                                                               data-student-num="@fine.StudentNum"
+                                                               data-amount="@(fine.Amount ?? 0)">
+                                                    </td>
+                                                    <td>@fine.StudentNumNavigation?.FullName</td>
+                                                    <td><code>@fine.StudentNum</code></td>
+                                                    <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>
+                                                        <span class="date-badge @badgeClass">
+                                                            <i class="bi @badgeIcon"></i>
+                                                            @badgeText
+                                                        </span>
+                                                    </td>
+                                                    <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+    
+</div>
 
 @section Scripts{
 <script>
@@ -260,5 +865,722 @@
             bsAlert.close();
         });
     }, 5000);
+    
+    // ======================= PHASE 1: SEARCH FUNCTIONALITY =======================
+    
+    // Fees Tab Search
+    const feesSearch = document.getElementById('fees-search');
+    const feesClearBtn = document.getElementById('fees-clear-search');
+    
+    if (feesSearch) {
+        feesSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            feesClearBtn.style.display = searchTerm ? 'block' : 'none';
+            filterRows('.fee-row', searchTerm);
+            updateStats('fees');
+        });
+        
+        feesClearBtn.addEventListener('click', function() {
+            feesSearch.value = '';
+            this.style.display = 'none';
+            filterRows('.fee-row', '');
+            updateStats('fees');
+        });
+    }
+    
+    // Fines Tab Search
+    const finesSearch = document.getElementById('fines-search');
+    const finesClearBtn = document.getElementById('fines-clear-search');
+    
+    if (finesSearch) {
+        finesSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            finesClearBtn.style.display = searchTerm ? 'block' : 'none';
+            filterRows('.fine-row', searchTerm);
+            updateStats('fines');
+        });
+        
+        finesClearBtn.addEventListener('click', function() {
+            finesSearch.value = '';
+            this.style.display = 'none';
+            filterRows('.fine-row', '');
+            updateStats('fines');
+        });
+    }
+    
+    // ======================= PHASE 1: SORT FUNCTIONALITY =======================
+    
+    // Fees Tab Sort
+    const feesSort = document.getElementById('fees-sort');
+    if (feesSort) {
+        feesSort.addEventListener('change', function() {
+            sortRows('.fee-row', this.value, '#fees-categories-container');
+        });
+    }
+    
+    // Fines Tab Sort
+    const finesSort = document.getElementById('fines-sort');
+    if (finesSort) {
+        finesSort.addEventListener('change', function() {
+            sortRows('.fine-row', this.value, '#fines-categories-container');
+        });
+    }
+    
+    // ======================= HELPER FUNCTIONS =======================
+    
+    function filterRows(rowSelector, searchTerm) {
+        const rows = document.querySelectorAll(rowSelector);
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const studentName = row.getAttribute('data-student-name') || '';
+            const studentNum = row.getAttribute('data-student-num') || '';
+            
+            const matches = studentName.includes(searchTerm) || studentNum.includes(searchTerm);
+            
+            if (matches) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Hide/show category cards if all rows are hidden
+        const categories = document.querySelectorAll('.fee-category-card');
+        categories.forEach(category => {
+            const categoryRows = category.querySelectorAll(rowSelector);
+            const visibleRows = Array.from(categoryRows).filter(r => r.style.display !== 'none');
+            
+            if (visibleRows.length === 0) {
+                category.closest('.col-12').style.display = 'none';
+            } else {
+                category.closest('.col-12').style.display = '';
+            }
+        });
+        
+        return visibleCount;
+    }
+    
+    function sortRows(rowSelector, sortValue, containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) return;
+        
+        const categoryCards = Array.from(container.querySelectorAll('.col-12'));
+        
+        categoryCards.forEach(card => {
+            const tbody = card.querySelector('tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll(rowSelector));
+            
+            rows.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(sortValue) {
+                    case 'name-asc':
+                        aVal = a.getAttribute('data-student-name') || '';
+                        bVal = b.getAttribute('data-student-name') || '';
+                        return aVal.localeCompare(bVal);
+                    
+                    case 'name-desc':
+                        aVal = a.getAttribute('data-student-name') || '';
+                        bVal = b.getAttribute('data-student-name') || '';
+                        return bVal.localeCompare(aVal);
+                    
+                    case 'amount-asc':
+                        aVal = parseFloat(a.getAttribute('data-amount')) || 0;
+                        bVal = parseFloat(b.getAttribute('data-amount')) || 0;
+                        return aVal - bVal;
+                    
+                    case 'amount-desc':
+                        aVal = parseFloat(a.getAttribute('data-amount')) || 0;
+                        bVal = parseFloat(b.getAttribute('data-amount')) || 0;
+                        return bVal - aVal;
+                    
+                    case 'date-asc':
+                        aVal = a.getAttribute('data-collection-date') || '';
+                        bVal = b.getAttribute('data-collection-date') || '';
+                        return aVal.localeCompare(bVal);
+                    
+                    case 'date-desc':
+                        aVal = a.getAttribute('data-collection-date') || '';
+                        bVal = b.getAttribute('data-collection-date') || '';
+                        return bVal.localeCompare(aVal);
+                    
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Clear and re-append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    }
+    
+    function updateStats(type) {
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        const rows = document.querySelectorAll(rowSelector);
+        
+        let visibleRows = Array.from(rows).filter(r => r.style.display !== 'none');
+        let totalAmount = 0;
+        let dates = [];
+        
+        visibleRows.forEach(row => {
+            const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+            totalAmount += amount;
+            
+            const date = row.getAttribute('data-collection-date');
+            if (date) dates.push(date);
+        });
+        
+        const count = visibleRows.length;
+        const avgAmount = count > 0 ? totalAmount / count : 0;
+        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+        
+        // Update stat cards
+        const prefix = type === 'fees' ? 'fees' : 'fines';
+        document.getElementById(`${prefix}-total-amount`).textContent = `₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById(`${prefix}-student-count`).textContent = count;
+        document.getElementById(`${prefix}-avg-amount`).textContent = `₱${avgAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById(`${prefix}-oldest-date`).textContent = oldestDate;
+        
+        // Update tab badge
+        document.getElementById(`${prefix}-count-badge`).textContent = count;
+    }
+    
+    console.log('Phase 1 features loaded: Search, Sort, Date Badges, Quick Stats');
+    
+    // ======================= PHASE 2: BULK SELECTION =======================
+    
+    // Select All in Category - Fees
+    document.querySelectorAll('.select-all-category').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const category = this.getAttribute('data-category');
+            const categoryCheckboxes = document.querySelectorAll(`.fee-checkbox[data-category="${category}"]`);
+            categoryCheckboxes.forEach(cb => {
+                if (cb.closest('tr').style.display !== 'none') { // Only select visible rows
+                    cb.checked = this.checked;
+                }
+            });
+            updateBulkActionBar();
+        });
+    });
+    
+    // Select All in Category - Fines
+    document.querySelectorAll('.select-all-category-fine').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const category = this.getAttribute('data-category');
+            const categoryCheckboxes = document.querySelectorAll(`.fine-checkbox[data-category="${category}"]`);
+            categoryCheckboxes.forEach(cb => {
+                if (cb.closest('tr').style.display !== 'none') { // Only select visible rows
+                    cb.checked = this.checked;
+                }
+            });
+            updateBulkActionBar();
+        });
+    });
+    
+    // Individual checkbox changes
+    document.querySelectorAll('.fee-checkbox, .fine-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkActionBar();
+            
+            // Update "Select All" checkbox for this category
+            const category = this.getAttribute('data-category');
+            const isFine = this.classList.contains('fine-checkbox');
+            const categoryCheckbox = isFine ? 
+                document.querySelector(`.select-all-category-fine[data-category="${category}"]`) :
+                document.querySelector(`.select-all-category[data-category="${category}"]`);
+            
+            if (categoryCheckbox) {
+                const allCheckboxes = document.querySelectorAll(isFine ? `.fine-checkbox[data-category="${category}"]` : `.fee-checkbox[data-category="${category}"]`);
+                const visibleCheckboxes = Array.from(allCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+                const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+                categoryCheckbox.checked = checkedCount > 0 && checkedCount === visibleCheckboxes.length;
+            }
+        });
+    });
+    
+    // Cancel Selection Button
+    document.getElementById('cancel-selection-btn')?.addEventListener('click', function() {
+        document.querySelectorAll('.fee-checkbox, .fine-checkbox, .select-all-category, .select-all-category-fine').forEach(cb => {
+            cb.checked = false;
+        });
+        updateBulkActionBar();
+    });
+    
+    // View Selected Button
+    document.getElementById('view-selected-btn')?.addEventListener('click', function() {
+        const selected = getSelectedItems();
+        if (selected.length === 0) return;
+        
+        let message = 'Selected Items:\n\n';
+        selected.forEach((item, index) => {
+            message += `${index + 1}. ${item.studentName} (${item.studentNum}) - ₱${item.amount}\n`;
+        });
+        alert(message);
+    });
+    
+    // Bulk Remit Button (placeholder - implement actual remittance logic)
+    document.getElementById('bulk-remit-btn')?.addEventListener('click', function() {
+        const selected = getSelectedItems();
+        if (selected.length === 0) return;
+        
+        if (confirm(`Are you sure you want to remit ${selected.length} selected items totaling ₱${selected.reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2)}?`)) {
+            alert('Bulk remittance functionality would be implemented here.\n\nSelected items would be sent to the server for processing.');
+            // TODO: Implement actual bulk remittance via AJAX
+        }
+    });
+    
+    function updateBulkActionBar() {
+        const selected = getSelectedItems();
+        const bulkBar = document.getElementById('bulk-action-bar');
+        
+        if (selected.length > 0) {
+            bulkBar.style.display = 'block';
+            const total = selected.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            document.getElementById('selected-count').textContent = `${selected.length} item${selected.length > 1 ? 's' : ''} selected`;
+            document.getElementById('selected-count-badge').textContent = selected.length;
+            document.getElementById('selected-total').textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        } else {
+            bulkBar.style.display = 'none';
+        }
+    }
+    
+    function getSelectedItems() {
+        const selected = [];
+        document.querySelectorAll('.fee-checkbox:checked, .fine-checkbox:checked').forEach(cb => {
+            selected.push({
+                type: cb.classList.contains('fee-checkbox') ? 'fee' : 'fine',
+                id: cb.getAttribute(cb.classList.contains('fee-checkbox') ? 'data-fee-id' : 'data-fine-id'),
+                studentName: cb.getAttribute('data-student-name'),
+                studentNum: cb.getAttribute('data-student-num'),
+                amount: cb.getAttribute('data-amount'),
+                category: cb.getAttribute('data-category')
+            });
+        });
+        return selected;
+    }
+    
+    // ======================= PHASE 2: DATE RANGE FILTER =======================
+    
+    // Date preset buttons - Fees
+    document.querySelectorAll('#fees-content .date-preset').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#fees-content .date-preset').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const days = this.getAttribute('data-days');
+            applyDateFilter('fees', days);
+        });
+    });
+    
+    // Date preset buttons - Fines
+    document.querySelectorAll('#fines-content .date-preset').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#fines-content .date-preset').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const days = this.getAttribute('data-days');
+            applyDateFilter('fines', days);
+        });
+    });
+    
+    // Custom date range - Fees
+    document.getElementById('fees-date-from')?.addEventListener('change', () => applyCustomDateFilter('fees'));
+    document.getElementById('fees-date-to')?.addEventListener('change', () => applyCustomDateFilter('fees'));
+    
+    // Custom date range - Fines
+    document.getElementById('fines-date-from')?.addEventListener('change', () => applyCustomDateFilter('fines'));
+    document.getElementById('fines-date-to')?.addEventListener('change', () => applyCustomDateFilter('fines'));
+    
+    // Clear dates
+    document.getElementById('fees-clear-dates')?.addEventListener('click', () => {
+        document.getElementById('fees-date-from').value = '';
+        document.getElementById('fees-date-to').value = '';
+        document.querySelectorAll('#fees-content .date-preset').forEach(b => b.classList.remove('active'));
+        document.querySelector('#fees-content .date-preset[data-days="all"]').classList.add('active');
+        applyDateFilter('fees', 'all');
+    });
+    
+    document.getElementById('fines-clear-dates')?.addEventListener('click', () => {
+        document.getElementById('fines-date-from').value = '';
+        document.getElementById('fines-date-to').value = '';
+        document.querySelectorAll('#fines-content .date-preset').forEach(b => b.classList.remove('active'));
+        document.querySelector('#fines-content .date-preset[data-days="all"]').classList.add('active');
+        applyDateFilter('fines', 'all');
+    });
+    
+    function applyDateFilter(type, days) {
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        const rows = document.querySelectorAll(rowSelector);
+        
+        if (days === 'all') {
+            rows.forEach(row => row.style.display = '');
+        } else {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
+            
+            rows.forEach(row => {
+                const dateStr = row.getAttribute('data-collection-date');
+                if (dateStr) {
+                    const rowDate = new Date(dateStr);
+                    row.style.display = rowDate >= cutoffDate ? '' : 'none';
+                }
+            });
+        }
+        
+        hideEmptyCategories();
+        updateStats(type);
+    }
+    
+    function applyCustomDateFilter(type) {
+        const fromInput = document.getElementById(`${type}-date-from`);
+        const toInput = document.getElementById(`${type}-date-to`);
+        
+        if (!fromInput.value && !toInput.value) return;
+        
+        // Deactivate preset buttons
+        document.querySelectorAll(`#${type}-content .date-preset`).forEach(b => b.classList.remove('active'));
+        
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        const rows = document.querySelectorAll(rowSelector);
+        
+        const fromDate = fromInput.value ? new Date(fromInput.value) : null;
+        const toDate = toInput.value ? new Date(toInput.value) : null;
+        
+        rows.forEach(row => {
+            const dateStr = row.getAttribute('data-collection-date');
+            if (dateStr) {
+                const rowDate = new Date(dateStr);
+                let show = true;
+                
+                if (fromDate && rowDate < fromDate) show = false;
+                if (toDate && rowDate > toDate) show = false;
+                
+                row.style.display = show ? '' : 'none';
+            }
+        });
+        
+        hideEmptyCategories();
+        updateStats(type);
+    }
+    
+    function hideEmptyCategories() {
+        document.querySelectorAll('.fee-category-card').forEach(card => {
+            const rows = card.querySelectorAll('.fee-row, .fine-row');
+            const visibleRows = Array.from(rows).filter(r => r.style.display !== 'none');
+            card.closest('.col-12').style.display = visibleRows.length > 0 ? '' : 'none';
+        });
+    }
+    
+    // ======================= PHASE 2: EXPORT TO EXCEL =======================
+    
+    document.getElementById('export-excel-btn')?.addEventListener('click', function() {
+        const activeTab = document.querySelector('.nav-link.active').id;
+        const type = activeTab === 'fees-tab' ? 'fees' : 'fines';
+        exportToExcel(type);
+    });
+    
+    function exportToExcel(type) {
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        
+        // Get all rows, but only from visible categories AND visible rows
+        const allRows = Array.from(document.querySelectorAll(rowSelector));
+        const visibleRows = allRows.filter(row => {
+            // Check if the row itself is visible
+            if (row.style.display === 'none') return false;
+            
+            // Check if the category containing this row is visible
+            const categoryCard = row.closest('.col-12');
+            if (categoryCard && categoryCard.style.display === 'none') return false;
+            
+            return true;
+        });
+        
+        if (visibleRows.length === 0) {
+            alert('No data to export!');
+            return;
+        }
+        
+        // Build CSV content
+        let csv = 'Student Name,Student Number,Category,Amount,Collection Date,Status\n';
+        
+        visibleRows.forEach(row => {
+            const studentName = row.getAttribute('data-student-name') || '';
+            const studentNum = row.getAttribute('data-student-num') || '';
+            const category = row.getAttribute('data-category') || '';
+            const amount = row.getAttribute('data-amount') || '0';
+            const collectionDate = row.getAttribute('data-collection-date') || '';
+            
+            csv += `"${studentName}","${studentNum}","${category}","${amount}","${collectionDate}","Collected"\n`;
+        });
+        
+        // Create download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Pending_${type}_Collections_${today}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log(`Exported ${visibleRows.length} ${type} records to Excel`);
+    }
+    
+    console.log('Phase 2 features loaded: Bulk Selection, Date Range Filter, Export to Excel');
+    
+    // ======================= PHASE 3: AMOUNT RANGE FILTER =======================
+    
+    // Fees Amount Filter
+    document.getElementById('fees-amount-min')?.addEventListener('input', () => applyAmountFilter('fees'));
+    document.getElementById('fees-amount-max')?.addEventListener('input', () => applyAmountFilter('fees'));
+    document.getElementById('fees-clear-amount')?.addEventListener('click', () => {
+        document.getElementById('fees-amount-min').value = '';
+        document.getElementById('fees-amount-max').value = '';
+        applyAmountFilter('fees');
+    });
+    
+    // Fines Amount Filter
+    document.getElementById('fines-amount-min')?.addEventListener('input', () => applyAmountFilter('fines'));
+    document.getElementById('fines-amount-max')?.addEventListener('input', () => applyAmountFilter('fines'));
+    document.getElementById('fines-clear-amount')?.addEventListener('click', () => {
+        document.getElementById('fines-amount-min').value = '';
+        document.getElementById('fines-amount-max').value = '';
+        applyAmountFilter('fines');
+    });
+    
+    function applyAmountFilter(type) {
+        const minInput = document.getElementById(`${type}-amount-min`);
+        const maxInput = document.getElementById(`${type}-amount-max`);
+        
+        const min = minInput.value ? parseFloat(minInput.value) : 0;
+        const max = maxInput.value ? parseFloat(maxInput.value) : Infinity;
+        
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        const rows = document.querySelectorAll(rowSelector);
+        
+        rows.forEach(row => {
+            const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+            
+            if (amount >= min && amount <= max) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        hideEmptyCategories();
+        updateStats(type);
+    }
+    
+    // ======================= PHASE 3: VIEW TOGGLE =======================
+    
+    // Fees View Toggle
+    document.getElementById('fees-view-grouped')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fees', 'grouped');
+    });
+    document.getElementById('fees-view-list')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fees', 'list');
+    });
+    document.getElementById('fees-view-compact')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fees', 'compact');
+    });
+    
+    // Fines View Toggle
+    document.getElementById('fines-view-grouped')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fines', 'grouped');
+    });
+    document.getElementById('fines-view-list')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fines', 'list');
+    });
+    document.getElementById('fines-view-compact')?.addEventListener('change', function() {
+        if (this.checked) applyViewMode('fines', 'compact');
+    });
+    
+    function applyViewMode(type, mode) {
+        const container = document.getElementById(`${type}-categories-container`);
+        if (!container) return;
+        
+        // Remove all view classes
+        container.classList.remove('view-grouped', 'view-list', 'view-compact');
+        
+        // Add new view class
+        container.classList.add(`view-${mode}`);
+        
+        console.log(`Applied ${mode} view to ${type}`);
+    }
+    
+    // ======================= PHASE 3: EXPAND/COLLAPSE CATEGORIES =======================
+    
+    document.querySelectorAll('.collapse-category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                const isCollapsed = targetElement.classList.contains('collapsed');
+                
+                if (isCollapsed) {
+                    // Expand
+                    targetElement.classList.remove('collapsed');
+                    targetElement.style.maxHeight = targetElement.scrollHeight + 'px';
+                    this.classList.remove('collapsed');
+                } else {
+                    // Collapse
+                    targetElement.style.maxHeight = targetElement.scrollHeight + 'px';
+                    // Force reflow
+                    targetElement.offsetHeight;
+                    targetElement.style.maxHeight = '0';
+                    targetElement.classList.add('collapsed');
+                    this.classList.add('collapsed');
+                }
+            }
+        });
+    });
+    
+    // Set initial max-height for all category contents (for smooth animation)
+    document.querySelectorAll('.category-content').forEach(content => {
+        if (!content.classList.contains('collapsed')) {
+            content.style.maxHeight = content.scrollHeight + 'px';
+        }
+    });
+    
+    // Add "Collapse All" and "Expand All" buttons functionality (optional enhancement)
+    function collapseAllCategories(type) {
+        const prefix = type === 'fees' ? 'fees-category-' : 'fines-category-';
+        document.querySelectorAll(`[id^="${prefix}"]`).forEach(content => {
+            if (!content.classList.contains('collapsed')) {
+                content.style.maxHeight = '0';
+                content.classList.add('collapsed');
+                
+                // Update button icon
+                const btn = document.querySelector(`[data-target="${content.id}"]`);
+                if (btn) btn.classList.add('collapsed');
+            }
+        });
+    }
+    
+    function expandAllCategories(type) {
+        const prefix = type === 'fees' ? 'fees-category-' : 'fines-category-';
+        document.querySelectorAll(`[id^="${prefix}"]`).forEach(content => {
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.style.maxHeight = content.scrollHeight + 'px';
+                
+                // Update button icon
+                const btn = document.querySelector(`[data-target="${content.id}"]`);
+                if (btn) btn.classList.remove('collapsed');
+            }
+        });
+    }
+    
+    console.log('Phase 3 features loaded: Amount Range Filter, View Toggle, Expand/Collapse');
+    
+    // ======================= CATEGORY FILTER =======================
+    
+    // Fees Category Filter
+    document.getElementById('fees-category-filter')?.addEventListener('change', function() {
+        applyCategoryFilter('fees', this.value);
+    });
+    
+    // Fines Category Filter
+    document.getElementById('fines-category-filter')?.addEventListener('change', function() {
+        applyCategoryFilter('fines', this.value);
+    });
+    
+    function applyCategoryFilter(type, selectedCategory) {
+        const containerSelector = `#${type}-categories-container`;
+        const categoryCards = document.querySelectorAll(`${containerSelector} .col-12`);
+        
+        if (selectedCategory === 'all') {
+            // Show all categories
+            categoryCards.forEach(card => {
+                card.style.display = '';
+            });
+        } else {
+            // Show only selected category
+            categoryCards.forEach(card => {
+                const categoryCard = card.querySelector('.fee-category-card');
+                if (categoryCard) {
+                    // Get category name from the heading
+                    const categoryHeading = categoryCard.querySelector('h5');
+                    const categoryName = categoryHeading ? categoryHeading.textContent.trim() : '';
+                    
+                    if (categoryName === selectedCategory) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        // Update stats to reflect filtered categories
+        updateStatsWithCategoryFilter(type, selectedCategory);
+    }
+    
+    function updateStatsWithCategoryFilter(type, selectedCategory) {
+        const rowSelector = type === 'fees' ? '.fee-row' : '.fine-row';
+        let visibleRows;
+        
+        if (selectedCategory === 'all') {
+            // Count all visible rows
+            visibleRows = Array.from(document.querySelectorAll(rowSelector)).filter(r => r.style.display !== 'none');
+        } else {
+            // Count only rows in the selected category that are visible
+            visibleRows = Array.from(document.querySelectorAll(rowSelector)).filter(r => {
+                const category = r.getAttribute('data-category');
+                return category === selectedCategory && r.style.display !== 'none';
+            });
+        }
+        
+        let totalAmount = 0;
+        let dates = [];
+        
+        visibleRows.forEach(row => {
+            const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+            totalAmount += amount;
+            
+            const date = row.getAttribute('data-collection-date');
+            if (date) dates.push(date);
+        });
+        
+        const count = visibleRows.length;
+        const avgAmount = count > 0 ? totalAmount / count : 0;
+        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+        
+        // Update stat cards
+        const prefix = type === 'fees' ? 'fees' : 'fines';
+        document.getElementById(`${prefix}-total-amount`).textContent = `₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById(`${prefix}-student-count`).textContent = count;
+        document.getElementById(`${prefix}-avg-amount`).textContent = `₱${avgAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById(`${prefix}-oldest-date`).textContent = oldestDate;
+        
+        // Update tab badge
+        document.getElementById(`${prefix}-count-badge`).textContent = count;
+    }
+    
+    // Override existing updateStats to work with category filter
+    const originalUpdateStats = updateStats;
+    updateStats = function(type) {
+        // Call original update stats
+        originalUpdateStats(type);
+        
+        // Then apply category filter if one is selected
+        const categoryFilter = document.getElementById(`${type}-category-filter`);
+        if (categoryFilter && categoryFilter.value !== 'all') {
+            updateStatsWithCategoryFilter(type, categoryFilter.value);
+        }
+    };
+    
+    console.log('Category Filter loaded: Filter by specific fee/fine categories');
 </script>
 }
