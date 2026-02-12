@@ -964,7 +964,10 @@ namespace iBITS_Portal.Controllers
             string posterName = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
             var existingReminders = await _context.Announcements
-                .Where(a => a.AnnouncementType == "Payment Reminder" 
+                .Where(a => (a.AnnouncementType == "General Reminder" 
+                          || a.AnnouncementType == "Urgent Notice"
+                          || a.AnnouncementType == "Final Notice"
+                          || a.AnnouncementType == "New Fee Posted")
                          && a.PostedBy == posterName
                          && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now))
                 .OrderByDescending(a => a.Timestamp)
@@ -982,6 +985,7 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PostPaymentReminder(
+            int? reminderId,
             string content, 
             string targetAudience, 
             string reminderTitle, 
@@ -1001,6 +1005,39 @@ namespace iBITS_Portal.Controllers
             // Calculate expiry date
             DateTime? expiryDate = expiryDays > 0 ? DateTime.Now.AddDays(expiryDays) : (DateTime?)null;
 
+            // ===== EDIT MODE: Update existing reminder =====
+            if (reminderId.HasValue && reminderId.Value > 0)
+            {
+                var existingReminder = await _context.Announcements.FindAsync(reminderId.Value);
+                
+                if (existingReminder == null)
+                {
+                    TempData["Error"] = "Reminder not found.";
+                    return RedirectToAction("PaymentReminders");
+                }
+
+                // Verify ownership
+                if (existingReminder.PostedBy != poster && !User.IsInRole("Admin"))
+                {
+                    TempData["Error"] = "You can only edit your own reminders.";
+                    return RedirectToAction("PaymentReminders");
+                }
+
+                // Update existing reminder
+                existingReminder.Title = "Payment Reminder: " + reminderTitle;
+                existingReminder.Content = content;
+                existingReminder.TargetAudience = targetAudience;
+                existingReminder.AnnouncementType = reminderType;
+                existingReminder.ExpiryDate = expiryDate;
+
+                _context.Update(existingReminder);
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] = "Payment reminder updated successfully!";
+                return RedirectToAction("PaymentReminders");
+            }
+
+            // ===== CREATE MODE: Add new reminder =====
             var announcement = new Announcement
             {
                 Title = "Payment Reminder: " + reminderTitle,
@@ -1045,33 +1082,105 @@ namespace iBITS_Portal.Controllers
         private async Task<List<Student>> GetTargetedStudents(string targetAudience)
         {
             var query = _context.Students.Where(s => s.IsArchived != true);
+            
+            // Handle multiple audiences (comma-separated)
+            if (string.IsNullOrWhiteSpace(targetAudience))
+            {
+                return new List<Student>();
+            }
 
-            if (targetAudience == "All Students")
+            // Split by comma for multiple audiences
+            var audiences = targetAudience.Split(',').Select(a => a.Trim()).ToList();
+            
+            // If "All Students" is in the list, return all students
+            if (audiences.Contains("All Students"))
             {
                 return await query.ToListAsync();
             }
-            else if (targetAudience == "Students with Outstanding Balance")
-            {
-                // Get students who have unpaid fees
-                var studentsWithBalance = await _context.Fees
-                    .Where(f => f.FeeStatus != "Paid")
-                    .Select(f => f.StudentNum)
-                    .Distinct()
-                    .ToListAsync();
 
-                return await query.Where(s => studentsWithBalance.Contains(s.StudentNum)).ToListAsync();
-            }
-            else if (targetAudience.Contains("Year"))
+            // Use a HashSet to avoid duplicate students when multiple criteria match
+            var targetedStudentNums = new HashSet<string>();
+
+            foreach (var audience in audiences)
             {
-                // Extract year level (e.g., "1st Year" -> "1st")
-                var yearPrefix = targetAudience.Split(new[] { ' ' }, StringSplitOptions.None)[0];
-                return await query.Where(s => s.YearLevelSection != null && s.YearLevelSection.Contains(yearPrefix)).ToListAsync();
+                List<string> studentNums = new List<string>();
+
+                if (audience == "Students with Outstanding Balance")
+                {
+                    // Get students who have unpaid fees
+                    studentNums = await _context.Fees
+                        .Where(f => f.FeeStatus != "Paid")
+                        .Select(f => f.StudentNum)
+                        .Distinct()
+                        .ToListAsync();
+                }
+                else if (audience.Contains("Year"))
+                {
+                    // Check if it's a program-year combination (e.g., "BSIT 1st Year", "DIT 2nd Year")
+                    var parts = audience.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    
+                    if (parts.Length >= 3 && parts[2] == "Year")
+                    {
+                        // Format: "BSIT 1st Year" or "DIT 3rd Year"
+                        string program = parts[0]; // "BSIT" or "DIT"
+                        string yearPrefix = parts[1]; // "1st", "2nd", "3rd", "4th"
+                        string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
+                        
+                        // Match students with specific program AND year level
+                        studentNums = await query
+                            .Where(s => s.Course == program 
+                                     && s.YearLevelSection != null 
+                                     && s.YearLevelSection.StartsWith(yearNumber + "-"))
+                            .Select(s => s.StudentNum)
+                            .ToListAsync();
+                    }
+                    else
+                    {
+                        // Format: "1st Year", "2nd Year" (all programs)
+                        var yearPrefix = audience.Split(new[] { ' ' }, StringSplitOptions.None)[0];
+                        string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
+                        
+                        // Match students where YearLevelSection starts with the year number (e.g., "1-1", "1-2")
+                        studentNums = await query
+                            .Where(s => s.YearLevelSection != null && s.YearLevelSection.StartsWith(yearNumber + "-"))
+                            .Select(s => s.StudentNum)
+                            .ToListAsync();
+                    }
+                }
+                else
+                {
+                    // Assume it's a course (BSIT, BSCS, etc.)
+                    studentNums = await query
+                        .Where(s => s.Course == audience)
+                        .Select(s => s.StudentNum)
+                        .ToListAsync();
+                }
+
+                // Add to the set (automatically handles duplicates)
+                foreach (var num in studentNums)
+                {
+                    targetedStudentNums.Add(num);
+                }
             }
-            else
+
+            // Return the distinct list of students
+            return await query.Where(s => targetedStudentNums.Contains(s.StudentNum)).ToListAsync();
+        }
+
+        // ============================================================
+        // GET TARGET MEMBER COUNT (AJAX)
+        // ============================================================
+        [HttpGet]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> GetTargetMemberCount(string targetAudience)
+        {
+            if (string.IsNullOrWhiteSpace(targetAudience))
             {
-                // Assume it's a course (BSIT, BSCS, etc.)
-                return await query.Where(s => s.Course == targetAudience).ToListAsync();
+                return Json(new { count = 0 });
             }
+
+            var targetedStudents = await GetTargetedStudents(targetAudience);
+            return Json(new { count = targetedStudents.Count });
         }
 
         // ============================================================
