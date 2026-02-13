@@ -356,7 +356,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fee.Amount?.ToString("N2")</span>
-                                    @* FIXED: Use case-insensitive comparison *@
+                                    @* SIMPLIFIED: Only show Paid or Unpaid *@
                                     @if (string.Equals(fee.FeeStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Paid</span>
@@ -399,6 +399,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fine.Amount?.ToString("N2")</span>
+                                    @* SIMPLIFIED: Only show Paid or Unpaid *@
                                     @if (string.Equals(fine.FinesStatus, "Paid", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Paid</span>

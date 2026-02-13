@@ -660,31 +660,38 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgTreasurerDashboard()
         {
-            // Get all fees and fines with student navigation
+            // Get all fees and fines with student navigation AND remittance
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Remittance) // Include for IsAwaitingValidation
                 .Where(f => f.StudentNumNavigation != null)
                 .ToListAsync();
             
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Remittance) // Include for IsAwaitingValidation
                 .Where(f => f.StudentNumNavigation != null)
                 .ToListAsync();
 
-            // Calculate statistics - count all PAID fees/fines
+            // Calculate statistics - ONLY count VALIDATED fees/fines (exclude Class Treasurer payments)
             ViewBag.TotalFeesCollected = fees
-                .Where(f => f.FeeStatus?.ToUpper() == "PAID")
+                .Where(f => f.FeeStatus?.ToUpper() == "PAID" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                         && !f.IsAwaitingValidation) // Exclude pending batches and Class Treasurer payments
                 .Sum(f => f.Amount ?? 0);
             ViewBag.TotalFinesCollected = fines
-                .Where(f => f.FinesStatus?.ToUpper() == "PAID")
+                .Where(f => f.FinesStatus?.ToUpper() == "PAID" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                         && !f.IsAwaitingValidation) // Exclude pending batches and Class Treasurer payments
                 .Sum(f => f.Amount ?? 0);
             
-            // Pending includes: unpaid fees/fines
+            // Outstanding Balance: All fees/fines NOT validated by Org Treasurer
+            // This includes: Unpaid + Paid by Class Treasurer but not validated
             ViewBag.PendingFees = fees
-                .Where(f => f.FeeStatus?.ToUpper() != "PAID")
+                .Where(f => f.RemittanceStatus != FeeRemittanceStatus.Remitted || f.IsAwaitingValidation)
                 .Sum(f => f.Amount ?? 0);
             ViewBag.PendingFines = fines
-                .Where(f => f.FinesStatus?.ToUpper() != "PAID")
+                .Where(f => f.RemittanceStatus != FeeRemittanceStatus.Remitted || f.IsAwaitingValidation)
                 .Sum(f => f.Amount ?? 0);
             
             ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
@@ -714,7 +721,10 @@ namespace iBITS_Portal.Controllers
                 {
                     ProgramYear = g.Key,
                     TotalFees = g.Sum(f => f.Amount ?? 0),
-                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0)
+                    // Only count VALIDATED fees (exclude Class Treasurer payments and pending batches)
+                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID" 
+                                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                                         && !f.IsAwaitingValidation).Sum(f => f.Amount ?? 0)
                 })
                 .OrderBy(s => s.ProgramYear)
                 .ToList();
@@ -738,14 +748,18 @@ namespace iBITS_Portal.Controllers
                     f.CollectionDate.HasValue && 
                     f.CollectionDate >= monthStart && 
                     f.CollectionDate <= monthEnd && 
-                    f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID")
+                    f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID" &&
+                    f.RemittanceStatus == FeeRemittanceStatus.Remitted &&
+                    !f.IsAwaitingValidation)
                     .Sum(f => f.Amount ?? 0);
                 
                 var finesInMonth = fines.Where(f => 
                     f.CollectionDate.HasValue && 
                     f.CollectionDate >= monthStart && 
                     f.CollectionDate <= monthEnd && 
-                    f.FinesStatus != null && f.FinesStatus.ToUpper() == "PAID")
+                    f.FinesStatus != null && f.FinesStatus.ToUpper() == "PAID" &&
+                    f.RemittanceStatus == FeeRemittanceStatus.Remitted &&
+                    !f.IsAwaitingValidation)
                     .Sum(f => f.Amount ?? 0);
 
                 monthlyTrends.Add(new
@@ -885,18 +899,24 @@ namespace iBITS_Portal.Controllers
                 // Fetch fees and fines with collection dates in range
                 var fees = await _context.Fees
                     .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Remittance)
                     .Where(f => f.CollectionDate.HasValue 
                              && f.CollectionDate >= startDate 
                              && f.CollectionDate <= endDate
-                             && f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID")
+                             && f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID"
+                             && f.RemittanceStatus == FeeRemittanceStatus.Remitted
+                             && !f.IsAwaitingValidation)
                     .ToListAsync();
 
                 var fines = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
+                    .Include(f => f.Remittance)
                     .Where(f => f.CollectionDate.HasValue 
                              && f.CollectionDate >= startDate 
                              && f.CollectionDate <= endDate
-                             && f.FinesStatus != null && f.FinesStatus.ToUpper() == "PAID")
+                             && f.FinesStatus != null && f.FinesStatus.ToUpper() == "PAID"
+                             && f.RemittanceStatus == FeeRemittanceStatus.Remitted
+                             && !f.IsAwaitingValidation)
                     .ToListAsync();
 
                 // Group by month for chart display
@@ -1181,6 +1201,274 @@ namespace iBITS_Portal.Controllers
 
             var targetedStudents = await GetTargetedStudents(targetAudience);
             return Json(new { count = targetedStudents.Count });
+        }
+
+        // ============================================================
+        // REVOKE PAYMENT (Set back to Unpaid)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RevokePayment(int feeId, string? reason)
+        {
+            var fee = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+            if (fee == null)
+            {
+                TempData["Error"] = "Fee not found.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // OPTION B VALIDATION: Only allow revoking direct Org Treasurer payments
+            // Check if already unpaid
+            if (fee.FeeStatus?.ToUpper() != "PAID")
+            {
+                TempData["Warning"] = "This fee is already unpaid.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // Check if fee is locked
+            if (fee.IsPaymentLocked)
+            {
+                TempData["Error"] = "This payment is locked and cannot be revoked.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // FIXED: Check if part of remittance batch (cannot revoke batch items individually)
+            if (fee.RemittanceId.HasValue)
+            {
+                TempData["Error"] = "This payment is part of a remittance batch and cannot be revoked individually. Please reject the entire batch if needed.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // FIXED: Must be Remitted status (direct Org Treasurer payment)
+            if (fee.RemittanceStatus != FeeRemittanceStatus.Remitted)
+            {
+                TempData["Error"] = "Only validated payments can be revoked. This payment has not been validated yet.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            // Revoke the payment
+            fee.FeeStatus = "Pending";
+            fee.CollectedBy = null;
+            fee.CollectionDate = null;
+            fee.OfficialPaymentDate = null;
+            fee.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+            fee.RemittanceId = null;
+
+            _context.Fees.Update(fee);
+
+            // Notify student
+            if (!string.IsNullOrEmpty(fee.StudentNum))
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    StudentNum = fee.StudentNum,
+                    Title = "Payment Revoked - Action Required",
+                    Message = $"Your payment for '{fee.FeeName}' (₱{fee.Amount:N2}) has been revoked by the Org Treasurer. " +
+                              $"Reason: {(string.IsNullOrWhiteSpace(reason) ? "Not specified" : reason)}. " +
+                              $"Please contact your Class Treasurer or Org Treasurer for clarification.",
+                    NotificationType = "Payment Alert",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = treasurer?.StudentNum
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Payment revoked successfully. Fee is now Unpaid.";
+            return RedirectToAction("OrgFees");
+        }
+
+        // ============================================================
+        // LOCK PAYMENT (Permanent - Cannot be undone)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LockPayment(int feeId, string confirmation)
+        {
+            // Verify confirmation word
+            if (string.IsNullOrWhiteSpace(confirmation) || !confirmation.Equals("LOCK", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Error"] = "You must type 'LOCK' to confirm this permanent action.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var fee = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
+                .FirstOrDefaultAsync(f => f.FeeId == feeId);
+
+            if (fee == null)
+            {
+                TempData["Error"] = "Fee not found.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // Check if already locked
+            if (fee.IsPaymentLocked)
+            {
+                TempData["Warning"] = "This payment is already locked.";
+                return RedirectToAction("OrgFees");
+            }
+
+            // Check if not paid
+            if (fee.FeeStatus?.ToUpper() != "PAID")
+            {
+                TempData["Error"] = "Only paid fees can be locked.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            // Lock the payment
+            fee.IsPaymentLocked = true;
+            fee.PaymentLockedDate = DateTime.Now;
+            fee.LockedBy = treasurer?.StudentNum;
+
+            _context.Fees.Update(fee);
+
+            // Optional: Notify student
+            if (!string.IsNullOrEmpty(fee.StudentNum))
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    StudentNum = fee.StudentNum,
+                    Title = "Payment Verified ✅",
+                    Message = $"Your payment for '{fee.FeeName}' (₱{fee.Amount:N2}) has been verified and locked by the Org Treasurer. " +
+                              $"This payment is now permanently recorded and cannot be changed. Thank you for your payment!",
+                    NotificationType = "Payment Confirmation",
+                    NotificationDate = DateTime.Now,
+                    IsRead = false,
+                    SentBy = treasurer?.StudentNum
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Payment locked successfully. This action is permanent and cannot be undone.";
+            return RedirectToAction("OrgFees");
+        }
+
+        // ============================================================
+        // BULK REVOKE PAYMENTS
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkRevokePayments(int[] feeIds)
+        {
+            if (feeIds == null || feeIds.Length == 0)
+            {
+                TempData["Error"] = "No fees selected.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var fees = await _context.Fees
+                .Where(f => feeIds.Contains(f.FeeId))
+                .ToListAsync();
+
+            int revoked = 0;
+            int skipped = 0;
+
+            foreach (var fee in fees)
+            {
+                if (fee.IsPaymentLocked || fee.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (fee.FeeStatus?.ToUpper() != "PAID")
+                {
+                    skipped++;
+                    continue;
+                }
+
+                fee.FeeStatus = "Pending";
+                fee.CollectedBy = null;
+                fee.CollectionDate = null;
+                fee.OfficialPaymentDate = null;
+                fee.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+                fee.RemittanceId = null;
+
+                revoked++;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var message = $"{revoked} payment(s) revoked successfully.";
+            if (skipped > 0)
+            {
+                message += $" {skipped} skipped (locked or not paid).";
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction("OrgFees");
+        }
+
+        // ============================================================
+        // BULK LOCK PAYMENTS
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkLockPayments(int[] feeIds, string confirmation)
+        {
+            if (string.IsNullOrWhiteSpace(confirmation) || !confirmation.Equals("LOCK ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Error"] = "You must type 'LOCK ALL' to confirm this permanent action.";
+                return RedirectToAction("OrgFees");
+            }
+
+            if (feeIds == null || feeIds.Length == 0)
+            {
+                TempData["Error"] = "No fees selected.";
+                return RedirectToAction("OrgFees");
+            }
+
+            var fees = await _context.Fees
+                .Where(f => feeIds.Contains(f.FeeId))
+                .ToListAsync();
+
+            var user = await _userManager.GetUserAsync(User);
+            var treasurer = await _context.Students.FindAsync(user.UserName);
+
+            int locked = 0;
+            int skipped = 0;
+
+            foreach (var fee in fees)
+            {
+                if (fee.IsPaymentLocked || fee.FeeStatus?.ToUpper() != "PAID")
+                {
+                    skipped++;
+                    continue;
+                }
+
+                fee.IsPaymentLocked = true;
+                fee.PaymentLockedDate = DateTime.Now;
+                fee.LockedBy = treasurer?.StudentNum;
+
+                locked++;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var message = $"{locked} payment(s) locked successfully.";
+            if (skipped > 0)
+            {
+                message += $" {skipped} skipped (already locked or not paid).";
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction("OrgFees");
         }
 
         // ============================================================
@@ -2085,15 +2373,29 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgFees()
         {
+            // Include Remittance navigation for batch status checking
             var fees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Remittance) // Include remittance for IsAwaitingValidation property
                 .OrderByDescending(f => f.FeeId)
                 .ToListAsync();
 
-            // Calculate statistics - ONLY count validated (remitted) fees
+            // NO FILTER - Show ALL fees in table
+            // Fees will be filtered only in metrics (PAID card, charts)
+
+            // Calculate statistics
             var totalExpected = fees.Sum(f => f.Amount ?? 0);
-            var totalCollected = fees.Where(f => f.FeeStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0);
-            var totalPending = totalExpected - totalCollected;
+            
+            // PAID card - ONLY count validated batches + direct Org payments (exclude pending batches)
+            var totalCollected = fees.Where(f => 
+                f.FeeStatus?.ToLower() == "paid" 
+                && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                && !f.IsAwaitingValidation) // Exclude "Remitted waiting for validation"
+                .Sum(f => f.Amount ?? 0);
+            
+            var totalPending = fees
+                .Where(f => f.FeeStatus?.ToLower() != "paid")
+                .Sum(f => f.Amount ?? 0);
 
             ViewBag.TotalExpected = totalExpected;
             ViewBag.TotalCollected = totalCollected;
@@ -2111,8 +2413,13 @@ namespace iBITS_Portal.Controllers
                 .ToListAsync();
 
             // Chart Data - Paid by Program-Year (ONLY VALIDATED REMITTANCES)
+            // Exclude: Pending batches AND "Paid in Class Treasurer" (not in batch, not validated)
             var collectedBreakdown = fees
-                .Where(f => f.FeeStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .Where(f => f.FeeStatus?.ToLower() == "paid" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted // MUST be validated (excludes "Paid in Class Treasurer")
+                         && !f.IsAwaitingValidation // EXCLUDE pending batches
+                         && f.StudentNumNavigation != null 
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
                 .GroupBy(f => {
                     var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
                     var parts = section.Split('-');
@@ -2127,9 +2434,12 @@ namespace iBITS_Portal.Controllers
                 })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
-            // Chart Data - Unpaid by Program-Year (includes unpaid + paid but not yet validated)
+            // Chart Data - Unpaid by Program-Year
+            // Include: Unpaid only (exclude paid-in-class until validated)
             var pendingBreakdown = fees
-                .Where(f => (f.FeeStatus?.ToLower() != "paid" || f.RemittanceStatus != FeeRemittanceStatus.Remitted) && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .Where(f => f.FeeStatus?.ToLower() != "paid"
+                         && f.StudentNumNavigation != null 
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
                 .GroupBy(f => {
                     var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
                     var parts = section.Split('-');
@@ -2156,8 +2466,10 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> OrgFines()
         {
+            // Include Remittance navigation for batch status checking
             var fines = await _context.Fines
                 .Include(f => f.StudentNumNavigation)
+                .Include(f => f.Remittance) // Include remittance for IsAwaitingValidation property
                 .Include(f => f.Attendance)
                     .ThenInclude(a => a.Event)
                 .Include(f => f.Attendance)
@@ -2165,9 +2477,19 @@ namespace iBITS_Portal.Controllers
                 .OrderByDescending(f => f.FineId)
                 .ToListAsync();
 
-            // Calculate statistics - ONLY count validated (remitted) fines (exclude waived from expected)
+            // NO FILTER - Show ALL fines in table
+            // Fines will be filtered only in metrics (PAID card, charts)
+
+            // Calculate statistics (exclude waived from expected)
             var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);
-            var totalCollected = fines.Where(f => f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0);
+            
+            // PAID card - ONLY count validated batches + direct Org payments (exclude pending batches)
+            var totalCollected = fines.Where(f => 
+                f.FinesStatus?.ToLower() == "paid" 
+                && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                && !f.IsAwaitingValidation) // Exclude "Remitted waiting for validation"
+                .Sum(f => f.Amount ?? 0);
+            
             var totalPending = totalExpected - totalCollected;
 
             ViewBag.TotalExpected = totalExpected;
@@ -2193,9 +2515,13 @@ namespace iBITS_Portal.Controllers
                 .OrderBy(r => r)
                 .ToList();
 
-            // Chart Data - Paid by Program-Year (ONLY VALIDATED REMITTANCES)
+            // Chart Data - Paid by Program-Year (ONLY VALIDATED REMITTANCES - exclude pending batches)
             var paidBreakdown = fines
-                .Where(f => f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus == FeeRemittanceStatus.Remitted && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .Where(f => f.FinesStatus?.ToLower() == "paid" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                         && !f.IsAwaitingValidation // EXCLUDE payments in pending remittance batches
+                         && f.StudentNumNavigation != null 
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
                 .GroupBy(f => {
                     var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
                     var parts = section.Split('-');
@@ -2210,9 +2536,13 @@ namespace iBITS_Portal.Controllers
                 })
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.Amount ?? 0));
 
-            // Chart Data - Unpaid by Program-Year (includes unpaid + paid but not validated)
+            // Chart Data - Unpaid by Program-Year (includes unpaid + paid but not validated + pending batches)
             var unpaidBreakdown = fines
-                .Where(f => (f.FinesStatus?.ToLower() == "unpaid" || (f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus != FeeRemittanceStatus.Remitted)) && f.StudentNumNavigation != null && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
+                .Where(f => (f.FinesStatus?.ToLower() == "unpaid" 
+                          || (f.FinesStatus?.ToLower() == "paid" && f.RemittanceStatus != FeeRemittanceStatus.Remitted) 
+                          || f.IsAwaitingValidation) // INCLUDE payments awaiting validation in "unpaid" chart
+                         && f.StudentNumNavigation != null 
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection))
                 .GroupBy(f => {
                     var section = f.StudentNumNavigation.YearLevelSection ?? "Unknown";
                     var parts = section.Split('-');
@@ -4051,6 +4381,7 @@ namespace iBITS_Portal.Controllers
                 _context.Remittances.Update(remittance);
 
                 // Update all associated fees - set official payment date and mark as Remitted
+                // OPTION B - AUTO-LOCK all payments in validated remittance batch
                 if (remittance.RemittanceType == RemittanceType.Fee)
                 {
                     var feeIds = remittance.RemittanceItems.Where(i => i.FeeId.HasValue).Select(i => i.FeeId.Value).ToList();
@@ -4063,6 +4394,12 @@ namespace iBITS_Portal.Controllers
                     {
                         fee.RemittanceStatus = FeeRemittanceStatus.Remitted;
                         fee.OfficialPaymentDate = validationDate; // THE OFFICIAL DATE
+                        
+                        // AUTO-LOCK: Payments in validated batch are permanently locked
+                        fee.IsPaymentLocked = true;
+                        fee.PaymentLockedDate = validationDate;
+                        fee.LockedBy = orgTreasurer.StudentNum;
+                        
                         _context.Fees.Update(fee);
 
                         // Notify student
@@ -4072,7 +4409,7 @@ namespace iBITS_Portal.Controllers
                             {
                                 StudentNum = fee.StudentNum,
                                 Title = "Payment Officially Validated",
-                                Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been officially validated by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
+                                Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
                                 NotificationDate = DateTime.Now,
                                 IsRead = false,
@@ -4093,6 +4430,12 @@ namespace iBITS_Portal.Controllers
                     {
                         fine.RemittanceStatus = FeeRemittanceStatus.Remitted;
                         fine.OfficialPaymentDate = validationDate;
+                        
+                        // AUTO-LOCK: Payments in validated batch are permanently locked
+                        fine.IsPaymentLocked = true;
+                        fine.PaymentLockedDate = validationDate;
+                        fine.LockedBy = orgTreasurer.StudentNum;
+                        
                         _context.Fines.Update(fine);
 
                         // Notify student
@@ -4102,7 +4445,7 @@ namespace iBITS_Portal.Controllers
                             {
                                 StudentNum = fine.StudentNum,
                                 Title = "Fine Payment Officially Validated",
-                                Message = $"Your fine payment of ₱{fine.Amount:N2} for '{fine.Description}' has been officially validated.",
+                                Message = $"Your fine payment of ₱{fine.Amount:N2} for '{fine.Description}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
                                 NotificationDate = DateTime.Now,
                                 IsRead = false,
@@ -4415,11 +4758,26 @@ namespace iBITS_Portal.Controllers
                 })
                 .ToList();
 
-            // Calculate statistics from program-year grouped data
-            ViewBag.TotalFeesCollected = fees.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.TotalFinesCollected = fines.Where(f => f.FinesStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.PendingFees = fees.Where(f => f.FeeStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
-            ViewBag.PendingFines = fines.Where(f => f.FinesStatus?.ToUpper() != "PAID").Sum(f => f.Amount ?? 0);
+            // Calculate statistics - ONLY count VALIDATED fees/fines (exclude Class Treasurer payments)
+            ViewBag.TotalFeesCollected = fees
+                .Where(f => f.FeeStatus?.ToUpper() == "PAID" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                         && !f.IsAwaitingValidation)
+                .Sum(f => f.Amount ?? 0);
+            ViewBag.TotalFinesCollected = fines
+                .Where(f => f.FinesStatus?.ToUpper() == "PAID" 
+                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                         && !f.IsAwaitingValidation)
+                .Sum(f => f.Amount ?? 0);
+            
+            // Outstanding Balance: All fees/fines NOT validated by Org Treasurer
+            // This includes: Unpaid + Paid by Class Treasurer but not validated
+            ViewBag.PendingFees = fees
+                .Where(f => f.RemittanceStatus != FeeRemittanceStatus.Remitted || f.IsAwaitingValidation)
+                .Sum(f => f.Amount ?? 0);
+            ViewBag.PendingFines = fines
+                .Where(f => f.RemittanceStatus != FeeRemittanceStatus.Remitted || f.IsAwaitingValidation)
+                .Sum(f => f.Amount ?? 0);
             ViewBag.TotalCollections = ViewBag.TotalFeesCollected + ViewBag.TotalFinesCollected;
 
             // Remittance statistics
@@ -4458,7 +4816,10 @@ namespace iBITS_Portal.Controllers
                 {
                     ProgramYear = g.Key,
                     TotalFees = g.Sum(f => f.Amount ?? 0),
-                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID").Sum(f => f.Amount ?? 0),
+                    // Only count VALIDATED fees (exclude Class Treasurer payments and pending batches)
+                    PaidFees = g.Where(f => f.FeeStatus?.ToUpper() == "PAID" 
+                                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted 
+                                         && !f.IsAwaitingValidation).Sum(f => f.Amount ?? 0),
                     RemittedFees = g.Where(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted).Sum(f => f.Amount ?? 0)
                 })
                 .OrderBy(s => s.ProgramYear)
@@ -4478,8 +4839,19 @@ namespace iBITS_Portal.Controllers
                     var monthStart = new DateTime(month.Year, month.Month, 1);
                     var monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
-                    var feesInMonth = fees.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FeeStatus?.ToUpper() == "PAID");
-                    var finesInMonth = fines.Where(f => f.CollectionDate >= monthStart && f.CollectionDate <= monthEnd && f.FinesStatus?.ToUpper() == "PAID");
+                    // Only count VALIDATED fees/fines (exclude Class Treasurer payments and pending batches)
+                    var feesInMonth = fees.Where(f => 
+                        f.CollectionDate >= monthStart && 
+                        f.CollectionDate <= monthEnd && 
+                        f.FeeStatus?.ToUpper() == "PAID" &&
+                        f.RemittanceStatus == FeeRemittanceStatus.Remitted &&
+                        !f.IsAwaitingValidation);
+                    var finesInMonth = fines.Where(f => 
+                        f.CollectionDate >= monthStart && 
+                        f.CollectionDate <= monthEnd && 
+                        f.FinesStatus?.ToUpper() == "PAID" &&
+                        f.RemittanceStatus == FeeRemittanceStatus.Remitted &&
+                        !f.IsAwaitingValidation);
 
                     return new {
                         Month = month.ToString("MMM yyyy"),
@@ -4977,6 +5349,174 @@ namespace iBITS_Portal.Controllers
             }
         }
 
+        // ============================================================
+        // INDIVIDUAL LOCK/REVOKE ACTIONS - FINES (Org Treasurer)
+        // ============================================================
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> RevokeFinePayment(int fineId, string? reason)
+        {
+            try
+            {
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found" });
+                }
+
+                // Check if can revoke using model property
+                if (!fine.CanOrgTreasurerRevoke)
+                {
+                    return Json(new { success = false, message = "Cannot revoke: Fine is either unpaid, locked, or already remitted" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                // Revoke the payment
+                fine.FinesStatus = "Unpaid";
+                fine.CollectionDate = null;
+                fine.CollectedBy = null;
+                fine.OfficialPaymentDate = null;
+                fine.RemittanceStatus = FeeRemittanceStatus.NotRemitted;
+
+                // Send notification to student
+                if (!string.IsNullOrEmpty(fine.StudentNum))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        StudentNum = fine.StudentNum,
+                        Title = "Fine Payment Revoked",
+                        Message = $"Your payment of ₱{fine.Amount:N2} for '{fine.Description ?? "Fine"}' has been revoked by {treasurer?.FullName}. " +
+                                  (string.IsNullOrEmpty(reason) ? "" : $"Reason: {reason}."),
+                        NotificationType = "Payment",
+                        NotificationDate = DateTime.Now,
+                        IsRead = false,
+                        SentBy = treasurer?.StudentNum
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"Fine payment revoked successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> LockFinePayment(int fineId, string confirmation)
+        {
+            try
+            {
+                if (confirmation != "LOCK")
+                {
+                    return Json(new { success = false, message = "Invalid confirmation. Please type 'LOCK' to confirm." });
+                }
+
+                var fine = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .FirstOrDefaultAsync(f => f.FineId == fineId);
+
+                if (fine == null)
+                {
+                    return Json(new { success = false, message = "Fine not found" });
+                }
+
+                // Check if can lock using model property
+                if (!fine.CanOrgTreasurerLock)
+                {
+                    return Json(new { success = false, message = "Cannot lock: Fine must be paid, unlocked, and not remitted" });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                // Lock the payment
+                fine.IsPaymentLocked = true;
+                fine.PaymentLockedDate = DateTime.Now;
+                fine.LockedBy = treasurer?.StudentNum;
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fine payment locked successfully. This payment can no longer be revoked." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // ============================================================
+        // BULK LOCK ACTIONS - FINES (Org Treasurer)
+        // ============================================================
+
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BulkLockFines([FromBody] BulkFineLockRequest request)
+        {
+            try
+            {
+                if (request.FineIds == null || request.FineIds.Count == 0)
+                {
+                    return Json(new { success = false, message = "No fines selected" });
+                }
+
+                if (request.Confirmation != "LOCK ALL")
+                {
+                    return Json(new { success = false, message = "Invalid confirmation. Please type 'LOCK ALL' to confirm." });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                var treasurer = await _context.Students.FindAsync(user?.UserName);
+
+                if (treasurer == null)
+                {
+                    return Json(new { success = false, message = "Treasurer profile not found" });
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var fineId in request.FineIds)
+                {
+                    var fine = await _context.Fines.FindAsync(fineId);
+
+                    // Can only lock if paid, unlocked, and not remitted
+                    if (fine == null || !fine.CanOrgTreasurerLock)
+                    {
+                        failCount++;
+                        continue;
+                    }
+
+                    // Lock the payment
+                    fine.IsPaymentLocked = true;
+                    fine.PaymentLockedDate = DateTime.Now;
+                    fine.LockedBy = treasurer.StudentNum;
+
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Successfully locked {successCount} fine payment(s)" + (failCount > 0 ? $" ({failCount} skipped)" : "")
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
         #endregion
 
     }
@@ -4994,7 +5534,19 @@ namespace iBITS_Portal.Controllers
     {
         public List<int> FeeIds { get; set; }
         public string Category { get; set; }
-    }   
+    }
+
+    public class BulkFineLockRequest
+    {
+        public List<int> FineIds { get; set; }
+        public string Confirmation { get; set; }
+    }
+
+    public class BulkFeeLockRequest
+    {
+        public List<int> FeeIds { get; set; }
+        public string Confirmation { get; set; }
+    }
 
 
 }

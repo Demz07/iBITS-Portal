@@ -88,6 +88,27 @@ public partial class Fee
     public DateTime? OfficialPaymentDate { get; set; }
 
     // ============================================================
+    // PAYMENT LOCK FIELDS (for Revoke/Lock Feature)
+    // ============================================================
+
+    /// <summary>
+    /// Indicates if this payment has been locked by Org Treasurer (permanent)
+    /// Once locked, payment cannot be revoked or edited
+    /// </summary>
+    public bool IsPaymentLocked { get; set; } = false;
+
+    /// <summary>
+    /// Date when payment was locked
+    /// </summary>
+    public DateTime? PaymentLockedDate { get; set; }
+
+    /// <summary>
+    /// Org Treasurer who locked the payment (StudentNum)
+    /// </summary>
+    [StringLength(450)]
+    public string? LockedBy { get; set; }
+
+    // ============================================================
     // Navigation Properties
     // ============================================================
 
@@ -109,6 +130,12 @@ public partial class Fee
     [ForeignKey("CollectedBy")]
     public virtual Student? CollectedByNavigation { get; set; }
 
+    /// <summary>
+    /// Navigation property to the Org Treasurer who locked the payment
+    /// </summary>
+    [ForeignKey("LockedBy")]
+    public virtual Student? LockedByNavigation { get; set; }
+
     // ============================================================
     // Computed Properties for Remittance Logic
     // ============================================================
@@ -121,10 +148,10 @@ public partial class Fee
     public bool CanClassTreasurerEdit => RemittanceStatus == FeeRemittanceStatus.NotRemitted;
 
     /// <summary>
-    /// Checks if this fee is locked (remitted or pending remittance)
+    /// Checks if this fee is locked (manually locked OR remitted)
     /// </summary>
     [NotMapped]
-    public bool IsLocked => RemittanceStatus != FeeRemittanceStatus.NotRemitted;
+    public bool IsLocked => IsPaymentLocked || RemittanceStatus != FeeRemittanceStatus.NotRemitted;
 
     /// <summary>
     /// Checks if this fee has been officially validated
@@ -134,8 +161,60 @@ public partial class Fee
 
     /// <summary>
     /// Checks if Org Treasurer can edit this fee
-    /// (Only allowed for unpaid AND not remitted records)
+    /// (Only allowed for unpaid AND not remitted AND not locked)
     /// </summary>
     [NotMapped]
-    public bool CanOrgTreasurerEdit => FeeStatus?.ToUpper() != "PAID" && RemittanceStatus != FeeRemittanceStatus.Remitted;
+    public bool CanOrgTreasurerEdit => FeeStatus?.ToUpper() != "PAID" 
+                                        && RemittanceStatus != FeeRemittanceStatus.Remitted
+                                        && !IsPaymentLocked;
+
+    /// <summary>
+    /// Checks if Org Treasurer can revoke this payment
+    /// Rules (Option B - Grace Period):
+    /// - Payment must be Paid
+    /// - Payment must NOT be locked
+    /// - Payment must be Remitted (only Org Treasurer direct payments)
+    /// - Payment must NOT be part of a remittance batch (RemittanceId = NULL)
+    /// This allows Org Treasurer to revoke their OWN payments before locking (grace period for mistakes)
+    /// </summary>
+    [NotMapped]
+    public bool CanOrgTreasurerRevoke => FeeStatus?.ToUpper() == "PAID" 
+                                          && !IsPaymentLocked 
+                                          && RemittanceStatus == FeeRemittanceStatus.Remitted
+                                          && RemittanceId == null; // Only direct Org Treasurer payments
+
+    /// <summary>
+    /// Checks if Org Treasurer can lock this payment
+    /// Rules (Option B - Grace Period):
+    /// - Payment must be Paid
+    /// - Payment must be Remitted (validated by Org Treasurer)
+    /// - Payment must NOT already be locked
+    /// - Payment must NOT be part of a remittance batch (RemittanceId = NULL)
+    /// This allows Org Treasurer to manually lock their direct payments for final verification
+    /// </summary>
+    [NotMapped]
+    public bool CanOrgTreasurerLock => FeeStatus?.ToUpper() == "PAID" 
+                                        && !IsPaymentLocked 
+                                        && RemittanceStatus == FeeRemittanceStatus.Remitted
+                                        && RemittanceId == null; // Only direct Org Treasurer payments
+
+    /// <summary>
+    /// Checks if this fee is in a submitted remittance batch waiting for validation
+    /// Shows "Remitted waiting for validation" status in Org Treasurer view
+    /// </summary>
+    [NotMapped]
+    public bool IsAwaitingValidation => RemittanceId.HasValue 
+                                         && Remittance != null 
+                                         && Remittance.Status == Models.RemittanceStatus.Pending;
+
+    /// <summary>
+    /// Checks if this fee should be visible in Org Treasurer views
+    /// Only show if:
+    /// - Part of a submitted remittance batch (pending or validated)
+    /// - OR marked as paid by Org Treasurer directly (RemittanceId = NULL and Remitted)
+    /// Do NOT show Class Treasurer payments without a batch
+    /// </summary>
+    [NotMapped]
+    public bool ShouldShowInOrgView => (RemittanceId.HasValue && Remittance != null && Remittance.Status != Models.RemittanceStatus.Rejected)
+                                        || (RemittanceId == null && RemittanceStatus == FeeRemittanceStatus.Remitted);
 }

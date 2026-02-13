@@ -91,7 +91,7 @@
 <!-- FINANCIAL OVERVIEW -->
 <div class="glass-panel p-4 mb-4">
     <h5 style="color: var(--text-strong); font-weight: 700; margin-bottom: 1.5rem;">
-        <i class="bi bi-graph-up me-2"></i> Financial Overview
+        <i class="bi bi-graph-up me-2"></i> Fees Overview
     </h5>
 
     <!-- Summary Cards -->
@@ -273,8 +273,11 @@
                 <button type="button" class="btn btn-sm btn-success me-2" id="bulkMarkPaid">
                     <i class="bi bi-check-circle me-1"></i> Mark as Paid
                 </button>
-                <button type="button" class="btn btn-sm btn-warning" id="bulkRevoke">
-                    <i class="bi bi-x-circle me-1"></i> Revoke
+                <button type="button" class="btn btn-sm btn-warning me-2" id="bulkRevoke">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Selected
+                </button>
+                <button type="button" class="btn btn-sm btn-info" id="bulkLock">
+                    <i class="bi bi-lock-fill me-1"></i> Lock Selected
                 </button>
             </div>
         </div>
@@ -310,16 +313,42 @@
 
                         // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
                         var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
+                        
+                        // NEW: Payment Lock Status
+                        var isPaymentLocked = fee.IsPaymentLocked;
+                        var isPaidUnlocked = dbStatus?.ToUpper() == "PAID" && !isPaymentLocked && !isRemitted;
 
                         // Visual Data (What Org Treasurer Sees)
                         var displayAmountPaid = isOfficiallyPaid ? (fee.Amount ?? 0) : 0;
                         var displayBalance = isOfficiallyPaid ? 0 : (fee.Amount ?? 0);
-                        var displayStatus = isOfficiallyPaid ? "Paid" : "Unpaid";
+                        
+                        // SIMPLIFIED STATUS: Only Paid (when Remitted/Validated) or Unpaid
+                        string displayStatus;
+                        string statusBadgeClass;
+                        string statusIcon;
+                        
+                        if (isRemitted)
+                        {
+                            // Only show as PAID if validated by Org Treasurer (Remitted)
+                            displayStatus = "Paid";
+                            statusBadgeClass = "badge-success";
+                            statusIcon = "bi-check-circle-fill";
+                        }
+                        else
+                        {
+                            // Everything else is UNPAID (including pending remittance)
+                            displayStatus = "Unpaid";
+                            statusBadgeClass = "badge-danger";
+                            statusIcon = "bi-x-circle-fill";
+                        }
 
                         // Locking Logic:
-                        // Lock if officially paid OR if Class Treasurer has collected it (to prevent double collection)
-                        var isLocked = isPaidByClassTreasurer || isOfficiallyPaid;
+                        var isLocked = isPaymentLocked || isPaidByClassTreasurer || isOfficiallyPaid;
                         var canEdit = !isLocked;
+                        
+                        // Action Permissions
+                        var canRevoke = fee.CanOrgTreasurerRevoke;
+                        var canLock = fee.CanOrgTreasurerLock;
 
                         var rowClass = isOfficiallyPaid ? "row-paid" : (isLocked ? "row-locked" : "");
 
@@ -341,7 +370,7 @@
                             data-section="@(student?.YearLevelSection ?? "")"
                             data-program="@program"
                             data-year="@yearLevel"
-                            data-status="@displayStatus.ToLower()"
+                            data-status="@(isRemitted ? "paid" : "unpaid")"
                             data-amount="@(fee.Amount ?? 0)"
                             data-paid="@displayAmountPaid"
                             data-balance="@displayBalance"
@@ -355,13 +384,24 @@
                                 }
                                 else
                                 {
-                                    @if (isPaidByClassTreasurer)
+                                    @if (fee.IsAwaitingValidation)
                                     {
-                                        <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                        @* In Remittance Batch - Waiting for Validation *@
+                                        <i class="bi bi-shield-lock-fill text-success" title="Waiting for Org Treasurer to Validate"></i>
                                     }
                                     else if (isOfficiallyPaid)
                                     {
+                                        @* Validated & Remitted *@
                                         <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
+                                    }
+                                    else if (fee.RemittanceId == null && fee.RemittanceStatus != FeeRemittanceStatus.Remitted && dbStatus?.ToUpper() == "PAID")
+                                    {
+                                        @* Paid in Class Treasurer - no batch yet *@
+                                        <i class="bi bi-cash-stack text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"></i>
+                                    }
+                                    else if (isPaidByClassTreasurer)
+                                    {
+                                        <i class="bi bi-cash-stack text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"></i>
                                     }
                                 }
                             </td>
@@ -385,31 +425,75 @@
 
                             <!-- Status Badge -->
                             <td>
-                                @if (isOfficiallyPaid)
+                                @if (isRemitted)
                                 {
-                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
+                                    @* PAID: Only when validated by Org Treasurer (Remitted) *@
+                                    <span class="status-badge status-paid">
+                                        <i class="bi bi-check-circle-fill"></i> Paid
+                                    </span>
                                 }
                                 else
                                 {
-                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
+                                    @* UNPAID: Everything else (including pending remittance) *@
+                                    <span class="status-badge status-unpaid">
+                                        <i class="bi bi-x-circle-fill"></i> Unpaid
+                                    </span>
                                 }
                             </td>
 
                             <!-- Actions -->
                             <td class="text-center">
-                                @if (canEdit)
+                                @if (canRevoke || canLock)
+                                {
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        @if (canLock)
+                                        {
+                                            <button type="button" class="btn btn-outline-info btn-sm" 
+                                                    onclick="showLockModal(@fee.FeeId, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(student?.FullName ?? fee.StudentNum))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(fee.FeeName))', @(fee.Amount ?? 0))"
+                                                    title="Lock Payment (Permanent)">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </button>
+                                        }
+                                        @if (canRevoke)
+                                        {
+                                            <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                    onclick="showRevokeModal(@fee.FeeId, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(student?.FullName ?? fee.StudentNum))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(fee.FeeName))', @(fee.Amount ?? 0))"
+                                                    title="Revoke Payment">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                else if (canEdit)
                                 {
                                     <button type="button" class="btn btn-sm btn-outline-success" onclick="markOrgFeePaid(@fee.FeeId, '@student?.FullName?.Replace("'", "\\'")', '@fee.FeeName?.Replace("'", "\\'")', @(fee.Amount ?? 0))" title="Mark as Paid (Full Payment)">
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 }
-                                else if (isPaidByClassTreasurer)
+                                else if (isPaymentLocked)
                                 {
-                                    <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
+                                    <span class="text-success" title="Payment Locked & Verified">
+                                        <i class="bi bi-shield-check"></i>
+                                    </span>
+                                }
+                                else if (fee.IsAwaitingValidation)
+                                {
+                                    @* In Remittance Batch - Waiting for Validation *@
+                                    <span class="text-success" title="Waiting for Org Treasurer to Validate"><i class="bi bi-shield-lock-fill"></i></span>
                                 }
                                 else if (isOfficiallyPaid)
                                 {
-                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
+                                    @* Validated & Remitted *@
+                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-shield-check"></i></span>
+                                }
+                                else if (fee.RemittanceId == null && fee.RemittanceStatus != FeeRemittanceStatus.Remitted && dbStatus?.ToUpper() == "PAID")
+                                {
+                                    @* Paid in Class Treasurer - no batch yet *@
+                                    <span class="text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"><i class="bi bi-cash-stack"></i></span>
+                                }
+                                else if (isPaidByClassTreasurer)
+                                {
+                                    <span class="text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"><i class="bi bi-cash-stack"></i></span>
                                 }
                             </td>
                         </tr>
@@ -694,6 +778,109 @@
     </div>
 </div>
 
+
+<!-- REVOKE PAYMENT MODAL -->
+<div class="modal fade" id="revokePaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <h5 class="modal-title text-white"><i class="bi bi-arrow-counterclockwise me-2"></i> Revoke Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="RevokePayment" asp-controller="Officer" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="revokeFeeId" name="feeId" />
+                <div class="modal-body">
+                    <div class="alert alert-warning" style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3);">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This will set the fee back to "Unpaid" status.
+                    </div>
+                    <div class="confirm-modal-details mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Student</span>
+                            <span class="fw-bold" id="revokeStudentName"></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Fee</span>
+                            <span class="fw-bold" id="revokeFeeName"></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Amount</span>
+                            <span class="text-gold fw-bold">?<span id="revokeFeeAmount"></span></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="revokeReason" class="form-label">Reason for Revocation (Optional)</label>
+                        <textarea class="form-control" id="revokeReason" name="reason" rows="3" placeholder="e.g., Duplicate entry, Wrong student"></textarea>
+                        <small class="text-muted">This reason will be sent to the student.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- LOCK PAYMENT MODAL -->
+<div class="modal fade" id="lockPaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #dc2626, #991b1b);">
+                <h5 class="modal-title text-white"><i class="bi bi-lock-fill me-2"></i> Lock Payment - PERMANENT</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="LockPayment" asp-controller="Officer" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="lockFeeId" name="feeId" />
+                <div class="modal-body text-center">
+                    <div class="mb-3" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(220, 38, 38, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem; color: #dc2626;"></i>
+                    </div>
+                    <h5 class="text-danger mb-3">?? WARNING: THIS ACTION CANNOT BE UNDONE! ??</h5>
+                    <div class="confirm-modal-details mb-3 text-start" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Student</span>
+                            <span class="fw-bold" id="lockStudentName"></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Fee</span>
+                            <span class="fw-bold" id="lockFeeName"></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Amount</span>
+                            <span class="text-gold fw-bold">?<span id="lockFeeAmount"></span></span>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger text-start mb-3" style="background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.3);">
+                        <strong>Once locked:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>? CANNOT be revoked</li>
+                            <li>? CANNOT be edited</li>
+                            <li>? Permanently marked as PAID</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label for="lockConfirmation" class="form-label">Type <strong class="text-danger">LOCK</strong> to confirm:</label>
+                        <input type="text" class="form-control text-center" id="lockConfirmation" name="confirmation" 
+                               placeholder="Type LOCK here" required autocomplete="off" 
+                               oninput="toggleLockButton()" style="font-weight: bold; font-size: 1.1rem;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="lockPaymentBtn" disabled>
+                        <i class="bi bi-lock-fill me-1"></i> Lock Payment - PERMANENT
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
@@ -1182,5 +1369,121 @@
                 toast.addEventListener('hidden.bs.toast', () => toast.remove());
             }
         });
+
+        // ============================================================
+        // REVOKE & LOCK PAYMENT FUNCTIONS
+        // ============================================================
+        
+        function showRevokeModal(feeId, studentName, feeName, amount) {
+            document.getElementById('revokeFeeId').value = feeId;
+            document.getElementById('revokeStudentName').textContent = studentName;
+            document.getElementById('revokeFeeName').textContent = feeName;
+            document.getElementById('revokeFeeAmount').textContent = amount.toFixed(2);
+            document.getElementById('revokeReason').value = '';
+            
+            new bootstrap.Modal(document.getElementById('revokePaymentModal')).show();
+        }
+        
+        function showLockModal(feeId, studentName, feeName, amount) {
+            document.getElementById('lockFeeId').value = feeId;
+            document.getElementById('lockStudentName').textContent = studentName;
+            document.getElementById('lockFeeName').textContent = feeName;
+            document.getElementById('lockFeeAmount').textContent = amount.toFixed(2);
+            document.getElementById('lockConfirmation').value = '';
+            document.getElementById('lockPaymentBtn').disabled = true;
+            
+            new bootstrap.Modal(document.getElementById('lockPaymentModal')).show();
+        }
+        
+        function toggleLockButton() {
+            const confirmation = document.getElementById('lockConfirmation').value;
+            const lockBtn = document.getElementById('lockPaymentBtn');
+            lockBtn.disabled = confirmation.toUpperCase() !== 'LOCK';
+        }
+        
+        function toggleBulkLockButton() {
+            const confirmation = document.getElementById('bulkLockConfirmation').value;
+            const bulkLockBtn = document.getElementById('bulkLockBtn');
+            bulkLockBtn.disabled = confirmation.toUpperCase() !== 'LOCK ALL';
+        }
+        
+        // Bulk revoke handler
+        document.getElementById('bulkRevoke').addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.fee-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one fee to revoke.');
+                return;
+            }
+            
+            // Show bulk revoke modal (simplified - just submit directly with confirmation)
+            if (confirm(`Are you sure you want to revoke ${selectedCheckboxes.length} payment(s)? Locked payments will be skipped.`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("BulkRevokePayments", "Officer")';
+                
+                const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = antiforgeryToken;
+                form.appendChild(tokenInput);
+                
+                selectedCheckboxes.forEach(cb => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'feeIds';
+                    input.value = cb.getAttribute('data-fee-id');
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+        
+        // Bulk lock handler
+        document.getElementById('bulkLock').addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.fee-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one fee to lock.');
+                return;
+            }
+            
+            // Show confirmation prompt
+            const confirmation = prompt(`⚠️ WARNING: You are about to PERMANENTLY lock ${selectedCheckboxes.length} payment(s).\n\nThis action CANNOT be undone!\n\nType "LOCK ALL" to confirm:`);
+            
+            if (confirmation && confirmation.toUpperCase() === 'LOCK ALL') {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("BulkLockPayments", "Officer")';
+                
+                const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = antiforgeryToken;
+                form.appendChild(tokenInput);
+                
+                const confirmationInput = document.createElement('input');
+                confirmationInput.type = 'hidden';
+                confirmationInput.name = 'confirmation';
+                confirmationInput.value = 'LOCK ALL';
+                form.appendChild(confirmationInput);
+                
+                selectedCheckboxes.forEach(cb => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'feeIds';
+                    input.value = cb.getAttribute('data-fee-id');
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            } else if (confirmation) {
+                alert('You must type "LOCK ALL" exactly to confirm this action.');
+            }
+        });
     </script>
 }
+

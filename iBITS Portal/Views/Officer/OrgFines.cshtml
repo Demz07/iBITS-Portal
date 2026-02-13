@@ -288,8 +288,11 @@
                 <button type="button" class="btn btn-sm btn-success me-2" id="bulkMarkPaid">
                     <i class="bi bi-check-circle me-1"></i> Mark as Paid
                 </button>
-                <button type="button" class="btn btn-sm btn-warning" id="bulkRevoke">
+                <button type="button" class="btn btn-sm btn-warning me-2" id="bulkRevoke">
                     <i class="bi bi-x-circle me-1"></i> Revoke
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" id="bulkLock">
+                    <i class="bi bi-lock-fill me-1"></i> Lock Selected
                 </button>
             </div>
         </div>
@@ -327,14 +330,16 @@
                         var isExcused = dbStatus?.ToUpper() == "EXCUSED";
                         var isPaidByClassTreasurer = dbStatus?.ToUpper() == "PAID" && !isRemitted;
 
-                        // LOGIC: It only reflects as PAID to Org Treasurer if it is Validated (Remitted)
+                        // SIMPLIFIED STATUS: Only Paid (when Remitted/Validated) or Unpaid
                         // Exception: Excused fines show as Excused immediately.
                         var isOfficiallyPaid = dbStatus?.ToUpper() == "PAID" && isRemitted;
 
                         // Visual Data
                         var displayAmountPaid = isOfficiallyPaid ? (fine.Amount ?? 0) : 0;
                         var displayBalance = isOfficiallyPaid ? 0 : (isExcused ? 0 : (fine.Amount ?? 0));
-                        var displayStatus = isOfficiallyPaid ? "Paid" : (isExcused ? "Excused" : "Unpaid");
+                        
+                        // Simple status: Paid (when Remitted), Excused (special case), or Unpaid
+                        var displayStatus = isRemitted ? "Paid" : (isExcused ? "Excused" : "Unpaid");
 
                         // Locking Logic - Can only edit if unpaid and not locked by class treasurer
                         var isLocked = isPaidByClassTreasurer || isExcused || isOfficiallyPaid;
@@ -375,17 +380,23 @@
                                 }
                                 else
                                 {
-                                    @if (isPaidByClassTreasurer)
+                                    @if (fine.IsAwaitingValidation)
                                     {
-                                        <i class="bi bi-hourglass-split text-warning" title="Pending Validation - Collected by Class Treasurer"></i>
+                                        @* In Remittance Batch - Waiting for Validation *@
+                                        <i class="bi bi-shield-lock-fill text-success" title="Waiting for Org Treasurer to Validate"></i>
                                     }
                                     else if (isOfficiallyPaid)
                                     {
+                                        @* Validated & Remitted *@
                                         <i class="bi bi-lock-fill text-muted" title="Validated & Remitted - Cannot modify"></i>
                                     }
                                     else if (isExcused)
                                     {
                                         <i class="bi bi-shield-check text-info" title="Excused"></i>
+                                    }
+                                    else if (isPaidByClassTreasurer)
+                                    {
+                                        <i class="bi bi-cash-stack text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"></i>
                                     }
                                 }
                             </td>
@@ -418,17 +429,26 @@
 
                             <!-- Status Badge -->
                             <td>
-                                @if (isOfficiallyPaid)
+                                @if (isExcused)
                                 {
-                                    <span class="status-badge status-paid"><i class="bi bi-check-circle-fill"></i> Paid</span>
+                                    @* EXCUSED: Special status for excused fines *@
+                                    <span class="status-badge status-excused">
+                                        <i class="bi bi-shield-check"></i> Excused
+                                    </span>
                                 }
-                                else if (isExcused)
+                                else if (isRemitted)
                                 {
-                                    <span class="status-badge status-excused"><i class="bi bi-shield-check"></i> Excused</span>
+                                    @* PAID: Only when validated by Org Treasurer (Remitted) *@
+                                    <span class="status-badge status-paid">
+                                        <i class="bi bi-check-circle-fill"></i> Paid
+                                    </span>
                                 }
                                 else
                                 {
-                                    <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
+                                    @* UNPAID: Everything else (including pending remittance) *@
+                                    <span class="status-badge status-unpaid">
+                                        <i class="bi bi-x-circle-fill"></i> Unpaid
+                                    </span>
                                 }
                             </td>
 
@@ -440,17 +460,72 @@
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 }
-                                else if (isPaidByClassTreasurer)
+                                else if (dbStatus?.ToUpper() == "PAID")
                                 {
-                                    <span class="text-warning" title="Pending Validation by Org Treasurer"><i class="bi bi-hourglass-split"></i></span>
+                                    @* Payment is paid - check payment source and lock status *@
+                                    
+                                    @if (fine.RemittanceId.HasValue && fine.IsAwaitingValidation)
+                                    {
+                                        @* Part of a remittance batch - waiting for validation *@
+                                        <span class="text-success" title="Waiting for Org Treasurer to Validate">
+                                            <i class="bi bi-shield-lock-fill"></i>
+                                        </span>
+                                    }
+                                    else if (fine.RemittanceId.HasValue && !fine.IsAwaitingValidation)
+                                    {
+                                        @* Part of a remittance batch - validated and locked *@
+                                        <span class="text-success" title="Validated & Remitted">
+                                            <i class="bi bi-shield-check"></i>
+                                        </span>
+                                    }
+                                    else if (fine.IsPaymentLocked)
+                                    {
+                                        @* Direct Org Treasurer payment - manually locked (no actions available) *@
+                                        <span class="text-success" title="Payment Locked & Verified">
+                                            <i class="bi bi-shield-check"></i>
+                                        </span>
+                                    }
+                                    else if (fine.CanOrgTreasurerRevoke || fine.CanOrgTreasurerLock)
+                                    {
+                                        @* Direct Org Treasurer payment - unlocked (Grace Period - can revoke or lock) *@
+                                        @if (fine.CanOrgTreasurerRevoke)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-warning me-1" onclick="showRevokeFineModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Revoke Payment (Marked by Mistake)">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                        @if (fine.CanOrgTreasurerLock)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="showLockFineModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', '@description?.Replace("'", "\\'")', @(fine.Amount ?? 0))" title="Lock Payment (Verify & Finalize)">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @* Paid by Class Treasurer - awaiting remittance (no individual actions) *@
+                                        <span class="text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch">
+                                            <i class="bi bi-cash-stack"></i>
+                                        </span>
+                                    }
+                                }
+                                else if (fine.IsAwaitingValidation)
+                                {
+                                    @* In Remittance Batch - Waiting for Validation *@
+                                    <span class="text-success" title="Waiting for Org Treasurer to Validate"><i class="bi bi-shield-lock-fill"></i></span>
                                 }
                                 else if (isOfficiallyPaid)
                                 {
-                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-lock-fill"></i></span>
+                                    @* Validated & Remitted *@
+                                    <span class="text-success" title="Validated & Remitted"><i class="bi bi-shield-check"></i></span>
                                 }
                                 else if (isExcused)
                                 {
                                     <span class="text-info" title="Excused"><i class="bi bi-shield-check"></i></span>
+                                }
+                                else if (isPaidByClassTreasurer)
+                                {
+                                    <span class="text-primary" title="Paid in Class Treasurer - Awaiting Remittance Batch"><i class="bi bi-cash-stack"></i></span>
                                 }
                             </td>
                         </tr>
@@ -635,6 +710,129 @@
                 <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="confirmOrgFinePaymentBtn" onclick="executeOrgFinePayment()">
                     <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- REVOKE FINE PAYMENT MODAL -->
+<div class="modal fade" id="revokeFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise text-warning me-2"></i> Revoke Fine Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This will revert the fine to "Unpaid" status.
+                </div>
+                
+                <div class="confirm-modal-details" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Student</span>
+                        <span class="detail-value fw-bold" id="revokeFineStudentName"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Fine</span>
+                        <span class="detail-value fw-bold" id="revokeFineDescription"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between">
+                        <span class="detail-label text-muted">Amount</span>
+                        <span class="detail-value text-gold fw-bold">₱<span id="revokeFineAmount"></span></span>
+                    </div>
+                </div>
+
+                <input type="hidden" id="revokeFineId" />
+                
+                <div class="mb-3">
+                    <label for="revokeFineReason" class="form-label">Reason (Optional)</label>
+                    <textarea class="form-control" id="revokeFineReason" rows="3" placeholder="Enter reason for revoking this payment..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="executeRevokeFine()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Revoke Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LOCK FINE PAYMENT MODAL -->
+<div class="modal fade" id="lockFineModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-lock-fill text-primary me-2"></i> Lock Fine Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6;">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    <strong>Permanent Action:</strong> Once locked, this payment cannot be revoked. This is used to mark the payment as verified and finalized.
+                </div>
+                
+                <div class="confirm-modal-details" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Student</span>
+                        <span class="detail-value fw-bold" id="lockFineStudentName"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between mb-2">
+                        <span class="detail-label text-muted">Fine</span>
+                        <span class="detail-value fw-bold" id="lockFineDescription"></span>
+                    </div>
+                    <div class="detail-row d-flex justify-content-between">
+                        <span class="detail-label text-muted">Amount</span>
+                        <span class="detail-value text-gold fw-bold">₱<span id="lockFineAmount"></span></span>
+                    </div>
+                </div>
+
+                <input type="hidden" id="lockFineId" />
+                
+                <div class="mb-3">
+                    <label for="lockFineConfirmation" class="form-label">Type <strong class="text-primary">LOCK</strong> to confirm</label>
+                    <input type="text" class="form-control" id="lockFineConfirmation" placeholder="Type LOCK to confirm" />
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeLockFine()">
+                    <i class="bi bi-lock-fill me-1"></i> Lock Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BULK LOCK FINES MODAL -->
+<div class="modal fade" id="bulkLockFinesModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="bi bi-lock-fill text-primary me-2"></i> Bulk Lock Fine Payments</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6;">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    <strong>Permanent Action:</strong> Once locked, these payments cannot be revoked.
+                </div>
+                
+                <p class="text-center mb-3">You are about to lock <strong class="text-primary"><span id="bulkLockCount">0</span> fine payment(s)</strong>.</p>
+                
+                <div class="mb-3">
+                    <label for="bulkLockConfirmation" class="form-label">Type <strong class="text-primary">LOCK ALL</strong> to confirm</label>
+                    <input type="text" class="form-control" id="bulkLockConfirmation" placeholder="Type LOCK ALL to confirm" />
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeBulkLockFines()">
+                    <i class="bi bi-lock-fill me-1"></i> Lock All Selected
                 </button>
             </div>
         </div>
@@ -998,6 +1196,24 @@
                 });
             }
 
+            // Bulk Lock
+            const bulkLockBtn = document.getElementById('bulkLock');
+            if (bulkLockBtn) {
+                bulkLockBtn.addEventListener('click', function() {
+                    const selectedIds = getSelectedFineIds();
+                    
+                    if (selectedIds.length === 0) {
+                        showToast('warning', 'Please select fines to lock');
+                        return;
+                    }
+
+                    // Show bulk lock modal
+                    document.getElementById('bulkLockCount').textContent = selectedIds.length;
+                    const modal = new bootstrap.Modal(document.getElementById('bulkLockFinesModal'));
+                    modal.show();
+                });
+            }
+
             function getSelectedFineIds() {
                 const selected = [];
                 document.querySelectorAll('.fine-checkbox:checked').forEach(cb => {
@@ -1063,6 +1279,139 @@
                 }
             }
         });
+
+        // ============================================================
+        // LOCK/REVOKE FUNCTIONS
+        // ============================================================
+
+        function showRevokeFineModal(fineId, studentName, description, amount) {
+            document.getElementById('revokeFineId').value = fineId;
+            document.getElementById('revokeFineStudentName').textContent = studentName;
+            document.getElementById('revokeFineDescription').textContent = description;
+            document.getElementById('revokeFineAmount').textContent = parseFloat(amount).toFixed(2);
+            document.getElementById('revokeFineReason').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('revokeFineModal'));
+            modal.show();
+        }
+
+        async function executeRevokeFine() {
+            const fineId = document.getElementById('revokeFineId').value;
+            const reason = document.getElementById('revokeFineReason').value;
+
+            try {
+                const response = await fetch('/Officer/RevokeFinePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        fineId: fineId,
+                        reason: reason
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('success', result.message);
+                    bootstrap.Modal.getInstance(document.getElementById('revokeFineModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'An error occurred. Please try again.');
+            }
+        }
+
+        function showLockFineModal(fineId, studentName, description, amount) {
+            document.getElementById('lockFineId').value = fineId;
+            document.getElementById('lockFineStudentName').textContent = studentName;
+            document.getElementById('lockFineDescription').textContent = description;
+            document.getElementById('lockFineAmount').textContent = parseFloat(amount).toFixed(2);
+            document.getElementById('lockFineConfirmation').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('lockFineModal'));
+            modal.show();
+        }
+
+        async function executeLockFine() {
+            const fineId = document.getElementById('lockFineId').value;
+            const confirmation = document.getElementById('lockFineConfirmation').value;
+
+            if (confirmation !== 'LOCK') {
+                showToast('error', 'Please type LOCK to confirm');
+                return;
+            }
+
+            try {
+                const response = await fetch('/Officer/LockFinePayment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        fineId: fineId,
+                        confirmation: confirmation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('success', result.message);
+                    bootstrap.Modal.getInstance(document.getElementById('lockFineModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'An error occurred. Please try again.');
+            }
+        }
+
+        async function executeBulkLockFines() {
+            const confirmation = document.getElementById('bulkLockConfirmation').value;
+
+            if (confirmation !== 'LOCK ALL') {
+                showToast('error', 'Please type LOCK ALL to confirm');
+                return;
+            }
+
+            const selectedIds = [];
+            document.querySelectorAll('.fine-checkbox:checked').forEach(cb => {
+                selectedIds.push(parseInt(cb.dataset.fineId));
+            });
+
+            try {
+                const response = await fetch('/Officer/BulkLockFines', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        fineIds: selectedIds,
+                        confirmation: confirmation
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('success', result.message);
+                    bootstrap.Modal.getInstance(document.getElementById('bulkLockFinesModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('error', result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'An error occurred. Please try again.');
+            }
+        }
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
 }
