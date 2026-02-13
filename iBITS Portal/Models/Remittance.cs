@@ -50,6 +50,12 @@ namespace iBITS_Portal.Models
         public string RemittanceType { get; set; } = "Fee";
 
         /// <summary>
+        /// Program of the class (e.g., "BSIT", "DIT")
+        /// </summary>
+        [StringLength(50)]
+        public string? Program { get; set; }
+
+        /// <summary>
         /// YearLevelSection of the class (e.g., "BSIT 3-1")
         /// </summary>
         [Required]

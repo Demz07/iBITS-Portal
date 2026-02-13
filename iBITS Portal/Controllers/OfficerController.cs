@@ -3245,11 +3245,15 @@ namespace iBITS_Portal.Controllers
                     var batchCode = await GenerateRemittanceBatchCode();
 
                     // Create remittance record
+                    // Extract Program from Section (e.g., "BSIT 3-1" -> "BSIT")
+                    var program = section?.Split(' ').FirstOrDefault();
+                    
                     var remittance = new Remittance
                     {
                         BatchCode = batchCode,
                         FineCategory = feeName,
                         RemittanceType = RemittanceType.Fine,
+                        Program = program,
                         Section = section,
                         TotalAmount = fines.Sum(f => f.Amount ?? 0),
                         TotalStudents = fines.Count,
@@ -3321,9 +3325,13 @@ namespace iBITS_Portal.Controllers
                     var batchCodeForFees = await GenerateRemittanceBatchCode();
 
                     // Create remittance record
+                    // Extract Program from Section (e.g., "BSIT 3-1" -> "BSIT")
+                    var programForFees = section?.Split(' ').FirstOrDefault();
+                    
                     var remittance = new Remittance
                     {
                         BatchCode = batchCodeForFees,
+                        Program = programForFees,
                         Section = section,
                         FeeName = feeName,
                         TotalAmount = fees.Sum(f => f.Amount ?? 0),

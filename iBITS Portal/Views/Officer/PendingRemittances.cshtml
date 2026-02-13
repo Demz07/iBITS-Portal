@@ -167,7 +167,8 @@
                                 </div>
                                 <div class="text-white">@remittance.CategoryName</div>
                                 <small class="text-muted">
-                                    Remitted by: <span class="text-white fw-semibold">@(remittance.Section ?? "Unknown Section")</span> • 
+                                    <span class="text-white fw-semibold">@(remittance.Program ?? "Unknown Program")</span> • 
+                                    Section <span class="text-white fw-semibold">@(remittance.Section ?? "Unknown Section")</span> • 
                                     @remittance.SubmittedDate.ToString("MMM dd, h:mm tt")
                                 </small>
                             </div>
