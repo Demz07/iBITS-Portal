@@ -269,9 +269,9 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">Fine Records</h5>
         <div>
-            <a asp-action="ExportOrgFines" class="btn-gold-outline btn-sm me-2">
-                <i class="bi bi-download me-1"></i> Export Fines
-            </a>
+            <button class="btn-gold-outline btn-sm me-2" onclick="exportFinesData()">
+                <i class="bi bi-download me-1"></i> Export Filtered Data
+            </button>
             <button class="btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createFineModal">
                 <i class="bi bi-plus-lg me-1"></i> Create Fine
             </button>
@@ -315,7 +315,7 @@
                     <th class="text-center" style="width: 100px;">ACTION</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="finesTableBody">
                 @if (Model != null && Model.Any())
                 {
                     foreach (var fine in Model)
@@ -1411,6 +1411,146 @@
                 console.error('Error:', error);
                 showToast('error', 'An error occurred. Please try again.');
             }
+
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // ============================================================
+        // EXPORT FINES DATA (WYSIWYG - What You See Is What You Get)
+        // ============================================================
+        function exportFinesData() {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div class="modal fade" id="exportFinesModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content glass-modal" style="background: rgba(30, 30, 30, 0.95); border: 1px solid rgba(212, 175, 55, 0.3);">
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-white"><i class="bi bi-download me-2"></i> Export Filtered Data</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">Choose export format for visible/filtered records:</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" onclick="exportFinesToExcel()">
+                                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-danger" onclick="exportFinesToPDF()">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            const exportModal = new bootstrap.Modal(document.getElementById('exportFinesModal'));
+            exportModal.show();
+            document.getElementById('exportFinesModal').addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
+        function exportFinesToExcel() {
+            const visibleRows = document.querySelectorAll('#finesTableBody tr:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+                return;
+            }
+            
+            const data = [
+                ['Fine ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Description', 'Amount', 'Status']
+            ];
+            
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 1) {
+                    const fineId = cells[1]?.textContent?.trim() || '';
+                    const studentInfo = cells[2];
+                    const studentName = studentInfo?.querySelector('div:first-child')?.textContent?.trim() || '';
+                    const studentId = studentInfo?.querySelector('.small')?.textContent?.trim() || '';
+                    const program = cells[3]?.textContent?.trim() || '';
+                    const year = cells[4]?.textContent?.trim() || '';
+                    const description = cells[5]?.textContent?.trim() || '';
+                    const amount = cells[6]?.textContent?.trim() || '';
+                    const status = cells[7]?.textContent?.trim() || '';
+                    
+                    data.push([fineId, studentName, studentId, program, year, description, amount, status]);
+                }
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            ws['!cols'] = [
+                { wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 10 }, 
+                { wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 10 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Org Fines');
+            XLSX.writeFile(wb, `OrgFines-Filtered-${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fine record(s)`);
+        }
+
+        function exportFinesToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const visibleRows = document.querySelectorAll('#finesTableBody tr:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+                return;
+            }
+            
+            doc.setFontSize(18);
+            doc.text('Organization Fines Report (Filtered)', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Records: ${visibleRows.length}`, 14, 28);
+            
+            const tableData = [];
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 1) {
+                    const fineId = cells[1]?.textContent?.trim() || '';
+                    const studentInfo = cells[2];
+                    const studentName = studentInfo?.querySelector('div:first-child')?.textContent?.trim() || '';
+                    const studentId = studentInfo?.querySelector('.small')?.textContent?.trim() || '';
+                    const program = cells[3]?.textContent?.trim() || '';
+                    const year = cells[4]?.textContent?.trim() || '';
+                    const description = cells[5]?.textContent?.trim() || '';
+                    // Extract amount and format with proper Peso sign (use PHP instead of Unicode for PDF compatibility)
+                    const amountText = cells[6]?.textContent?.trim() || '';
+                    const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, ''); // Use PHP instead of ₱ symbol
+                    const status = cells[7]?.textContent?.trim() || '';
+                    
+                    tableData.push([fineId, studentName, studentId, program, year, description, amount, status]);
+                }
+            });
+            
+            doc.autoTable({
+                head: [['Fine ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Description', 'Amount', 'Status']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: {
+                    0: { cellWidth: 15 }, 1: { cellWidth: 45 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20 },
+                    4: { cellWidth: 15 }, 5: { cellWidth: 50 }, 6: { cellWidth: 25 }, 7: { cellWidth: 20 }
+                }
+            });
+            
+            doc.save(`OrgFines-Filtered-${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fine record(s) to PDF`);
         }
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
