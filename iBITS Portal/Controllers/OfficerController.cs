@@ -3259,8 +3259,8 @@ namespace iBITS_Portal.Controllers
                     var batchCode = await GenerateRemittanceBatchCode();
 
                     // Create remittance record
-                    // Extract Program from Section (e.g., "BSIT 3-1" -> "BSIT")
-                    var program = section?.Split(' ').FirstOrDefault();
+                    // Get Program from treasurer's Course field
+                    var program = treasurer.Course;
                     
                     var remittance = new Remittance
                     {
@@ -3353,8 +3353,8 @@ namespace iBITS_Portal.Controllers
                     var batchCodeForFees = await GenerateRemittanceBatchCode();
 
                     // Create remittance record
-                    // Extract Program from Section (e.g., "BSIT 3-1" -> "BSIT")
-                    var programForFees = section?.Split(' ').FirstOrDefault();
+                    // Get Program from treasurer's Course field
+                    var programForFees = treasurer.Course;
                     
                     var remittance = new Remittance
                     {
