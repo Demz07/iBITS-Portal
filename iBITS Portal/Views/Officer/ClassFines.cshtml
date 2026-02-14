@@ -446,11 +446,17 @@
             var categoryExcused = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "EXCUSED");
             var categoryCollectedNotRemitted = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
             var categoryRemitted = categoryFines.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
-            var canRemit = categoryCollectedNotRemitted > 0;
-
+            
             // Check if this category is validated (closed)
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
+            
+            // Check if there's already a pending remittance for this category
+            var pendingRemittances = ViewBag.PendingRemittances as List<string> ?? new List<string>();
+            var hasPendingRemittance = pendingRemittances.Contains(categoryName);
+            
+            // Can only remit if: has collected fines, not closed, and no pending remittance
+            var canRemit = categoryCollectedNotRemitted > 0 && !isClosed && !hasPendingRemittance;
 
             <div class="fine-category-card mb-4 @(isClosed ? "border-purple" : "")">
                 <!-- Category Header -->
@@ -484,6 +490,10 @@
                         @if (isClosed)
                         {
                             <span class="badge bg-purple"><i class="bi bi-lock-fill me-1"></i> Category Closed</span>
+                        }
+                        else if (hasPendingRemittance)
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Pending Validation</span>
                         }
                         else if (canRemit)
                         {
@@ -543,7 +553,7 @@
                                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                                     var isPaid = fine.FinesStatus?.ToUpper() == "PAID";
                                     var isExcused = fine.FinesStatus?.ToUpper() == "EXCUSED";
-                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed;
+                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed || hasPendingRemittance;
                                     var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
                                     var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
@@ -623,7 +633,7 @@
                                             }
                                             else if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
+                                                <span class="lock-indicator" title="@(hasPendingRemittance ? "Locked - Pending Validation" : "Locked - Category is Closed or Remitted")">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }

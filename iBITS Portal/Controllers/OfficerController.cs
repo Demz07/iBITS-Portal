@@ -3214,6 +3214,20 @@ namespace iBITS_Portal.Controllers
 
                 if (isFinetype)
                 {
+                    // Check if there's already a pending remittance for this section and fine category
+                    var existingRemittance = await _context.Remittances
+                        .Where(r => r.Section == section 
+                                 && r.FineCategory == feeName 
+                                 && r.RemittanceType == RemittanceType.Fine
+                                 && r.Status == RemittanceStatus.Pending)
+                        .FirstOrDefaultAsync();
+
+                    if (existingRemittance != null)
+                    {
+                        TempData["Error"] = $"A remittance batch ({existingRemittance.BatchCode}) for this fine category is already pending validation. Please wait for Org Treasurer to validate it before creating a new batch.";
+                        return RedirectToAction("PendingCollections", new { type = "fines" });
+                    }
+
                     // Get fines for this category (match by Description for manual fines, or Event Name for event fines)
                     var fines = await _context.Fines
                         .Include(f => f.StudentNumNavigation)
@@ -3299,6 +3313,20 @@ namespace iBITS_Portal.Controllers
                 }
                 else
                 {
+                    // Check if there's already a pending remittance for this section and fee name
+                    var existingRemittance = await _context.Remittances
+                        .Where(r => r.Section == section 
+                                 && r.FeeName == feeName 
+                                 && r.RemittanceType == RemittanceType.Fee
+                                 && r.Status == RemittanceStatus.Pending)
+                        .FirstOrDefaultAsync();
+
+                    if (existingRemittance != null)
+                    {
+                        TempData["Error"] = $"A remittance batch ({existingRemittance.BatchCode}) for this fee is already pending validation. Please wait for Org Treasurer to validate it before creating a new batch.";
+                        return RedirectToAction("PendingCollections");
+                    }
+
                     // Get fees for this category
                     var fees = await _context.Fees
                         .Include(f => f.StudentNumNavigation)
@@ -3419,7 +3447,16 @@ namespace iBITS_Portal.Controllers
                 .Select(r => r.FeeName)
                 .ToListAsync();
 
+            // Get pending remittances to prevent duplicate remittance attempts
+            var pendingRemittances = await _context.Remittances
+                .Where(r => r.Section == section 
+                    && r.RemittanceType == RemittanceType.Fee
+                    && r.Status == RemittanceStatus.Pending)
+                .Select(r => r.FeeName)
+                .ToListAsync();
+
             ViewBag.ValidatedCategories = validatedCategories;
+            ViewBag.PendingRemittances = pendingRemittances;
 
             // Calculate statistics
             var totalExpected = fees.Sum(f => f.Amount ?? 0);
@@ -3503,7 +3540,16 @@ namespace iBITS_Portal.Controllers
                 .Select(r => r.FineCategory)
                 .ToListAsync();
 
+            // Get pending remittances to prevent duplicate remittance attempts
+            var pendingRemittances = await _context.Remittances
+                .Where(r => r.Section == section 
+                    && r.RemittanceType == RemittanceType.Fine
+                    && r.Status == RemittanceStatus.Pending)
+                .Select(r => r.FineCategory)
+                .ToListAsync();
+
             ViewBag.ValidatedCategories = validatedCategories;
+            ViewBag.PendingRemittances = pendingRemittances;
 
             // Calculate statistics
             var totalExpected = fines.Where(f => f.FinesStatus?.ToLower() != "waived").Sum(f => f.Amount ?? 0);

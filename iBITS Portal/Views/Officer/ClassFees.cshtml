@@ -441,11 +441,17 @@
             var categoryUnpaid = categoryFees.Count(f => f.FeeStatus?.ToUpper() != "PAID");
             var categoryCollectedNotRemitted = categoryFees.Count(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
             var categoryRemitted = categoryFees.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
-            var canRemit = categoryCollectedNotRemitted > 0;
-
+            
             // Check if this category is validated (closed)
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
+            
+            // Check if there's already a pending remittance for this category
+            var pendingRemittances = ViewBag.PendingRemittances as List<string> ?? new List<string>();
+            var hasPendingRemittance = pendingRemittances.Contains(categoryName);
+            
+            // Can only remit if: has collected fees, not closed, and no pending remittance
+            var canRemit = categoryCollectedNotRemitted > 0 && !isClosed && !hasPendingRemittance;
 
             <div class="fee-category-card @(isClosed ? "border-purple" : "")">
                 <!-- Category Header -->
@@ -474,6 +480,10 @@
                         @if (isClosed)
                         {
                             <span class="badge bg-purple"><i class="bi bi-lock-fill me-1"></i> Category Closed</span>
+                        }
+                        else if (hasPendingRemittance)
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Pending Validation</span>
                         }
                         else if (canRemit)
                         {
@@ -532,7 +542,7 @@
                                 {
                                     var student = fee.StudentNumNavigation;
                                     var isPaid = fee.FeeStatus?.ToUpper() == "PAID";
-                                    var isLocked = fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed;
+                                    var isLocked = fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed || hasPendingRemittance;
                                     var isRemitted = fee.RemittanceStatus == FeeRemittanceStatus.Remitted;
                                     var isPendingRemit = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
@@ -600,7 +610,7 @@
                                         <td class="text-center">
                                             @if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
+                                                <span class="lock-indicator" title="@(hasPendingRemittance ? "Locked - Pending Validation" : "Locked - Category is Closed or Remitted")">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }
