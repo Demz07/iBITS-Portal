@@ -121,15 +121,16 @@ namespace iBITS_Portal.Controllers
                 .ToListAsync();
 
             var announcements = await _context.Announcements
-                .Where(a =>
-                    (a.TargetAudience == "All Students" ||
-                     a.TargetAudience == student.Course ||
-                     (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
-                    && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
-                    && !dismissedIds.Contains(a.Id))
-                .OrderByDescending(a => a.Timestamp)
-                .Take(10)
-                .ToListAsync();
+     .Where(a =>
+         (a.TargetAudience == "All Students" ||
+          a.TargetAudience == student.Course ||
+          (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
+         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
+         && a.AnnouncementType != "Admin Notice" // <--- CRITICAL: Exclude Admin Notices from General list
+         && !dismissedIds.Contains(a.Id))
+     .OrderByDescending(a => a.Timestamp)
+     .Take(10)
+     .ToListAsync();
 
             // Financials
             var unpaidFees = await _context.Fees
@@ -176,6 +177,18 @@ namespace iBITS_Portal.Controllers
             ViewBag.StudentImage = string.IsNullOrWhiteSpace(student.StudentImage)
                 ? "/images/default-avatar.png"
                 : student.StudentImage;
+
+            // ================== ADMIN NOTICES ==================
+            // Fetch individual notifications (Admin Notices) that haven't been read/dismissed
+            var adminNotices = await _context.Notifications
+    .Where(n => n.StudentNum == user.UserName && !n.IsRead && n.NotificationType == "Admin Notice")
+    .OrderByDescending(n => n.NotificationDate)
+    .ToListAsync();
+
+            ViewBag.AdminNotices = adminNotices;
+            // ===================================================
+
+
 
             return View("StudentDashboard");
         }
@@ -243,6 +256,40 @@ namespace iBITS_Portal.Controllers
             return Json(new { success = true, message = "Announcement dismissed successfully" });
         }
 
+        // ================== ADMIN NOTICE DISMISS ==================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DismissNotification(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || user.UserName == null)
+            {
+                return Json(new { success = false, message = "User not authenticated" });
+            }
+
+            // Find the specific notification
+            var notification = await _context.Notifications.FindAsync(id);
+
+            if (notification == null)
+            {
+                return Json(new { success = false, message = "Notice not found" });
+            }
+
+            // Security check: ensure this notice actually belongs to the logged-in student
+            if (notification.StudentNum != user.UserName)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            // Mark as Read (this removes it from the "Unread" list in your dashboard)
+            notification.IsRead = true;
+            _context.Notifications.Update(notification);
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Notice dismissed" });
+        }
+
         // ================== GET ALL EVENTS (JSON) for MODAL ==================
         [HttpGet]
         public async Task<IActionResult> GetAllEventsJson()
@@ -290,3 +337,4 @@ namespace iBITS_Portal.Controllers
         [AllowAnonymous] public IActionResult LandingDevelopers() => View();
     }
 }
+

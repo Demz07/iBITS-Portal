@@ -65,6 +65,22 @@ let finesUnpaidChart = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     initializeDashboard();
+
+    // Quick Actions Panel Logic
+    const quickActionsContent = document.getElementById('quickActionsContent');
+    const quickActionsChevron = document.getElementById('quickActionsChevron');
+
+    if (quickActionsContent) {
+        quickActionsContent.addEventListener('shown.bs.collapse', function () {
+            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(0deg)';
+        });
+        quickActionsContent.addEventListener('hidden.bs.collapse', function () {
+            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(-90deg)';
+        });
+    }
+
+    // Initialize Send Notice Modal logic
+    initSendNoticeModal();
 });
 
 function initializeDashboard() {
@@ -991,7 +1007,7 @@ function exportFinancialModalData() {
 }
 
 // ==========================================
-// SEND NOTICE FUNCTIONS (UPDATED)
+// SEND NOTICE MODAL FUNCTIONALITY
 // ==========================================
 
 function sendNoticeToEnrollmentStudents() {
@@ -1005,108 +1021,31 @@ function sendNoticeToFinancialStudents() {
 }
 
 function openSendNoticeModal(contextTitle) {
-    const sendNoticeModal = new bootstrap.Modal(document.getElementById('sendNoticeModal'));
+    const modalEl = document.getElementById('sendNoticeModal');
+    if (!modalEl) return;
+
+    const sendNoticeModal = new bootstrap.Modal(modalEl);
     const subjectInput = document.getElementById('noticeSubject');
 
     if (subjectInput && contextTitle) {
         subjectInput.value = `Regarding: ${contextTitle}`;
     }
 
-    updateRecipientCount(); // Initial count
+    updateNotificationPreview(); // Initial count
     sendNoticeModal.show();
 }
-
-$(document).ready(function () {
-    // 1. Handle Radio/Select Changes to update Recipient Count
-    $('input[name="recipientFilter"], #noticeProgram, #noticeYear').on('change', function () {
-        const val = $('input[name="recipientFilter"]:checked').val();
-
-        // Show/Hide filter rows based on selection
-        $('#programFilterRow').toggle(val === 'program' || val === 'year');
-        $('#yearFilterRow').toggle(val === 'year');
-
-        updateRecipientCount();
-    });
-
-    // 2. AJAX Form Submission
-    $('#sendNoticeForm').on('submit', function (e) {
-        e.preventDefault();
-
-        const btn = $('#sendNoticeBtn');
-        const originalText = btn.html();
-
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
-
-        $.ajax({
-            url: window.sendNotificationUrl, // Defined in Index.cshtml
-            type: 'POST',
-            data: $(this).serialize(),
-            success: function (response) {
-                if (response.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('sendNoticeModal')).hide();
-                    alert(response.message); // Replace with a toast if you have one
-                    $('#sendNoticeForm')[0].reset();
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function () {
-                alert('Connection error. Please try again.');
-            },
-            complete: function () {
-                btn.prop('disabled', false).html(originalText);
-            }
-        });
-    });
-});
-
-// Helper to update the "X students will receive this" text in the modal
-function updateRecipientCount() {
-    const filter = $('input[name="recipientFilter"]:checked').val();
-    const program = $('#noticeProgram').val();
-    const year = $('#noticeYear').val();
-
-    $.get(window.notificationPreviewUrl, { filter, program, year }, function (data) {
-        $('#recipientCount').text(data.count);
-        $('#recipientSample').text(data.sample);
-    });
-}
-
-// ==========================================
-// QUICK ACTIONS PANEL TOGGLE
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', function () {
-    const quickActionsContent = document.getElementById('quickActionsContent');
-    const quickActionsChevron = document.getElementById('quickActionsChevron');
-
-    if (quickActionsContent) {
-        quickActionsContent.addEventListener('shown.bs.collapse', function () {
-            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(0deg)';
-        });
-
-        quickActionsContent.addEventListener('hidden.bs.collapse', function () {
-            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(-90deg)';
-        });
-    }
-
-    // Initialize Send Notice Modal
-    initSendNoticeModal();
-});
-
-// ==========================================
-// SEND NOTICE MODAL FUNCTIONALITY
-// ==========================================
 
 function initSendNoticeModal() {
     const recipientRadios = document.querySelectorAll('input[name="recipientFilter"]');
     const programFilterRow = document.getElementById('programFilterRow');
     const yearFilterRow = document.getElementById('yearFilterRow');
 
+    if (!recipientRadios.length) return;
+
     recipientRadios.forEach(radio => {
         radio.addEventListener('change', function () {
             const value = this.value;
-
+            // Toggle visibility of Program/Year filters
             if (value === 'program') {
                 programFilterRow.style.display = 'block';
                 yearFilterRow.style.display = 'none';
@@ -1117,7 +1056,6 @@ function initSendNoticeModal() {
                 programFilterRow.style.display = 'none';
                 yearFilterRow.style.display = 'none';
             }
-
             updateNotificationPreview();
         });
     });
@@ -1125,10 +1063,9 @@ function initSendNoticeModal() {
     document.getElementById('noticeProgram')?.addEventListener('change', updateNotificationPreview);
     document.getElementById('noticeYear')?.addEventListener('change', updateNotificationPreview);
 
-    updateNotificationPreview();
-
     const sendNoticeForm = document.getElementById('sendNoticeForm');
     if (sendNoticeForm) {
+        // This is the ONLY submit listener.
         sendNoticeForm.addEventListener('submit', handleSendNotice);
     }
 }
@@ -1160,57 +1097,86 @@ function updateNotificationPreview() {
                 sampleEl.textContent = sampleText;
             }
         })
-        .catch(error => {
-            console.error('Error fetching preview:', error);
-        });
+        .catch(err => console.error("Preview error:", err));
 }
 
 async function handleSendNotice(e) {
     e.preventDefault();
-
     const form = e.target;
     const submitBtn = document.getElementById('sendNoticeBtn');
-    const originalBtnText = submitBtn.innerHTML;
+
+    // Prevent double-clicks
+    if (submitBtn.disabled) return;
 
     const count = parseInt(document.getElementById('recipientCount')?.textContent) || 0;
     if (count === 0) {
-        alert('No students match the selected criteria.');
+        alert('No students match the criteria.');
         return;
     }
 
-    if (!confirm(`Send this notice to ${count} students?`)) {
-        return;
-    }
+    if (!confirm(`Send this notice to ${count} students?`)) return;
 
+    const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
 
     try {
-        const formData = new FormData(form);
-
         const response = await fetch(window.sendNotificationUrl, {
             method: 'POST',
-            body: formData
+            body: new FormData(form) // Automatically includes CSRF token
         });
 
         const data = await response.json();
 
         if (data.success) {
             alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('sendNoticeModal'))?.hide();
+            // Hide modal
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('sendNoticeModal'));
+            if (modalInstance) modalInstance.hide();
+
             form.reset();
+            // Hide filter rows
+            document.getElementById('programFilterRow').style.display = 'none';
+            document.getElementById('yearFilterRow').style.display = 'none';
             updateNotificationPreview();
         } else {
-            alert(data.message || 'Failed to send notification');
+            alert(data.message || "Failed to send.");
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to send notification. Please try again.');
+    } catch (e) {
+        console.error(e);
+        alert('Error communicating with server.');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
+        submitBtn.innerHTML = originalText;
     }
 }
+
+//// ==========================================
+//// QUICK ACTIONS PANEL TOGGLE
+//// ==========================================
+
+//document.addEventListener('DOMContentLoaded', function () {
+//    const data = window.dashboardData || {};
+
+//    // 1. Initialize Charts & Counters
+//    initializeDashboard();
+
+//    // 2. Quick Actions Panel Logic
+//    const quickActionsContent = document.getElementById('quickActionsContent');
+//    const quickActionsChevron = document.getElementById('quickActionsChevron');
+
+//    if (quickActionsContent) {
+//        quickActionsContent.addEventListener('shown.bs.collapse', () => {
+//            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(0deg)';
+//        });
+//        quickActionsContent.addEventListener('hidden.bs.collapse', () => {
+//            if (quickActionsChevron) quickActionsChevron.style.transform = 'rotate(-90deg)';
+//        });
+//    }
+
+//    // 3. Initialize Send Notice Modal logic
+//    initSendNoticeModal();
+//});
 
 
 

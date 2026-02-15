@@ -15,7 +15,12 @@
 
     // Split announcements
     var paymentReminders = announcements.Where(a => (a.Title ?? string.Empty).Contains("Payment Reminder")).ToList();
-    var regularAnnouncements = announcements.Where(a => !(a.Title ?? string.Empty).Contains("Payment Reminder")).ToList();
+    var regularAnnouncements = announcements.Where(a =>
+      !(a.Title ?? string.Empty).Contains("Payment Reminder") &&
+      a.AnnouncementType != "Admin Notice"
+  ).ToList();
+
+    var adminNotices = ViewBag.AdminNotices as List<Notification> ?? new List<Notification>();
 
     // CURRENT ACTIVITY
     var today = DateOnly.FromDateTime(DateTime.Today);
@@ -357,15 +362,18 @@
             }
 
         @@keyframes portalToastIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
+            from
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         }
 
         /* ✅ Make Current Activity scroll inside the card body */
@@ -408,9 +416,26 @@
         <div class="glass-card h-100">
             <h5 class="card-header"><i class="bi bi-megaphone-fill me-2 text-gold"></i> Announcements</h5>
             <div class="card-body announcement-scroll-container">
-                @if (!announcements.Any())
+                @if (!announcements.Any() && !adminNotices.Any(x => !x.IsRead))
                 {
                     <p class="text-muted text-center py-3">No announcements yet.</p>
+                }
+
+                @* --- START: ADMIN NOTICES (New Section) --- *@
+                @foreach (var n in adminNotices.Where(x => !x.IsRead))
+                {
+                    <div class="announcement-item border-start-warning mb-3"
+                         style="cursor: pointer; background: rgba(212, 175, 55, 0.05);"
+                         onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
+
+                        @* Added '?' after NotificationDate below *@
+                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
+
+                        <p class="mb-0 mt-1 text-white">
+                            <strong>@n.Title</strong> @* This displays the SUBJECT *@
+                        </p>
+                        <small class="text-muted" style="font-size: 0.7rem;">Click to read full message</small>
+                    </div>
                 }
 
                 @foreach (var reminder in paymentReminders)
@@ -615,6 +640,32 @@
         </div>
     </div>
 }
+
+<!-- ADMIN NOTICE DETAIL MODAL -->
+<div class="modal fade" id="adminNoticeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid var(--gold-primary); backdrop-filter: blur(20px);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-gold"><i class="bi bi-megaphone-fill me-2"></i> Admin Notice</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-white">
+                <h4 id="viewNoticeSubject" class="fw-bold mb-3"></h4>
+                <div id="viewNoticeMessage" style="white-space: pre-line; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;"></div>
+                <div class="mt-3 opacity-50 small d-flex justify-content-between">
+                    <span id="viewNoticeDate"></span>
+                    <span id="viewNoticeSender"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-danger" onclick="openAdminDismissConfirm()">
+                    <i class="bi bi-trash me-1"></i> Dismiss this reminder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @* 2. PROFILE SIDEBAR *@
 <div class="offcanvas offcanvas-end glass-modal" tabindex="-1" id="profileOffcanvas">
@@ -822,7 +873,7 @@
     </div>
 </div>
 
-@* Dismiss confirm modal *@
+@* Dismiss confirm modal (Announcements) *@
 <div class="modal fade" id="dismissConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(212,175,55,0.75); backdrop-filter: blur(18px);">
@@ -851,6 +902,35 @@
     </div>
 </div>
 
+@* ✅ NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
+<div class="modal fade" id="adminDismissConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(220,53,69,0.65); backdrop-filter: blur(18px);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-trash3-fill me-2"></i> Dismiss Admin Notice
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-white">
+                <div class="text-center">
+                    <i class="bi bi-exclamation-octagon-fill text-danger mb-2" style="font-size:2.5rem;"></i>
+                    <p class="mb-2 fw-bold">Are you sure?</p>
+                    <p class="small text-muted mb-0">
+                        This notice will be removed from your dashboard.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger flex-fill" id="confirmAdminDismissBtn">
+                    <i class="bi bi-check2-circle me-1"></i> Yes, Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="portalToastContainer"></div>
 
 <input type="hidden" id="hiddenStudentId" value="@student?.StudentNum" />
@@ -864,6 +944,8 @@
 }
 
 @section Scripts {
+
+
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
 
@@ -1051,85 +1133,157 @@
         });
 
         // ===========================
-             // PROFILE PICTURE: Preview + AJAX Upload
-             // ===========================
-             (function () {
-                 const fileInput = document.getElementById('profilePictureInput');
-                 const previewImg = document.getElementById('profilePicturePreview');
-                 const form = document.getElementById('ajaxProfileForm');
-                 const btn = document.getElementById('btnUpdateProfile');
+        // PROFILE PICTURE: Preview + AJAX Upload
+        // ===========================
+        (function () {
+            const fileInput = document.getElementById('profilePictureInput');
+            const previewImg = document.getElementById('profilePicturePreview');
+            const form = document.getElementById('ajaxProfileForm');
+            const btn = document.getElementById('btnUpdateProfile');
 
-                 // 1. Handle File Selection Preview
-                 if (fileInput && previewImg) {
-                     fileInput.addEventListener('change', function () {
-                         const file = this.files && this.files[0];
-                         if (!file) return;
-                         const allowed = ['image/jpeg', 'image/png'];
-                         if (!allowed.includes(file.type)) { showPortalToast('danger', 'Invalid file', 'Only JPG and PNG are allowed.'); this.value = ''; return; }
-                         if (file.size > 5 * 1024 * 1024) { showPortalToast('danger', 'Too large', 'File must be less than 5MB.'); this.value = ''; return; }
-                         const reader = new FileReader();
-                         reader.onload = (e) => { previewImg.src = e.target.result; };
-                         reader.readAsDataURL(file);
-                     });
-                 }
+            // 1. Handle File Selection Preview
+            if (fileInput && previewImg) {
+                fileInput.addEventListener('change', function () {
+                    const file = this.files && this.files[0];
+                    if (!file) return;
+                    const allowed = ['image/jpeg', 'image/png'];
+                    if (!allowed.includes(file.type)) { showPortalToast('danger', 'Invalid file', 'Only JPG and PNG are allowed.'); this.value = ''; return; }
+                    if (file.size > 5 * 1024 * 1024) { showPortalToast('danger', 'Too large', 'File must be less than 5MB.'); this.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => { previewImg.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                });
+            }
 
-                 // 2. Handle Form Submission (AJAX)
-                 if (form) {
-                     form.addEventListener('submit', function (e) {
-                         e.preventDefault();
-                         const formData = new FormData(form);
-                         const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
-                         const token = tokenInput ? tokenInput.value : '';
+            // 2. Handle Form Submission (AJAX)
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
 
-                         const oldBtnHtml = btn ? btn.innerHTML : '';
-                         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Saving...'; }
+                    const oldBtnHtml = btn ? btn.innerHTML : '';
+                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Saving...'; }
 
-                         fetch('@Url.Action("UpdateProfileAjax", "Account")', {
-                             method: 'POST',
-                             headers: { 'RequestVerificationToken': token },
-                             body: formData
-                         })
-                         .then(r => r.json())
-                         .then(data => {
-                             if (data.success) {
-                                 // Cache buster string to force browser to reload image
-                                 const timestamp = '?t=' + Date.now();
+                    fetch('@Url.Action("UpdateProfileAjax", "Account")', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Cache buster string to force browser to reload image
+                            const timestamp = '?t=' + Date.now();
 
-                                 // A. Update Modal Preview
-                                 if (data.imagePath && previewImg) {
-                                     previewImg.src = data.imagePath + timestamp;
-                                 }
+                            // A. Update Modal Preview
+                            if (data.imagePath && previewImg) {
+                                previewImg.src = data.imagePath + timestamp;
+                            }
 
-                                 // B. Update Header Avatar (Next to "Hello, Name")
-                                 const headerMyProfileImg = document.getElementById('headerMyProfileImg');
-                                 if (headerMyProfileImg && data.imagePath) {
-                                     headerMyProfileImg.src = data.imagePath + timestamp;
-                                 }
+                            // B. Update Header Avatar (Next to "Hello, Name")
+                            const headerMyProfileImg = document.getElementById('headerMyProfileImg');
+                            if (headerMyProfileImg && data.imagePath) {
+                                headerMyProfileImg.src = data.imagePath + timestamp;
+                            }
 
-                                 // C. Update Top Navbar Avatar (if present in Layout)
-                                 const navImg = document.getElementById('navProfileImg');
-                                 if (navImg && data.imagePath) {
-                                     navImg.src = data.imagePath + timestamp;
-                                 }
+                            // C. Update Top Navbar Avatar (if present in Layout)
+                            const navImg = document.getElementById('navProfileImg');
+                            if (navImg && data.imagePath) {
+                                navImg.src = data.imagePath + timestamp;
+                            }
 
-                                 // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
-                                 const sidebarImg = document.getElementById('offcanvasProfileImg');
-                                 if (sidebarImg && data.imagePath) {
-                                     sidebarImg.src = data.imagePath + timestamp;
-                                 }
+                            // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
+                            const sidebarImg = document.getElementById('offcanvasProfileImg');
+                            if (sidebarImg && data.imagePath) {
+                                sidebarImg.src = data.imagePath + timestamp;
+                            }
 
-                                 showPortalToast('success', 'Profile Updated', data.message || 'Profile photo updated successfully!');
-                             } else {
-                                 showPortalToast('danger', 'Upload Failed', data.message || 'Please try again.');
-                             }
-                         })
-                         .catch(err => {
-                             console.error(err);
-                             showPortalToast('danger', 'Network Error', 'Something went wrong.');
-                         })
-                         .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
-                     });
-                 }
-             })();
+                            showPortalToast('success', 'Profile Updated', data.message || 'Profile photo updated successfully!');
+                        } else {
+                            showPortalToast('danger', 'Upload Failed', data.message || 'Please try again.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
+                    })
+                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
+                });
+            }
+        })();
+
+
+        // sender notice
+        let activeNoticeId = null;
+
+        function openAdminNoticeModal(id, title, msg, date, sender) {
+            activeNoticeId = id;
+            document.getElementById('viewNoticeSubject').innerText = title;
+            document.getElementById('viewNoticeMessage').innerText = msg;
+            document.getElementById('viewNoticeDate').innerText = date;
+            document.getElementById('viewNoticeSender').innerText = "Sent by: " + sender;
+
+            new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
+        }
+
+        // ✅ NEW: Open the nice confirm modal for Admin Notice
+        function openAdminDismissConfirm() {
+            const modal = new bootstrap.Modal(document.getElementById('adminDismissConfirmModal'));
+            modal.show();
+        }
+
+        // ✅ NEW: Handle Admin Notice Dismiss (with toast after)
+        document.addEventListener('DOMContentLoaded', function () {
+            const adminConfirmBtn = document.getElementById('confirmAdminDismissBtn');
+            if (!adminConfirmBtn) return;
+
+            adminConfirmBtn.addEventListener('click', function () {
+                if (!activeNoticeId) return;
+
+                // Hide confirm modal
+                const confirmInst = bootstrap.Modal.getInstance(document.getElementById('adminDismissConfirmModal'));
+                if (confirmInst) confirmInst.hide();
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                $.ajax({
+                    url: '/Home/DismissNotification',
+                    type: 'POST',
+                    data: {
+                        id: activeNoticeId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            // Hide the view modal if open
+                            const viewInst = bootstrap.Modal.getInstance(document.getElementById('adminNoticeModal'));
+                            if (viewInst) viewInst.hide();
+
+                            // Remove the matching card from the list (if present)
+                            const listItems = document.querySelectorAll('.announcement-item.border-start-warning');
+                            listItems.forEach(el => {
+                                // Find the one that opened this modal by subject text match (safe fallback)
+                                const titleEl = el.querySelector('p.mb-0.mt-1.text-white strong');
+                                if (titleEl && titleEl.innerText.trim() === document.getElementById('viewNoticeSubject').innerText.trim()) {
+                                    el.style.opacity = '0';
+                                    setTimeout(() => el.remove(), 260);
+                                }
+                            });
+
+                            // Show the pretty toast (like your 2nd screenshot)
+                            showPortalToast('success', 'Dismissed', 'Admin notice dismissed successfully.');
+                            activeNoticeId = null;
+                        } else {
+                            showPortalToast('danger', 'Error', 'Could not dismiss notice.');
+                        }
+                    },
+                    error: function() {
+                        showPortalToast('danger', 'Error', 'Server connection failed.');
+                    }
+                });
+            });
+        });
     </script>
 }

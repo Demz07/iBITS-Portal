@@ -16,6 +16,7 @@
 // ============================================================
 
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using iBITS_Portal.Helpers;
 using iBITS_Portal.Models;
 using iBITS_Portal.ViewModels;
@@ -1022,77 +1023,38 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                // Get Admin info for the "PostedBy" field
                 var adminUser = await _userManager.GetUserAsync(User);
-                var adminProfile = await _context.Students.FindAsync(adminUser?.UserName);
-                string posterName = adminProfile != null ? $"{adminProfile.StudentFn} {adminProfile.StudentLn}" : "Administrator";
+                string posterName = adminUser?.UserName ?? "Administrator";
 
-                // Helper for year level extraction
-                int ExtractYearLevel(string? yls)
+                var query = _context.Students.Where(s => s.IsArchived != true);
+
+                if (!string.IsNullOrEmpty(programFilter) && (recipientFilter == "program" || recipientFilter == "year"))
+                    query = query.Where(s => s.Course != null && s.Course.Contains(programFilter));
+
+                if (recipientFilter == "pending")
                 {
-                    if (string.IsNullOrWhiteSpace(yls)) return 0;
-                    var input = yls.Trim().ToUpper();
-                    if (input.Contains("FIRST") || input.Contains("1ST")) return 1;
-                    if (input.Contains("SECOND") || input.Contains("2ND")) return 2;
-                    if (input.Contains("THIRD") || input.Contains("3RD")) return 3;
-                    if (input.Contains("FOURTH") || input.Contains("4TH")) return 4;
-                    foreach (char c in input)
-                        if (char.IsDigit(c) && c >= '1' && c <= '4') return c - '0';
-                    return 0;
+                    var debtors = await _context.Fees.Where(f => f.FeeStatus != "Paid").Select(f => f.StudentNum).ToListAsync();
+                    var fineDebtors = await _context.Attendances.SelectMany(a => a.Fines).Where(f => f.FinesStatus != "Paid").Select(f => f.Attendance.StudentNum).ToListAsync();
+                    var allDebtors = debtors.Union(fineDebtors).Distinct().ToList();
+                    query = query.Where(s => allDebtors.Contains(s.StudentNum));
                 }
 
-                var students = await _context.Students
-                    .Where(s => s.IsArchived != true && !string.IsNullOrEmpty(s.StudentEmail))
-                    .ToListAsync();
-
-                string targetAudienceLabel = "All Students";
-
-                // Apply filters & set Target Audience Label
-                if (recipientFilter == "program" && !string.IsNullOrEmpty(programFilter))
+                var studentList = await query.ToListAsync();
+                if (recipientFilter == "year" && !string.IsNullOrEmpty(yearFilter))
                 {
-                    students = students.Where(s => s.Course != null && s.Course.ToUpper().Contains(programFilter.ToUpper())).ToList();
-                    targetAudienceLabel = $"{programFilter} Students";
-                }
-                else if (recipientFilter == "year" && !string.IsNullOrEmpty(programFilter) && !string.IsNullOrEmpty(yearFilter))
-                {
-                    int.TryParse(yearFilter, out int year);
-                    students = students.Where(s => s.Course != null && s.Course.ToUpper().Contains(programFilter.ToUpper()) && ExtractYearLevel(s.YearLevelSection) == year).ToList();
-                    string suffix = year == 1 ? "st" : year == 2 ? "nd" : year == 3 ? "rd" : "th";
-                    targetAudienceLabel = $"{programFilter} - {year}{suffix} Year";
-                }
-                else if (recipientFilter == "pending")
-                {
-                    var feesWithPending = await _context.Fees
-                        .Where(f => string.IsNullOrWhiteSpace(f.FeeStatus) || f.FeeStatus.ToUpper() == "PENDING" || f.FeeStatus.ToUpper() == "UNPAID")
-                        .Select(f => f.StudentNum)
-                        .Distinct()
-                        .ToListAsync();
-                    students = students.Where(s => feesWithPending.Contains(s.StudentNum)).ToList();
-                    targetAudienceLabel = "Students with Pending Balances";
+                    int.TryParse(yearFilter, out int yr);
+                    studentList = studentList.Where(s => ExtractYearLevel(s.YearLevelSection) == yr).ToList();
                 }
 
-                if (!students.Any())
-                {
-                    return Json(new { success = false, message = "No students found matching the criteria." });
-                }
+                // THIS LINE PREVENTS MULTIPLE SENDS TO THE SAME STUDENT
+                studentList = studentList.GroupBy(s => s.StudentNum).Select(g => g.First()).ToList();
 
-                // --- 1. CREATE ANNOUNCEMENT (For Dashboard Feed) ---
-                var announcement = new Announcement
-                {
-                    Title = subject,
-                    Content = message,
-                    PostedBy = posterName,
-                    Timestamp = DateTime.Now,
-                    AnnouncementType = "Admin Notice",
-                    TargetAudience = targetAudienceLabel,
-                    ExpiryDate = DateTime.Now.AddDays(30) // Set default expiry to 30 days
-                };
-                _context.Announcements.Add(announcement);
+                if (!studentList.Any()) return Json(new { success = false, message = "No recipients found." });
 
-                // --- 2. CREATE INDIVIDUAL NOTIFICATIONS (For Private Alerts) ---
-                foreach (var student in students)
+                // NOTICE: NO ANNOUNCEMENT TABLE ADD HERE. ONLY NOTIFICATIONS.
+                foreach (var student in studentList)
                 {
-                    var notification = new Notification
+                    _context.Notifications.Add(new Notification
                     {
                         StudentNum = student.StudentNum,
                         Title = subject,
@@ -1101,24 +1063,13 @@ namespace iBITS_Portal.Controllers
                         IsRead = false,
                         NotificationType = "Admin Notice",
                         SentBy = posterName
-                    };
-                    _context.Notifications.Add(notification);
+                    });
                 }
 
                 await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    message = $"Notice posted and sent successfully to {students.Count} students.",
-                    recipientCount = students.Count
-                });
+                return Json(new { success = true, message = $"Notice sent to {studentList.Count} recipients." });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending notification");
-                return Json(new { success = false, message = "Error sending notification. Please try again." });
-            }
+            catch (Exception ex) { return Json(new { success = false, message = "Error: " + ex.Message }); }
         }
 
         // =========================================================
@@ -5209,5 +5160,6 @@ namespace iBITS_Portal.Controllers
         public int StudentCount { get; set; }
     }
 }
+
 
 
