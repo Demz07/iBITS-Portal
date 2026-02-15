@@ -119,29 +119,164 @@
 
             <form asp-action="PostPaymentReminder" method="post" onsubmit="return validateForm()">
                 @Html.AntiForgeryToken()
+                
+                <!-- Hidden field for edit mode -->
+                <input type="hidden" id="editingReminderId" name="reminderId" value="" />
 
-                <!-- Target Audience -->
+                <!-- Target Audience - Checkbox Based -->
                 <div class="mb-3">
-                    <label for="targetAudience" class="form-label">
+                    <label class="form-label">
                         Target Audience <span class="text-danger">*</span>
                     </label>
-                    <select class="form-select" id="targetAudience" name="targetAudience" required>
-                        <option value="All Students">All Students</option>
-                        <option value="Students with Outstanding Balance">Students with Outstanding Balance</option>
-                        <optgroup label="Year Levels">
-                            @foreach (var year in ViewBag.YearLevels as List<string>)
-                            {
-                                <option value="@year">@year</option>
-                            }
-                        </optgroup>
-                        <optgroup label="Programs">
-                            @foreach (var course in ViewBag.Courses as List<string>)
-                            {
-                                <option value="@course">@course</option>
-                            }
-                        </optgroup>
-                    </select>
-                    <small class="text-muted">Select who will receive this reminder</small>
+                    <div id="targetAudienceBox" class="p-3 border rounded" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1) !important;">
+                        <!-- Special Categories -->
+                        <div class="mb-3">
+                            <div class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 500;">Special Categories:</div>
+                            <div class="form-check">
+                                <input class="form-check-input audience-checkbox" type="checkbox" value="All Students" 
+                                       id="audience_all" name="targetAudiences" onchange="handleAllStudentsChange()">
+                                <label class="form-check-label" for="audience_all">
+                                    All Students
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input audience-checkbox" type="checkbox" 
+                                       value="Students with Outstanding Balance" 
+                                       id="audience_outstanding" name="targetAudiences">
+                                <label class="form-check-label" for="audience_outstanding">
+                                    Students with Outstanding Balance
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Year Levels -->
+                        <div class="mb-3">
+                            <div class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 500;">Year Levels:</div>
+                            <div class="row">
+                                @if (ViewBag.YearLevels != null)
+                                {
+                                    int yearIndex = 0;
+                                    foreach (var year in ViewBag.YearLevels as List<string>)
+                                    {
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                       value="@year" id="audience_year_@yearIndex" name="targetAudiences">
+                                                <label class="form-check-label" for="audience_year_@yearIndex">
+                                                    @year
+                                                </label>
+                                            </div>
+                                        </div>
+                                        yearIndex++;
+                                    }
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Programs -->
+                        <div class="mb-3">
+                            <div class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 500;">Programs:</div>
+                            <div class="row">
+                                @if (ViewBag.Courses != null)
+                                {
+                                    int courseIndex = 0;
+                                    foreach (var course in ViewBag.Courses as List<string>)
+                                    {
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                       value="@course" id="audience_course_@courseIndex" name="targetAudiences">
+                                                <label class="form-check-label" for="audience_course_@courseIndex">
+                                                    @course (All Years)
+                                                </label>
+                                            </div>
+                                        </div>
+                                        courseIndex++;
+                                    }
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Program-Specific Year Levels -->
+                        <div class="mb-0">
+                            <div class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 500;">Specific Program-Year Combinations:</div>
+                            
+                            <!-- BSIT Years -->
+                            <div class="mb-2">
+                                <small class="text-gold fw-bold">BSIT:</small>
+                                <div class="row mt-1">
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="BSIT 1st Year" id="audience_bsit_1" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_bsit_1">1st Year</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="BSIT 2nd Year" id="audience_bsit_2" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_bsit_2">2nd Year</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="BSIT 3rd Year" id="audience_bsit_3" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_bsit_3">3rd Year</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="BSIT 4th Year" id="audience_bsit_4" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_bsit_4">4th Year</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DIT Years -->
+                            <div class="mb-2">
+                                <small class="text-gold fw-bold">DIT:</small>
+                                <div class="row mt-1">
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="DIT 1st Year" id="audience_dit_1" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_dit_1">1st Year</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="DIT 2nd Year" id="audience_dit_2" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_dit_2">2nd Year</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input audience-checkbox" type="checkbox" 
+                                                   value="DIT 3rd Year" id="audience_dit_3" name="targetAudiences">
+                                            <label class="form-check-label" for="audience_dit_3">3rd Year</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selection Counter Badge -->
+                        <div class="mt-2">
+                            <span id="audienceCounter" class="badge bg-secondary">
+                                <i class="bi bi-info-circle me-1"></i>0 audiences selected
+                            </span>
+                            <span id="targetMemberCounter" class="badge bg-info ms-2" style="display: none;">
+                                <i class="bi bi-people-fill me-1"></i>0 students will receive this
+                            </span>
+                        </div>
+                    </div>
+                    <small class="text-muted">Select one or more target audiences</small>
+                    <input type="hidden" id="targetAudienceHidden" name="targetAudience" required>
                 </div>
 
                 <!-- Reminder Type (Hidden) -->
@@ -241,14 +376,20 @@
                     <div class="reminder-item">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h6 class="mb-0 text-warning">@reminder.Title</h6>
-                            <form asp-action="DeletePaymentReminder" method="post" style="display:inline;" 
-                                  onsubmit="return confirmDelete('@reminder.Title')">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@reminder.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger delete-btn">
-                                    <i class="bi bi-trash"></i>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-warning delete-btn me-1" 
+                                        onclick="editReminder(@reminder.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Title.Replace("Payment Reminder: ", "")))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Content))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.TargetAudience ?? ""))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.AnnouncementType ?? ""))', @(reminder.ExpiryDate.HasValue ? Math.Max(0, (int)(reminder.ExpiryDate.Value - DateTime.Now).TotalDays) : 0))">
+                                    <i class="bi bi-pencil"></i>
                                 </button>
-                            </form>
+                                <form asp-action="DeletePaymentReminder" method="post" style="display:inline;" 
+                                      onsubmit="return confirmDelete('@reminder.Title')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@reminder.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger delete-btn">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                         <p class="mb-2 small text-muted">@reminder.Content</p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -299,6 +440,89 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        // ===== CHECKBOX MANAGEMENT =====
+        function updateAudienceSelection() {
+            const checkboxes = document.querySelectorAll('.audience-checkbox:checked');
+            const hiddenInput = document.getElementById('targetAudienceHidden');
+            const counter = document.getElementById('audienceCounter');
+            const memberCounter = document.getElementById('targetMemberCounter');
+            
+            // Collect selected values
+            const selected = Array.from(checkboxes).map(cb => cb.value);
+            const count = selected.length;
+            
+            // Update hidden input (comma-separated)
+            hiddenInput.value = selected.join(', ');
+            
+            // Update counter badge
+            if (count === 0) {
+                counter.className = 'badge bg-danger';
+                counter.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Please select at least one audience';
+                memberCounter.style.display = 'none';
+            } else if (count === 1) {
+                counter.className = 'badge bg-info';
+                counter.innerHTML = `<i class="bi bi-check-circle me-1"></i>${count} audience selected`;
+            } else {
+                counter.className = 'badge bg-success';
+                counter.innerHTML = `<i class="bi bi-check-circle me-1"></i>${count} audiences selected`;
+            }
+            
+            // Fetch target member count via AJAX
+            if (count > 0) {
+                const targetAudience = selected.join(', ');
+                fetch(`/Officer/GetTargetMemberCount?targetAudience=${encodeURIComponent(targetAudience)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update badge color and content based on count
+                        if (data.count === 0) {
+                            memberCounter.className = 'badge bg-warning ms-2';
+                            memberCounter.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>${data.count} students (no match)`;
+                        } else {
+                            memberCounter.className = 'badge bg-info ms-2';
+                            memberCounter.innerHTML = `<i class="bi bi-people-fill me-1"></i>${data.count} student${data.count !== 1 ? 's' : ''} will receive this`;
+                        }
+                        memberCounter.style.display = 'inline-block';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching target count:', error);
+                        memberCounter.style.display = 'none';
+                    });
+            }
+        }
+
+        function handleAllStudentsChange() {
+            const allStudentsCheckbox = document.getElementById('audience_all');
+            const otherCheckboxes = document.querySelectorAll('.audience-checkbox:not(#audience_all)');
+            
+            if (allStudentsCheckbox.checked) {
+                // Disable and uncheck all other checkboxes
+                otherCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                    cb.disabled = true;
+                    cb.parentElement.style.opacity = '0.5';
+                });
+            } else {
+                // Re-enable all checkboxes
+                otherCheckboxes.forEach(cb => {
+                    cb.disabled = false;
+                    cb.parentElement.style.opacity = '1';
+                });
+            }
+            
+            updateAudienceSelection();
+        }
+
+        // Attach change event to all audience checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('.audience-checkbox');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateAudienceSelection);
+            });
+            updateCharCount();
+            updateAudienceSelection();
+        });
+
+        // ===== TEMPLATE SELECTION =====
         function useTemplate(element, typeName) {
             document.getElementById('reminderType').value = typeName;
 
@@ -308,8 +532,11 @@
             element.classList.add('active');
         }
 
+        // ===== FORM VALIDATION =====
         function validateForm() {
             const type = document.getElementById('reminderType').value;
+            const audiences = document.getElementById('targetAudienceHidden').value;
+            
             if (!type) {
                 Swal.fire({
                     icon: 'warning',
@@ -322,23 +549,114 @@
                 });
                 return false;
             }
+            
+            if (!audiences || audiences.trim() === '') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Audience Required',
+                    text: "Please select at least one target audience.",
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    confirmButtonColor: '#D4AF37',
+                    iconColor: '#D4AF37'
+                });
+                return false;
+            }
+            
             return true;
         }
 
+        // ===== CLEAR FORM =====
         function clearForm() {
+            // Clear text inputs
             document.getElementById('reminderMessage').value = '';
             document.getElementById('reminderTitle').value = '';
             document.getElementById('reminderType').value = '';
-            document.getElementById('targetAudience').selectedIndex = 0;
             document.getElementById('expiryDays').value = '30';
-
+            document.getElementById('editingReminderId').value = '';
+            
+            // Uncheck all audience checkboxes
+            document.querySelectorAll('.audience-checkbox').forEach(cb => {
+                cb.checked = false;
+                cb.disabled = false;
+                cb.parentElement.style.opacity = '1';
+            });
+            
+            // Clear template selection
             document.querySelectorAll('.reminder-template').forEach(box => {
                 box.classList.remove('active');
             });
-
+            
+            // Update UI
             updateCharCount();
+            updateAudienceSelection();
+            
+            // Reset form header and button
+            document.querySelector('.glass-panel h5').innerHTML = '<i class="bi bi-pencil-square me-2 text-gold"></i> Create Payment Reminder';
+            document.querySelector('button[type="submit"]').innerHTML = '<i class="bi bi-send-fill me-1"></i> Post Reminder';
+            document.querySelector('button[type="submit"]').className = 'btn btn-warning';
         }
 
+        // ===== EDIT REMINDER =====
+        function editReminder(id, title, content, targetAudience, reminderType, expiryDays) {
+            // Set editing mode
+            document.getElementById('editingReminderId').value = id;
+            
+            // Populate form fields
+            document.getElementById('reminderTitle').value = title;
+            document.getElementById('reminderMessage').value = content;
+            document.getElementById('expiryDays').value = expiryDays || 30;
+            document.getElementById('reminderType').value = reminderType;
+            
+            // Update form header and button
+            document.querySelector('.glass-panel h5').innerHTML = '<i class="bi bi-pencil-square me-2 text-gold"></i> Edit Payment Reminder';
+            document.querySelector('button[type="submit"]').innerHTML = '<i class="bi bi-save me-1"></i> Update Reminder';
+            document.querySelector('button[type="submit"]').className = 'btn btn-success';
+            
+            // Handle target audience checkboxes
+            // First, uncheck all
+            document.querySelectorAll('.audience-checkbox').forEach(cb => {
+                cb.checked = false;
+                cb.disabled = false;
+                cb.parentElement.style.opacity = '1';
+            });
+            
+            // Parse and check the appropriate boxes
+            if (targetAudience) {
+                const audiences = targetAudience.split(',').map(a => a.trim());
+                audiences.forEach(audience => {
+                    const checkbox = Array.from(document.querySelectorAll('.audience-checkbox'))
+                        .find(cb => cb.value === audience);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+                
+                // Handle "All Students" special case
+                if (audiences.includes('All Students')) {
+                    handleAllStudentsChange();
+                }
+            }
+            
+            // Highlight the selected reminder type
+            document.querySelectorAll('.reminder-template').forEach(box => {
+                box.classList.remove('active');
+            });
+            const templateElement = Array.from(document.querySelectorAll('.reminder-template'))
+                .find(el => el.textContent.includes(reminderType));
+            if (templateElement) {
+                templateElement.classList.add('active');
+            }
+            
+            // Update UI
+            updateCharCount();
+            updateAudienceSelection();
+            
+            // Scroll to form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ===== CHARACTER COUNTER =====
         function updateCharCount() {
             const textarea = document.getElementById('reminderMessage');
             const counter = document.getElementById('charCounter');
@@ -355,13 +673,9 @@
             }
         }
 
+        // ===== DELETE CONFIRMATION =====
         function confirmDelete(title) {
             return confirm(`Are you sure you want to delete the reminder: "${title}"?\n\nThis action cannot be undone.`);
         }
-
-        // Initialize character counter on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCharCount();
-        });
     </script>
 }

@@ -428,9 +428,9 @@
             <i class="bi bi-list-check me-2"></i> Fine Records - @sectionName
         </h5>
         <div>
-            <a asp-action="ExportClassFines" class="btn-gold-outline btn-sm">
-                <i class="bi bi-download me-1"></i> Export
-            </a>
+            <button onclick="exportClassFinesData()" class="btn-gold-outline btn-sm">
+                <i class="bi bi-download me-1"></i> Export Filtered Data
+            </button>
         </div>
     </div>
 
@@ -446,11 +446,17 @@
             var categoryExcused = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "EXCUSED");
             var categoryCollectedNotRemitted = categoryFines.Count(f => f.FinesStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
             var categoryRemitted = categoryFines.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
-            var canRemit = categoryCollectedNotRemitted > 0;
-
+            
             // Check if this category is validated (closed)
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
+            
+            // Check if there's already a pending remittance for this category
+            var pendingRemittances = ViewBag.PendingRemittances as List<string> ?? new List<string>();
+            var hasPendingRemittance = pendingRemittances.Contains(categoryName);
+            
+            // Can only remit if: has collected fines, not closed, and no pending remittance
+            var canRemit = categoryCollectedNotRemitted > 0 && !isClosed && !hasPendingRemittance;
 
             <div class="fine-category-card mb-4 @(isClosed ? "border-purple" : "")">
                 <!-- Category Header -->
@@ -484,6 +490,10 @@
                         @if (isClosed)
                         {
                             <span class="badge bg-purple"><i class="bi bi-lock-fill me-1"></i> Category Closed</span>
+                        }
+                        else if (hasPendingRemittance)
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Pending Validation</span>
                         }
                         else if (canRemit)
                         {
@@ -543,7 +553,7 @@
                                     var student = fine.StudentNumNavigation ?? fine.Attendance?.StudentNumNavigation;
                                     var isPaid = fine.FinesStatus?.ToUpper() == "PAID";
                                     var isExcused = fine.FinesStatus?.ToUpper() == "EXCUSED";
-                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed;
+                                    var isLocked = fine.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed || hasPendingRemittance;
                                     var isRemitted = fine.RemittanceStatus == FeeRemittanceStatus.Remitted;
                                     var isPendingRemit = fine.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
@@ -623,7 +633,7 @@
                                             }
                                             else if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
+                                                <span class="lock-indicator" title="@(hasPendingRemittance ? "Locked - Pending Validation" : "Locked - Category is Closed or Remitted")">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }
@@ -1199,6 +1209,143 @@
                 console.error('Error:', error);
                 showToast('error', 'An error occurred. Please try again.');
             }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // ============================================================
+        // EXPORT CLASS FINES DATA (WYSIWYG)
+        // ============================================================
+        function exportClassFinesData() {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div class="modal fade" id="exportClassFinesModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content glass-modal" style="background: rgba(30, 30, 30, 0.95); border: 1px solid rgba(212, 175, 55, 0.3);">
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-white"><i class="bi bi-download me-2"></i> Export Class Fines</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">Choose export format for visible fines:</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" onclick="exportClassFinesToExcel()">
+                                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-danger" onclick="exportClassFinesToPDF()">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            const exportModal = new bootstrap.Modal(document.getElementById('exportClassFinesModal'));
+            exportModal.show();
+            document.getElementById('exportClassFinesModal').addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
+        function exportClassFinesToExcel() {
+            const visibleRows = document.querySelectorAll('.fine-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportClassFinesModal')).hide();
+                return;
+            }
+            
+            const data = [
+                ['Fine ID', 'Fine Category', 'Student Name', 'Student ID', 'Program', 'Year & Section', 'Amount', 'Payment Status', 'Remittance']
+            ];
+            
+            visibleRows.forEach(row => {
+                const fineId = row.dataset.fineId || '';
+                const category = row.dataset.category || '';
+                const studentName = row.dataset.studentName || '';
+                const studentId = row.dataset.studentId || '';
+                
+                const cells = row.querySelectorAll('td');
+                const program = cells[3]?.textContent?.trim() || '';
+                const yearSection = cells[4]?.textContent?.trim() || '';
+                const amount = cells[5]?.textContent?.trim() || '';
+                const status = cells[6]?.textContent?.trim() || '';
+                const remittance = cells[7]?.textContent?.trim() || '';
+                
+                data.push([fineId, category, studentName, studentId, program, yearSection, amount, status, remittance]);
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            ws['!cols'] = [
+                { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, 
+                { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Class Fines');
+            XLSX.writeFile(wb, `ClassFines-${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportClassFinesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fine record(s)`);
+        }
+
+        function exportClassFinesToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const visibleRows = document.querySelectorAll('.fine-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportClassFinesModal')).hide();
+                return;
+            }
+            
+            doc.setFontSize(18);
+            doc.text('Class Fines Report', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Records: ${visibleRows.length}`, 14, 28);
+            
+            const tableData = [];
+            visibleRows.forEach(row => {
+                const fineId = row.dataset.fineId || '';
+                const category = row.dataset.category || '';
+                const studentName = row.dataset.studentName || '';
+                const studentId = row.dataset.studentId || '';
+                
+                const cells = row.querySelectorAll('td');
+                const program = cells[3]?.textContent?.trim() || '';
+                const yearSection = cells[4]?.textContent?.trim() || '';
+                // Extract amount and format with PHP instead of ₱ for PDF compatibility
+                const amountText = cells[5]?.textContent?.trim() || '';
+                const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, '');
+                const status = cells[6]?.textContent?.trim() || '';
+                const remittance = cells[7]?.textContent?.trim() || '';
+                
+                tableData.push([fineId, category, studentName, studentId, program, yearSection, amount, status, remittance]);
+            });
+            
+            doc.autoTable({
+                head: [['Fine ID', 'Category', 'Student Name', 'Student ID', 'Program', 'Year & Section', 'Amount', 'Payment', 'Remittance']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
+                styles: { fontSize: 7, cellPadding: 1.5 },
+                columnStyles: {
+                    0: { cellWidth: 15 }, 1: { cellWidth: 30 }, 2: { cellWidth: 40 }, 3: { cellWidth: 30 },
+                    4: { cellWidth: 20 }, 5: { cellWidth: 25 }, 6: { cellWidth: 20 }, 7: { cellWidth: 20 }, 8: { cellWidth: 20 }
+                }
+            });
+            
+            doc.save(`ClassFines-${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportClassFinesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fine record(s) to PDF`);
         }
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>

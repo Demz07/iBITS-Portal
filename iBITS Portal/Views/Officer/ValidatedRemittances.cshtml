@@ -125,7 +125,8 @@
                         </div>
                         <h6 class="text-white mb-1">@remittance.CategoryName</h6>
                         <small class="text-muted">
-                            Section @remittance.Section • 
+                            <span class="text-white fw-semibold">@(remittance.Program ?? "Unknown Program")</span> • 
+                            Section <span class="text-white fw-semibold">@remittance.Section</span> • 
                             By @(remittance.SubmittedByNavigation?.FullName ?? "Class Treasurer")
                         </small>
                     </div>

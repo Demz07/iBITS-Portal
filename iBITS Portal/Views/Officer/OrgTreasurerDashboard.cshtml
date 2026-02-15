@@ -47,6 +47,24 @@
                 transform: translateX(5px);
                 background: rgba(255,255,255,0.08);
             }
+
+        /* Notification Badge Pulse Animation */
+        .pulse-notification {
+            animation: pulse-glow 2s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 1);
+        }
+
+        @@keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
     </style>
 }
 
@@ -58,58 +76,53 @@
         </h4>
         <p class="mb-0 small text-muted">Complete financial overview for all students</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         <a href="@Url.Action("PaymentReminders", "Officer")" class="btn btn-warning">
             <i class="bi bi-megaphone me-1"></i> Post Reminder
         </a>
+        <div class="dropdown">
+            <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                <i class="bi bi-download me-2"></i> Export Dashboard
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" style="background-color: rgba(30, 30, 30, 0.95); border: 1px solid rgba(255, 215, 0, 0.3);">
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportChartImages(); return false;">
+                        <i class="bi bi-image me-2 text-info"></i> Export Charts as Images (PNG)
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" style="border-color: rgba(255, 255, 255, 0.1);"></li>
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportAsPDF(); return false;">
+                        <i class="bi bi-file-pdf me-2 text-danger"></i> Export as PDF Report
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" style="border-color: rgba(255, 255, 255, 0.1);"></li>
+                <li>
+                    <a class="dropdown-item text-white" href="#" onclick="exportToExcel(); return false;">
+                        <i class="bi bi-file-excel me-2 text-success"></i> Export Data as Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 
-<!-- QUICK ACCESS CARDS -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <a href="@Url.Action("OrgFees", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
-                <div class="d-flex align-items-center">
-                    <div class="me-4" style="background: rgba(16, 185, 129, 0.15); color: #10b981; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
-                        <i class="bi bi-cash-stack fs-1"></i>
-                    </div>
-                    <div>
-                        <h5 class="text-white mb-1 fw-bold">Fees Management</h5>
-                        <p class="text-muted mb-0 small">View all fees, create new fees, and track collections across all sections</p>
-                    </div>
-                    <div class="ms-auto">
-                        <i class="bi bi-chevron-right text-gold fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6">
-        <a href="@Url.Action("OrgFines", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;">
-                <div class="d-flex align-items-center">
-                    <div class="me-4" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
-                        <i class="bi bi-exclamation-triangle fs-1"></i>
-                    </div>
-                    <div>
-                        <h5 class="text-white mb-1 fw-bold">Fines Management</h5>
-                        <p class="text-muted mb-0 small">View all fines, create new fines, and monitor penalty collections</p>
-                    </div>
-                    <div class="ms-auto">
-                        <i class="bi bi-chevron-right text-gold fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
+<!-- QUICK ACCESS CARDS REMOVED -->
 
 <!-- REMITTANCE MANAGEMENT CARDS -->
 <div class="row mb-4">
     <div class="col-md-6">
         <a href="@Url.Action("PendingRemittances", "Officer")" class="text-decoration-none">
-            <div class="glass-panel p-4 h-100" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.4);">
+            <div class="glass-panel p-4 h-100 position-relative" style="transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.4);">
+                @if (ViewBag.PendingRemittanceCount != null && ViewBag.PendingRemittanceCount > 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger pulse-notification" 
+                          style="font-size: 0.85rem; padding: 0.5em 0.75em; z-index: 10;">
+                        @ViewBag.PendingRemittanceCount
+                        <span class="visually-hidden">pending remittances</span>
+                    </span>
+                }
                 <div class="d-flex align-items-center">
                     <div class="me-4" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
                         <i class="bi bi-hourglass-split fs-1"></i>
@@ -209,9 +222,9 @@
                             <td><i class="bi bi-hourglass-split text-warning me-2"></i> Total Pending</td>
                             <td class="text-end fw-bold text-warning">₱@((pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
-                        <tr class="table-active">
-                            <td><i class="bi bi-calculator me-2"></i> Grand Total</td>
-                            <td class="text-end fw-bold text-white">₱@((totalCollections + pendingFees + pendingFines).ToString("N2"))</td>
+                        <tr class="table-active" style="background-color: rgba(255, 215, 0, 0.1);">
+                            <td class="text-white"><i class="bi bi-calculator-fill me-2" style="color: #FFD700;"></i> <strong>Grand Total</strong></td>
+                            <td class="text-end fw-bold" style="color: #FFD700; font-size: 1.1rem;">₱@((totalCollections + pendingFees + pendingFines).ToString("N2"))</td>
                         </tr>
                     </tbody>
                 </table>
@@ -238,9 +251,137 @@
     <div class="col-12">
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
-                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends (Current Academic Year)
+                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends
             </h5>
-            <canvas id="trendsChart" style="max-height: 300px;"></canvas>
+
+            <!-- Filter Tabs -->
+            <ul class="nav nav-tabs mb-3" id="filterTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="quick-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#quick-filter" type="button" role="tab">
+                        <i class="bi bi-lightning-charge me-1"></i> Quick Filter
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="month-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#month-filter" type="button" role="tab">
+                        <i class="bi bi-calendar-month me-1"></i> By Month
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="daterange-filter-tab" data-bs-toggle="tab" 
+                            data-bs-target="#daterange-filter" type="button" role="tab">
+                        <i class="bi bi-calendar-range me-1"></i> Date Range
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mb-3" id="filterTabContent">
+                <!-- Quick Filter Tab -->
+                <div class="tab-pane fade show active" id="quick-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Time Range</label>
+                            <select id="quickRange" class="form-select form-select-sm">
+                                <option value="lastWeek">Last Week</option>
+                                <option value="lastMonth">Last Month</option>
+                                <option value="last3Months" selected>Last 3 Months</option>
+                                <option value="last6Months">Last 6 Months</option>
+                                <option value="currentSemester">Current Semester</option>
+                                <option value="fullYear">Full Academic Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Academic Year</label>
+                            <select id="academicYear" class="form-select form-select-sm">
+                                <option value="2025-2026" selected>2025-2026</option>
+                                <option value="2024-2025">2024-2025</option>
+                                <option value="2023-2024">2023-2024</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- By Month Tab -->
+                <div class="tab-pane fade" id="month-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Month</label>
+                            <select id="monthSelect" class="form-select form-select-sm">
+                                <option value="1">January</option>
+                                <option value="2" selected>February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">Year</label>
+                            <select id="yearSelect" class="form-select form-select-sm">
+                                <option value="2026" selected>2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Range Tab -->
+                <div class="tab-pane fade" id="daterange-filter" role="tabpanel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">From Date</label>
+                            <input type="date" id="fromDate" class="form-control form-control-sm" 
+                                   value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-white">To Date</label>
+                            <input type="date" id="toDate" class="form-control form-control-sm" 
+                                   value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
+                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
+                                <i class="bi bi-funnel me-1"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Filter Label -->
+            <div class="mb-2">
+                <small class="text-muted">
+                    <i class="bi bi-filter-circle me-1"></i> 
+                    Showing: <span id="currentFilterLabel" class="text-gold fw-bold">Last 3 Months</span>
+                </small>
+            </div>
+
+            <!-- Chart -->
+            <div style="position: relative; height: 350px;">
+                <canvas id="trendsChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -251,9 +392,6 @@
         <div class="glass-panel">
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Paid/Unpaid by Program-Year
-                <button class="btn btn-sm btn-outline-light float-end" onclick="exportProgramYearData()">
-                    <i class="bi bi-download me-1"></i> Export
-                </button>
             </h5>
             @if (ViewBag.ProgramYearStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearStats).Any())
             {
@@ -281,8 +419,23 @@
                                 <h6 class="text-danger mb-0">₱@programYearUnpaid.ToString("N2")</h6>
                             </div>
                         </div>
-                        <div class="progress mt-3" style="height: 8px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F1"))%"></div>
+                        @{
+                            var paidPercent = programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0;
+                            var unpaidPercent = programYearTotal > 0 ? (programYearUnpaid / programYearTotal * 100) : 0;
+                        }
+                        <div class="progress mt-3" style="height: 30px; position: relative; background-color: rgba(220, 53, 69, 0.3);">
+                            <div class="progress-bar bg-success d-flex align-items-center justify-content-center" role="progressbar" style="width: @paidPercent.ToString("F1")%">
+                                @if (paidPercent > 5)
+                                {
+                                    <span class="text-white fw-bold small">@paidPercent.ToString("F1")% Paid</span>
+                                }
+                            </div>
+                            @if (unpaidPercent > 5)
+                            {
+                                <span class="position-absolute text-white fw-bold small" style="right: 10px; top: 50%; transform: translateY(-50%);">
+                                    @unpaidPercent.ToString("F1")% Unpaid
+                                </span>
+                            }
                         </div>
                     </div>
                 }
@@ -296,72 +449,255 @@
 </div>
 
 @section Scripts {
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2canvas - For capturing DOM elements as images -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <!-- jsPDF - For PDF generation -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    
+    <!-- SheetJS - For Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
     <script>
         // Monthly Trends Line Chart
         const trendsCtx = document.getElementById('trendsChart').getContext('2d');
         const monthlyTrends = @Html.Raw(Json.Serialize(ViewBag.MonthlyTrends ?? new List<object>()));
         
-        new Chart(trendsCtx, {
-            type: 'line',
-            data: {
-                labels: monthlyTrends.map(t => t.Month),
-                datasets: [
-                    {
-                        label: 'Fees Collected',
-                        data: monthlyTrends.map(t => t.FeesCollected),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+        // Debug: Log the data
+        console.log('Initial Monthly Trends Data:', monthlyTrends);
+        console.log('Number of months:', monthlyTrends.length);
+        
+        // Global chart variable
+        let trendsChart = null;
+        
+        // Initialize chart
+        function initializeTrendsChart(data) {
+            // Destroy existing chart if any
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+
+            // Check if we have data
+            if (!data || data.length === 0) {
+                // Show no data message
+                const canvas = document.getElementById('trendsChart');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No collection data available for the selected period', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // Debug: Log raw data first
+            console.log('Raw data received:', data);
+            console.log('First item:', data[0]);
+            console.log('Property names:', data[0] ? Object.keys(data[0]) : 'no data');
+
+            // Calculate max value for Y-axis scale
+            const feesData = data.map(t => t.feesCollected || t.FeesCollected || 0);
+            const finesData = data.map(t => t.finesCollected || t.FinesCollected || 0);
+            const labels = data.map(t => t.month || t.Month || 'Unknown');
+            const maxFees = Math.max(...feesData);
+            const maxFines = Math.max(...finesData);
+            const maxValue = Math.max(maxFees, maxFines);
+            const suggestedMaxValue = maxValue > 0 ? maxValue * 1.2 : 100;
+
+            console.log('Processed Chart Data:', {
+                labels: labels,
+                feesData: feesData,
+                finesData: finesData,
+                maxValue: maxValue,
+                suggestedMax: suggestedMaxValue
+            });
+
+            trendsChart = new Chart(trendsCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Fees Collected',
+                            data: feesData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'Fines Collected',
+                            data: finesData,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#f59e0b',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { 
+                                color: '#fff', 
+                                font: { size: 14, weight: 'bold' },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#FFD700',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                }
+                            }
+                        }
                     },
-                    {
-                        label: 'Fines Collected',
-                        data: monthlyTrends.map(t => t.FinesCollected),
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        labels: { color: '#fff', font: { size: 12 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: suggestedMaxValue,
+                            ticks: { 
+                                color: '#fff',
+                                font: { size: 12, weight: 'bold' },
+                                padding: 10,
+                                callback: function(value) {
+                                    // Format large numbers with K/M suffix
+                                    if (value >= 1000000) {
+                                        return '₱' + (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return '₱' + (value / 1000).toFixed(1) + 'K';
+                                    }
+                                    return '₱' + value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                                }
+                            },
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.15)',
+                                drawBorder: true,
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                borderWidth: 2
+                            }
+                        },
+                        x: {
+                            display: true,
+                            position: 'bottom',
+                            ticks: { 
+                                color: '#fff',
+                                font: { size: 12, weight: 'bold' },
+                                padding: 10,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                autoSkip: false
+                            },
+                            grid: { 
+                                display: false,
+                                drawBorder: true,
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                borderWidth: 2
                             }
                         }
                     }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { 
-                            color: '#fff',
-                            callback: function(value) {
-                                return '₱' + value.toLocaleString();
-                            }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    },
-                    x: {
-                        ticks: { color: '#fff' },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    }
                 }
+            });
+        }
+
+        // Apply Filter Function
+        function applyFilter() {
+            // Determine which tab is active
+            const activeTab = document.querySelector('#filterTabs .nav-link.active').id;
+            let params = {};
+            
+            if (activeTab === 'quick-filter-tab') {
+                // Quick Filter mode
+                params = {
+                    filterType: 'quick',
+                    quickRange: document.getElementById('quickRange').value,
+                    academicYear: document.getElementById('academicYear').value
+                };
+            } else if (activeTab === 'month-filter-tab') {
+                // By Month mode
+                params = {
+                    filterType: 'month',
+                    month: document.getElementById('monthSelect').value,
+                    year: document.getElementById('yearSelect').value
+                };
+            } else if (activeTab === 'daterange-filter-tab') {
+                // Date Range mode
+                const fromDate = document.getElementById('fromDate').value;
+                const toDate = document.getElementById('toDate').value;
+                
+                // Validation
+                if (!fromDate || !toDate) {
+                    alert('Please select both From Date and To Date');
+                    return;
+                }
+                
+                if (new Date(toDate) < new Date(fromDate)) {
+                    alert('To Date must be after From Date');
+                    return;
+                }
+                
+                params = {
+                    filterType: 'daterange',
+                    fromDate: fromDate,
+                    toDate: toDate
+                };
             }
-        });
+            
+            // Show loading indicator
+            document.getElementById('currentFilterLabel').innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Loading...';
+            
+            // Make AJAX call
+            fetch('/Officer/GetMonthlyTrends?' + new URLSearchParams(params))
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Filter Result:', result);
+                    
+                    if (result.success) {
+                        // Update filter label
+                        document.getElementById('currentFilterLabel').textContent = result.filterLabel;
+                        
+                        // Update chart
+                        initializeTrendsChart(result.data);
+                    } else {
+                        alert('Error: ' + result.message);
+                        document.getElementById('currentFilterLabel').textContent = 'Error loading data';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching trends:', error);
+                    alert('Failed to load data. Please try again.');
+                    document.getElementById('currentFilterLabel').textContent = 'Error';
+                });
+        }
+
+        // Initialize chart with default data on page load
+        initializeTrendsChart(monthlyTrends);
 
         // Financial Doughnut Chart
         const ctx = document.getElementById('financialChart').getContext('2d');
@@ -398,5 +734,150 @@
                 }
             }
         });
+
+        // ============================================================
+        // EXPORT FUNCTIONS
+        // ============================================================
+
+        // Export Charts as Images (PNG)
+        async function exportChartImages() {
+            try {
+                alert('Generating images... This may take a few seconds.');
+
+                // Capture Collection Trends chart
+                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
+                const trendsCanvas = await html2canvas(trendsSection, {
+                    backgroundColor: '#1a1a2e',
+                    scale: 2
+                });
+                
+                // Download Collection Trends image
+                const trendsImg = trendsCanvas.toDataURL('image/png');
+                const link1 = document.createElement('a');
+                link1.href = trendsImg;
+                link1.download = 'collection_trends_' + new Date().toISOString().split('T')[0] + '.png';
+                document.body.appendChild(link1);
+                link1.click();
+                document.body.removeChild(link1);
+
+                // Small delay before next export
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Capture Program-Year section
+                const programYearSection = document.querySelectorAll('.glass-panel')[document.querySelectorAll('.glass-panel').length - 1];
+                const pyCanvas = await html2canvas(programYearSection, {
+                    backgroundColor: '#1a1a2e',
+                    scale: 2
+                });
+                
+                const pyImg = pyCanvas.toDataURL('image/png');
+                const link2 = document.createElement('a');
+                link2.href = pyImg;
+                link2.download = 'program_year_stats_' + new Date().toISOString().split('T')[0] + '.png';
+                document.body.appendChild(link2);
+                link2.click();
+                document.body.removeChild(link2);
+
+                alert('Images exported successfully!');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export images: ' + error.message);
+            }
+        }
+
+        // Export as PDF Report
+        async function exportAsPDF() {
+            try {
+                alert('Generating PDF... This may take a few seconds.');
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('portrait', 'mm', 'a4');
+                
+                // Header
+                pdf.setFontSize(20);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Organization Treasury Dashboard', 20, 20);
+                
+                pdf.setFontSize(10);
+                pdf.setTextColor(150, 150, 150);
+                pdf.text('Generated: ' + new Date().toLocaleString(), 20, 28);
+                
+                // Quick Stats
+                pdf.setFontSize(14);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Financial Summary', 20, 40);
+                
+                pdf.setFontSize(10);
+                pdf.setTextColor(0, 0, 0);
+                pdf.text('Total Fees Collected: PHP ' + (@totalFeesCollected).toLocaleString(), 20, 48);
+                pdf.text('Total Fines Collected: PHP ' + (@totalFinesCollected).toLocaleString(), 20, 55);
+                pdf.text('Pending Fees: PHP ' + (@pendingFees).toLocaleString(), 20, 62);
+                pdf.text('Pending Fines: PHP ' + (@pendingFines).toLocaleString(), 20, 69);
+                pdf.text('Grand Total: PHP ' + (@(totalCollections + pendingFees + pendingFines)).toLocaleString(), 20, 76);
+
+                // Add Collection Trends chart
+                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
+                const trendsCanvas = await html2canvas(trendsSection, { scale: 1 });
+                const trendsImg = trendsCanvas.toDataURL('image/jpeg', 0.7);
+                pdf.addImage(trendsImg, 'JPEG', 20, 85, 170, 80);
+
+                // Page 2
+                pdf.addPage();
+                pdf.setFontSize(14);
+                pdf.setTextColor(255, 215, 0);
+                pdf.text('Program-Year Breakdown', 20, 20);
+
+                const programYearSection = document.querySelectorAll('.glass-panel')[document.querySelectorAll('.glass-panel').length - 1];
+                const pyCanvas = await html2canvas(programYearSection, { scale: 1 });
+                const pyImg = pyCanvas.toDataURL('image/jpeg', 0.7);
+                pdf.addImage(pyImg, 'JPEG', 20, 30, 170, 100);
+
+                pdf.save('OrgTreasury_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+                alert('PDF exported successfully!');
+            } catch (error) {
+                console.error('PDF export error:', error);
+                alert('Failed to export PDF: ' + error.message);
+            }
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+
+                // Sheet 1: Quick Stats
+                const statsData = [
+                    ['Organization Treasury Dashboard'],
+                    ['Generated: ' + new Date().toLocaleString()],
+                    [],
+                    ['Metric', 'Amount'],
+                    ['Total Fees Collected', @totalFeesCollected],
+                    ['Total Fines Collected', @totalFinesCollected],
+                    ['Pending Fees', @pendingFees],
+                    ['Pending Fines', @pendingFines],
+                    ['Grand Total', @(totalCollections + pendingFees + pendingFines)]
+                ];
+                const ws1 = XLSX.utils.aoa_to_sheet(statsData);
+                XLSX.utils.book_append_sheet(wb, ws1, 'Quick Stats');
+
+                // Sheet 2: Monthly Trends
+                if (monthlyTrends && monthlyTrends.length > 0) {
+                    const monthlyData = monthlyTrends.map(item => ({
+                        Month: item.Month || item.month || 'Unknown',
+                        'Fees Collected': item.FeesCollected || item.feesCollected || 0,
+                        'Fines Collected': item.FinesCollected || item.finesCollected || 0,
+                        'Total': (item.FeesCollected || item.feesCollected || 0) + (item.FinesCollected || item.finesCollected || 0)
+                    }));
+                    const ws2 = XLSX.utils.json_to_sheet(monthlyData);
+                    XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Trends');
+                }
+
+                XLSX.writeFile(wb, 'OrgTreasury_Data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+                alert('Excel file exported successfully!');
+            } catch (error) {
+                console.error('Excel export error:', error);
+                alert('Failed to export Excel: ' + error.message);
+            }
+        }
     </script>
 }

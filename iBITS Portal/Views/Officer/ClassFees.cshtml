@@ -424,9 +424,9 @@
             <i class="bi bi-list-check me-2"></i> Fee Records - @sectionName
         </h5>
         <div>
-            <a asp-action="ExportClassFees" class="btn-gold-outline btn-sm">
-                <i class="bi bi-download me-1"></i> Export
-            </a>
+            <button onclick="exportClassFeesData()" class="btn-gold-outline btn-sm">
+                <i class="bi bi-download me-1"></i> Export Filtered Data
+            </button>
         </div>
     </div>
 
@@ -441,11 +441,17 @@
             var categoryUnpaid = categoryFees.Count(f => f.FeeStatus?.ToUpper() != "PAID");
             var categoryCollectedNotRemitted = categoryFees.Count(f => f.FeeStatus?.ToUpper() == "PAID" && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
             var categoryRemitted = categoryFees.Count(f => f.RemittanceStatus == FeeRemittanceStatus.Remitted);
-            var canRemit = categoryCollectedNotRemitted > 0;
-
+            
             // Check if this category is validated (closed)
             var validatedCategories = ViewBag.ValidatedCategories as List<string> ?? new List<string>();
             var isClosed = validatedCategories.Contains(categoryName);
+            
+            // Check if there's already a pending remittance for this category
+            var pendingRemittances = ViewBag.PendingRemittances as List<string> ?? new List<string>();
+            var hasPendingRemittance = pendingRemittances.Contains(categoryName);
+            
+            // Can only remit if: has collected fees, not closed, and no pending remittance
+            var canRemit = categoryCollectedNotRemitted > 0 && !isClosed && !hasPendingRemittance;
 
             <div class="fee-category-card @(isClosed ? "border-purple" : "")">
                 <!-- Category Header -->
@@ -474,6 +480,10 @@
                         @if (isClosed)
                         {
                             <span class="badge bg-purple"><i class="bi bi-lock-fill me-1"></i> Category Closed</span>
+                        }
+                        else if (hasPendingRemittance)
+                        {
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Pending Validation</span>
                         }
                         else if (canRemit)
                         {
@@ -532,7 +542,7 @@
                                 {
                                     var student = fee.StudentNumNavigation;
                                     var isPaid = fee.FeeStatus?.ToUpper() == "PAID";
-                                    var isLocked = fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed;
+                                    var isLocked = fee.RemittanceStatus != FeeRemittanceStatus.NotRemitted || isClosed || hasPendingRemittance;
                                     var isRemitted = fee.RemittanceStatus == FeeRemittanceStatus.Remitted;
                                     var isPendingRemit = fee.RemittanceStatus == FeeRemittanceStatus.PendingRemittance;
                                     var rowClass = isLocked ? "row-locked" : "";
@@ -600,7 +610,7 @@
                                         <td class="text-center">
                                             @if (isLocked)
                                             {
-                                                <span class="lock-indicator" title="Locked - Category is Closed or Remitted">
+                                                <span class="lock-indicator" title="@(hasPendingRemittance ? "Locked - Pending Validation" : "Locked - Category is Closed or Remitted")">
                                                     <i class="bi bi-lock-fill"></i> Locked
                                                 </span>
                                             }
@@ -1038,6 +1048,167 @@
                 applyFilters();
             });
         });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // ============================================================
+        // EXPORT CLASS FEES DATA (WYSIWYG)
+        // ============================================================
+        function exportClassFeesData() {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div class="modal fade" id="exportClassFeesModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content glass-modal" style="background: rgba(30, 30, 30, 0.95); border: 1px solid rgba(212, 175, 55, 0.3);">
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-white"><i class="bi bi-download me-2"></i> Export Class Fees</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">Choose export format for visible fees:</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" onclick="exportClassFeesToExcel()">
+                                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-danger" onclick="exportClassFeesToPDF()">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            const exportModal = new bootstrap.Modal(document.getElementById('exportClassFeesModal'));
+            exportModal.show();
+            document.getElementById('exportClassFeesModal').addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
+        function exportClassFeesToExcel() {
+            const visibleRows = document.querySelectorAll('.fee-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
+                return;
+            }
+            
+            const data = [
+                ['Fee ID', 'Fee Category', 'Student Name', 'Student ID', 'Program', 'Year & Section', 'Amount', 'Payment Status', 'Remittance']
+            ];
+            
+            visibleRows.forEach(row => {
+                const feeId = row.dataset.feeId || '';
+                const category = row.dataset.category || '';
+                const studentName = row.dataset.studentName || '';
+                const studentId = row.dataset.studentId || '';
+                
+                const cells = row.querySelectorAll('td');
+                const program = cells[3]?.textContent?.trim() || '';
+                const yearSection = cells[4]?.textContent?.trim() || '';
+                const amount = cells[5]?.textContent?.trim() || '';
+                const status = cells[6]?.textContent?.trim() || '';
+                const remittance = cells[7]?.textContent?.trim() || '';
+                
+                data.push([feeId, category, studentName, studentId, program, yearSection, amount, status, remittance]);
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            ws['!cols'] = [
+                { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, 
+                { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Class Fees');
+            XLSX.writeFile(wb, `ClassFees-${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fee record(s)`);
+        }
+
+        function exportClassFeesToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const visibleRows = document.querySelectorAll('.fee-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                alert('No visible data to export. Please adjust your filters.');
+                bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
+                return;
+            }
+            
+            doc.setFontSize(18);
+            doc.text('Class Fees Report', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Records: ${visibleRows.length}`, 14, 28);
+            
+            const tableData = [];
+            visibleRows.forEach(row => {
+                const feeId = row.dataset.feeId || '';
+                const category = row.dataset.category || '';
+                const studentName = row.dataset.studentName || '';
+                const studentId = row.dataset.studentId || '';
+                
+                const cells = row.querySelectorAll('td');
+                const program = cells[3]?.textContent?.trim() || '';
+                const yearSection = cells[4]?.textContent?.trim() || '';
+                // Extract amount and format with PHP instead of ₱ for PDF compatibility
+                const amountText = cells[5]?.textContent?.trim() || '';
+                const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, '');
+                const status = cells[6]?.textContent?.trim() || '';
+                const remittance = cells[7]?.textContent?.trim() || '';
+                
+                tableData.push([feeId, category, studentName, studentId, program, yearSection, amount, status, remittance]);
+            });
+            
+            doc.autoTable({
+                head: [['Fee ID', 'Category', 'Student Name', 'Student ID', 'Program', 'Year & Section', 'Amount', 'Payment', 'Remittance']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
+                styles: { fontSize: 7, cellPadding: 1.5 },
+                columnStyles: {
+                    0: { cellWidth: 15 }, 1: { cellWidth: 30 }, 2: { cellWidth: 40 }, 3: { cellWidth: 30 },
+                    4: { cellWidth: 20 }, 5: { cellWidth: 25 }, 6: { cellWidth: 20 }, 7: { cellWidth: 20 }, 8: { cellWidth: 20 }
+                }
+            });
+            
+            doc.save(`ClassFees-${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
+            showToast('success', `Exported ${visibleRows.length} fee record(s) to PDF`);
+        }
+
+        function showToast(type, message) {
+            const bgClass = type === 'success' ? 'success' : (type === 'info' ? 'info' : 'danger');
+            const icon = type === 'success' ? 'check-circle' : (type === 'info' ? 'info-circle' : 'exclamation-circle');
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${bgClass} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="bi bi-${icon} me-2"></i>${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = container.lastElementChild;
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
     </script>
     <script src="~/js/officer-fees.js" asp-append-version="true"></script>
 }

@@ -30,8 +30,9 @@ namespace iBITS_Portal.Models
 
         /// <summary>
         /// Target audience: "All Students", "1st Year", "2nd Year", "BSIT", "BSCS", etc.
+        /// Updated to support multiple audiences (comma-separated): "1st Year, BSIT, Outstanding Balance"
         /// </summary>
-        [StringLength(100)]
+        [StringLength(500)]
         public string? TargetAudience { get; set; }
 
         /// <summary>

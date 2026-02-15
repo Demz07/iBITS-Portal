@@ -1,0 +1,80 @@
+feat: Add Program field to remittances and update Org Treasury Dashboard logic
+
+BREAKING CHANGES:
+- Database migration required: Added 'Program' column to Remittances table
+
+NEW FEATURES:
+- Added Program display in all remittance views (Pending, History, Validated)
+- Program is automatically extracted from Student.Course when creating remittances
+- Enhanced visual consistency with blue cash stack icons for Class Treasurer payments
+
+DASHBOARD UPDATES:
+- Fixed Org Treasury Dashboard to only reflect validated payments
+- Outstanding Balance now excludes Class Treasurer payments (not yet validated)
+- Total Collected only counts Remitted & Validated fees/fines
+- Program/Year stats now only count validated payments
+- Monthly trends now only count validated payments
+
+UI/UX IMPROVEMENTS:
+- Simplified status display: Only "Paid" and "Unpaid" (plus "Excused" for fines)
+- Added consistent blue cash stack icon (bi-cash-stack) for Class Treasurer payments
+- Added green shield-lock icon (bi-shield-lock-fill) for pending validation
+- Added green shield-check icon (bi-shield-check) for validated payments
+- Updated tooltips for better clarity
+
+FILES MODIFIED:
+Models:
+- Models/Remittance.cs: Added Program property (NVARCHAR(50), nullable)
+- Models/Fee.cs: No changes
+- Models/Fine.cs: No changes
+
+Controllers:
+- Controllers/OfficerController.cs:
+  * Updated OrgTreasurerDashboard() - Fixed Outstanding Balance calculation
+  * Updated OrgTreasurerDashboardWithRemittance() - Fixed all statistics
+  * Updated fee remittance creation - Auto-populate Program from Section
+  * Updated fine remittance creation - Auto-populate Program from Section
+
+Views:
+- Views/Officer/OrgFees.cshtml:
+  * Simplified status badges (Paid/Unpaid only)
+  * Updated checkbox column icons (cash stack, shield-lock, lock)
+  * Updated action column icons for validation states
+
+- Views/Officer/OrgFines.cshtml:
+  * Simplified status badges (Paid/Unpaid/Excused)
+  * Updated checkbox column icons (cash stack, shield-lock, lock)
+  * Updated action column icons for validation states
+
+- Views/Officer/PendingRemittances.cshtml:
+  * Added Program display before Section
+
+- Views/Officer/RemittanceHistory.cshtml:
+  * Added Program display before Section
+
+- Views/Officer/ValidatedRemittances.cshtml:
+  * Added Program display before Section
+
+DATABASE MIGRATION:
+- Added 'Program' column to Remittances table
+- Populated existing records from Student.Course via joins
+- SQL scripts provided in project root
+
+TECHNICAL DETAILS:
+- Program extraction logic: Section "BSIT 3-1" -> Program = "BSIT"
+- Dashboard now uses RemittanceStatus == Remitted for "Paid" classification
+- Icon hierarchy: Cash Stack (pending) -> Shield Lock (awaiting) -> Shield Check (validated)
+
+TESTING:
+- Build successful: 0 errors, 218 warnings (nullable references - non-critical)
+- Database migration tested and verified
+- All remittance views display Program correctly
+
+IMPACT:
+- Class Treasurer payments no longer affect Org Treasury Dashboard until validated
+- Clearer visual indicators for payment states
+- Better tracking with Program field in remittances
+- Improved user experience with consistent iconography
+
+---
+Co-authored-by: Rovo Dev <rovodev@example.com>

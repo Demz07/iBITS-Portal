@@ -133,6 +133,65 @@ namespace iBITS_Portal.Controllers
      .ToListAsync();
 
             // Financials
+            // Get all non-expired, non-dismissed announcements
+            var allAnnouncements = await _context.Announcements
+                .Where(a => (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
+                            && !dismissedAnnouncementIds.Contains(a.Id))
+                .OrderByDescending(a => a.Timestamp)
+                .ToListAsync();
+
+            // Filter announcements based on target audience (supports comma-separated)
+            var announcements = allAnnouncements.Where(a => 
+            {
+                if (string.IsNullOrWhiteSpace(a.TargetAudience))
+                    return false;
+
+                // Split target audiences by comma
+                var audiences = a.TargetAudience.Split(',').Select(t => t.Trim()).ToList();
+
+                // Check if student matches any of the target audiences
+                return audiences.Any(audience =>
+                {
+                    if (audience == "All Students")
+                        return true;
+                    
+                    if (audience == student.Course)
+                        return true;
+                    
+                    if (audience == "Students with Outstanding Balance")
+                        return true; // Will be checked against fees later if needed
+                    
+                    // Check year level (e.g., "1st Year" should match "1-1", "1-2", etc.)
+                    if (audience.Contains("Year") && student.YearLevelSection != null)
+                    {
+                        var parts = audience.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        
+                        if (parts.Length >= 3 && parts[2] == "Year")
+                        {
+                            // Format: "BSIT 1st Year" or "DIT 3rd Year"
+                            string program = parts[0]; // "BSIT" or "DIT"
+                            string yearPrefix = parts[1]; // "1st", "2nd", "3rd", "4th"
+                            string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
+                            
+                            // Match if student has both the program AND year level
+                            return student.Course == program && student.YearLevelSection.StartsWith(yearNumber + "-");
+                        }
+                        else
+                        {
+                            // Format: "1st Year", "2nd Year" (all programs)
+                            var yearPrefix = audience.Split(' ')[0];
+                            string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
+                            return student.YearLevelSection.StartsWith(yearNumber + "-");
+                        }
+                    }
+                    
+                    return false;
+                });
+            }).Take(10).ToList();
+
+            // ============================================================
+            // NEW: FINANCIAL SUMMARY
+            // ============================================================
             var unpaidFees = await _context.Fees
                 .Where(f => f.StudentNum == user.UserName && f.FeeStatus != "Paid")
                 .ToListAsync();
