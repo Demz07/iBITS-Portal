@@ -136,7 +136,7 @@
 
 
 
-        
+
     <!-- Row 2: Charts -->
     <div class="row g-4">
         <!-- Paid Fines Chart -->
@@ -284,7 +284,7 @@
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
-                    <th class="text-center" style="width: 60px;">ACTIONS</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -372,32 +372,7 @@
                             }
                         </td>
 
-                        <!-- Actions Dropdown (Admin: No Payment Status Changes) -->
-                        <td class="text-center">
-                            @if (!isPaid && !isExcused)
-                            {
-                                <div class="dropdown">
-                                    <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                        <li>
-                                            <a href="#" class="dropdown-item text-danger" onclick="openDeleteModal(@fine.FineId, '@student?.FullName?.Replace("'", "\\'")', @(fine.Amount ?? 0))">
-                                                <i class="bi bi-trash me-2"></i> Delete Fine
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            }
-                            else if (isPaid)
-                            {
-                                <span class="text-success" title="Paid - Cannot modify"><i class="bi bi-lock-fill"></i></span>
-                            }
-                            else if (isExcused)
-                            {
-                                <span class="text-info" title="Excused - Cannot modify"><i class="bi bi-shield-lock-fill"></i></span>
-                            }
-                        </td>
+
                     </tr>
                 }
             </tbody>
@@ -609,5 +584,6 @@
     </script>
     <script src="~/js/fines.js" asp-append-version="true"></script>
 }
+
 
 

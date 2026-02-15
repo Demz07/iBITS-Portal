@@ -1,17 +1,38 @@
 @* ============================================================ *@
-@* FILE PATH: Views/Home/Index.cshtml (Student Dashboard)       *@
-@* FINAL VERSION: Complete UI/UX Fixes - Guaranteed Instant Email Update *@@* ============================================================ *@
+@* FILE PATH: Views/Home/StudentDashboard.cshtml                *@
+@* ============================================================ *@
+@using iBITS_Portal.Models
 @{
     ViewData["Title"] = "Command Center";
     Layout = "~/Views/Shared/_StudentLayout.cshtml";
 
-    var student = ViewBag.Student as iBITS_Portal.Models.Student;
-    var nextEvent = ViewBag.NextEvent as iBITS_Portal.Models.Event;
-    var upcomingEvents = ViewBag.UpcomingEvents as List<iBITS_Portal.Models.Event> ?? new List<iBITS_Portal.Models.Event>();
-    var announcements = ViewBag.Announcements as List<iBITS_Portal.Models.Announcement> ?? new List<iBITS_Portal.Models.Announcement>();
-    var paymentReminders = announcements.Where(a => a.Title.Contains("Payment Reminder")).ToList();
-    var regularAnnouncements = announcements.Where(a => !a.Title.Contains("Payment Reminder")).ToList();
+    var student = ViewBag.Student as Student;
 
+    // Expect these from the controller
+    var currentEvents = ViewBag.CurrentEvents as List<Event> ?? new List<Event>();
+    var upcomingEvents = ViewBag.UpcomingEvents as List<Event> ?? new List<Event>();
+    var announcements = ViewBag.Announcements as List<Announcement> ?? new List<Announcement>();
+
+    // Split announcements
+    var paymentReminders = announcements.Where(a => (a.Title ?? string.Empty).Contains("Payment Reminder")).ToList();
+    var regularAnnouncements = announcements.Where(a =>
+      !(a.Title ?? string.Empty).Contains("Payment Reminder") &&
+      a.AnnouncementType != "Admin Notice"
+  ).ToList();
+
+    var adminNotices = ViewBag.AdminNotices as List<Notification> ?? new List<Notification>();
+
+    // CURRENT ACTIVITY
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    bool showCurrentActivity = currentEvents.Any();
+
+    // Upcoming (sidebar)
+    var upcomingEventsDisplay = upcomingEvents
+        .Where(e => (!e.EventDate.HasValue || e.EventDate.Value >= today) && !e.IsClosed)
+        .OrderBy(e => e.EventDate ?? DateOnly.MaxValue)
+        .ToList();
+
+    // Role badge
     string displayRole = "Member";
     string badgeClass = "badge-role-member";
     string badgeIcon = "bi-person-fill";
@@ -27,6 +48,29 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/student-dashboard.css" asp-append-version="true" />
     <style>
+        /* SETTINGS MODAL SIDEBAR TABS */
+        #accountSettingsTabs .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+            #accountSettingsTabs .nav-link:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: #fff;
+            }
+
+            /* The Active State (Gold Background, Black Text) */
+            #accountSettingsTabs .nav-link.active {
+                background-color: var(--gold-primary) !important;
+                color: #000 !important;
+                font-weight: 700;
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+            }
         /* Fix for Modal Stacking */
         .modal-header .btn-close {
             z-index: 10001 !important;
@@ -131,7 +175,6 @@
             object-fit: cover;
         }
 
-        /* Event Modal Specifics */
         #eventTabs .nav-link {
             color: var(--text-main);
             background: rgba(255, 255, 255, 0.05);
@@ -144,6 +187,210 @@
                 border-color: var(--gold-primary);
                 color: var(--gold-primary);
             }
+
+        /* UPCOMING EVENTS (SIDEBAR) */
+        .upcoming-events-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .upcoming-event-card {
+            display: flex;
+            gap: 12px;
+            padding: 14px 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+            transition: transform .18s ease, border-color .18s ease, background .18s ease;
+        }
+
+            .upcoming-event-card:hover {
+                transform: translateY(-2px);
+                background: rgba(212, 175, 55, 0.08);
+                border-color: rgba(212, 175, 55, 0.30);
+            }
+
+        .ue-date-badge {
+            width: 56px;
+            flex-shrink: 0;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(212, 175, 55, 0.30);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 6px;
+        }
+
+            .ue-date-badge .month {
+                font-size: 0.65rem;
+                font-weight: 900;
+                letter-spacing: 1px;
+                color: var(--gold-primary);
+                text-transform: uppercase;
+                opacity: 0.95;
+            }
+
+            .ue-date-badge .day {
+                font-size: 1.35rem;
+                font-weight: 900;
+                line-height: 1.0;
+                color: #fff;
+                margin-top: 3px;
+            }
+
+        .ue-content {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ue-title {
+            font-weight: 800;
+            color: #fff;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ue-meta {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.65);
+        }
+
+            .ue-meta i {
+                color: var(--gold-primary);
+            }
+
+        .ue-sub {
+            font-size: 0.72rem;
+            margin-top: 4px;
+            color: rgba(255,255,255,0.55);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* THEMED TOAST / ALERT */
+        #portalToastContainer {
+            position: fixed;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            width: min(520px, calc(100% - 24px));
+            pointer-events: none;
+        }
+
+        .portal-toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            background: rgba(15, 15, 15, 0.88);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+            color: #fff;
+            animation: portalToastIn 0.25s ease both;
+        }
+
+            .portal-toast.success {
+                border-color: rgba(25, 135, 84, 0.55);
+            }
+
+            .portal-toast.danger {
+                border-color: rgba(220, 53, 69, 0.55);
+            }
+
+            .portal-toast.warning {
+                border-color: rgba(255, 193, 7, 0.65);
+            }
+
+            .portal-toast .icon {
+                font-size: 1.25rem;
+                line-height: 1;
+                margin-top: 1px;
+                color: var(--gold-primary);
+            }
+
+            .portal-toast.success .icon {
+                color: #28a745;
+            }
+
+            .portal-toast.danger .icon {
+                color: #dc3545;
+            }
+
+            .portal-toast.warning .icon {
+                color: #ffc107;
+            }
+
+            .portal-toast .title {
+                font-weight: 800;
+                margin: 0;
+                font-size: 0.95rem;
+            }
+
+            .portal-toast .msg {
+                margin: 2px 0 0 0;
+                opacity: 0.9;
+                font-size: 0.85rem;
+            }
+
+            .portal-toast .close-btn {
+                margin-left: auto;
+                background: transparent;
+                border: none;
+                color: rgba(255,255,255,0.75);
+                padding: 2px 6px;
+                font-size: 1rem;
+                line-height: 1;
+                cursor: pointer;
+            }
+
+        @@keyframes portalToastIn {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+
+        /* ✅ Make Current Activity scroll inside the card body */
+        .current-activity-scroll {
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+            .current-activity-scroll::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .current-activity-scroll::-webkit-scrollbar-thumb {
+                background: rgba(212,175,55,0.6);
+                border-radius: 6px;
+            }
     </style>
 }
 
@@ -153,15 +400,10 @@
         <span class="role-badge @badgeClass"><i class="bi @badgeIcon"></i> @displayRole</span>
     </div>
     <a href="#profileOffcanvas" data-bs-toggle="offcanvas" class="btn-my-profile">
-        @if (!string.IsNullOrEmpty(student?.StudentImage))
-        {
-            <img src="@student.StudentImage" alt="My Profile" class="profile-icon-img" />
-        }
-        else
-        {
-
-            <i class="bi bi-person-circle fs-2"></i>
-        }
+        <img id="headerMyProfileImg"
+             src="@(string.IsNullOrEmpty(student?.StudentImage) ? Url.Content("~/images/default-avatar.png") : student.StudentImage)"
+             alt="My Profile"
+             class="profile-icon-img" />
         <span>My Profile</span>
     </a>
 </div>
@@ -174,9 +416,26 @@
         <div class="glass-card h-100">
             <h5 class="card-header"><i class="bi bi-megaphone-fill me-2 text-gold"></i> Announcements</h5>
             <div class="card-body announcement-scroll-container">
-                @if (!announcements.Any())
+                @if (!announcements.Any() && !adminNotices.Any(x => !x.IsRead))
                 {
                     <p class="text-muted text-center py-3">No announcements yet.</p>
+                }
+
+                @* --- START: ADMIN NOTICES (New Section) --- *@
+                @foreach (var n in adminNotices.Where(x => !x.IsRead))
+                {
+                    <div class="announcement-item border-start-warning mb-3"
+                         style="cursor: pointer; background: rgba(212, 175, 55, 0.05);"
+                         onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
+
+                        @* Added '?' after NotificationDate below *@
+                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
+
+                        <p class="mb-0 mt-1 text-white">
+                            <strong>@n.Title</strong> @* This displays the SUBJECT *@
+                        </p>
+                        <small class="text-muted" style="font-size: 0.7rem;">Click to read full message</small>
+                    </div>
                 }
 
                 @foreach (var reminder in paymentReminders)
@@ -188,9 +447,15 @@
                     else if (reminder.AnnouncementType == "Final Notice") { colorClass = "text-orange"; borderClass = "border-start-orange"; }
                     else if (reminder.AnnouncementType == "New Fee Posted") { colorClass = "text-info"; borderClass = "border-start-info"; }
 
-                    <div class="announcement-item @borderClass mb-3" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modal@(reminder.Id)">
+                    <div class="announcement-item @borderClass mb-3"
+                         id="announcement-@reminder.Id"
+                         style="cursor: pointer;"
+                         data-bs-toggle="modal"
+                         data-bs-target="#modal@(reminder.Id)">
                         <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") • @(reminder.AnnouncementType ?? "Payment Reminder")</small>
-                        <p class="mb-0 mt-1 text-white"><strong>@reminder.Title.Replace("Payment Reminder: ", "")</strong></p>
+                        <p class="mb-0 mt-1 text-white">
+                            <strong>@((reminder.Title ?? string.Empty).Replace("Payment Reminder: ", ""))</strong>
+                        </p>
                         <small class="text-muted" style="font-size: 0.7rem;">Click to read full message</small>
                     </div>
                 }
@@ -203,8 +468,8 @@
                                 <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") · Posted by @announcement.PostedBy</small>
                                 <p class="mb-0 mt-1 text-white">@announcement.Content</p>
                             </div>
-                            <button class="btn btn-sm btn-link text-muted p-0 ms-2" 
-                                    onclick="dismissAnnouncement(@announcement.Id, this)" 
+                            <button class="btn btn-sm btn-link text-muted p-0 ms-2"
+                                    onclick="dismissAnnouncement(@announcement.Id, this)"
                                     title="Dismiss this announcement">
                                 <i class="bi bi-x-lg"></i>
                             </button>
@@ -215,29 +480,81 @@
         </div>
     </div>
 
-    <!-- NEXT ACTIVITY -->
+    <!-- CURRENT ACTIVITY (All of today's open events, scrollable) -->
     <div class="col-lg-7">
         <div class="glass-card h-100">
-            <h5 class="card-header"><i class="bi bi-calendar-event me-2"></i> Next Activity</h5>
+            <h5 class="card-header">
+                <i class="bi bi-activity me-2 text-warning"></i> Current Activity
+            </h5>
+
             <div class="card-body">
-                @if (nextEvent != null)
+                @if (showCurrentActivity)
                 {
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="fw-bold text-white mb-0">@nextEvent.EventName</h3>
-                        <span class="badge bg-primary">@(nextEvent.EventDate?.ToString("MMM dd") ?? "TBA")</span>
-                    </div>
-                    <p class="text-muted small"><i class="bi bi-geo-alt"></i> @nextEvent.EventLocation</p>
-                    <div class="countdown-container mt-4">
-                        <div class="time-box"><span id="days">00</span><small>Days</small></div>
-                        <div class="time-box"><span id="hours">00</span><small>Hours</small></div>
-                        <div class="time-box"><span id="minutes">00</span><small>Mins</small></div>
-                        <div class="time-box"><span id="seconds">00</span><small>Secs</small></div>
+                    <div class="current-activity-scroll">
+                        @foreach (var currentEvent in currentEvents)
+                        {
+                            <div class="mb-4 p-3 rounded"
+                                 style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h4 class="fw-bold text-white mb-2">@currentEvent.EventName</h4>
+
+                                        <div class="d-flex flex-wrap gap-3 small text-muted">
+                                            <div>
+                                                <i class="bi bi-calendar3 me-1 text-warning"></i>
+                                                <span>
+                                                    @(currentEvent.EventDate.HasValue? currentEvent.EventDate.Value.ToString("MMM dd, yyyy") : "Date: TBA")
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <i class="bi bi-clock me-1 text-warning"></i>
+                                                <span>
+                                                    @if (currentEvent.StartTime.HasValue)
+                                                    {
+                                                        @currentEvent.StartTime.Value.ToString("h:mm tt")
+                                                        if (currentEvent.EndTime.HasValue)
+                                                        {
+                                                            @: - @currentEvent.EndTime.Value.ToString("h:mm tt")
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        @:Time: TBA
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <i class="bi bi-geo-alt-fill me-1 text-warning"></i>
+                                                <span>
+                                                    @(string.IsNullOrWhiteSpace(currentEvent.EventLocation) ? "Location: TBA" : currentEvent.EventLocation)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <span class="badge bg-primary">ONGOING</span>
+                                </div>
+
+                                <!-- EVENT DESCRIPTION -->
+                                <div class="mt-3 p-3 rounded"
+                                     style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
+                                    <h6 class="fw-bold text-white mb-2" style="opacity:0.9;">Event Description:</h6>
+                                    <p class="mb-0 text-muted small" style="white-space: pre-line;">
+                                        @(string.IsNullOrWhiteSpace(currentEvent.EventDesc) ? "No description available." : currentEvent.EventDesc)
+                                    </p>
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
                 else
                 {
-
-                    <div class="text-center py-5 text-muted"><i class="bi bi-calendar-x fs-1"></i><p>No upcoming events.</p></div>
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x fs-1"></i>
+                        <p class="mb-0">No current activity.</p>
+                    </div>
                 }
             </div>
         </div>
@@ -248,15 +565,30 @@
         <div class="glass-card h-100 d-flex flex-column">
             <h5 class="card-header text-gold text-uppercase fw-bold">Upcoming Events</h5>
             <div class="card-body flex-grow-1">
-                @if (upcomingEvents.Any())
+                @if (upcomingEventsDisplay.Any())
                 {
-                    @foreach (var evt in upcomingEvents.Take(4))
-                    {
-                        <div class="upcoming-event-item">
-                            <div class="upcoming-event-date"><div class="month">@evt.EventDate?.ToString("MMM")</div><div class="day">@evt.EventDate?.ToString("dd")</div></div>
-                            <div class="upcoming-event-details"><h6>@evt.EventName</h6><small>@evt.EventLocation</small></div>
-                        </div>
-                    }
+                    <div class="upcoming-events-wrap">
+                        @foreach (var evt in upcomingEventsDisplay.Take(4))
+                        {
+                            <div class="upcoming-event-card">
+                                <div class="ue-date-badge">
+                                    <div class="month">@evt.EventDate?.ToString("MMM")</div>
+                                    <div class="day">@evt.EventDate?.ToString("dd")</div>
+                                </div>
+
+                                <div class="ue-content">
+                                    <div class="ue-title">@evt.EventName</div>
+                                    <div class="ue-meta">
+                                        <i class="bi bi-geo-alt-fill"></i>
+                                        <span>@(string.IsNullOrWhiteSpace(evt.EventLocation) ? "TBA" : evt.EventLocation)</span>
+                                    </div>
+                                    <div class="ue-sub">
+                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd • MMM dd, yyyy") : "Date: TBA")
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {
@@ -289,7 +621,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-white">
-                    <h4 class="fw-bold mb-3">@reminder.Title.Replace("Payment Reminder: ", "")</h4>
+                    <h4 class="fw-bold mb-3">@((reminder.Title ?? string.Empty).Replace("Payment Reminder: ", ""))</h4>
                     <div style="white-space: pre-line; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">@reminder.Content</div>
                     <div class="mt-3 opacity-50 small text-end">Posted by: @reminder.PostedBy</div>
                 </div>
@@ -297,7 +629,10 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i> Close
                     </button>
-                    <button type="button" class="btn btn-outline-warning" onclick="dismissAnnouncement(@reminder.Id, this)" data-reminder-id="@reminder.Id">
+                    <button type="button"
+                            class="btn btn-outline-warning"
+                            onclick="dismissAnnouncement(@reminder.Id, this)"
+                            data-reminder-id="@reminder.Id">
                         <i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder
                     </button>
                 </div>
@@ -305,6 +640,32 @@
         </div>
     </div>
 }
+
+<!-- ADMIN NOTICE DETAIL MODAL -->
+<div class="modal fade" id="adminNoticeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid var(--gold-primary); backdrop-filter: blur(20px);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-gold"><i class="bi bi-megaphone-fill me-2"></i> Admin Notice</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-white">
+                <h4 id="viewNoticeSubject" class="fw-bold mb-3"></h4>
+                <div id="viewNoticeMessage" style="white-space: pre-line; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;"></div>
+                <div class="mt-3 opacity-50 small d-flex justify-content-between">
+                    <span id="viewNoticeDate"></span>
+                    <span id="viewNoticeSender"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-danger" onclick="openAdminDismissConfirm()">
+                    <i class="bi bi-trash me-1"></i> Dismiss this reminder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @* 2. PROFILE SIDEBAR *@
 <div class="offcanvas offcanvas-end glass-modal" tabindex="-1" id="profileOffcanvas">
@@ -314,7 +675,10 @@
     </div>
     <div class="offcanvas-body text-center">
         <div class="profile-pic-wrapper">
-            <img src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)" alt="Profile" class="profile-icon-img">
+            <img id="offcanvasProfileImg"
+                 src="@(string.IsNullOrEmpty(student?.StudentImage) ? Url.Content("~/images/default-avatar.png") : student.StudentImage)"
+                 alt="Profile"
+                 class="profile-icon-img">
         </div>
         <h4 class="text-white fw-bold mt-3">@student?.StudentFn @student?.StudentLn</h4>
         <p class="text-gold mono-font mb-1">@student?.StudentNum</p>
@@ -332,7 +696,7 @@
     </div>
 </div>
 
-@* 3. EVENTS MODAL (Restored Full Layout) *@
+@* 3. EVENTS MODAL *@
 <div class="modal fade" id="eventsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content glass-modal">
@@ -362,34 +726,36 @@
     </div>
 </div>
 
-@* 4. ACCOUNT SETTINGS MODAL (Custom Themed UI with Tabbed Layout) *@
+@* 4. ACCOUNT SETTINGS MODAL *@
 <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
+        <!-- Main Modal Content -->
         <div class="modal-content glass-modal p-0" style="background: rgba(15, 15, 15, 0.98); border: 1px solid var(--gold-primary);">
 
             <div class="d-flex" style="min-height: 600px;">
 
-                @* LEFT COLUMN: Navigation (Themed Menu) *@
+                <!-- LEFT SIDEBAR -->
                 <div class="p-4 flex-shrink-0" style="width: 300px; background: rgba(0,0,0,0.25); border-right: 1px solid rgba(255,255,255,0.05);">
                     <div class="mb-5">
                         <h4 class="fw-bold text-white mb-1">Manage your account</h4>
                         <p class="text-muted small">Change your account settings</p>
                     </div>
 
+                    <!-- TAB NAVIGATION -->
                     <ul class="nav nav-pills flex-column" id="accountSettingsTabs" role="tablist">
                         <li class="nav-item mb-2" role="presentation">
-                            <button class="nav-link active w-100 text-start" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile-pane" type="button" role="tab" aria-controls="profile-pane" aria-selected="true" style="background:none; color:white;">
-                                <i class="bi bi-person-fill me-2"></i> Profile
+                            <button class="nav-link active w-100 text-start" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile-pane" type="button" role="tab" aria-controls="profile-pane" aria-selected="true">
+                                <i class="bi bi-person-fill me-3"></i> Profile
                             </button>
                         </li>
                         <li class="nav-item mb-2" role="presentation">
-                            <button class="nav-link w-100 text-start" id="email-tab" data-bs-toggle="pill" data-bs-target="#email-pane" type="button" role="tab" aria-controls="email-pane" aria-selected="false" style="background:none; color:white;">
-                                <i class="bi bi-envelope-fill me-2"></i> Email
+                            <button class="nav-link w-100 text-start" id="email-tab" data-bs-toggle="pill" data-bs-target="#email-pane" type="button" role="tab" aria-controls="email-pane" aria-selected="false">
+                                <i class="bi bi-envelope-fill me-3"></i> Email
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link w-100 text-start" id="password-tab" data-bs-toggle="pill" data-bs-target="#password-pane" type="button" role="tab" aria-controls="password-pane" aria-selected="false" style="background:none; color:white;">
-                                <i class="bi bi-lock-fill me-2"></i> Password
+                            <button class="nav-link w-100 text-start" id="password-tab" data-bs-toggle="pill" data-bs-target="#password-pane" type="button" role="tab" aria-controls="password-pane" aria-selected="false">
+                                <i class="bi bi-lock-fill me-3"></i> Password
                             </button>
                         </li>
                     </ul>
@@ -399,30 +765,27 @@
                     </div>
                 </div>
 
-                @* RIGHT COLUMN: Content Area (Tab Content) *@
-                <div class="p-5 flex-grow-1 text-white">
+                <!-- RIGHT CONTENT AREA -->
+                <div class="p-5 flex-grow-1 text-white position-relative">
                     <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal" style="z-index:10;"></button>
 
                     <div class="tab-content" id="accountSettingsTabContent">
 
-                        @* TAB 1: PROFILE *@
+                        <!-- Profile Pane -->
                         <div class="tab-pane fade show active" id="profile-pane" role="tabpanel" aria-labelledby="profile-tab">
                             <h4 class="fw-bold mb-4">Manage Profile</h4>
-
                             <form id="ajaxProfileForm" class="row" enctype="multipart/form-data">
-                                @* ADD enctype for file upload *@
                                 @Html.AntiForgeryToken()
                                 <div id="profileAlert" class="alert d-none small col-12"></div>
-
                                 <div class="col-md-5 text-center mb-4">
                                     <label for="profilePictureInput" style="cursor: pointer;">
-                                        @* LINK LABEL TO INPUT *@
-                                        <img src="@(student?.StudentImage ?? "/images/default-avatar.png")"
+                                        <img id="profilePicturePreview"
+                                             src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)"
                                              class="rounded-circle border border-warning p-1 mb-2"
-                                             style="width: 150px; height: 150px; object-fit: cover;" id="profilePicturePreview">
+                                             style="width: 150px; height: 150px; object-fit: cover;">
                                         <p class="small text-muted">Click image to change</p>
                                     </label>
-                                    <input type="file" id="profilePictureInput" name="ProfilePicture" class="d-none" accept=".jpg,.jpeg,.png"> @* HIDE ORIGINAL INPUT *@
+                                    <input type="file" id="profilePictureInput" name="ProfilePicture" class="d-none" accept=".jpg,.jpeg,.png">
                                 </div>
                                 <div class="col-md-7">
                                     <div class="mb-3 p-3 rounded" style="background: rgba(255,255,255,0.05);">
@@ -442,47 +805,30 @@
                             </form>
                         </div>
 
-                        @* TAB 2: EMAIL *@
+                        <!-- Email Pane -->
                         <div class="tab-pane fade" id="email-pane" role="tabpanel" aria-labelledby="email-tab">
                             <h4 class="fw-bold mb-4">Manage Email</h4>
-
                             <form id="ajaxEmailForm">
                                 @Html.AntiForgeryToken()
-
                                 <div id="emailAlert" class="alert d-none small"></div>
-
                                 <div class="mb-3">
                                     <label class="modal-label text-gold">Current Email</label>
-                                    <input type="email"
-                                           id="currentStudentEmail"
-                                           value="@(student?.StudentEmail)"
-                                           class="form-control bg-dark text-white border-secondary"
-                                           readonly />
+                                    <input type="email" id="currentStudentEmail" value="@(student?.StudentEmail)" class="form-control bg-dark text-white border-secondary" readonly />
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="modal-label text-gold">New Email</label>
-                                    <input type="email"
-                                           name="NewEmail"
-                                           class="form-control bg-dark text-white border-secondary"
-                                           required />
+                                    <input type="email" name="NewEmail" class="form-control bg-dark text-white border-secondary" required />
                                 </div>
-
-                                <button type="submit"
-                                        class="btn btn-gold mt-3"
-                                        id="btnUpdateEmail">
-                                    Save Changes
-                                </button>
+                                <button type="submit" class="btn btn-gold mt-3" id="btnUpdateEmail">Save Changes</button>
                             </form>
                         </div>
 
-                        @* TAB 3: PASSWORD *@
+                        <!-- Password Pane -->
                         <div class="tab-pane fade" id="password-pane" role="tabpanel" aria-labelledby="password-tab">
                             <h4 class="fw-bold mb-4">Manage Password</h4>
                             <form id="ajaxPasswordForm">
                                 @Html.AntiForgeryToken()
                                 <div id="passwordAlert" class="alert d-none small"></div>
-
                                 <div class="mb-3">
                                     <label class="modal-label" style="color:var(--gold-primary);">Current Password</label>
                                     <input type="password" name="OldPassword" class="form-control bg-dark text-white border-secondary" placeholder="Enter current password" required>
@@ -498,14 +844,16 @@
                                 <button type="submit" class="btn btn-gold mt-3" id="btnUpdatePass">Update Password</button>
                             </form>
                         </div>
-                    </div>
-                </div>
-            </div>
+
+                    </div> <!-- End Tab Content -->
+                </div> <!-- End Right Content -->
+
+            </div> <!-- End d-flex -->
         </div>
     </div>
 </div>
 
-@* 5. VISUALLY APPEALING CONFIRMATION MODAL *@
+@* Existing confirm modal used by settings *@
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid #ffc107; backdrop-filter: blur(15px);">
@@ -525,44 +873,153 @@
     </div>
 </div>
 
+@* Dismiss confirm modal (Announcements) *@
+<div class="modal fade" id="dismissConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(212,175,55,0.75); backdrop-filter: blur(18px);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-warning">
+                    <i class="bi bi-eye-slash-fill me-2"></i> Dismiss Announcement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-white">
+                <div class="text-center">
+                    <i class="bi bi-bell-slash-fill text-warning mb-2" style="font-size:2.5rem;"></i>
+                    <p class="mb-2 fw-bold">Are you sure?</p>
+                    <p class="small text-muted mb-0">
+                        You won’t see this announcement again after dismissing it.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning flex-fill" id="confirmDismissBtn">
+                    <i class="bi bi-check2-circle me-1"></i> Yes, Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ✅ NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
+<div class="modal fade" id="adminDismissConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(220,53,69,0.65); backdrop-filter: blur(18px);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-trash3-fill me-2"></i> Dismiss Admin Notice
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-white">
+                <div class="text-center">
+                    <i class="bi bi-exclamation-octagon-fill text-danger mb-2" style="font-size:2.5rem;"></i>
+                    <p class="mb-2 fw-bold">Are you sure?</p>
+                    <p class="small text-muted mb-0">
+                        This notice will be removed from your dashboard.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger flex-fill" id="confirmAdminDismissBtn">
+                    <i class="bi bi-check2-circle me-1"></i> Yes, Dismiss
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="portalToastContainer"></div>
 
 <input type="hidden" id="hiddenStudentId" value="@student?.StudentNum" />
-@if (nextEvent != null && nextEvent.EventDate.HasValue)
+@if (showCurrentActivity)
 {
-    <input type="hidden" id="eventDate" value="@nextEvent.EventDate.Value.ToString("yyyy-MM-dd")" />
+    var firstEvent = currentEvents.First();
+    if (firstEvent.EventDate.HasValue)
+    {
+        <input type="hidden" id="eventDate" value="@firstEvent.EventDate.Value.ToString("yyyy-MM-dd")" />
+    }
 }
 
 @section Scripts {
+
+
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
+
     <script>
         function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
 
+        // ✅ FIXED: Fetch events correctly instead of checking profile images
         function loadUpcomingEvents() {
             const container = document.getElementById('upcomingEventsContent');
-            fetch('/Student/GetAllEventsJson').then(r => r.json()).then(data => {
-                container.innerHTML = '';
-                const today = new Date(); today.setHours(0,0,0,0);
-                const upcoming = data.filter(i => new Date(i.eventDate) >= today && !i.isClosed);
-                if (upcoming.length > 0) upcoming.forEach(i => container.innerHTML += renderEventCard(i, false));
-                else container.innerHTML = '<div class="col-12 text-center py-5 text-muted">No upcoming events.</div>';
-            });
+            if(!container) return;
+
+            // Show loading spinner
+            container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-warning" role="status"></div></div>';
+
+            fetch('/Home/GetAllEventsJson')
+                .then(r => r.json())
+                .then(data => {
+                    container.innerHTML = '';
+                    // Check 'upcoming' property
+                    const events = data.upcoming || [];
+
+                    if (events.length > 0) {
+                        let html = '';
+                        events.forEach(item => {
+                            // false = Render as upcoming style
+                            html += renderEventCard(item, false);
+                        });
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No upcoming events found.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading events:', error);
+                    container.innerHTML = '<div class="col-12 text-center text-danger py-4">Unable to load events.</div>';
+                });
         }
 
+        // ✅ FIXED: Fetch history correctly
         function loadEventHistory() {
             const container = document.getElementById('eventHistoryContent');
-            fetch('/Student/GetAllEventsJson').then(r => r.json()).then(data => {
-                container.innerHTML = '';
-                const today = new Date(); today.setHours(0,0,0,0);
-                const past = data.filter(i => new Date(i.eventDate) < today || i.isClosed).sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
-                if (past.length > 0) past.forEach(i => container.innerHTML += renderEventCard(i, true));
-                else container.innerHTML = '<div class="col-12 text-center py-5 text-muted">No event history.</div>';
-            });
+            if(!container) return;
+
+            container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-warning" role="status"></div></div>';
+
+            fetch('/Home/GetAllEventsJson')
+                .then(r => r.json())
+                .then(data => {
+                    container.innerHTML = '';
+                    // Check 'history' property
+                    const events = data.history || [];
+
+                    if (events.length > 0) {
+                        let html = '';
+                        events.forEach(item => {
+                            // true = Render as history/completed style
+                            html += renderEventCard(item, true);
+                        });
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No event history found.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading history:', error);
+                    container.innerHTML = '<div class="col-12 text-center text-danger py-4">Unable to load history.</div>';
+                });
         }
 
-        // RESTORED: Professional Event Card Layout
+        // ✅ Helper to render the cards (uses your design)
         function renderEventCard(item, isPastEvent) {
+            // Parse the date safely
             const eventDate = new Date(item.eventDate);
+
             let statusClass = isPastEvent ? (item.isClosed ? "bg-dark" : "bg-secondary") : "badge-upcoming";
             let statusText = isPastEvent ? (item.isClosed ? "Closed" : "Completed") : "Upcoming";
 
@@ -586,260 +1043,247 @@
             </div>`;
         }
 
-        // Universal function to handle the AJAX result and update the UI
-        function handleAjaxResult(formId, alertId, btnId, res) {
-            const btn = document.getElementById(btnId);
-            const alertDiv = document.getElementById(alertId);
+        // TOAST
+        function showPortalToast(type, title, message, timeout = 2800) {
+            const container = document.getElementById('portalToastContainer');
+            if (!container) return;
 
-            // Revert button immediately
-            const originalText = btn.getAttribute('data-original-text');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+            const toast = document.createElement('div');
+            toast.className = `portal-toast ${type}`;
+            const icon = type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill';
 
+            toast.innerHTML = `
+                <div class="icon"><i class="bi ${icon}"></i></div>
+                <div><p class="title">${title}</p><p class="msg">${message}</p></div>
+                <button class="close-btn" aria-label="Close">&times;</button>
+            `;
 
-            alertDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
-
-            if (res.success) {
-                alertDiv.innerHTML = res.message;
-                alertDiv.classList.add('alert-success');
-
-                // --- INSTANT UI UPDATE LOGIC ---
-                if (res.imagePath) {
-                    const uniqueUrl = res.imagePath + '?t=' + new Date().getTime();
-                    document.getElementById('profilePicturePreview').src = uniqueUrl;
-                    document.querySelector('.profile-pic-wrapper img').src = uniqueUrl;
-                    document.querySelector('.profile-icon-img').src = uniqueUrl;
-                }
-
-                // CRITICAL FIX: Update Email Display
-                        if (formId === 'ajaxEmailForm') {
-            const newEmailInput = document.getElementById('ajaxEmailForm').querySelector('input[name="NewEmail"]');
-            // CRITICAL CHANGE: Update ID here
-            const currentEmailDisplay = document.getElementById('currentStudentEmail');
-
-            if (newEmailInput && currentEmailDisplay) {
-                currentEmailDisplay.value = newEmailInput.value;
-            }
-        }
-                // --- END INSTANT UI UPDATE LOGIC ---
-
-                // Only clear fields that should be cleared (password and new email)
-                if (formId === 'ajaxPasswordForm' || formId === 'ajaxEmailForm') {
-                     document.getElementById(formId).reset();
-                }
-
-            } else {
-                alertDiv.innerHTML = res.message;
-                alertDiv.classList.add('alert-danger');
-            }
+            toast.querySelector('.close-btn').onclick = () => toast.remove();
+            container.appendChild(toast);
+            setTimeout(() => { if (toast && toast.parentNode) toast.remove(); }, timeout);
         }
 
-        // Core AJAX Submission Handler
-        function submitFormAjax(formId, url, btnId, alertId, isFileUpload) {
-            const form = document.getElementById(formId);
-            const btn = document.getElementById(btnId);
-            const alertDiv = document.getElementById(alertId);
+        // TEMP DATA FLASH MESSAGE
+        (function () {
+            const flashMsg = @System.Text.Json.JsonSerializer.Serialize(TempData["Message"] as string);
+            if (flashMsg) { showPortalToast('success', 'Success', flashMsg, 3500); }
+        })();
 
-            // Set original text on the button once (for handleAjaxResult to read it later)
-            if(!btn.hasAttribute('data-original-text')) {
-                 btn.setAttribute('data-original-text', btn.textContent.trim()); // Use textContent.trim()
-            }
-
-            const formData = isFileUpload ? new FormData(form) : new URLSearchParams(new FormData(form));
-
-            // Set loading state: Show spinner only while fetching
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Saving...`; // Use simpler saving text
-            alertDiv.classList.add('d-none');
-
-            const headers = {};
-            if (!isFileUpload) {
-                const token = new FormData(form).get('__RequestVerificationToken');
-                headers['RequestVerificationToken'] = token;
-            }
-
-            fetch(url, {
-                method: 'POST',
-                headers: isFileUpload ? {} : headers,
-                body: formData
-            })
-            .then(r => r.json())
-            .then(res => { handleAjaxResult(formId, alertId, btnId, res); })
-            .catch(err => {
-                // CRITICAL FIX: Ensure button is re-enabled on network/server error
-                handleAjaxResult(formId, alertId, btnId, { success: false, message: "A network or server error occurred. Please check the Console (F12)." });
-                console.error(err);
-            });
-        }
-
-        // Universal function to trigger the custom confirmation modal
-        function confirmAndSubmit(e, formId, url, btnId, alertId, isFileUpload = false) {
-            e.preventDefault();
-
-            const form = document.getElementById(formId);
-
-            // CRITICAL FIX: Block confirmation modal if browser validation fails
-            if (!form.checkValidity()) {
-                form.reportValidity(); // Display the "Please fill out this field" tooltips
-                return;
-            }
-
-            // Store form data to be executed on confirmation
-            const confirmButton = document.getElementById('confirmActionButton');
-
-            // Set the onclick logic to submit the form
-            confirmButton.onclick = () => {
-                // 1. Manually close the confirmation modal
-                const confirmModalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-                confirmModalInstance.hide();
-
-                // 2. Execute the actual submission
-                submitFormAjax(formId, url, btnId, alertId, isFileUpload);
-            };
-
-            // Display the visually appealing modal
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-            confirmModal.show();
+        // DISMISS ANNOUNCEMENT
+        let pendingDismiss = { id: null, button: null };
+        function dismissAnnouncement(announcementId, button) {
+            pendingDismiss.id = announcementId;
+            pendingDismiss.button = button;
+            const modal = new bootstrap.Modal(document.getElementById('dismissConfirmModal'));
+            modal.show();
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            const confirmDismissBtn = document.getElementById('confirmDismissBtn');
+            if (!confirmDismissBtn) return;
 
-            // --- UI/TAB LOGIC FIX: Ensures the correct tab is highlighted ---
-            var accountSettingsModal = document.getElementById('settingsModal');
-            if(accountSettingsModal) {
-                // Set initial active button styling on modal show
-                accountSettingsModal.addEventListener('shown.bs.modal', function () {
-                    const activeTabButton = document.querySelector('#accountSettingsTabs .nav-link.active');
-                    if(activeTabButton) {
-                        activeTabButton.style.background = 'var(--gold-primary)';
-                        activeTabButton.style.color = 'black';
+            confirmDismissBtn.addEventListener('click', function () {
+                const announcementId = pendingDismiss.id;
+                const button = pendingDismiss.button;
+                const dismissModalInstance = bootstrap.Modal.getInstance(document.getElementById('dismissConfirmModal'));
+                if (dismissModalInstance) dismissModalInstance.hide();
+
+                if (!announcementId || !button) return;
+                const originalBtnHtml = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
+
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
+
+                fetch('/Home/DismissAnnouncement', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                    body: `id=${announcementId}&__RequestVerificationToken=${encodeURIComponent(token)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const openedModalEl = document.getElementById('modal' + announcementId);
+                        const openedModal = openedModalEl ? bootstrap.Modal.getInstance(openedModalEl) : null;
+                        if (openedModal) openedModal.hide();
+
+                        const announcementElement = document.getElementById('announcement-' + announcementId);
+                        if (announcementElement) {
+                            announcementElement.style.opacity = '0';
+                            setTimeout(() => {
+                                announcementElement.remove();
+                            }, 260);
+                        }
+                        showPortalToast('success', 'Dismissed', 'Announcement dismissed successfully.');
+                    } else {
+                        showPortalToast('danger', 'Error', (data.message || 'Error dismissing announcement.'));
+                        button.disabled = false;
+                        button.innerHTML = originalBtnHtml;
                     }
-                });
-
-                // Add event listener to handle subsequent tab clicks
-                document.getElementById('accountSettingsTabs').addEventListener('click', function(e) {
-                    if(e.target.classList.contains('nav-link')) {
-                        // Reset all tabs
-                        document.querySelectorAll('#accountSettingsTabs .nav-link').forEach(link => {
-                            link.style.background = 'none';
-                            link.style.color = 'white';
-                        });
-                        // Set active tab
-                        e.target.style.background = 'var(--gold-primary)';
-                        e.target.style.color = 'black';
-                    }
-                });
-            }
-            // --- END UI/TAB LOGIC FIX ---
-
-
-            // --- IMAGE PREVIEW LOGIC (Profile Tab) ---
-            const profilePictureInput = document.getElementById('profilePictureInput');
-            const profilePicturePreview = document.getElementById('profilePicturePreview');
-            if (profilePictureInput && profilePicturePreview) {
-                profilePictureInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        profilePicturePreview.src = URL.createObjectURL(file);
-                    }
-                });
-            }
-
-
-            // --- PROFILE FORM SUBMISSION ---
-            const profileForm = document.getElementById('ajaxProfileForm');
-            if (profileForm) {
-                profileForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxProfileForm', '/Account/UpdateProfileAjax', 'btnUpdateProfile', 'profileAlert', true); // True for File Upload
-                });
-            }
-
-            // --- EMAIL FORM SUBMISSION ---
-            const emailForm = document.getElementById('ajaxEmailForm');
-            if (emailForm) {
-                emailForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxEmailForm', '/Account/UpdateEmailAjax', 'btnUpdateEmail', 'emailAlert', false);
-                });
-            }
-
-            // --- PASSWORD FORM SUBMISSION ---
-            const passwordForm = document.getElementById('ajaxPasswordForm');
-            if (passwordForm) {
-                passwordForm.addEventListener('submit', function (e) {
-                    confirmAndSubmit(e, 'ajaxPasswordForm', '/Account/ChangePasswordAjax', 'btnUpdatePass', 'passwordAlert', false);
-                });
-            }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showPortalToast('danger', 'Network Error', 'An error occurred.');
+                    button.disabled = false;
+                    button.innerHTML = originalBtnHtml;
+                })
+                .finally(() => { pendingDismiss.id = null; pendingDismiss.button = null; });
+            });
         });
 
-        // ============================================================
-        // DISMISS ANNOUNCEMENT FUNCTIONALITY
-        // ============================================================
-        function dismissAnnouncement(announcementId, button) {
-            if (!confirm('Are you sure you want to dismiss this announcement? You won\'t see it again.')) {
-                return;
+        // ===========================
+        // PROFILE PICTURE: Preview + AJAX Upload
+        // ===========================
+        (function () {
+            const fileInput = document.getElementById('profilePictureInput');
+            const previewImg = document.getElementById('profilePicturePreview');
+            const form = document.getElementById('ajaxProfileForm');
+            const btn = document.getElementById('btnUpdateProfile');
+
+            // 1. Handle File Selection Preview
+            if (fileInput && previewImg) {
+                fileInput.addEventListener('change', function () {
+                    const file = this.files && this.files[0];
+                    if (!file) return;
+                    const allowed = ['image/jpeg', 'image/png'];
+                    if (!allowed.includes(file.type)) { showPortalToast('danger', 'Invalid file', 'Only JPG and PNG are allowed.'); this.value = ''; return; }
+                    if (file.size > 5 * 1024 * 1024) { showPortalToast('danger', 'Too large', 'File must be less than 5MB.'); this.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => { previewImg.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                });
             }
 
-            // Disable button to prevent double-clicks
-            button.disabled = true;
-            button.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Dismissing...';
+            // 2. Handle Form Submission (AJAX)
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
 
-            // Get CSRF token
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    const oldBtnHtml = btn ? btn.innerHTML : '';
+                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Saving...'; }
 
-            fetch('/Home/DismissAnnouncement', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': token
-                },
-                body: `id=${announcementId}&__RequestVerificationToken=${encodeURIComponent(token)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Close modal if open
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modal' + announcementId));
-                    if (modal) {
-                        modal.hide();
-                    }
+                    fetch('@Url.Action("UpdateProfileAjax", "Account")', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Cache buster string to force browser to reload image
+                            const timestamp = '?t=' + Date.now();
 
-                    // Remove announcement from DOM with fade effect
-                    const announcementElement = document.getElementById('announcement-' + announcementId);
-                    if (announcementElement) {
-                        announcementElement.style.transition = 'opacity 0.3s ease';
-                        announcementElement.style.opacity = '0';
-                        setTimeout(() => {
-                            announcementElement.remove();
-                            
-                            // Check if no announcements left
-                            const announcementsContainer = document.querySelector('.announcement-scroll-container');
-                            if (announcementsContainer && announcementsContainer.children.length === 0) {
-                                announcementsContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-inbox display-4"></i><p class="mt-2">No announcements</p></div>';
+                            // A. Update Modal Preview
+                            if (data.imagePath && previewImg) {
+                                previewImg.src = data.imagePath + timestamp;
                             }
-                        }, 300);
-                    }
 
-                    // Show success message
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-                    alertDiv.style.zIndex = '9999';
-                    alertDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Announcement dismissed successfully<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                    document.body.appendChild(alertDiv);
-                    setTimeout(() => alertDiv.remove(), 3000);
-                } else {
-                    alert('Error dismissing announcement: ' + data.message);
-                    button.disabled = false;
-                    button.innerHTML = '<i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder';
-            });
+                            // B. Update Header Avatar (Next to "Hello, Name")
+                            const headerMyProfileImg = document.getElementById('headerMyProfileImg');
+                            if (headerMyProfileImg && data.imagePath) {
+                                headerMyProfileImg.src = data.imagePath + timestamp;
+                            }
+
+                            // C. Update Top Navbar Avatar (if present in Layout)
+                            const navImg = document.getElementById('navProfileImg');
+                            if (navImg && data.imagePath) {
+                                navImg.src = data.imagePath + timestamp;
+                            }
+
+                            // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
+                            const sidebarImg = document.getElementById('offcanvasProfileImg');
+                            if (sidebarImg && data.imagePath) {
+                                sidebarImg.src = data.imagePath + timestamp;
+                            }
+
+                            showPortalToast('success', 'Profile Updated', data.message || 'Profile photo updated successfully!');
+                        } else {
+                            showPortalToast('danger', 'Upload Failed', data.message || 'Please try again.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
+                    })
+                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
+                });
+            }
+        })();
+
+
+        // sender notice
+        let activeNoticeId = null;
+
+        function openAdminNoticeModal(id, title, msg, date, sender) {
+            activeNoticeId = id;
+            document.getElementById('viewNoticeSubject').innerText = title;
+            document.getElementById('viewNoticeMessage').innerText = msg;
+            document.getElementById('viewNoticeDate').innerText = date;
+            document.getElementById('viewNoticeSender').innerText = "Sent by: " + sender;
+
+            new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
         }
+
+        // ✅ NEW: Open the nice confirm modal for Admin Notice
+        function openAdminDismissConfirm() {
+            const modal = new bootstrap.Modal(document.getElementById('adminDismissConfirmModal'));
+            modal.show();
+        }
+
+        // ✅ NEW: Handle Admin Notice Dismiss (with toast after)
+        document.addEventListener('DOMContentLoaded', function () {
+            const adminConfirmBtn = document.getElementById('confirmAdminDismissBtn');
+            if (!adminConfirmBtn) return;
+
+            adminConfirmBtn.addEventListener('click', function () {
+                if (!activeNoticeId) return;
+
+                // Hide confirm modal
+                const confirmInst = bootstrap.Modal.getInstance(document.getElementById('adminDismissConfirmModal'));
+                if (confirmInst) confirmInst.hide();
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                $.ajax({
+                    url: '/Home/DismissNotification',
+                    type: 'POST',
+                    data: {
+                        id: activeNoticeId,
+                        __RequestVerificationToken: token
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            // Hide the view modal if open
+                            const viewInst = bootstrap.Modal.getInstance(document.getElementById('adminNoticeModal'));
+                            if (viewInst) viewInst.hide();
+
+                            // Remove the matching card from the list (if present)
+                            const listItems = document.querySelectorAll('.announcement-item.border-start-warning');
+                            listItems.forEach(el => {
+                                // Find the one that opened this modal by subject text match (safe fallback)
+                                const titleEl = el.querySelector('p.mb-0.mt-1.text-white strong');
+                                if (titleEl && titleEl.innerText.trim() === document.getElementById('viewNoticeSubject').innerText.trim()) {
+                                    el.style.opacity = '0';
+                                    setTimeout(() => el.remove(), 260);
+                                }
+                            });
+
+                            // Show the pretty toast (like your 2nd screenshot)
+                            showPortalToast('success', 'Dismissed', 'Admin notice dismissed successfully.');
+                            activeNoticeId = null;
+                        } else {
+                            showPortalToast('danger', 'Error', 'Could not dismiss notice.');
+                        }
+                    },
+                    error: function() {
+                        showPortalToast('danger', 'Error', 'Server connection failed.');
+                    }
+                });
+            });
+        });
     </script>
 }
-
-

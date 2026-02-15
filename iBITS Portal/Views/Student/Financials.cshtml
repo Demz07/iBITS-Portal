@@ -44,10 +44,8 @@
             }
 
         /* ========================================================= */
-        /* COMPACT RECEIPT-STYLE CARD DESIGN WITH RANDOM COLORS      */
+        /* Summary Stats at Top                                      */
         /* ========================================================= */
-        
-        /* Summary Stats at Top */
         .payment-summary-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -77,210 +75,9 @@
             font-weight: 700;
         }
 
-        /* Receipts Container - 2 Column Grid with Vertical Scroll */
-        .receipts-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-            padding: 20px 0;
-            overflow-y: auto;
-            max-height: calc(100vh - 400px);
-        }
-
-        /* Responsive: 1 column on mobile */
-        @@media (max-width: 768px) {
-            .receipts-container {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-        }
-
-        /* Receipt Card Container - Grid Item */
-        .receipt-card {
-            width: 100%;
-            max-width: none;
-            margin: 0;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            padding: 0;
-            overflow: hidden;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-            font-family: 'Courier New', monospace;
-        }
-
-        .receipt-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        /* Custom scrollbar for receipts container */
-        .receipts-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .receipts-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-
-        .receipts-container::-webkit-scrollbar-thumb {
-            background: rgba(251, 191, 36, 0.5);
-            border-radius: 4px;
-        }
-
-        .receipts-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(251, 191, 36, 0.7);
-        }
-
-        /* Receipt Header - BIGGER */
-        .receipt-header {
-            border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
-            padding: 20px 25px;
-            text-align: center;
-        }
-
-        .receipt-title {
-            color: var(--text-strong);
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin: 0 0 8px 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .receipt-id {
-            color: var(--text-main);
-            font-size: 0.85rem;
-            margin: 0;
-            opacity: 0.9;
-        }
-
-        /* Receipt Body - BIGGER */
-        .receipt-body {
-            padding: 25px 30px;
-        }
-
-        .receipt-type-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-
-        .receipt-divider {
-            height: 2px;
-            background: repeating-linear-gradient(
-                90deg,
-                rgba(255, 255, 255, 0.3) 0px,
-                rgba(255, 255, 255, 0.3) 5px,
-                transparent 5px,
-                transparent 10px
-            );
-            margin: 15px 0;
-        }
-
-        /* Receipt Details - BIGGER */
-        .receipt-detail-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            font-size: 0.9rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .receipt-detail-row:last-of-type {
-            border-bottom: none;
-        }
-
-        .receipt-label {
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0.95;
-            font-size: 0.9rem;
-        }
-
-        .receipt-label i {
-            font-size: 0.85rem;
-        }
-
-        .receipt-value {
-            color: var(--text-strong);
-            font-weight: 600;
-            text-align: right;
-            font-size: 0.95rem;
-        }
-
-        /* Receipt Footer - BIGGER */
-        .receipt-footer {
-            background: rgba(0, 0, 0, 0.3);
-            border-top: 2px dashed rgba(255, 255, 255, 0.3);
-            padding: 20px 30px;
-        }
-
-        .receipt-total {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .receipt-total-label {
-            color: var(--text-main);
-            font-size: 0.95rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .receipt-total-amount {
-            color: #34d399;
-            font-size: 2rem;
-            font-weight: 700;
-        }
-
-        .receipt-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .receipt-status-label {
-            color: var(--text-main);
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-
-        .receipt-status-badge {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        .receipt-status-badge i {
-            font-size: 0.85rem;
-        }
-
-        /* Filter Controls */
+        /* ========================================================= */
+        /* Filter Controls                                           */
+        /* ========================================================= */
         .filter-controls {
             display: flex;
             justify-content: flex-end;
@@ -300,21 +97,135 @@
             transition: all 0.2s;
         }
 
-        .filter-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: var(--gold-primary);
-            color: var(--gold-primary);
+            .filter-btn:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: var(--gold-primary);
+                color: var(--gold-primary);
+            }
+
+        /* ========================================================= */
+        /* NEW: SIMPLE COLUMN LIST FOR PAYMENT HISTORY (NO RECEIPTS)  */
+        /* Scoped to #transactionsList so it won't affect other pages */
+        /* ========================================================= */
+
+        /* keep original class name in markup, but override layout when .simple-list is added */
+        #transactionsList.simple-list {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px;
+            padding: 12px 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 400px);
         }
 
+        #transactionsList .tx-row {
+            display: grid;
+            grid-template-columns: 1.6fr 0.8fr 0.6fr;
+            gap: 12px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        /* Razor requires @@media */
+        @@media (max-width: 768px) {
+            #transactionsList .tx-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+        }
+
+        #transactionsList .tx-main {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #transactionsList .tx-title {
+            font-weight: 700;
+            color: var(--text-strong);
+            font-size: 0.95rem;
+        }
+
+        #transactionsList .tx-sub {
+            color: var(--text-main);
+            opacity: 0.9;
+            font-size: 0.82rem;
+        }
+
+        /* Middle column: ONLY Processed By + Date */
+        #transactionsList .tx-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            opacity: 0.9;
+        }
+
+        #transactionsList .tx-amount {
+            text-align: right;
+        }
+
+            #transactionsList .tx-amount .amount {
+                font-weight: 800;
+                color: #34d399;
+                font-size: 1.05rem;
+            }
+
+            #transactionsList .tx-amount .status {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 6px;
+                background: rgba(16, 185, 129, 0.15);
+                border: 1px solid rgba(16, 185, 129, 0.35);
+                color: #34d399;
+                padding: 5px 10px;
+                border-radius: 999px;
+                font-weight: 700;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+            }
+
+        #transactionsList .tx-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            width: fit-content;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-strong);
+        }
+
+            #transactionsList .tx-type.fee {
+                border-color: rgba(251, 191, 36, 0.35);
+                background: rgba(251, 191, 36, 0.10);
+                color: #fbbf24;
+            }
+
+            #transactionsList .tx-type.fine {
+                border-color: rgba(239, 68, 68, 0.35);
+                background: rgba(239, 68, 68, 0.10);
+                color: #f87171;
+            }
     </style>
 }
+
 <!-- Balance Summary -->
 <div class="row">
     <div class="col-12">
         <div class="glass-panel text-center">
             <p class="text-uppercase small text-muted mb-2">Current Balance Due</p>
             <h1 class="display-4 fw-bold" style="color: @(totalDue > 0 ? "#f87171" : "#34d399")">₱@totalDue.ToString("N2")</h1>
-
         </div>
     </div>
 </div>
@@ -352,7 +263,6 @@
                             <div class="d-flex w-100 justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1">@fee.FeeName</h6>
-
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fee.Amount?.ToString("N2")</span>
@@ -394,8 +304,8 @@
                                     <h6 class="mb-1">@(fine.Description ?? $"Fine for {fine.Attendance?.Event?.EventName}")</h6>
 
                                     @* --- THIS LINE HAS BEEN REMOVED ---
-                            <small class="text-muted">Due: @fine.FinesDueDate?.ToString("MMM dd, yyyy")</small>
-                            --- END OF REMOVED CODE --- *@
+                                        <small class="text-muted">Due: @fine.FinesDueDate?.ToString("MMM dd, yyyy")</small>
+                                       --- END OF REMOVED CODE --- *@
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold d-block">₱@fine.Amount?.ToString("N2")</span>
@@ -421,13 +331,12 @@
                     </li>
                 }
             </ul>
-
         </div>
 
         <!-- PAYMENT HISTORY TAB -->
         <div class="tab-pane fade" id="history-content" role="tabpanel">
             <h5 class="glass-header-title mb-3"><i class="bi bi-clock-history me-2 text-gold"></i> Payment Transaction History</h5>
-            
+
             <!-- Summary Statistics -->
             <div class="payment-summary-stats" id="paymentSummary" style="display: none;">
                 <div class="stat-card">
@@ -442,13 +351,13 @@
 
             <!-- Filter Controls -->
             <div class="filter-controls" id="filterControls" style="display: none;">
-                <button class="filter-btn" onclick="filterTransactions('all')">
+                <button class="filter-btn" onclick="filterTransactions('all', event)">
                     <i class="bi bi-list-ul"></i> All
                 </button>
-                <button class="filter-btn" onclick="filterTransactions('fee')">
+                <button class="filter-btn" onclick="filterTransactions('fee', event)">
                     <i class="bi bi-receipt"></i> Fees
                 </button>
-                <button class="filter-btn" onclick="filterTransactions('fine')">
+                <button class="filter-btn" onclick="filterTransactions('fine', event)">
                     <i class="bi bi-exclamation-octagon"></i> Fines
                 </button>
             </div>
@@ -471,16 +380,16 @@
         let allTransactions = [];
         let currentFilter = 'all';
 
-        document.getElementById('history-tab').addEventListener('shown.bs.tab', function() {
+        document.getElementById('history-tab').addEventListener('shown.bs.tab', function () {
             loadPaymentHistory();
         });
-        if(document.getElementById('history-tab').classList.contains('active')){
+        if (document.getElementById('history-tab').classList.contains('active')) {
             loadPaymentHistory();
         }
 
         function loadPaymentHistory() {
             const container = document.getElementById('transactionsList');
-            if(container.dataset.loaded === 'true') return;
+            if (container.dataset.loaded === 'true') return;
 
             container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading...</p></div>`;
 
@@ -509,152 +418,85 @@
             document.getElementById('totalTransactions').textContent = `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''}`;
         }
 
-        function filterTransactions(type) {
+        function filterTransactions(type, event) {
             currentFilter = type;
             let filtered = allTransactions;
-            
+
             if (type === 'fee') {
                 filtered = allTransactions.filter(tx => tx.type === 'Fee');
             } else if (type === 'fine') {
                 filtered = allTransactions.filter(tx => tx.type === 'Fine');
             }
-            
+
             renderTransactions(filtered);
 
-            // Update active button
+            // Update active button (safe event usage)
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.closest('.filter-btn').classList.add('active');
+            if (event && event.target) {
+                event.target.closest('.filter-btn').classList.add('active');
+            }
         }
 
-        // Random color generator for receipts
-        function getRandomReceiptColor() {
-            const colors = [
-                { header: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))', badge: 'rgba(59, 130, 246, 0.25)', badgeText: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(147, 51, 234, 0.1))', badge: 'rgba(168, 85, 247, 0.25)', badgeText: '#a78bfa', border: 'rgba(168, 85, 247, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(219, 39, 119, 0.1))', badge: 'rgba(236, 72, 153, 0.25)', badgeText: '#f472b6', border: 'rgba(236, 72, 153, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1))', badge: 'rgba(251, 191, 36, 0.25)', badgeText: '#fbbf24', border: 'rgba(251, 191, 36, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1))', badge: 'rgba(16, 185, 129, 0.25)', badgeText: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))', badge: 'rgba(239, 68, 68, 0.25)', badgeText: '#f87171', border: 'rgba(239, 68, 68, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(2, 132, 199, 0.1))', badge: 'rgba(14, 165, 233, 0.25)', badgeText: '#38bdf8', border: 'rgba(14, 165, 233, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(234, 88, 12, 0.15), rgba(194, 65, 12, 0.1))', badge: 'rgba(234, 88, 12, 0.25)', badgeText: '#fb923c', border: 'rgba(234, 88, 12, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(13, 148, 136, 0.1))', badge: 'rgba(20, 184, 166, 0.25)', badgeText: '#2dd4bf', border: 'rgba(20, 184, 166, 0.3)' },
-                { header: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1))', badge: 'rgba(139, 92, 246, 0.25)', badgeText: '#a78bfa', border: 'rgba(139, 92, 246, 0.3)' }
-            ];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-
-
+        // SIMPLE COLUMN LIST RENDER (no receipts)
         function renderTransactions(transactions) {
             const container = document.getElementById('transactionsList');
-            
+
+            // Force simple list layout (scoped)
+            container.classList.add('simple-list');
+
             if (transactions.length === 0) {
-                container.innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2"></i><p class="mt-2 mb-0">No transactions found.</p></div>`;
+                container.innerHTML = `<div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-2"></i>
+                    <p class="mt-2 mb-0">No transactions found.</p>
+                </div>`;
                 return;
             }
 
             let html = '';
-            let transactionNumber = transactions.length;
-            
+
             transactions.forEach((tx) => {
                 const isFine = tx.type === 'Fine';
                 const paymentDate = new Date(tx.paymentDate);
-                const formattedDate = paymentDate.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-                const formattedTime = paymentDate.toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit',
-                    hour12: true 
+                const formattedDate = paymentDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                 });
 
-                // Get random color for this receipt
-                const color = getRandomReceiptColor();
+                const typeClass = isFine ? 'fine' : 'fee';
+                const typeIcon = isFine ? 'bi-exclamation-octagon' : 'bi-receipt';
 
                 html += `
-                    <div class="receipt-card" data-type="${tx.type.toLowerCase()}">
-                        <!-- Receipt Header -->
-                        <div class="receipt-header" style="background: ${color.header};">
-                            <h5 class="receipt-title">
-                                <i class="bi bi-receipt-cutoff"></i> PAYMENT RECEIPT
-                            </h5>
-                            <p class="receipt-id">Transaction #${String(transactionNumber).padStart(3, '0')}</p>
+                    <div class="tx-row" data-type="${tx.type.toLowerCase()}">
+                        <div class="tx-main">
+                            <div class="tx-type ${typeClass}">
+                                <i class="bi ${typeIcon}"></i>
+                                ${tx.type}
+                            </div>
+
+                            <div class="tx-title">
+                                ${tx.description}
+                            </div>
+
+                            <div class="tx-sub">
+                                ${tx.academicYear ? `AY ${tx.academicYear}` : ''}
+                            </div>
                         </div>
 
-                        <!-- Receipt Body -->
-                        <div class="receipt-body">
-                            <!-- Type Badge -->
-                            <div class="receipt-type-badge" style="background: ${color.badge}; color: ${color.badgeText}; border: 1px solid ${color.border};">
-                                <i class="bi ${isFine ? 'bi-exclamation-octagon' : 'bi-receipt'}"></i>
-                                ${tx.type}: ${tx.description}
-                            </div>
-
-                            <div class="receipt-divider"></div>
-
-                            <!-- Transaction Details -->
-                            <div class="receipt-details">
-                                <div class="receipt-detail-row">
-                                    <span class="receipt-label">
-                                        <i class="bi bi-calendar-check"></i> Date
-                                    </span>
-                                    <span class="receipt-value">${formattedDate}</span>
-                                </div>
-
-                                <div class="receipt-detail-row">
-                                    <span class="receipt-label">
-                                        <i class="bi bi-clock"></i> Time
-                                    </span>
-                                    <span class="receipt-value">${formattedTime}</span>
-                                </div>
-
-                                <div class="receipt-detail-row">
-                                    <span class="receipt-label">
-                                        <i class="bi bi-person-check"></i> Processed By
-                                    </span>
-                                    <span class="receipt-value">${tx.processedBy || 'System'}</span>
-                                </div>
-
-                                <div class="receipt-detail-row">
-                                    <span class="receipt-label">
-                                        <i class="bi bi-cash-coin"></i> Payment Method
-                                    </span>
-                                    <span class="receipt-value">Cash</span>
-                                </div>
-
-                                ${tx.academicYear ? `
-                                <div class="receipt-detail-row">
-                                    <span class="receipt-label">
-                                        <i class="bi bi-book"></i> Academic Year
-                                    </span>
-                                    <span class="receipt-value">${tx.academicYear}</span>
-                                </div>
-                                ` : ''}
-                            </div>
-
-                            <div class="receipt-divider"></div>
+                        <div class="tx-meta">
+                            <div><i class="bi bi-person-check me-1"></i> Processed By: ${tx.processedBy || 'System'}</div>
+                            <div><i class="bi bi-calendar-check me-1"></i> Date: ${formattedDate}</div>
                         </div>
 
-                        <!-- Receipt Footer -->
-                        <div class="receipt-footer">
-                            <div class="receipt-total">
-                                <span class="receipt-total-label">Amount Paid:</span>
-                                <span class="receipt-total-amount">₱${parseFloat(tx.amount).toFixed(2)}</span>
-                            </div>
-                            <div class="receipt-status">
-                                <span class="receipt-status-label">Status:</span>
-                                <span class="receipt-status-badge">
-                                    <i class="bi bi-check-circle-fill"></i> PAID
-                                </span>
-                            </div>
+                        <div class="tx-amount">
+                            <div class="amount">₱${parseFloat(tx.amount).toFixed(2)}</div>
+                            <div class="status"><i class="bi bi-check-circle-fill"></i> Paid</div>
                         </div>
                     </div>
                 `;
-                transactionNumber--;
             });
-            
+
             container.innerHTML = html;
         }
     </script>
 }
-

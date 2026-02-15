@@ -299,7 +299,7 @@
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
-                    <th class="text-center" style="width: 60px;">ACTIONS</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -371,28 +371,8 @@
                                 }
                             </td>
 
-                            <!-- Actions Dropdown (Admin: No Payment Status Changes) -->
-                            <td class="text-center">
-                                @if (!isPaid)
-                                {
-                                    <div class="dropdown">
-                                        <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end glass-dropdown">
-                                            <li>
-                                                <a href="#" class="dropdown-item text-danger" onclick="confirmDeleteFee(@fee.FeeId, '@(student?.FullName?.Replace("'", "\\'") ?? "Unknown")', @(fee.Amount ?? 0)); return false;">
-                                                    <i class="bi bi-trash me-2"></i> Delete Record
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <span class="text-success" title="Paid - Cannot modify"><i class="bi bi-lock-fill"></i></span>
-                                }
-                            </td>
+
+
                         </tr>
                     }
                 }
@@ -731,4 +711,5 @@
     </script>
     <script src="~/js/payments.js" asp-append-version="true"></script>
 }
+
 

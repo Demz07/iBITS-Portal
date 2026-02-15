@@ -47,12 +47,8 @@
             var today = DateOnly.FromDateTime(now);
             var timeNow = TimeOnly.FromDateTime(now);
 
-            // Determine Effective End Date (use EventDate if EndDate is null)
             DateOnly effectiveEndDate = item.EndDate ?? item.EventDate ?? DateOnly.MaxValue;
 
-            // Logic for "Automatically Closed":
-            // 1. Date has passed OR
-            // 2. Date is today AND EndTime exists AND current time is past EndTime
             bool isPastDate = effectiveEndDate < today;
             bool isPastTimeToday = effectiveEndDate == today && item.EndTime.HasValue && item.EndTime.Value < timeNow;
             bool isAutomaticallyClosed = isPastDate || isPastTimeToday;
@@ -72,9 +68,16 @@
                 }
                 else if (item.EventDate.Value == today)
                 {
-                    // If it's today and NOT closed/past time, it's Happening Now
-                    statusClass = "badge-today";
-                    statusText = "Happening Now";
+                    if (item.StartTime.HasValue && item.StartTime.Value > timeNow)
+                    {
+                        statusClass = "badge-upcoming"; 
+                        statusText = "Upcoming";
+                    }
+                    else
+                    {
+                        statusClass = "badge-today";    
+                        statusText = "Happening Now";
+                    }
                 }
             }
 
@@ -83,8 +86,6 @@
                     <!-- Gradient Header & Status -->
                     <div class="event-header-gradient">
                         <span class="status-badge @statusClass">@statusText</span>
-
-                        <!-- Date Sticker -->
                         <div class="event-date-sticker">
                             <span class="date-month">@(item.EventDate.HasValue? item.EventDate.Value.ToString("MMM") : "TBA")</span>
                             <span class="date-day">@(item.EventDate.HasValue? item.EventDate.Value.Day.ToString() : "--")</span>
@@ -92,10 +93,8 @@
                     </div>
 
                     <div class="event-body">
-                        <!-- Title -->
                         <h5 class="event-title" title="@item.EventName">@item.EventName</h5>
 
-                        <!-- Meta Info (Time & Location) -->
                         <div class="event-meta">
                             <div class="meta-item">
                                 <i class="bi bi-clock"></i>
@@ -107,19 +106,18 @@
                             </div>
                         </div>
 
-                        <!-- Description -->
                         <div class="event-desc">
                             @(string.IsNullOrEmpty(item.EventDesc) ? "No additional details provided for this event." : item.EventDesc)
                         </div>
 
-                        <!-- Footer: Attendees & Actions -->
+                        <!-- Footer -->
                         <div class="event-footer">
                             <div class="attendees-tag" title="Total Attendees">
                                 <i class="bi bi-people-fill"></i> @(item.Attendances?.Count ?? 0)
                             </div>
 
                             <div class="d-flex gap-2">
-                                <!-- Only show Close button if not already completed -->
+                                <!-- 1. MANAGE (Active) vs VIEW (Completed) Logic -->
                                 @if (statusText != "Completed")
                                 {
                                     <button class="btn btn-sm btn-glass text-danger"
@@ -129,37 +127,68 @@
                                             onclick="setCloseEventModal('@item.EventId', '@item.EventName')">
                                         <i class="bi bi-exclamation-triangle-fill"></i>
                                     </button>
-                                }
 
-                                <button class="btn btn-sm btn-manage-event"
-                                        style="font-size: 0.75rem; padding: 5px 12px;"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editEventModal"
-                                        data-event-id="@item.EventId"
-                                        data-event-name="@item.EventName"
-                                        data-event-location="@item.EventLocation"
-                                        data-event-date="@(item.EventDate.HasValue? item.EventDate.Value.ToString("yyyy-MM-dd") : "")"
-                                        data-start-time="@item.StartTime?.ToString(@"hh\:mm")"
-                                        data-end-date="@(item.EndDate.HasValue? item.EndDate.Value.ToString("yyyy-MM-dd") : "")"
-                                        data-end-time="@item.EndTime?.ToString(@"hh\:mm")"
-                                        data-event-duration="@item.EventDuration"
-                                        data-event-acad-year="@item.AcadYear"
-                                        data-event-desc="@item.EventDesc"
-                                        data-event-type="@item.EventType"
-                                        data-fine-member="@item.FineForMember"
-                                        data-fine-class-officer="@item.FineForClassOfficer"
-                                        data-fine-org-officer="@item.FineForOrgOfficer"
-                                        data-non-ibits-fine-member="@item.NonIbitsFineForMember"
-                                        data-non-ibits-fine-class-officer="@item.NonIbitsFineForClassOfficer"
-                                        data-non-ibits-fine-org-officer="@item.NonIbitsFineForOrgOfficer">
-                                    Manage
-                                </button>
+                                    <button class="btn btn-sm btn-manage-event"
+                                            style="font-size: 0.75rem; padding: 5px 12px;"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editEventModal"
+                                            data-locked="false"
+                                            
+                                            data-event-id="@item.EventId"
+                                            data-event-name="@item.EventName"
+                                            data-event-location="@item.EventLocation"
+                                            data-event-date="@(item.EventDate.HasValue ? item.EventDate.Value.ToString("yyyy-MM-dd") : "")"
+                                            data-start-time="@item.StartTime?.ToString(@"HH\:mm")"
+                                            data-end-date="@(item.EndDate.HasValue ? item.EndDate.Value.ToString("yyyy-MM-dd") : "")"
+                                            data-end-time="@item.EndTime?.ToString(@"HH\:mm")"
+                                            data-event-duration="@item.EventDuration"
+                                            data-event-acad-year="@item.AcadYear"
+                                            data-event-desc="@item.EventDesc"
+                                            data-event-type="@item.EventType"
+                                            data-fine-member="@item.FineForMember"
+                                            data-fine-class-officer="@item.FineForClassOfficer"
+                                            data-fine-org-officer="@item.FineForOrgOfficer"
+                                            data-non-ibits-fine-member="@item.NonIbitsFineForMember"
+                                            data-non-ibits-fine-class-officer="@item.NonIbitsFineForClassOfficer"
+                                            data-non-ibits-fine-org-officer="@item.NonIbitsFineForOrgOfficer">
+                                        Manage
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-view-details"
+                                            style="font-size: 0.75rem; padding: 5px 12px;"
+                                            title="View Details (Event Locked)"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editEventModal"
+                                            data-locked="true"
+                                            
+                                            data-event-id="@item.EventId"
+                                            data-event-name="@item.EventName"
+                                            data-event-location="@item.EventLocation"
+                                            data-event-date="@(item.EventDate.HasValue ? item.EventDate.Value.ToString("yyyy-MM-dd") : "")"
+                                            data-start-time="@item.StartTime?.ToString(@"HH\:mm")"
+                                            data-end-date="@(item.EndDate.HasValue ? item.EndDate.Value.ToString("yyyy-MM-dd") : "")"
+                                            data-end-time="@item.EndTime?.ToString(@"HH\:mm")"
+                                            data-event-duration="@item.EventDuration"
+                                            data-event-acad-year="@item.AcadYear"
+                                            data-event-desc="@item.EventDesc"
+                                            data-event-type="@item.EventType"
+                                            data-fine-member="@item.FineForMember"
+                                            data-fine-class-officer="@item.FineForClassOfficer"
+                                            data-fine-org-officer="@item.FineForOrgOfficer"
+                                            data-non-ibits-fine-member="@item.NonIbitsFineForMember"
+                                            data-non-ibits-fine-class-officer="@item.NonIbitsFineForClassOfficer"
+                                            data-non-ibits-fine-org-officer="@item.NonIbitsFineForOrgOfficer">
+                                        <i class="bi bi-eye-fill me-1"></i> View Details
+                                    </button>
+                                }
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
+                        </div> <!-- End Footer -->
+                    </div> <!-- End Event Body -->
+                </div> <!-- End Glass Card -->
+            </div> <!-- End Col -->
+        } @* End Foreach *@
     }
     else
     {
@@ -167,14 +196,13 @@
             <div class="glass-panel p-5 d-inline-block">
                 <i class="bi bi-calendar-event text-muted" style="font-size: 3rem; opacity:0.5;"></i>
                 <h5 class="text-muted mt-3 fw-bold">No Events Found</h5>
-                <p class="small text-muted mb-3">Create your first event to start tracking.</p>
                 <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createEventModal">
                     <i class="bi bi-plus-lg me-1"></i> Create Event
                 </button>
             </div>
         </div>
     }
-</div>
+</div> <!-- End Row -->
 
 <!-- PAGINATION -->
 @if (Model != null && Model.TotalPages > 1)
@@ -202,7 +230,7 @@
     </div>
 }
 
-<!-- ================= MODAL: CREATE EVENT (NEW LAYOUT - NO TEMPLATES) ================= -->
+<!-- ================= MODAL: CREATE EVENT ================= -->
 <div class="modal fade" id="createEventModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content glass-modal">
@@ -213,10 +241,7 @@
             <form asp-action="CreateEvent" method="post">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
-
-                    <!-- NEW LAYOUT: Academic Year, Event Type in Row 1, Event Name Full Width Row 2 -->
                     <div class="row g-3">
-                        <!-- Row 1: Academic Year, Event Type -->
                         <div class="col-md-6">
                             <label class="form-label">Academic Year*</label>
                             <input type="text" name="AcadYear" class="form-control" placeholder="e.g., 2023-2024" required />
@@ -228,34 +253,26 @@
                                 <option value="Non-iBITS Event">Non-iBITS Event</option>
                             </select>
                         </div>
-
-                        <!-- Row 2: Event Name (Full Width) -->
                         <div class="col-12">
                             <label class="form-label">Event Name*</label>
                             <input type="text" name="EventName" class="form-control" required />
                         </div>
-
-                        <!-- Row 2: Start Date, End Date -->
                         <div class="col-md-6">
                             <label class="form-label">Start Date*</label>
-                            <input type="date" name="EventDate" class="form-control" required />
+                            <input type="date" name="EventDate" id="createEventDate" class="form-control" required />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">End Date</label>
-                            <input type="date" name="EndDate" class="form-control" />
+                            <input type="date" name="EndDate" id="createEndDate" class="form-control" required />
                         </div>
-
-                        <!-- Row 3: Start Time, End Time -->
                         <div class="col-md-6">
                             <label class="form-label">Start Time</label>
-                            <input type="time" name="StartTime" class="form-control" />
+                            <input type="time" name="StartTime" id="createStartTime" class="form-control" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">End Time</label>
-                            <input type="time" name="EndTime" class="form-control" />
+                            <input type="time" name="EndTime" id="createEndTime" class="form-control" />
                         </div>
-
-                        <!-- Row 4: Location, Duration -->
                         <div class="col-md-8">
                             <label class="form-label">Location</label>
                             <input type="text" name="EventLocation" class="form-control" />
@@ -264,23 +281,17 @@
                             <label class="form-label">Duration (Optional)</label>
                             <input type="text" name="EventDuration" class="form-control" placeholder="e.g., 2 hours" />
                         </div>
-
-                        <!-- Row 5: Description -->
                         <div class="col-12">
                             <label class="form-label">Description</label>
                             <textarea name="EventDesc" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
-
                     <hr class="my-3" style="border-color: var(--border-color);" />
-
-                    <!-- Fine Settings -->
                     <div class="row g-3">
                         <div class="col-12"><h6 class="text-gold"><i class="bi bi-star-fill me-2"></i>iBITS Event Fines</h6></div>
                         <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" name="FineForMember" class="form-control" value="100.00" /></div>
                         <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" name="FineForClassOfficer" class="form-control" value="150.00" /></div>
                         <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" name="FineForOrgOfficer" class="form-control" value="300.00" /></div>
-
                         <div class="col-12 mt-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Non-iBITS Event Fines</h6></div>
                         <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" name="NonIbitsFineForMember" class="form-control" value="50.00" /></div>
                         <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" name="NonIbitsFineForClassOfficer" class="form-control" value="100.00" /></div>
@@ -296,94 +307,86 @@
     </div>
 </div>
 
-<!-- ================= MODAL: EDIT EVENT ================= -->
+<!-- ================= MODAL: EDIT EVENT (UPDATED WITH IDs FOR LOCKING) ================= -->
 <div class="modal fade" id="editEventModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content glass-modal">
             <div class="modal-header border-0">
-                <h5 class="modal-title text-gold"><i class="bi bi-pencil-square me-2"></i> Edit Event</h5>
+                <!-- ADDED ID -->
+                <h5 class="modal-title text-gold" id="editEventTitle"><i class="bi bi-pencil-square me-2"></i> Edit Event</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-action="EditEvent" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="editEventId" name="EventId" />
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <!-- Row 1: Academic Year, Event Type -->
-                        <div class="col-md-6">
-                            <label class="form-label">Academic Year*</label>
-                            <input type="text" id="editAcadYear" name="AcadYear" class="form-control" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Event Type*</label>
-                            <select id="editEventType" name="EventType" class="form-select select2-modal" required style="width: 100%;">
-                                <option value="iBITS Event">iBITS Event</option>
-                                <option value="Non-iBITS Event">Non-iBITS Event</option>
-                            </select>
-                        </div>
-
-                        <!-- Row 2: Event Name (Full Width) -->
-                        <div class="col-12">
-                            <label class="form-label">Event Name*</label>
-                            <input type="text" id="editEventName" name="EventName" class="form-control" required />
-                        </div>
-
-                        <!-- Row 2: Start Date, End Date -->
-                        <div class="col-md-6">
-                            <label class="form-label">Start Date*</label>
-                            <input type="date" id="editEventDate" name="EventDate" class="form-control" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">End Date</label>
-                            <input type="date" id="editEndDate" name="EndDate" class="form-control" />
-                        </div>
-
-                        <!-- Row 3: Start Time, End Time -->
-                        <div class="col-md-6">
-                            <label class="form-label">Start Time</label>
-                            <input type="time" id="editStartTime" name="StartTime" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">End Time</label>
-                            <input type="time" id="editEndTime" name="EndTime" class="form-control" />
-                        </div>
-
-                        <!-- Row 4: Location, Duration -->
-                        <div class="col-md-8">
-                            <label class="form-label">Location</label>
-                            <input type="text" id="editEventLocation" name="EventLocation" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Duration (Optional)</label>
-                            <input type="text" id="editEventDuration" name="EventDuration" class="form-control" placeholder="e.g., 2 hours" />
+                    <!-- ADDED FIELDSET WRAPPER -->
+                    <fieldset id="editEventFieldset">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Academic Year*</label>
+                                <input type="text" id="editAcadYear" name="AcadYear" class="form-control" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Event Type*</label>
+                                <select id="editEventType" name="EventType" class="form-select select2-modal" required style="width: 100%;">
+                                    <option value="iBITS Event">iBITS Event</option>
+                                    <option value="Non-iBITS Event">Non-iBITS Event</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Event Name*</label>
+                                <input type="text" id="editEventName" name="EventName" class="form-control" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Start Date*</label>
+                                <input type="date" id="editEventDate" name="EventDate" class="form-control" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">End Date</label>
+                                <input type="date" id="editEndDate" name="EndDate" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Start Time</label>
+                                <input type="time" id="editStartTime" name="StartTime" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">End Time</label>
+                                <input type="time" id="editEndTime" name="EndTime" class="form-control" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Location</label>
+                                <input type="text" id="editEventLocation" name="EventLocation" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Duration (Optional)</label>
+                                <input type="text" id="editEventDuration" name="EventDuration" class="form-control" placeholder="e.g., 2 hours" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea id="editEventDesc" name="EventDesc" class="form-control" rows="2"></textarea>
+                            </div>
                         </div>
 
-                        <!-- Row 5: Description -->
-                        <div class="col-12">
-                            <label class="form-label">Description</label>
-                            <textarea id="editEventDesc" name="EventDesc" class="form-control" rows="2"></textarea>
+                        <hr class="my-3" style="border-color: var(--border-color);" />
+
+                        <div class="row g-3">
+                            <div class="col-12"><h6 class="text-gold"><i class="bi bi-star-fill me-2"></i>iBITS Event Fines</h6></div>
+                            <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editFineForMember" name="FineForMember" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editFineForClassOfficer" name="FineForClassOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editFineForOrgOfficer" name="FineForOrgOfficer" class="form-control" /></div>
+                            <div class="col-12 mt-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Non-iBITS Event Fines</h6></div>
+                            <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForMember" name="NonIbitsFineForMember" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForClassOfficer" name="NonIbitsFineForClassOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForOrgOfficer" name="NonIbitsFineForOrgOfficer" class="form-control" /></div>
                         </div>
-                    </div>
-
-                    <hr class="my-3" style="border-color: var(--border-color);" />
-
-                    <!-- Fine Settings -->
-                    <div class="row g-3">
-                        <div class="col-12"><h6 class="text-gold"><i class="bi bi-star-fill me-2"></i>iBITS Event Fines</h6></div>
-                        <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editFineForMember" name="FineForMember" class="form-control" /></div>
-                        <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editFineForClassOfficer" name="FineForClassOfficer" class="form-control" /></div>
-                        <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editFineForOrgOfficer" name="FineForOrgOfficer" class="form-control" /></div>
-
-                        <div class="col-12 mt-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Non-iBITS Event Fines</h6></div>
-                        <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForMember" name="NonIbitsFineForMember" class="form-control" /></div>
-                        <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForClassOfficer" name="NonIbitsFineForClassOfficer" class="form-control" /></div>
-                        <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForOrgOfficer" name="NonIbitsFineForOrgOfficer" class="form-control" /></div>
-                    </div>
+                    </fieldset> <!-- END FIELDSET -->
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteEventModal">Delete Event</button>
-                    <button type="button" class="btn btn-gold-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-gold">Update Event</button>
+                    <!-- ADDED BUTTON IDs -->
+                    <button type="button" class="btn btn-outline-danger" id="btnEditDelete" data-bs-toggle="modal" data-bs-target="#deleteEventModal">Delete Event</button>
+                    <button type="button" class="btn btn-gold-outline" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-gold" id="btnEditSave">Update Event</button>
                 </div>
             </form>
         </div>
@@ -459,8 +462,9 @@
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-    <!-- Custom Events JS -->
+    <!-- Custom Events JS (Uses the External File) -->
     <script src="~/js/events.js"></script>
+}
 
     <script>
         $(document).ready(function () {
@@ -493,4 +497,5 @@
         });
     </script>
 }
+
 

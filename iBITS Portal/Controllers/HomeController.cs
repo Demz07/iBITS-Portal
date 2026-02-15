@@ -1,8 +1,5 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Controllers/HomeController.cs
-// ============================================================
-// UPDATED: Injected the pending role change check into the
-// Index() method's login workflow.
 // ============================================================
 
 using iBITS_Portal.Models;
@@ -10,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace iBITS_Portal.Controllers
 {
@@ -52,6 +50,7 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction("Index", "Admin");
             }
 
+            // If still using default password, force password setup
             bool isDefaultPassword = await _userManager.CheckPasswordAsync(user, user.UserName);
             if (isDefaultPassword)
             {
@@ -71,44 +70,69 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction("Gateway");
             }
 
+            // If you still require profile photo before entering dashboard:
             bool hasProfilePicture = !string.IsNullOrEmpty(student.StudentImage);
             if (!hasProfilePicture)
             {
                 return RedirectToAction("ProfileSetup", "Account");
             }
 
-            // ============================================================
-            // NEW: CHECK FOR PENDING ROLE CHANGE
-            // ============================================================
+            // Pending role change (optional feature)
             var pendingChange = await _context.PendingRoleChanges
                 .FirstOrDefaultAsync(p => p.StudentNumber == user.UserName && !p.IsConfirmed && !p.IsDeclined);
 
             if (pendingChange != null)
             {
-                // If a pending change exists, redirect to the dedicated confirmation page.
                 return RedirectToPage("/Account/ConfirmRoleChange", new { area = "Identity" });
             }
-            // ============================================================
 
-            // All checks passed, proceed to the dashboard
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var nextEvent = await _context.Events
-                .Where(e => e.EventDate >= today && !e.IsClosed)
-                .OrderBy(e => e.EventDate)
-                .FirstOrDefaultAsync();
+            // ================== DASHBOARD DATA ==================
+            var today = DateOnly.FromDateTime(DateTime.Today);
 
+            // Current events: all for today (not closed)
+            var currentEvents = await _context.Events
+                .Where(e => e.EventDate.HasValue && e.EventDate.Value == today && !e.IsClosed)
+                .OrderBy(e => e.StartTime.HasValue ? 0 : 1)
+                .ThenBy(e => e.StartTime)
+                .ThenBy(e => e.EventName)
+                .ToListAsync();
+
+            var earliestStart = currentEvents
+                .Where(e => e.StartTime.HasValue)
+                .OrderBy(e => e.StartTime)
+                .Select(e => e.StartTime!.Value.ToString("h:mm tt"))
+                .FirstOrDefault();
+
+            ViewBag.NextEventTime = earliestStart;
+            ViewBag.CurrentEvents = currentEvents;
+
+            // Upcoming events: strictly future
             var upcomingEvents = await _context.Events
-                .Where(e => e.EventDate >= today && !e.IsClosed)
+                .Where(e => e.EventDate.HasValue && e.EventDate.Value > today && !e.IsClosed)
                 .OrderBy(e => e.EventDate)
+                .ThenBy(e => e.StartTime)
                 .Take(3)
                 .ToListAsync();
 
-            // Get dismissed announcement IDs for this student
-            var dismissedAnnouncementIds = await _context.UserAnnouncementDismissals
+            // Announcements (not dismissed and not expired)
+            var dismissedIds = await _context.UserAnnouncementDismissals
                 .Where(d => d.StudentNum == user.UserName)
                 .Select(d => d.AnnouncementId)
                 .ToListAsync();
 
+            var announcements = await _context.Announcements
+     .Where(a =>
+         (a.TargetAudience == "All Students" ||
+          a.TargetAudience == student.Course ||
+          (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
+         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
+         && a.AnnouncementType != "Admin Notice" // <--- CRITICAL: Exclude Admin Notices from General list
+         && !dismissedIds.Contains(a.Id))
+     .OrderByDescending(a => a.Timestamp)
+     .Take(10)
+     .ToListAsync();
+
+            // Financials
             // Get all non-expired, non-dismissed announcements
             var allAnnouncements = await _context.Announcements
                 .Where(a => (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
@@ -177,27 +201,22 @@ namespace iBITS_Portal.Controllers
                 .Where(f => f.Attendance != null && f.Attendance.StudentNum == user.UserName && f.FinesStatus != "Paid")
                 .ToListAsync();
 
-            var totalFeesUnpaid = unpaidFees.Sum(f => f.Amount);
-            var totalFinesUnpaid = unpaidFines.Sum(f => f.Amount);
-            var totalBalanceDue = totalFeesUnpaid + totalFinesUnpaid;
-
             ViewBag.UnpaidFeesCount = unpaidFees.Count;
             ViewBag.UnpaidFinesCount = unpaidFines.Count;
-            ViewBag.TotalBalanceDue = totalBalanceDue;
+            ViewBag.TotalBalanceDue = unpaidFees.Sum(f => f.Amount) + unpaidFines.Sum(f => f.Amount);
 
-            // ============================================================
-            // NEW: ATTENDANCE RATE
-            // ============================================================
+            // Attendance rate (past events only)
             var totalEvents = await _context.Events
-                .Where(e => e.EventDate < today) // Only count past events
+                .Where(e => e.EventDate.HasValue && e.EventDate.Value < today)
                 .CountAsync();
 
             var studentAttendances = await _context.Attendances
                 .Include(a => a.Event)
                 .Where(a => a.StudentNum == user.UserName &&
-                           a.AttendanceStatus == "Present" &&
-                           a.Event != null &&
-                           a.Event.EventDate < today)
+                            a.AttendanceStatus == "Present" &&
+                            a.Event != null &&
+                            a.Event.EventDate.HasValue &&
+                            a.Event.EventDate.Value < today)
                 .CountAsync();
 
             var attendanceRate = totalEvents > 0
@@ -208,10 +227,27 @@ namespace iBITS_Portal.Controllers
             ViewBag.EventsAttended = studentAttendances;
             ViewBag.TotalPastEvents = totalEvents;
 
+            // Pass to View
             ViewBag.Student = student;
-            ViewBag.NextEvent = nextEvent;
             ViewBag.UpcomingEvents = upcomingEvents;
             ViewBag.Announcements = announcements;
+
+            // ✅ Provide header avatar to _StudentLayout.cshtml
+            ViewBag.StudentImage = string.IsNullOrWhiteSpace(student.StudentImage)
+                ? "/images/default-avatar.png"
+                : student.StudentImage;
+
+            // ================== ADMIN NOTICES ==================
+            // Fetch individual notifications (Admin Notices) that haven't been read/dismissed
+            var adminNotices = await _context.Notifications
+    .Where(n => n.StudentNum == user.UserName && !n.IsRead && n.NotificationType == "Admin Notice")
+    .OrderByDescending(n => n.NotificationDate)
+    .ToListAsync();
+
+            ViewBag.AdminNotices = adminNotices;
+            // ===================================================
+
+
 
             return View("StudentDashboard");
         }
@@ -221,13 +257,11 @@ namespace iBITS_Portal.Controllers
         {
             if (_signInManager.IsSignedIn(User)) { return RedirectToAction("Index"); }
 
-            // Get real statistics from database
             var totalStudents = await _context.Students.CountAsync();
             var totalEvents = await _context.Events.CountAsync();
             var totalTransactions = await _context.PaymentTransactions.CountAsync();
             var totalScans = await _context.Attendances.Where(a => a.AttendanceStatus == "Present").CountAsync();
 
-            // Pass to ViewBag
             ViewBag.TotalStudents = totalStudents;
             ViewBag.TotalEvents = totalEvents;
             ViewBag.TotalTransactions = totalTransactions;
@@ -243,11 +277,9 @@ namespace iBITS_Portal.Controllers
             return View();
         }
 
-        public IActionResult Privacy() { return View(); }
+        public IActionResult Privacy() => View();
 
-        // ============================================================
-        // DISMISS ANNOUNCEMENT (Student Action)
-        // ============================================================
+        // ================== ANNOUNCEMENT DISMISS ==================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DismissAnnouncement(int id)
@@ -258,67 +290,110 @@ namespace iBITS_Portal.Controllers
                 return Json(new { success = false, message = "User not authenticated" });
             }
 
-            // Check if announcement exists
             var announcement = await _context.Announcements.FindAsync(id);
             if (announcement == null)
             {
                 return Json(new { success = false, message = "Announcement not found" });
             }
 
-            // Check if already dismissed
-            var existingDismissal = await _context.UserAnnouncementDismissals
+            var existing = await _context.UserAnnouncementDismissals
                 .FirstOrDefaultAsync(d => d.StudentNum == user.UserName && d.AnnouncementId == id);
 
-            if (existingDismissal != null)
+            if (existing != null)
             {
                 return Json(new { success = true, message = "Already dismissed" });
             }
 
-            // Create dismissal record
-            var dismissal = new UserAnnouncementDismissal
+            _context.UserAnnouncementDismissals.Add(new UserAnnouncementDismissal
             {
                 StudentNum = user.UserName,
                 AnnouncementId = id,
                 DismissedAt = DateTime.Now
-            };
-
-            _context.UserAnnouncementDismissals.Add(dismissal);
+            });
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, message = "Announcement dismissed successfully" });
         }
 
+        // ================== ADMIN NOTICE DISMISS ==================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DismissNotification(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || user.UserName == null)
+            {
+                return Json(new { success = false, message = "User not authenticated" });
+            }
 
+            // Find the specific notification
+            var notification = await _context.Notifications.FindAsync(id);
 
+            if (notification == null)
+            {
+                return Json(new { success = false, message = "Notice not found" });
+            }
 
+            // Security check: ensure this notice actually belongs to the logged-in student
+            if (notification.StudentNum != user.UserName)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            // Mark as Read (this removes it from the "Unread" list in your dashboard)
+            notification.IsRead = true;
+            _context.Notifications.Update(notification);
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Notice dismissed" });
+        }
+
+        // ================== GET ALL EVENTS (JSON) for MODAL ==================
+        [HttpGet]
+        public async Task<IActionResult> GetAllEventsJson()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { success = false, message = "User not found" });
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            // 1. Upcoming Events (Strictly FUTURE events only)
+            // Changed '>=' to '>' so today's events are excluded
+            var upcoming = await _context.Events
+                .Where(e => e.EventDate.HasValue && e.EventDate.Value > today && !e.IsClosed)
+                .OrderBy(e => e.EventDate)
+                .ThenBy(e => e.StartTime)
+                .Select(e => new
+                {
+                    eventName = e.EventName,
+                    eventDate = e.EventDate.Value.ToString("yyyy-MM-dd"),
+                    eventLocation = e.EventLocation,
+                    isClosed = e.IsClosed
+                })
+                .ToListAsync();
+
+            // 2. Event History (Past events OR Closed events)
+            var history = await _context.Events
+                .Where(e => (e.EventDate.HasValue && e.EventDate.Value < today) || e.IsClosed)
+                .OrderByDescending(e => e.EventDate)
+                .Select(e => new
+                {
+                    eventName = e.EventName,
+                    eventDate = e.EventDate.Value.ToString("yyyy-MM-dd"),
+                    eventLocation = e.EventLocation,
+                    isClosed = e.IsClosed
+                })
+                .ToListAsync();
+
+            // Return the data as JSON
+            return Json(new { upcoming = upcoming, history = history });
+        }
+
+        // Landing pages
+        [AllowAnonymous] public IActionResult LandingPageAbout() => View();
+        [AllowAnonymous] public IActionResult LandingPagePeople() => View();
+        [AllowAnonymous] public IActionResult LandingDevelopers() => View();
     }
 }
-
-//add
-
-public class HomeController : Controller
-{
-
-    public IActionResult LandingPageAbout()
-    {
-
-
-        return View();
-    }
-
-    public IActionResult LandingPagePeople()
-    {
-
-        return View();
-    }
-
-    public IActionResult LandingDevelopers()
-    {
-
-        return View();
-    }
-}
-
-
-
 

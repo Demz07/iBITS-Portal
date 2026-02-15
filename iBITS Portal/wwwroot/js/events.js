@@ -1,86 +1,144 @@
-/* C:\Users\Dave\OneDrive\Desktop\needs to be update\Heres the code you will need to update\events.js */
-/* wwwroot/js/events.js */
-
 $(document).ready(function () {
     console.log("📅 Events Manager Initialized");
 
     // =========================================================
-    // 1. INITIALIZE SELECT2 (Custom Dropdown Theme)
+    // 1. HELPER: DESTROY & INIT SELECT2
     // =========================================================
-
-    // Initialize for Create Modal
-    $('#createEventModal').on('shown.bs.modal', function () {
-        $(this).find('select').select2({
-            dropdownParent: $('#createEventModal'),
-            minimumResultsForSearch: Infinity, // Hides search box for cleaner look
-            width: '100%'
+    function initSelect2(modalId) {
+        // Destroy existing first to prevent duplication
+        $(modalId).find('select.select2-modal').each(function () {
+            if ($(this).data('select2')) {
+                $(this).select2('destroy');
+            }
         });
-    });
 
-    // Initialize for Edit Modal
-    $('#editEventModal').on('shown.bs.modal', function () {
-        $(this).find('select').select2({
-            dropdownParent: $('#editEventModal'),
+        // Initialize
+        $(modalId).find('select.select2-modal').select2({
+            dropdownParent: $(modalId),
             minimumResultsForSearch: Infinity,
             width: '100%'
-        });
-    });
-
-    // =========================================================
-    // 2. EDIT MODAL POPULATION
-    // =========================================================
-    const editEventModal = document.getElementById('editEventModal');
-
-    if (editEventModal) {
-        editEventModal.addEventListener('show.bs.modal', function (event) {
-            // Button that triggered the modal
-            const button = event.relatedTarget;
-            if (!button) return; // Prevention if triggered manually
-
-            // Helper to safely get attributes
-            const getAttr = (attr, def = '') => button.getAttribute(attr) || def;
-
-            // --- 1. Basic Info ---
-            document.getElementById('editEventId').value = getAttr('data-event-id');
-            document.getElementById('deleteEventId').value = getAttr('data-event-id'); // Sync for delete modal
-            document.getElementById('editEventName').value = getAttr('data-event-name');
-            document.getElementById('editEventLocation').value = getAttr('data-event-location');
-            document.getElementById('editEventDate').value = getAttr('data-event-date');
-            document.getElementById('editStartTime').value = getAttr('data-start-time');
-            document.getElementById('editEndDate').value = getAttr('data-end-date');
-            document.getElementById('editEndTime').value = getAttr('data-end-time');
-            document.getElementById('editEventDuration').value = getAttr('data-event-duration');
-            document.getElementById('editAcadYear').value = getAttr('data-event-acad-year');
-            document.getElementById('editEventDesc').value = getAttr('data-event-desc');
-
-            // --- 2. Event Type (Trigger Select2 Update) ---
-            const eventType = getAttr('data-event-type');
-            $('#editEventType').val(eventType).trigger('change');
-
-            // --- 3. Fines (iBITS) ---
-            document.getElementById('editFineForMember').value = getAttr('data-fine-member', '0.00');
-            document.getElementById('editFineForClassOfficer').value = getAttr('data-fine-class-officer', '0.00');
-            document.getElementById('editFineForOrgOfficer').value = getAttr('data-fine-org-officer', '0.00');
-
-            // --- 4. Fines (Non-iBITS) ---
-            document.getElementById('editNonIbitsFineForMember').value = getAttr('data-non-ibits-fine-member', '50.00');
-            document.getElementById('editNonIbitsFineForClassOfficer').value = getAttr('data-non-ibits-fine-class-officer', '100.00');
-            document.getElementById('editNonIbitsFineForOrgOfficer').value = getAttr('data-non-ibits-fine-org-officer', '150.00');
         });
     }
 
     // =========================================================
-    // 3. FORM RESET LOGIC (Templates Removed)
+    // 2. CREATE MODAL LOGIC
     // =========================================================
-    const createEventModal = document.getElementById('createEventModal');
-    if (createEventModal) {
-        createEventModal.addEventListener('hidden.bs.modal', function () {
-            const form = createEventModal.querySelector('form');
-            if (form) {
-                form.reset();
-                // Reset Select2 to default
-                $('#createEventModal select').val('iBITS Event').trigger('change');
+    $('#createEventModal').on('shown.bs.modal', function () {
+        initSelect2('#createEventModal');
+    });
+
+    $('#createEventModal').on('hidden.bs.modal', function () {
+        const form = this.querySelector('form');
+        if (form) form.reset();
+
+        // Reset Select2 value
+        $('#createEventModal select').val('iBITS Event').trigger('change');
+
+        // Remove manual date constraints
+        $('#createEndDate').val('').removeAttr('min');
+    });
+
+    // --- Date Constraints (Timezone Safe) ---
+    // This gets local date part correctly regardless of UTC offset
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+
+    // Set min for start date as today
+    $('#createEventDate').attr('min', today);
+
+    // Dynamic End Date Constraint
+    $('#createEventDate').on('change', function () {
+        const startDate = $(this).val();
+        $('#createEndDate').attr('min', startDate);
+
+        // If end date is set and is before start date, clear it
+        if ($('#createEndDate').val() && $('#createEndDate').val() < startDate) {
+            $('#createEndDate').val('');
+        }
+    });
+
+    // =========================================================
+    // 3. EDIT MODAL LOGIC (READ-ONLY SUPPORT)
+    // =========================================================
+
+    // Init Select2 when modal opens
+    $('#editEventModal').on('shown.bs.modal', function () {
+        initSelect2('#editEventModal');
+    });
+
+    const editEventModal = document.getElementById('editEventModal');
+    if (editEventModal) {
+        editEventModal.addEventListener('show.bs.modal', function (event) {
+            // Button that triggered the modal
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const getAttr = (attr, def = '') => button.getAttribute(attr) || def;
+
+            // --- 1. CHECK LOCK STATUS ---
+            const isLocked = getAttr('data-locked') === 'true';
+
+            // --- 2. TOGGLE UI (EDIT VS READ-ONLY) ---
+            const fieldset = document.getElementById('editEventFieldset');
+            const btnSave = document.getElementById('btnEditSave');
+            const btnDelete = document.getElementById('btnEditDelete');
+            const title = document.getElementById('editEventTitle');
+            const typeSelect = $('#editEventType');
+
+            if (isLocked) {
+                // COMPLETED EVENT: Read Only Mode
+                fieldset.disabled = true; // Native HTML disable for inputs
+                btnSave.style.display = 'none';
+                btnDelete.style.display = 'none';
+
+                title.innerHTML = '<i class="bi bi-eye-fill me-2"></i> Event Details <span class="badge bg-secondary ms-2" style="font-size: 0.6em; vertical-align: middle;">COMPLETED</span>';
+
+                // Select2 requires explicit disable
+                typeSelect.prop('disabled', true);
+            } else {
+                // ACTIVE EVENT: Edit Mode
+                fieldset.disabled = false;
+                btnSave.style.display = 'inline-block';
+                btnDelete.style.display = 'inline-block';
+
+                title.innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Event';
+
+                // Enable Select2
+                typeSelect.prop('disabled', false);
             }
+
+            // --- 3. POPULATE DATA ---
+            document.getElementById('editEventId').value = getAttr('data-event-id');
+            document.getElementById('deleteEventId').value = getAttr('data-event-id'); // For Delete Modal
+
+            document.getElementById('editEventName').value = getAttr('data-event-name');
+            document.getElementById('editEventLocation').value = getAttr('data-event-location');
+            document.getElementById('editEventDate').value = getAttr('data-event-date');
+
+            // Time inputs (Expects HH:mm format)
+            document.getElementById('editStartTime').value = getAttr('data-start-time');
+            document.getElementById('editEndTime').value = getAttr('data-end-time');
+
+            document.getElementById('editEndDate').value = getAttr('data-end-date');
+            document.getElementById('editEventDuration').value = getAttr('data-event-duration');
+            document.getElementById('editAcadYear').value = getAttr('data-event-acad-year');
+            document.getElementById('editEventDesc').value = getAttr('data-event-desc');
+
+            // Set Select2 Value
+            typeSelect.val(getAttr('data-event-type')).trigger('change');
+
+            // Fines (iBITS)
+            document.getElementById('editFineForMember').value = getAttr('data-fine-member', '0.00');
+            document.getElementById('editFineForClassOfficer').value = getAttr('data-fine-class-officer', '0.00');
+            document.getElementById('editFineForOrgOfficer').value = getAttr('data-fine-org-officer', '0.00');
+
+            // Fines (Non-iBITS)
+            document.getElementById('editNonIbitsFineForMember').value = getAttr('data-non-ibits-fine-member', '50.00');
+            document.getElementById('editNonIbitsFineForClassOfficer').value = getAttr('data-non-ibits-fine-class-officer', '100.00');
+            document.getElementById('editNonIbitsFineForOrgOfficer').value = getAttr('data-non-ibits-fine-org-officer', '150.00');
         });
     }
 });
@@ -92,3 +150,4 @@ window.setCloseEventModal = function (id, name) {
     document.getElementById('closeEventId').value = id;
     document.getElementById('closeEventName').textContent = name;
 };
+

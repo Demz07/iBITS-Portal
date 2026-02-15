@@ -240,14 +240,10 @@
             <div class="col-md-2 filter-item" data-filter="type">
                 <label class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Student Type</label>
                 <select name="typeFilter" id="typeFilter" class="form-select select2-enable auto-submit-filter" style="font-size: 0.85rem;">
-                    <option value="">All Types</option>
-                    @if (ViewBag.StudentTypes != null)
-                    {
-                        foreach (var type in ViewBag.StudentTypes)
-                        {
-                            <option value="@type" selected="@(ViewBag.TypeFilter == type)">@type</option>
-                        }
-                    }
+                    <option value="" selected="@(string.IsNullOrEmpty(ViewBag.TypeFilter))">All Types</option>
+                    <option value="Regular" selected="@(ViewBag.TypeFilter == "Regular")">Regular</option>
+                    <option value="Irregular" selected="@(ViewBag.TypeFilter == "Irregular")">Irregular</option>
+                    <option value="Ladderized" selected="@(ViewBag.TypeFilter == "Ladderized")">Ladderized</option>
                 </select>
             </div>
             <!-- Role Filter -->
@@ -452,7 +448,6 @@
                             <select name="StudentType" class="form-select select2-modal">
                                 <option value="Regular">Regular</option>
                                 <option value="Irregular">Irregular</option>
-                                <option value="Transferee">Transferee</option>
                                 <option value="Ladderized">Ladderized</option>
                             </select>
                         </div>
@@ -621,4 +616,5 @@
     </script>
     <script src="~/js/student-records.js" asp-append-version="true"></script>
 }
+
 
