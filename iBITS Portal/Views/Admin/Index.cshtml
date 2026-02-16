@@ -157,12 +157,9 @@
                 <div class="glass-panel chart-panel h-100">
                     <div class="panel-header">
                         <h5 class="panel-title"><i class="bi bi-pie-chart-fill me-2"></i>Students per Program</h5>
-                        <button class="badge badge-gold clickable-badge" onclick="showAllStudentsModal()" 
-                                aria-label="View all students" 
-                                tabindex="0" 
-                                onkeypress="if(event.key==='Enter' || event.key===' ') showAllStudentsModal()">
+                        <a href="@Url.Action("StudentRecords", "Admin")" class="badge badge-gold clickable-badge" aria-label="View all students">
                             Total: <span id="totalStudents">0</span>
-                        </button>
+                        </a>
                     </div>
                     <div class="chart-container">
                         <canvas id="studentsPerProgramChart"></canvas>
@@ -184,54 +181,26 @@
                                 BSIT <span class="program-years">(4-Year Program)</span>
                             </h6>
                             <div class="counters-row">
-                                <div class="counter-card bsit clickable-counter" 
-                                     data-program="BSIT" 
-                                     data-year="1" 
-                                     onclick="showYearLevelModal('BSIT', 1)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View BSIT 1st Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 1)">
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=BSIT&year=1" class="counter-card bsit clickable-counter" aria-label="View BSIT 1st Year students">
                                     <span class="counter-value" id="bsit1Count">0</span>
                                     <span class="counter-label">1st Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
-                                <div class="counter-card bsit clickable-counter" 
-                                     data-program="BSIT" 
-                                     data-year="2" 
-                                     onclick="showYearLevelModal('BSIT', 2)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View BSIT 2nd Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 2)">
+                                </a>
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=BSIT&year=2" class="counter-card bsit clickable-counter" aria-label="View BSIT 2nd Year students">
                                     <span class="counter-value" id="bsit2Count">0</span>
                                     <span class="counter-label">2nd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
-                                <div class="counter-card bsit clickable-counter" 
-                                     data-program="BSIT" 
-                                     data-year="3" 
-                                     onclick="showYearLevelModal('BSIT', 3)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View BSIT 3rd Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 3)">
+                                </a>
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=BSIT&year=3" class="counter-card bsit clickable-counter" aria-label="View BSIT 3rd Year students">
                                     <span class="counter-value" id="bsit3Count">0</span>
                                     <span class="counter-label">3rd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
-                                <div class="counter-card bsit clickable-counter" 
-                                     data-program="BSIT" 
-                                     data-year="4" 
-                                     onclick="showYearLevelModal('BSIT', 4)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View BSIT 4th Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 4)">
+                                </a>
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=BSIT&year=4" class="counter-card bsit clickable-counter" aria-label="View BSIT 4th Year students">
                                     <span class="counter-value" id="bsit4Count">0</span>
                                     <span class="counter-label">4th Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
+                                </a>
                             </div>
                         </div>
                         <!-- DIT Counters -->
@@ -241,42 +210,21 @@
                                 DIT <span class="program-years">(3-Year Program)</span>
                             </h6>
                             <div class="counters-row dit-row">
-                                <div class="counter-card dit clickable-counter" 
-                                     data-program="DIT" 
-                                     data-year="1" 
-                                     onclick="showYearLevelModal('DIT', 1)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View DIT 1st Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 1)">
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=DIT&year=1" class="counter-card dit clickable-counter" aria-label="View DIT 1st Year students">
                                     <span class="counter-value" id="dit1Count">0</span>
                                     <span class="counter-label">1st Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
-                                <div class="counter-card dit clickable-counter" 
-                                     data-program="DIT" 
-                                     data-year="2" 
-                                     onclick="showYearLevelModal('DIT', 2)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View DIT 2nd Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 2)">
+                                </a>
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=DIT&year=2" class="counter-card dit clickable-counter" aria-label="View DIT 2nd Year students">
                                     <span class="counter-value" id="dit2Count">0</span>
                                     <span class="counter-label">2nd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
-                                <div class="counter-card dit clickable-counter" 
-                                     data-program="DIT" 
-                                     data-year="3" 
-                                     onclick="showYearLevelModal('DIT', 3)"
-                                     role="button"
-                                     tabindex="0"
-                                     aria-label="View DIT 3rd Year students"
-                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 3)">
+                                </a>
+                                <a href="@Url.Action("StudentRecords", "Admin")?program=DIT&year=3" class="counter-card dit clickable-counter" aria-label="View DIT 3rd Year students">
                                     <span class="counter-value" id="dit3Count">0</span>
                                     <span class="counter-label">3rd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -284,79 +232,6 @@
             </div>
         </div>
     </div>
-
-    <!-- ============================================================ -->
-    <!-- MODAL: Student Enrollment Details                            -->
-    <!-- ============================================================ -->
-    <div class="modal fade" id="enrollmentDetailsModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content glass-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title text-gold">
-                        <i class="bi bi-mortarboard-fill me-2"></i>
-                        <span id="enrollmentModalTitle">Student Details</span>
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Loading State -->
-                    <div id="enrollmentModalLoading" class="text-center py-5">
-                        <div class="spinner-border text-gold" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-3 text-muted">Loading details...</p>
-                    </div>
-
-                    <!-- Content -->
-                    <div id="enrollmentModalContent" class="modal-content-hidden">
-                        <!-- Summary Cards -->
-                        <div class="details-summary">
-                            <div class="summary-item">
-                                <div class="summary-value" id="enrollmentTotalStudents">0</div>
-                                <div class="summary-label">Total Students</div>
-                            </div>
-                        </div>
-
-                        <!-- Student List Table -->
-                        <div class="details-section">
-                            <h6 class="details-section-title">
-                                <i class="bi bi-people me-2"></i>Student List
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-dark table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Student ID</th>
-                                            <th>Name</th>
-                                            <th>Section</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="enrollmentStudentListBody">
-                                        <!-- Dynamic content -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <div class="modal-quick-actions me-auto">
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="exportEnrollmentModalData()" title="Export to Excel">
-                            <i class="bi bi-download"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" onclick="sendNoticeToEnrollmentStudents()" title="Send Notice">
-                            <i class="bi bi-bell"></i>
-                        </button>
-                    </div>
-                    <a href="@Url.Action("StudentRecords", "Admin")" class="btn btn-gold-outline" id="enrollmentGoToStudentsBtn">
-                        <i class="bi bi-arrow-right-circle me-1"></i> View in Student Records
-                    </a>
-                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
     <!-- ============================================================ -->
     <!-- FINANCIAL OVERVIEW (Consolidated)                            -->
@@ -650,7 +525,7 @@
                     <a href="@Url.Action("Payments", "Admin")" class="btn btn-gold-outline" id="financialGoToPaymentsBtn">
                         <i class="bi bi-arrow-right-circle me-1"></i> Go to Payments
                     </a>
-                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-gold-outline" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -666,56 +541,61 @@
 <!-- MODAL: Send Notice                                           -->
 <!-- ============================================================ -->
 <div class="modal fade" id="sendNoticeModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content glass-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title text-gold">
-                        <i class="bi bi-bell-fill me-2"></i> Send Notice to Students
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title text-gold">
+                    <i class="bi bi-bell-fill me-2"></i> Manage Notifications
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Notification Tabs -->
+                <div class="notification-tabs">
+                    <button class="notification-tab active" onclick="switchNotificationTab('sendNotice')">
+                        <i class="bi bi-send me-1"></i> Send Notice
+                    </button>
+                    <button class="notification-tab" onclick="switchNotificationTab('activeNotifications')">
+                        <i class="bi bi-list-ul me-1"></i> Active Notifications
+                    </button>
                 </div>
-                <form id="sendNoticeForm">
-                    @Html.AntiForgeryToken()
-                    <div class="modal-body">
+
+                <!-- Tab Content: Send Notice -->
+                <div class="tab-content-pane active" id="sendNoticeTab">
+                    <form id="sendNoticeForm">
+                        @Html.AntiForgeryToken()
+                        
                         <!-- Recipients Section -->
                         <div class="notice-section">
                             <label class="form-label fw-bold"><i class="bi bi-people me-2"></i>Recipients</label>
                             <div class="recipient-options">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="recipientFilter" id="recipientAll" value="all" checked>
-                                    <label class="form-check-label" for="recipientAll">
-                                        All Students
-                                    </label>
+                                    <label class="form-check-label" for="recipientAll">All Students</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="recipientFilter" id="recipientProgram" value="program">
-                                    <label class="form-check-label" for="recipientProgram">
-                                        By Program
-                                    </label>
+                                    <label class="form-check-label" for="recipientProgram">By Program</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="recipientFilter" id="recipientYear" value="year">
-                                    <label class="form-check-label" for="recipientYear">
-                                        By Program & Year Level
-                                    </label>
+                                    <label class="form-check-label" for="recipientYear">By Program & Year Level</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="recipientFilter" id="recipientPending" value="pending">
-                                    <label class="form-check-label" for="recipientPending">
-                                        Students with Pending Fees
-                                    </label>
+                                    <label class="form-check-label" for="recipientPending">Students with Pending Fees</label>
                                 </div>
                             </div>
 
-                            <!-- Filter Options (shown conditionally) -->
+                            <!-- Filter Options -->
                             <div class="filter-row mt-3" id="programFilterRow" style="display: none;">
-                                <select class="form-select" id="noticeProgram" name="programFilter">
+                                <select class="glass-select-modal" id="noticeProgram" name="programFilter">
                                     <option value="BSIT">BSIT</option>
                                     <option value="DIT">DIT</option>
                                 </select>
                             </div>
                             <div class="filter-row mt-2" id="yearFilterRow" style="display: none;">
-                                <select class="form-select" id="noticeYear" name="yearFilter">
+                                <select class="glass-select-modal" id="noticeYear" name="yearFilter">
                                     <option value="1">1st Year</option>
                                     <option value="2">2nd Year</option>
                                     <option value="3">3rd Year</option>
@@ -737,17 +617,27 @@
                             <input type="text" class="form-control mb-3" id="noticeSubject" name="subject" placeholder="Subject" required>
                             <textarea class="form-control" id="noticeMessage" name="message" rows="5" placeholder="Enter your message here..." required></textarea>
                         </div>
+                    </form>
+                </div>
+
+                <!-- Tab Content: Active Notifications -->
+                <div class="tab-content-pane" id="activeNotificationsTab">
+                    <div id="activeNotificationsList" class="active-notifications-list">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-gold" role="status"></div>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-gold" id="sendNoticeBtn">
-                            <i class="bi bi-send me-1"></i> Send Notice
-                        </button>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-gold-outline" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-gold" id="sendNoticeBtn" onclick="document.getElementById('sendNoticeForm').requestSubmit()">
+                    <i class="bi bi-send me-1"></i> Send Notice
+                </button>
             </div>
         </div>
     </div>
+</div>
 
 
 
@@ -783,6 +673,9 @@
             window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
             window.notificationPreviewUrl = '@Url.Action("GetNotificationPreview", "Admin")';
             window.sendNotificationUrl = '@Url.Action("SendNotification", "Admin")';
+            window.getActiveNotificationsUrl = '@Url.Action("GetActiveNotifications", "Admin")';
+            window.updateNotificationUrl = '@Url.Action("UpdateNotification", "Admin")';
+            window.deleteNotificationUrl = '@Url.Action("DeleteNotification", "Admin")';
 
 
         </script>

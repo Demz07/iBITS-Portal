@@ -700,101 +700,6 @@ function updateFinesPieChart(data) {
 }
 
 // ==========================================
-// ENROLLMENT MODAL HANDLERS
-// ==========================================
-
-function showYearLevelModal(program, yearLevel) {
-    const modal = new bootstrap.Modal(document.getElementById('enrollmentDetailsModal'));
-    const modalTitle = document.getElementById('enrollmentModalTitle');
-    const modalLoading = document.getElementById('enrollmentModalLoading');
-    const modalContent = document.getElementById('enrollmentModalContent');
-    const goToStudentsBtn = document.getElementById('enrollmentGoToStudentsBtn');
-
-    // Set modal title
-    modalTitle.textContent = `${program} ${getOrdinal(yearLevel)} Year Students`;
-
-    // Update navigation button
-    if (goToStudentsBtn) {
-        const queryParams = `?program=${program}&year=${yearLevel}&autoApply=true`;
-        goToStudentsBtn.href = window.studentRecordsUrl + queryParams;
-    }
-
-    // Show loading state
-    modalLoading.style.display = 'block';
-    modalContent.style.display = 'none';
-
-    modal.show();
-
-    fetch(`${window.studentsByYearLevelUrl}?program=${program}&yearLevel=${yearLevel}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                populateEnrollmentModal(data);
-            } else {
-                showEnrollmentModalError(data.message || 'Failed to load details');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showEnrollmentModalError('Failed to load details');
-        })
-        .finally(() => {
-            modalLoading.style.display = 'none';
-            modalContent.style.display = 'block';
-        });
-}
-
-function populateEnrollmentModal(data) {
-    const summary = data.summary || {};
-
-    // Update summary cards
-    const totalStudentsEl = document.getElementById('enrollmentTotalStudents');
-    const activeStudentsEl = document.getElementById('enrollmentActiveStudents');
-    const inactiveStudentsEl = document.getElementById('enrollmentInactiveStudents');
-
-    if (totalStudentsEl) totalStudentsEl.textContent = summary.totalStudents || 0;
-    if (activeStudentsEl) activeStudentsEl.textContent = summary.activeStudents || 0;
-    if (inactiveStudentsEl) inactiveStudentsEl.textContent = (summary.totalStudents - summary.activeStudents) || 0;
-
-    // Populate student list
-    const studentListBody = document.getElementById('enrollmentStudentListBody');
-    if (!studentListBody) {
-        console.error('enrollmentStudentListBody element not found');
-        return;
-    }
-
-    studentListBody.innerHTML = '';
-
-    if (data.students && data.students.length > 0) {
-        data.students.forEach(student => {
-            const row = document.createElement('tr');
-            const statusClass = student.status === 'Active' ? 'paid' : 'unpaid';
-            row.innerHTML = `
-                <td><code>${student.studentNum}</code></td>
-                <td>${student.name}</td>
-                <td>${student.section || 'N/A'}</td>
-              
-            `;
-            studentListBody.appendChild(row);
-        });
-    } else {
-        studentListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No students found</td></tr>';
-    }
-}
-
-function showEnrollmentModalError(message) {
-    const modalContent = document.getElementById('enrollmentModalContent');
-    modalContent.innerHTML = `
-        <div class="text-center py-4">
-            <div class="text-danger mb-3">
-                <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
-            </div>
-            <p class="text-muted">${message}</p>
-        </div>
-    `;
-}
-
-// ==========================================
 // FINANCIAL MODAL HANDLERS
 // ==========================================
 
@@ -940,39 +845,6 @@ function showFinancialModalError(message) {
     `;
 }
 
-// Show modal with all students
-function showAllStudentsModal() {
-    const modalTitle = document.getElementById('enrollmentModalTitle');
-    const goToBtn = document.getElementById('enrollmentGoToStudentsBtn');
-
-    if (modalTitle) {
-        modalTitle.textContent = 'All Students';
-    }
-
-    // Show loading state
-    const modalContent = document.getElementById('enrollmentModalContent');
-    modalContent.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-gold"></div></div>';
-
-    // Open modal
-    const modal = new bootstrap.Modal(document.getElementById('enrollmentDetailsModal'));
-    modal.show();
-
-    // Fetch all students data
-    fetch(`${window.chartDetailsUrl}?chartType=allStudents`)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.students) {
-                populateEnrollmentModal(data.students);
-            } else {
-                showEnrollmentModalError('No students found');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showEnrollmentModalError('Failed to load student data');
-        });
-}
-
 // ==========================================
 // HELPER FUNCTIONS
 // ==========================================
@@ -998,10 +870,6 @@ function getStatusClass(status) {
 // EXPORT FUNCTIONS
 // ==========================================
 
-function exportEnrollmentModalData() {
-    alert('Export functionality - This will export enrollment data to Excel.');
-}
-
 function exportFinancialModalData() {
     alert('Export functionality - This will export financial data to Excel.');
 }
@@ -1009,11 +877,6 @@ function exportFinancialModalData() {
 // ==========================================
 // SEND NOTICE MODAL FUNCTIONALITY
 // ==========================================
-
-function sendNoticeToEnrollmentStudents() {
-    const modalTitle = document.getElementById('enrollmentModalTitle')?.textContent || '';
-    openSendNoticeModal(modalTitle);
-}
 
 function sendNoticeToFinancialStudents() {
     const modalTitle = document.getElementById('financialModalTitle')?.textContent || '';
@@ -1180,3 +1043,264 @@ async function handleSendNotice(e) {
 
 
 
+
+// ============================================================
+// NOTIFICATION TABS MANAGEMENT
+// ============================================================
+function switchNotificationTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.notification-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[onclick="switchNotificationTab('${tabName}')"]`).classList.add('active');
+
+    // Update tab content
+    document.querySelectorAll('.tab-content-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    document.getElementById(tabName + 'Tab').classList.add('active');
+
+    // Load active notifications when switching to that tab
+    if (tabName === 'activeNotifications') {
+        loadActiveNotifications();
+    }
+}
+
+// ============================================================
+// LOAD ACTIVE NOTIFICATIONS
+// ============================================================
+async function loadActiveNotifications() {
+    const listContainer = document.getElementById('activeNotificationsList');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-gold" role="status"></div></div>';
+
+    try {
+        const response = await fetch('/Admin/GetActiveNotifications');
+        const data = await response.json();
+
+        if (data.success && data.notifications && data.notifications.length > 0) {
+            listContainer.innerHTML = data.notifications.map(notification => `
+                <div class="notification-item" data-notification-id="${notification.id}">
+                    <div class="notification-item-header">
+                        <h6 class="notification-item-title">${escapeHtml(notification.title)}</h6>
+                        <span class="notification-item-date">${formatNotificationDate(notification.date)}</span>
+                    </div>
+                    <p class="notification-item-message">${escapeHtml(notification.message)}</p>
+                    <div class="notification-item-footer">
+                        <span class="notification-item-recipients">
+                            <i class="bi bi-people-fill me-1"></i>${notification.recipientCount} recipients
+                        </span>
+                        <div class="notification-item-actions">
+                            <button class="btn-notification-edit" data-notification-id="${notification.id}" data-notification-title="${escapeHtml(notification.title)}" data-notification-message="${escapeHtml(notification.message)}">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </button>
+                            <button class="btn-notification-delete" data-notification-id="${notification.id}" data-notification-title="${escapeHtml(notification.title)}">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = `
+                <div class="no-notifications">
+                    <i class="bi bi-bell-slash"></i>
+                    <p>No active notifications</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+        listContainer.innerHTML = `
+            <div class="no-notifications">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p>Error loading notifications</p>
+            </div>
+        `;
+    }
+
+    // Add event delegation for edit and delete buttons
+    listContainer.querySelectorAll('.btn-notification-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.notificationId;
+            const title = this.dataset.notificationTitle;
+            const message = this.dataset.notificationMessage;
+            editNotification(id, title, message);
+        });
+    });
+
+    listContainer.querySelectorAll('.btn-notification-delete').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.notificationId;
+            const title = this.dataset.notificationTitle;
+            deleteNotification(id, title);
+        });
+    });
+}
+
+// ============================================================
+// EDIT NOTIFICATION
+// ============================================================
+function editNotification(notificationId, currentTitle, currentMessage) {
+    // Switch to send notice tab
+    switchNotificationTab('sendNotice');
+
+    // Populate the form with current values
+    document.getElementById('noticeSubject').value = currentTitle;
+    document.getElementById('noticeMessage').value = currentMessage;
+
+    // Store the notification ID for updating
+    const form = document.getElementById('sendNoticeForm');
+    form.dataset.editingId = notificationId;
+
+    // Change the button text
+    const submitBtn = document.getElementById('sendNoticeBtn');
+    submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Update Notice';
+}
+
+// ============================================================
+// DELETE NOTIFICATION
+// ============================================================
+async function deleteNotification(notificationId, title) {
+    if (!confirm(`Are you sure you want to delete the notification "${title}"? This will remove it for all recipients.`)) {
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('notificationId', notificationId);
+
+        // Get anti-forgery token
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const response = await fetch('/Admin/DeleteNotification', {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': token
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Success', data.message || 'Notification deleted successfully', 'success');
+            loadActiveNotifications(); // Reload the list
+        } else {
+            showToast('Error', data.message || 'Failed to delete notification', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+        showToast('Error', 'An error occurred while deleting the notification', 'error');
+    }
+}
+
+// ============================================================
+// UPDATE HANDLE SEND NOTICE TO SUPPORT EDITING
+// ============================================================
+// Modify the existing handleSendNotice function
+const originalHandleSendNotice = handleSendNotice;
+handleSendNotice = async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const editingId = form.dataset.editingId;
+
+    if (editingId) {
+        // Update existing notification
+        const subject = document.getElementById('noticeSubject').value;
+        const message = document.getElementById('noticeMessage').value;
+
+        const formData = new FormData();
+        formData.append('notificationId', editingId);
+        formData.append('subject', subject);
+        formData.append('message', message);
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        try {
+            const response = await fetch('/Admin/UpdateNotification', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Success', data.message || 'Notification updated successfully', 'success');
+                
+                // Reset form
+                form.reset();
+                delete form.dataset.editingId;
+                document.getElementById('sendNoticeBtn').innerHTML = '<i class="bi bi-send me-1"></i> Send Notice';
+                
+                // Switch to active notifications tab
+                switchNotificationTab('activeNotifications');
+            } else {
+                showToast('Error', data.message || 'Failed to update notification', 'error');
+            }
+        } catch (error) {
+            console.error('Error updating notification:', error);
+            showToast('Error', 'An error occurred while updating the notification', 'error');
+        }
+    } else {
+        // Send new notification (original behavior)
+        await originalHandleSendNotice.call(this, e);
+        
+        // After successful send, reload active notifications
+        setTimeout(() => loadActiveNotifications(), 1000);
+    }
+};
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatNotificationDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+        return 'Today at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+        return 'Yesterday at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+}
+
+function showToast(title, message, type) {
+    // Simple toast notification (you can enhance this with Bootstrap toast or custom implementation)
+    const bgColor = type === 'success' ? '#10b981' : '#ef4444';
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        max-width: 350px;
+    `;
+    toast.innerHTML = `<strong>${title}</strong><br>${message}`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}

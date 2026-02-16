@@ -447,11 +447,38 @@ namespace iBITS_Portal.Controllers
         // Returns detailed breakdown when user clicks a chart segment
         // =========================================================
         [HttpGet]
-        public async Task<IActionResult> GetChartDetails(string chartType, string segment, string status, string? category)
+        public async Task<IActionResult> GetChartDetails(string chartType, string? segment = null, string? status = null, string? category = null)
         {
             try
             {
-                // ADDED: Explicitly handle only 'payments' chart type for this action
+                // Handle "allStudents" chart type
+                if (chartType.ToLower() == "allstudents")
+                {
+                    var allStudents = await _context.Students
+                        .Where(s => s.IsArchived != true)
+                        .ToListAsync();
+
+                    var studentList = allStudents.Select(s => new
+                    {
+                        studentNum = s.StudentNum,
+                        name = $"{s.StudentFn} {s.StudentLn}",
+                        section = s.YearLevelSection,
+                        status = s.Classification ?? "Active"
+                    }).ToList();
+
+                    return Json(new
+                    {
+                        success = true,
+                        students = studentList,
+                        summary = new
+                        {
+                            totalStudents = allStudents.Count,
+                            activeStudents = allStudents.Count(s => string.IsNullOrWhiteSpace(s.Classification) || s.Classification.ToUpper() == "ACTIVE")
+                        }
+                    });
+                }
+
+                // Handle 'payments' chart type
                 if (chartType.ToLower() != "payments")
                 {
                     return Json(new { success = false, message = "Invalid chart type specified for this endpoint." });
@@ -1123,6 +1150,132 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
+        // AJAX: Get Active Admin Notifications
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> GetActiveNotifications()
+        {
+            try
+            {
+                var adminUser = await _userManager.GetUserAsync(User);
+                string posterName = adminUser?.UserName ?? "Administrator";
+
+                // Get unique notifications sent by this admin (group by Title+Message)
+                var notifications = await _context.Notifications
+                    .Where(n => n.SentBy == posterName && n.NotificationType == "Admin Notice")
+                    .OrderByDescending(n => n.NotificationDate)
+                    .ToListAsync();
+
+                // Group by Title and Message to get unique notices
+                var uniqueNotices = notifications
+                    .GroupBy(n => new { n.Title, n.Message })
+                    .Select(g => new
+                    {
+                        id = g.First().NotificationId,
+                        title = g.Key.Title,
+                        message = g.Key.Message,
+                        date = g.First().NotificationDate,
+                        recipientCount = g.Count(),
+                        sampleRecipients = g.Take(3).Select(n => n.StudentNum).ToList()
+                    })
+                    .ToList();
+
+                return Json(new { success = true, notifications = uniqueNotices });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active notifications");
+                return Json(new { success = false, message = "Error loading notifications" });
+            }
+        }
+
+        // =========================================================
+        // AJAX: Update Notification
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateNotification(int notificationId, string subject, string message)
+        {
+            try
+            {
+                var adminUser = await _userManager.GetUserAsync(User);
+                string posterName = adminUser?.UserName ?? "Administrator";
+
+                // Get the original notification
+                var originalNotification = await _context.Notifications.FindAsync(notificationId);
+                if (originalNotification == null || originalNotification.SentBy != posterName)
+                {
+                    return Json(new { success = false, message = "Notification not found or unauthorized" });
+                }
+
+                // Update all notifications with the same title and message
+                var relatedNotifications = await _context.Notifications
+                    .Where(n => n.SentBy == posterName 
+                             && n.Title == originalNotification.Title 
+                             && n.Message == originalNotification.Message
+                             && n.NotificationType == "Admin Notice")
+                    .ToListAsync();
+
+                foreach (var notification in relatedNotifications)
+                {
+                    notification.Title = subject;
+                    notification.Message = message;
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Update Notification", $"Updated notification '{subject}' for {relatedNotifications.Count} recipients");
+
+                return Json(new { success = true, message = "Notification updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating notification");
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        // =========================================================
+        // AJAX: Delete Notification
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteNotification(int notificationId)
+        {
+            try
+            {
+                var adminUser = await _userManager.GetUserAsync(User);
+                string posterName = adminUser?.UserName ?? "Administrator";
+
+                // Get the original notification
+                var originalNotification = await _context.Notifications.FindAsync(notificationId);
+                if (originalNotification == null || originalNotification.SentBy != posterName)
+                {
+                    return Json(new { success = false, message = "Notification not found or unauthorized" });
+                }
+
+                // Delete all notifications with the same title and message
+                var relatedNotifications = await _context.Notifications
+                    .Where(n => n.SentBy == posterName 
+                             && n.Title == originalNotification.Title 
+                             && n.Message == originalNotification.Message
+                             && n.NotificationType == "Admin Notice")
+                    .ToListAsync();
+
+                _context.Notifications.RemoveRange(relatedNotifications);
+                await _context.SaveChangesAsync();
+
+                await LogAction("Delete Notification", $"Deleted notification '{originalNotification.Title}' for {relatedNotifications.Count} recipients");
+
+                return Json(new { success = true, message = "Notification deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting notification");
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        // =========================================================
         // SHARED HELPER METHOD (Put this at the bottom of the class)
         // =========================================================
         private int ExtractYearLevel(string? yls)
@@ -1571,7 +1724,7 @@ namespace iBITS_Portal.Controllers
             return new DashboardDataModel
             {
                 StudentsPerProgram = new Dictionary<string, int> { { "BSIT", bsitCount }, { "DIT", ditCount } },
-                TotalStudents = bsitCount + ditCount,
+                TotalStudents = allStudents.Count, // Use total count of all non-archived students
                 YearLevelCounts = yearLevelCounts,
                 FeesOverview = feesOverview,
                 FinesOverview = finesOverview,

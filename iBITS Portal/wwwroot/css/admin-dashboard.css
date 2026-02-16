@@ -391,6 +391,7 @@
     border-radius: 12px;
     padding: 16px 12px;
     text-align: center;
+    text-decoration: none !important; /* Remove underline from links */
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -1845,6 +1846,7 @@
     z-index: 100; /* Lifts the element above the glass overlay */
     pointer-events: auto; /* Ensures the element captures mouse events */
     transition: transform 0.2s; /* Optional: adds hover effect */
+    text-decoration: none !important; /* Remove underline from links */
 }
 
     .clickable-badge:hover {
@@ -1980,4 +1982,183 @@
 
 .details-section-title .collapse-icon {
     transition: transform 0.3s ease;
+}
+
+/* ============================================================ */
+/* NOTIFICATION MODAL TABS                                      */
+/* ============================================================ */
+.notification-tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+    margin-bottom: 1.5rem;
+}
+
+.notification-tab {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.notification-tab:hover {
+    color: rgba(212, 175, 55, 0.8);
+}
+
+.notification-tab.active {
+    color: var(--gold);
+}
+
+.notification-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gold);
+}
+
+.tab-content-pane {
+    display: none;
+}
+
+.tab-content-pane.active {
+    display: block;
+}
+
+/* Glass Morphism Select for Modals */
+.glass-select-modal {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.glass-select-modal:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.glass-select-modal option {
+    background: #1a1a2e;
+    color: var(--gold);
+}
+
+/* Active Notifications List */
+.active-notifications-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.notification-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(212, 175, 55, 0.4);
+}
+
+.notification-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.5rem;
+}
+
+.notification-item-title {
+    color: var(--gold);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.notification-item-date {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+}
+
+.notification-item-message {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.notification-item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.notification-item-recipients {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+}
+
+.notification-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-notification-edit {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.btn-notification-edit:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.btn-notification-delete {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.btn-notification-delete:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.no-notifications i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
 }

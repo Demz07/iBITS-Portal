@@ -613,6 +613,43 @@
         window.exportSelectedUrl = '@Url.Action("ExportSelectedStudents", "Admin")';
         window.archiveSelectedUrl = '@Url.Action("ArchiveSelectedStudents", "Admin")';
         window.resetPasswordSelectedUrl = '@Url.Action("ResetPasswordSelected", "Admin")';
+
+        // Auto-apply filters from URL parameters (from dashboard links)
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const program = urlParams.get('program');
+            const year = urlParams.get('year');
+            
+            if (program || year) {
+                // Set filter values
+                if (program) {
+                    const programFilter = document.getElementById('programFilter');
+                    if (programFilter) {
+                        programFilter.value = program;
+                        // Trigger Select2 update if it's initialized
+                        if ($(programFilter).hasClass('select2-hidden-accessible')) {
+                            $(programFilter).trigger('change');
+                        }
+                    }
+                }
+                
+                if (year) {
+                    const yearFilter = document.getElementById('yearFilter');
+                    if (yearFilter) {
+                        yearFilter.value = year;
+                        // Trigger Select2 update if it's initialized
+                        if ($(yearFilter).hasClass('select2-hidden-accessible')) {
+                            $(yearFilter).trigger('change');
+                        }
+                    }
+                }
+                
+                // Submit the form to apply filters
+                setTimeout(function() {
+                    document.getElementById('filterForm').submit();
+                }, 100);
+            }
+        });
     </script>
     <script src="~/js/student-records.js" asp-append-version="true"></script>
 }
