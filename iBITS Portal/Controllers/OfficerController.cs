@@ -1000,7 +1000,6 @@ namespace iBITS_Portal.Controllers
         // POST PAYMENT REMINDER (Org Treasurer)
         // ============================================================
         [Authorize(Roles = "Org Treasurer")]
-        [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> PaymentReminders()
         {
             // Get dynamic target audience options from actual student data
@@ -1019,7 +1018,6 @@ namespace iBITS_Portal.Controllers
             string posterName = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
             var existingReminders = await _context.Announcements
-                .Where(a => a.AnnouncementType == "Payment Reminder"
                 .Where(a => (a.AnnouncementType == "General Reminder" 
                           || a.AnnouncementType == "Urgent Notice"
                           || a.AnnouncementType == "Final Notice"
@@ -1045,9 +1043,6 @@ namespace iBITS_Portal.Controllers
             string targetAudience,
             string reminderTitle,
             int? reminderId,
-            string content, 
-            string targetAudience, 
-            string reminderTitle, 
             string reminderType,
             int expiryDays = 30)
         {
@@ -3080,23 +3075,6 @@ namespace iBITS_Portal.Controllers
             var section = treasurer.YearLevelSection;
             ViewBag.Section = section;
 
-            if (type == "fines")
-            {
-                // Get fines ready for remittance (paid but not yet remitted)
-                var pendingFines = await _context.Fines
-                    .Include(f => f.StudentNumNavigation)
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.Event)
-                    .Include(f => f.Attendance)
-                        .ThenInclude(a => a.StudentNumNavigation)
-                    .Where(f => (f.StudentNumNavigation != null || f.Attendance.StudentNumNavigation != null) &&
-                                ((f.StudentNumNavigation != null && f.StudentNumNavigation.YearLevelSection == section) ||
-                                 (f.Attendance != null && f.Attendance.StudentNumNavigation != null && f.Attendance.StudentNumNavigation.YearLevelSection == section)) &&
-                                f.FinesStatus == "Paid" &&
-                                f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
-                    .OrderBy(f => f.Description)
-                    .ThenBy(f => f.StudentNumNavigation != null ? f.StudentNumNavigation.StudentLn : f.Attendance.StudentNumNavigation.StudentLn)
-                    .ToListAsync();
             // Get FEES ready for remittance (paid but not yet remitted)
             var pendingFees = await _context.Fees
                 .Include(f => f.StudentNumNavigation)

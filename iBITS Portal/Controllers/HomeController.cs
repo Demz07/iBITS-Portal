@@ -120,74 +120,76 @@ namespace iBITS_Portal.Controllers
                 .Select(d => d.AnnouncementId)
                 .ToListAsync();
 
-            var announcements = await _context.Announcements
-     .Where(a =>
-         (a.TargetAudience == "All Students" ||
-          a.TargetAudience == student.Course ||
-          (student.YearLevelSection != null && a.TargetAudience != null && student.YearLevelSection.Contains(a.TargetAudience)))
-         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
-         && a.AnnouncementType != "Admin Notice" // <--- CRITICAL: Exclude Admin Notices from General list
-         && !dismissedIds.Contains(a.Id))
-     .OrderByDescending(a => a.Timestamp)
-     .Take(10)
-     .ToListAsync();
-
-            // Financials
-            // Get all non-expired, non-dismissed announcements
+            // Announcements
+            // - not dismissed
+            // - not expired
+            // - exclude Admin Notice
+            // - supports comma-separated target audiences
             var allAnnouncements = await _context.Announcements
                 .Where(a => (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
-                            && !dismissedAnnouncementIds.Contains(a.Id))
+                            && a.AnnouncementType != "Admin Notice"
+                            && !dismissedIds.Contains(a.Id))
                 .OrderByDescending(a => a.Timestamp)
                 .ToListAsync();
 
-            // Filter announcements based on target audience (supports comma-separated)
-            var announcements = allAnnouncements.Where(a => 
-            {
-                if (string.IsNullOrWhiteSpace(a.TargetAudience))
-                    return false;
-
-                // Split target audiences by comma
-                var audiences = a.TargetAudience.Split(',').Select(t => t.Trim()).ToList();
-
-                // Check if student matches any of the target audiences
-                return audiences.Any(audience =>
+            var announcements = allAnnouncements
+                .Where(a =>
                 {
-                    if (audience == "All Students")
-                        return true;
-                    
-                    if (audience == student.Course)
-                        return true;
-                    
-                    if (audience == "Students with Outstanding Balance")
-                        return true; // Will be checked against fees later if needed
-                    
-                    // Check year level (e.g., "1st Year" should match "1-1", "1-2", etc.)
-                    if (audience.Contains("Year") && student.YearLevelSection != null)
+                    if (string.IsNullOrWhiteSpace(a.TargetAudience))
+                        return false;
+
+                    var audiences = a.TargetAudience.Split(',')
+                        .Select(t => t.Trim())
+                        .Where(t => !string.IsNullOrWhiteSpace(t))
+                        .ToList();
+
+                    return audiences.Any(audience =>
                     {
-                        var parts = audience.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        
-                        if (parts.Length >= 3 && parts[2] == "Year")
+                        if (audience == "All Students")
+                            return true;
+
+                        if (audience == student.Course)
+                            return true;
+
+                        if (audience == "Students with Outstanding Balance")
+                            return true; // (optional) filter by fees later
+
+                        if (audience.Contains("Year") && student.YearLevelSection != null)
                         {
-                            // Format: "BSIT 1st Year" or "DIT 3rd Year"
-                            string program = parts[0]; // "BSIT" or "DIT"
-                            string yearPrefix = parts[1]; // "1st", "2nd", "3rd", "4th"
-                            string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
-                            
-                            // Match if student has both the program AND year level
-                            return student.Course == program && student.YearLevelSection.StartsWith(yearNumber + "-");
+                            // Supports:
+                            // - "BSIT 1st Year" / "DIT 3rd Year"
+                            // - "1st Year" / "2nd Year" (all programs)
+                            var parts = audience.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (parts.Length >= 3 && parts[2] == "Year")
+                            {
+                                var program = parts[0];
+                                var yearPrefix = parts[1];
+                                var yearNumber = yearPrefix
+                                    .Replace("st", "")
+                                    .Replace("nd", "")
+                                    .Replace("rd", "")
+                                    .Replace("th", "");
+
+                                return student.Course == program
+                                    && student.YearLevelSection.StartsWith(yearNumber + "-");
+                            }
+
+                            var yearPrefixAll = parts[0];
+                            var yearNumberAll = yearPrefixAll
+                                .Replace("st", "")
+                                .Replace("nd", "")
+                                .Replace("rd", "")
+                                .Replace("th", "");
+
+                            return student.YearLevelSection.StartsWith(yearNumberAll + "-");
                         }
-                        else
-                        {
-                            // Format: "1st Year", "2nd Year" (all programs)
-                            var yearPrefix = audience.Split(' ')[0];
-                            string yearNumber = yearPrefix.Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
-                            return student.YearLevelSection.StartsWith(yearNumber + "-");
-                        }
-                    }
-                    
-                    return false;
-                });
-            }).Take(10).ToList();
+
+                        return false;
+                    });
+                })
+                .Take(10)
+                .ToList();
 
             // ============================================================
             // NEW: FINANCIAL SUMMARY
