@@ -1901,3 +1901,83 @@
     height: 100%;
     cursor: pointer;
 }
+
+/* ======================================================= */
+/* EXTRACTED INLINE STYLES - Accessibility & Maintainability */
+/* ======================================================= */
+
+/* Clickable badge cursor */
+.clickable-badge {
+    cursor: pointer;
+}
+
+/* Category label styling */
+.category-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+}
+
+/* Financial summary cards compact layout */
+.financial-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.financial-summary-cards .summary-card {
+    padding: 10px;
+}
+
+.financial-summary-cards .card-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+}
+
+.financial-summary-cards .card-value {
+    font-size: 1rem;
+}
+
+.financial-summary-cards .card-label {
+    font-size: 0.7rem;
+}
+
+.financial-summary-cards .card-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 0.6rem;
+}
+
+/* Filter container sizing */
+.filter-container .glass-select {
+    padding: 0.25rem;
+    font-size: 0.8rem;
+}
+
+/* Chart container medium height */
+.chart-container-medium {
+    height: 150px;
+}
+
+/* Financial column border */
+.financial-column-divider {
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Collapsible student list */
+.financial-student-list-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Collapse icon for sections */
+.details-section-title.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.details-section-title .collapse-icon {
+    transition: transform 0.3s ease;
+}

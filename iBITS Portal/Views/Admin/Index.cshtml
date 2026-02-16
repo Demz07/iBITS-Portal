@@ -56,8 +56,8 @@
         <div class="collapse show" id="quickActionsContent">
             <div class="quick-actions-grid">
                 <!-- Add Student -->
-                <a href="@Url.Action("StudentRecords", "Admin")?action=add" class="quick-action-card">
-                    <div class="action-icon add-student">
+                <a href="@Url.Action("StudentRecords", "Admin")?action=add" class="quick-action-card" aria-label="Add new student">
+                    <div class="action-icon add-student" aria-hidden="true">
                         <i class="bi bi-person-plus-fill"></i>
                     </div>
                     <div class="action-content">
@@ -67,8 +67,8 @@
                 </a>
 
                 <!-- Create Fee -->
-                <a href="@Url.Action("Payments", "Admin")?action=createFee" class="quick-action-card">
-                    <div class="action-icon create-fee">
+                <a href="@Url.Action("Payments", "Admin")?action=createFee" class="quick-action-card" aria-label="Create new fee">
+                    <div class="action-icon create-fee" aria-hidden="true">
                         <i class="bi bi-cash-coin"></i>
                     </div>
                     <div class="action-content">
@@ -78,8 +78,8 @@
                 </a>
 
                 <!-- Create Event -->
-                <a href="@Url.Action("Events", "Admin")?action=create" class="quick-action-card">
-                    <div class="action-icon create-event">
+                <a href="@Url.Action("Events", "Admin")?action=create" class="quick-action-card" aria-label="Create new event">
+                    <div class="action-icon create-event" aria-hidden="true">
                         <i class="bi bi-calendar-plus-fill"></i>
                     </div>
                     <div class="action-content">
@@ -90,8 +90,14 @@
 
                 <!-- Export Reports -->
                 <div class="quick-action-card dropdown">
-                    <div class="dropdown-trigger-area" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="action-icon export-reports">
+                    <div class="dropdown-trigger-area" 
+                         data-bs-toggle="dropdown" 
+                         aria-expanded="false"
+                         role="button"
+                         tabindex="0"
+                         aria-label="Export reports menu"
+                         onkeypress="if(event.key==='Enter' || event.key===' ') this.click()">
+                        <div class="action-icon export-reports" aria-hidden="true">
                             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
                         </div>
                         <div class="action-content">
@@ -109,8 +115,8 @@
                 </div>
 
                 <!-- Send Notice -->
-                <button type="button" class="quick-action-card" data-bs-toggle="modal" data-bs-target="#sendNoticeModal">
-                    <div class="action-icon send-notice">
+                <button type="button" class="quick-action-card" data-bs-toggle="modal" data-bs-target="#sendNoticeModal" aria-label="Send notice to students">
+                    <div class="action-icon send-notice" aria-hidden="true">
                         <i class="bi bi-bell-fill"></i>
                     </div>
                     <div class="action-content">
@@ -120,8 +126,8 @@
                 </button>
 
                 <!-- Scan Attendance -->
-                <a href="@Url.Action("Attendance", "Admin")" class="quick-action-card">
-                    <div class="action-icon scan-attendance">
+                <a href="@Url.Action("Attendance", "Admin")" class="quick-action-card" aria-label="View attendance records">
+                    <div class="action-icon scan-attendance" aria-hidden="true">
                         <i class="bi bi-clipboard-check"></i>
                     </div>
                     <div class="action-content">
@@ -151,9 +157,12 @@
                 <div class="glass-panel chart-panel h-100">
                     <div class="panel-header">
                         <h5 class="panel-title"><i class="bi bi-pie-chart-fill me-2"></i>Students per Program</h5>
-                        <span class="badge badge-gold clickable-badge" onclick="showAllStudentsModal()" style="cursor: pointer;">
+                        <button class="badge badge-gold clickable-badge" onclick="showAllStudentsModal()" 
+                                aria-label="View all students" 
+                                tabindex="0" 
+                                onkeypress="if(event.key==='Enter' || event.key===' ') showAllStudentsModal()">
                             Total: <span id="totalStudents">0</span>
-                        </span>
+                        </button>
                     </div>
                     <div class="chart-container">
                         <canvas id="studentsPerProgramChart"></canvas>
@@ -175,22 +184,50 @@
                                 BSIT <span class="program-years">(4-Year Program)</span>
                             </h6>
                             <div class="counters-row">
-                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="1" onclick="showYearLevelModal('BSIT', 1)">
+                                <div class="counter-card bsit clickable-counter" 
+                                     data-program="BSIT" 
+                                     data-year="1" 
+                                     onclick="showYearLevelModal('BSIT', 1)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View BSIT 1st Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 1)">
                                     <span class="counter-value" id="bsit1Count">0</span>
                                     <span class="counter-label">1st Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
                                 </div>
-                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="2" onclick="showYearLevelModal('BSIT', 2)">
+                                <div class="counter-card bsit clickable-counter" 
+                                     data-program="BSIT" 
+                                     data-year="2" 
+                                     onclick="showYearLevelModal('BSIT', 2)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View BSIT 2nd Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 2)">
                                     <span class="counter-value" id="bsit2Count">0</span>
                                     <span class="counter-label">2nd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
                                 </div>
-                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="3" onclick="showYearLevelModal('BSIT', 3)">
+                                <div class="counter-card bsit clickable-counter" 
+                                     data-program="BSIT" 
+                                     data-year="3" 
+                                     onclick="showYearLevelModal('BSIT', 3)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View BSIT 3rd Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 3)">
                                     <span class="counter-value" id="bsit3Count">0</span>
                                     <span class="counter-label">3rd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
                                 </div>
-                                <div class="counter-card bsit clickable-counter" data-program="BSIT" data-year="4" onclick="showYearLevelModal('BSIT', 4)">
+                                <div class="counter-card bsit clickable-counter" 
+                                     data-program="BSIT" 
+                                     data-year="4" 
+                                     onclick="showYearLevelModal('BSIT', 4)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View BSIT 4th Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('BSIT', 4)">
                                     <span class="counter-value" id="bsit4Count">0</span>
                                     <span class="counter-label">4th Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
@@ -204,17 +241,38 @@
                                 DIT <span class="program-years">(3-Year Program)</span>
                             </h6>
                             <div class="counters-row dit-row">
-                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="1" onclick="showYearLevelModal('DIT', 1)">
+                                <div class="counter-card dit clickable-counter" 
+                                     data-program="DIT" 
+                                     data-year="1" 
+                                     onclick="showYearLevelModal('DIT', 1)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View DIT 1st Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 1)">
                                     <span class="counter-value" id="dit1Count">0</span>
                                     <span class="counter-label">1st Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
                                 </div>
-                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="2" onclick="showYearLevelModal('DIT', 2)">
+                                <div class="counter-card dit clickable-counter" 
+                                     data-program="DIT" 
+                                     data-year="2" 
+                                     onclick="showYearLevelModal('DIT', 2)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View DIT 2nd Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 2)">
                                     <span class="counter-value" id="dit2Count">0</span>
                                     <span class="counter-label">2nd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
                                 </div>
-                                <div class="counter-card dit clickable-counter" data-program="DIT" data-year="3" onclick="showYearLevelModal('DIT', 3)">
+                                <div class="counter-card dit clickable-counter" 
+                                     data-program="DIT" 
+                                     data-year="3" 
+                                     onclick="showYearLevelModal('DIT', 3)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="View DIT 3rd Year students"
+                                     onkeypress="if(event.key==='Enter' || event.key===' ') showYearLevelModal('DIT', 3)">
                                     <span class="counter-value" id="dit3Count">0</span>
                                     <span class="counter-label">3rd Year</span>
                                     <span class="counter-hint"><i class="bi bi-eye"></i></span>
@@ -250,7 +308,7 @@
                     </div>
 
                     <!-- Content -->
-                    <div id="enrollmentModalContent" style="display: none;">
+                    <div id="enrollmentModalContent" class="modal-content-hidden">
                         <!-- Summary Cards -->
                         <div class="details-summary">
                             <div class="summary-item">
@@ -316,7 +374,7 @@
             <!-- ========================== -->
             <!-- LEFT COLUMN: FEES          -->
             <!-- ========================== -->
-            <div class="col-xl-6" style="border-right: 1px solid rgba(255,255,255,0.1);">
+            <div class="col-xl-6 financial-column-divider">
                 <!-- Fees Sub-Header & Filter -->
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <!-- Requirement: Gold Label -->
@@ -325,8 +383,8 @@
                     <!-- Requirement: Separated Interactive Label -->
                     <div class="d-flex align-items-center">
                         <label for="feeCategoryFilter" class="category-label me-2">Category</label>
-                        <div class="filter-container" style="width: 140px;">
-                            <select class="glass-select py-1" style="font-size: 0.8rem;" id="feeCategoryFilter" onchange="refreshFinancialData('fees')">
+                        <div class="filter-container">
+                            <select class="glass-select" id="feeCategoryFilter" onchange="refreshFinancialData('fees')" aria-label="Filter fees by category">
                                 <option value="all">All Fees</option>
                                 @if (ViewBag.FeeCategories != null)
                                 {
@@ -341,30 +399,30 @@
                 </div>
 
                 <!-- Fees Summary Cards -->
-                <div class="financial-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">
-                    <div class="summary-card total" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-cash-stack"></i></div>
+                <div class="financial-summary-cards">
+                    <div class="summary-card total">
+                        <div class="card-icon"><i class="bi bi-cash-stack"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesExpected">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Total</div>
+                            <div class="card-value">₱<span id="feesExpected">0.00</span></div>
+                            <div class="card-label">Total</div>
                         </div>
                     </div>
-                    <div class="summary-card collected" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="summary-card collected">
+                        <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesCollected">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Paid</div>
-                            <div class="card-badge success" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="feesCollectionRate">0</span>%</div>
+                            <div class="card-value">₱<span id="feesCollected">0.00</span></div>
+                            <div class="card-label">Paid</div>
+                            <div class="card-badge success"><span id="feesCollectionRate">0</span>%</div>
                         </div>
                     </div>
 
                     <!-- Requirement: Fees Unpaid set to Red (Danger) instead of Yellow (Warning) -->
-                    <div class="summary-card pending" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem; background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-x-circle-fill"></i></div>
+                    <div class="summary-card pending">
+                        <div class="card-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-x-circle-fill"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="feesPending">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Unpaid</div>
-                            <div class="card-badge danger" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="feesPendingRate">0</span>%</div>
+                            <div class="card-value">₱<span id="feesPending">0.00</span></div>
+                            <div class="card-label">Unpaid</div>
+                            <div class="card-badge danger"><span id="feesPendingRate">0</span>%</div>
                         </div>
                     </div>
                 </div>
@@ -372,18 +430,18 @@
                 <!-- Fees Charts -->
                 <div class="row g-2">
                     <div class="col-6">
-                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="paid">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="paid" role="button" tabindex="0" aria-label="View paid fees distribution details">
                             <div class="text-center mb-1"><small class="text-success fw-bold">Paid Distribution</small></div>
-                            <div class="chart-container-medium" style="height: 150px;">
+                            <div class="chart-container-medium">
                                 <canvas id="feesPaidChart"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="pending">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="payments" data-status="pending" role="button" tabindex="0" aria-label="View unpaid fees distribution details">
                             <!-- Requirement: Text changed to Red -->
                             <div class="text-center mb-1"><small class="text-danger fw-bold">Unpaid Distribution</small></div>
-                            <div class="chart-container-medium" style="height: 150px;">
+                            <div class="chart-container-medium">
                                 <canvas id="feesUnpaidChart"></canvas>
                             </div>
                         </div>
@@ -414,8 +472,8 @@
                     <!-- Requirement: Separated Interactive Label -->
                     <div class="d-flex align-items-center">
                         <label for="fineCategoryFilter" class="category-label me-2">Category</label>
-                        <div class="filter-container" style="width: 140px;">
-                            <select class="glass-select py-1" style="font-size: 0.8rem;" id="fineCategoryFilter" onchange="refreshFinancialData('fines')">
+                        <div class="filter-container">
+                            <select class="glass-select" id="fineCategoryFilter" onchange="refreshFinancialData('fines')" aria-label="Filter fines by category">
                                 <option value="all">All Fines</option>
                                 <option value="manual">Manual Only</option>
                                 <option value="event">Event Only</option>
@@ -434,28 +492,28 @@
                 </div>
 
                 <!-- Fines Summary Cards -->
-                <div class="financial-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;">
-                    <div class="summary-card total" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-cash-stack"></i></div>
+                <div class="financial-summary-cards">
+                    <div class="summary-card total">
+                        <div class="card-icon"><i class="bi bi-cash-stack"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesExpected">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Total</div>
+                            <div class="card-value">₱<span id="finesExpected">0.00</span></div>
+                            <div class="card-label">Total</div>
                         </div>
                     </div>
-                    <div class="summary-card collected" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem;"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="summary-card collected">
+                        <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesCollected">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Paid</div>
-                            <div class="card-badge success" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="finesCollectionRate">0</span>%</div>
+                            <div class="card-value">₱<span id="finesCollected">0.00</span></div>
+                            <div class="card-label">Paid</div>
+                            <div class="card-badge success"><span id="finesCollectionRate">0</span>%</div>
                         </div>
                     </div>
-                    <div class="summary-card pending" style="padding: 10px;">
-                        <div class="card-icon" style="width: 30px; height: 30px; font-size: 1rem; background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-exclamation-circle-fill"></i></div>
+                    <div class="summary-card pending">
+                        <div class="card-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--chart-red);"><i class="bi bi-exclamation-circle-fill"></i></div>
                         <div class="card-content">
-                            <div class="card-value" style="font-size: 1rem;">₱<span id="finesPending">0.00</span></div>
-                            <div class="card-label" style="font-size: 0.7rem;">Unpaid</div>
-                            <div class="card-badge danger" style="position: absolute; top: 5px; right: 5px; font-size: 0.6rem;"><span id="finesPendingRate">0</span>%</div>
+                            <div class="card-value">₱<span id="finesPending">0.00</span></div>
+                            <div class="card-label">Unpaid</div>
+                            <div class="card-badge danger"><span id="finesPendingRate">0</span>%</div>
                         </div>
                     </div>
                 </div>
@@ -463,17 +521,17 @@
                 <!-- Fines Charts -->
                 <div class="row g-2">
                     <div class="col-6">
-                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="paid">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="paid" role="button" tabindex="0" aria-label="View paid fines distribution details">
                             <div class="text-center mb-1"><small class="text-success fw-bold">Paid Distribution</small></div>
-                            <div class="chart-container-medium" style="height: 150px;">
+                            <div class="chart-container-medium">
                                 <canvas id="finesPaidChart"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="pending">
+                        <div class="glass-panel chart-panel h-100 clickable-chart p-2" data-chart-type="fines" data-status="pending" role="button" tabindex="0" aria-label="View unpaid fines distribution details">
                             <div class="text-center mb-1"><small class="text-danger fw-bold">Unpaid Distribution</small></div>
-                            <div class="chart-container-medium" style="height: 150px;">
+                            <div class="chart-container-medium">
                                 <canvas id="finesUnpaidChart"></canvas>
                             </div>
                         </div>
@@ -517,7 +575,7 @@
                     </div>
 
                     <!-- Content -->
-                    <div id="financialModalContent" style="display: none;">
+                    <div id="financialModalContent" class="modal-content-hidden">
                         <!-- Summary Cards -->
                         <div class="details-summary">
                             <div class="summary-item">
@@ -555,12 +613,12 @@
 
                         <!-- Student List (Collapsible) -->
                         <div class="details-section">
-                            <h6 class="details-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#financialStudentListCollapse" style="cursor: pointer;">
+                            <h6 class="details-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#financialStudentListCollapse" style="cursor: pointer;" role="button" tabindex="0" aria-expanded="false" aria-controls="financialStudentListCollapse">
                                 <i class="bi bi-people me-2"></i>Student List
                                 <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                             </h6>
                             <div class="collapse" id="financialStudentListCollapse">
-                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <div class="table-responsive financial-student-list-scroll">
                                     <table class="table table-dark table-sm table-hover">
                                         <thead>
                                             <tr>
@@ -598,10 +656,16 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL: Send Notice                                           -->
-    <!-- ============================================================ -->
-    <div class="modal fade" id="sendNoticeModal" tabindex="-1" data-bs-backdrop="static">
+</div> <!-- End dashboard-container -->
+
+<!-- ============================================================ -->
+<!-- MODALS (Outside Container)                                   -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- MODAL: Send Notice                                           -->
+<!-- ============================================================ -->
+<div class="modal fade" id="sendNoticeModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content glass-modal">
                 <div class="modal-header">
@@ -690,16 +754,16 @@
 @section Scripts {
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script>
-            // Pass data from controller to JavaScript
+            // Pass data from controller to JavaScript with null guards
             window.dashboardData = {
                 // Student Enrollment (Preserved)
-                studentsPerProgram: @Html.Raw(Json.Serialize(ViewBag.StudentsPerProgram)),
+                studentsPerProgram: @Html.Raw(Json.Serialize(ViewBag.StudentsPerProgram ?? new {})),
                 totalStudents: @(ViewBag.TotalStudents ?? 0),
-                yearLevelCounts: @Html.Raw(Json.Serialize(ViewBag.YearLevelCounts)),
+                yearLevelCounts: @Html.Raw(Json.Serialize(ViewBag.YearLevelCounts ?? new {})),
 
                 // NEW: Financial Data Structure
-                feesData: @Html.Raw(Json.Serialize(ViewBag.FeesData)),
-                finesData: @Html.Raw(Json.Serialize(ViewBag.FinesData)),
+                feesData: @Html.Raw(Json.Serialize(ViewBag.FeesData ?? new {})),
+                finesData: @Html.Raw(Json.Serialize(ViewBag.FinesData ?? new {})),
 
                 // Placeholders to prevent JS errors if referenced
                 monthlyActiveStudents: [],
