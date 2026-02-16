@@ -1,0 +1,50 @@
+﻿# Event Filtering Fix - Summary
+
+## Issue
+Closed or force-stopped events were still appearing in the event selection dropdown 
+in the Scanner view (Officer/Scanner.cshtml), allowing secretaries to record attendance 
+for events that should no longer be active.
+
+## Root Cause
+The Scanner() method in OfficerController.cs was only filtering events by:
+- Today's date
+- Active time window (started but not ended)
+
+It was NOT checking the IsClosed property, which is set when an event is 
+manually closed/force-stopped by administrators.
+
+## Solution Applied
+Updated the Scanner() method in:
+**File:** source/repos/iBITS Portal/iBITS Portal/Controllers/OfficerController.cs
+**Line:** 140
+
+### Change Made:
+**BEFORE:**
+.Where(e => e.EventDate == today)
+
+**AFTER:**
+.Where(e => e.EventDate == today && !e.IsClosed)
+
+## How It Works Now
+The Scanner view now filters events using THREE criteria:
+1. ✅ Event date matches today
+2. ✅ Event is NOT closed (IsClosed = false)
+3. ✅ Event is within active time window (started but not ended)
+
+## Impact
+- Closed/force-stopped events will NO LONGER appear in the event selector dropdown
+- Prevents secretaries from recording attendance for closed events
+- Maintains data integrity by respecting admin event closure decisions
+
+## Files Modified
+1. source/repos/iBITS Portal/iBITS Portal/Controllers/OfficerController.cs (Line 140)
+
+## Testing Recommendation
+1. Create a test event for today
+2. Force stop/close the event via Admin panel
+3. Navigate to Officer/Scanner page
+4. Verify the closed event does NOT appear in the dropdown
+5. Open the event again and verify it reappears (if still within time window)
+
+## Status
+✅ COMPLETED - Ready for testing

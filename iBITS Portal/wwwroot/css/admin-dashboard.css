@@ -1,4 +1,4 @@
-﻿/* ======================================================= */
+/* ======================================================= */
 /*                 DASHBOARD STYLES                        */
 /*         Gold & Navy Blue Theme - Glassmorphism          */
 /*         Categorized Sections Design                     */
@@ -399,20 +399,25 @@
 
     .counter-card::before {
         content: '';
+        display: block;
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 3px;
+        height: 4px; /* Prominent strip like in screenshot */
+        border-radius: 12px 12px 0 0;
         transition: all 0.3s ease;
+        z-index: 1;
     }
 
     .counter-card.bsit::before {
-        background: linear-gradient(90deg, var(--gold-primary) 0%, var(--gold-hover) 100%);
+        background: linear-gradient(90deg, var(--gold-primary) 0%, var(--gold-hover) 100%) !important;
+        height: 4px !important; /* Prominent gold strip like in the screenshot */
     }
 
     .counter-card.dit::before {
-        background: linear-gradient(90deg, var(--chart-blue) 0%, var(--dit3-color) 100%);
+        background: linear-gradient(90deg, var(--chart-blue) 0%, var(--dit3-color) 100%) !important;
+        height: 4px !important; /* Prominent blue strip like in the screenshot */
     }
 
     .counter-card:hover {
@@ -2161,4 +2166,51 @@
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.3;
+}
+
+/* Student Count Display */
+.student-count-display {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.badge-lg {
+    font-size: 0.95rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+#programBreakdown {
+    font-weight: normal;
+    opacity: 0.95;
+    font-size: 0.9rem;
+}
+
+/* Duplicate rules removed - using the ones defined earlier in the file */
+
+/* Counter Strip - Actual HTML Elements */
+.counter-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 12px 12px 0 0;
+    z-index: 10;
+}
+
+.gold-strip {
+    background: linear-gradient(90deg, var(--gold-primary), var(--gold-bright)) !important;
+}
+
+.blue-strip {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa) !important;
+}
+
+/* Ensure counter-card has position relative for strip positioning */
+.counter-card {
+    position: relative !important;
 }

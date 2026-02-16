@@ -1807,7 +1807,15 @@ namespace iBITS_Portal.Controllers
             await PopulateFilterDropdowns();
 
             // The summary counts can be simplified or adjusted as needed
-            ViewBag.TotalStudents = await _context.Students.CountAsync();
+            ViewBag.TotalStudents = await _context.Students.Where(s => s.IsArchived != true).CountAsync();
+
+            // NEW: Get filtered students count and program breakdown
+            var filteredStudents = await studentsQuery.ToListAsync();
+            ViewBag.FilteredCount = filteredStudents.Count;
+            ViewBag.ProgramBreakdown = new {
+                BSIT = filteredStudents.Count(s => s.Course != null && s.Course.Contains("BSIT")),
+                DIT = filteredStudents.Count(s => s.Course != null && s.Course.Contains("DIT"))
+            };
 
             ViewBag.TotalOfficers = await _context.Students.CountAsync(s => s.Officer != null && s.Officer.Classification == "Org Officer");
 

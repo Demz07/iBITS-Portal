@@ -261,6 +261,16 @@
     </form>
 </div>
 
+<!-- STUDENT COUNT DISPLAY -->
+<div class="student-count-display mb-3">
+    <span class="badge badge-gold badge-lg">
+        <i class="bi bi-people-fill me-2"></i>
+        <span id="filteredCount">@(ViewBag.FilteredCount ?? 0)</span> students found
+        <span id="programBreakdown" class="ms-2"></span>
+        <span class="text-muted ms-2" style="opacity: 0.8;">out of <span id="totalCount">@(ViewBag.TotalStudents ?? 0)</span> total records</span>
+    </span>
+</div>
+
 <!-- BULK ACTIONS BAR (Hidden by default, shows when items selected) -->
 <div id="bulkActionsBar" class="bulk-actions-bar" style="display: none;">
     <div class="d-flex align-items-center justify-content-between">
@@ -649,7 +659,32 @@
                     document.getElementById('filterForm').submit();
                 }, 100);
             }
+
+            // Initialize student count display
+            updateStudentCountDisplay();
         });
+
+        // Function to update student count display with program breakdown
+        function updateStudentCountDisplay() {
+            const filteredCount = @(ViewBag.FilteredCount ?? 0);
+            const totalCount = @(ViewBag.TotalStudents ?? 0);
+            const programBreakdown = @Html.Raw(Json.Serialize(ViewBag.ProgramBreakdown ?? new {}));
+
+            document.getElementById('filteredCount').textContent = filteredCount;
+            document.getElementById('totalCount').textContent = totalCount;
+
+            // Build breakdown text
+            let breakdownParts = [];
+            if (programBreakdown.BSIT > 0) {
+                breakdownParts.push(`BSIT: ${programBreakdown.BSIT}`);
+            }
+            if (programBreakdown.DIT > 0) {
+                breakdownParts.push(`DIT: ${programBreakdown.DIT}`);
+            }
+
+            const breakdownText = breakdownParts.length > 0 ? `(${breakdownParts.join(', ')})` : '';
+            document.getElementById('programBreakdown').textContent = breakdownText;
+        }
     </script>
     <script src="~/js/student-records.js" asp-append-version="true"></script>
 }

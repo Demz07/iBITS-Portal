@@ -1,3 +1,5 @@
+
+
 @* FILE PATH: Views/Officer/AttendanceRecords.cshtml *@
 @model IEnumerable<iBITS_Portal.Models.Attendance>
 @{
@@ -115,7 +117,8 @@
 <!-- BULK ACTION BAR (Only for Org Secretary) -->
 @if (canEdit)
 {
-    <div id="bulkActionBar" class="glass-panel">
+    <!-- Added style="display: none;" -->
+    <div id="bulkActionBar" class="glass-panel" style="display: none;">
         <form asp-action="BulkUpdateStatus" method="post" id="bulkForm">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="text-strong">
@@ -131,6 +134,7 @@
                         <option value="Excused">Mark Excused</option>
                     </select>
                     <button type="submit" class="btn btn-gold-outline px-4">Apply to Selected</button>
+                    <!-- Ensure deselectAll() is updated as shown above -->
                     <button type="button" class="btn btn-outline-light" onclick="deselectAll()">Cancel</button>
                 </div>
             </div>
@@ -371,47 +375,9 @@
         }
 
         function exportToExcel() {
-            // WYSIWYG: Export only VISIBLE/FILTERED rows
             const table = document.getElementById('attendanceTable');
-            const visibleRows = table.querySelectorAll('tbody tr:not([style*="display: none"])');
-            
-            if (visibleRows.length === 0) {
-                alert('No visible data to export. Please adjust your filters.');
-                return;
-            }
-            
-            // Extract header
-            const headers = [];
-            table.querySelectorAll('thead th').forEach(th => {
-                headers.push(th.textContent.trim());
-            });
-            
-            // Extract visible row data
-            const data = [headers];
-            visibleRows.forEach(row => {
-                const rowData = [];
-                row.querySelectorAll('td').forEach(td => {
-                    rowData.push(td.textContent.trim());
-                });
-                data.push(rowData);
-            });
-            
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            
-            // Set column widths
-            ws['!cols'] = [
-                { wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, 
-                { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 20 }
-            ];
-            
-            XLSX.utils.book_append_sheet(wb, ws, 'Attendance Records');
-            XLSX.writeFile(wb, `Attendance_Records_Filtered_${new Date().toISOString().split('T')[0]}.xlsx`);
-            
-            // Show success message
-            if (typeof showToast === 'function') {
-                showToast('success', `Exported ${visibleRows.length} attendance record(s)`);
-            }
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Attendance Records"});
+            XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toISOString().split('T')[0] + '.xlsx');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
