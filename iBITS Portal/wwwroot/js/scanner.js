@@ -341,31 +341,68 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // --- TABLE UI ---
+    //function addTableRow(data) {
+    //    if (emptyState) emptyState.style.display = 'none';
+    //    const row = document.createElement('tr');
+    //    row.style.animation = "fadeIn 0.5s";
+
+    //    // FIXED: Use normalized path
+    //    row.innerHTML = `
+    //        <td><span class="text-muted small">${data.scanTime}</span></td>
+    //        <td class="fw-bold">${data.studentId}</td>
+    //        <td>
+    //            <div class="d-flex align-items-center gap-2">
+    //                <img src="${normalizeImagePath(data.profileImage)}"
+    //                     alt="Profile"
+    //                     class="table-profile-img"
+    //                     onerror="this.src='/images/default-avatar.png'">
+    //                <div>
+    //                    <div>${data.studentName}</div>
+    //                    <span class="small text-muted">${data.section}</span>
+    //                </div>
+    //            </div>
+    //        </td>
+    //        <td><span class="status-badge status-present">${data.status}</span></td>
+    //    `;
+    //    tableBody.prepend(row);
+    //}
+
     function addTableRow(data) {
         if (emptyState) emptyState.style.display = 'none';
         const row = document.createElement('tr');
-        row.style.animation = "fadeIn 0.5s";
 
-        // FIXED: Use normalized path
+        // Uses the ID we just added to the C# Controller
+        const id = data.attendanceId;
+
         row.innerHTML = `
-            <td><span class="text-muted small">${data.scanTime}</span></td>
-            <td class="fw-bold">${data.studentId}</td>
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    <img src="${normalizeImagePath(data.profileImage)}" 
-                         alt="Profile" 
-                         class="table-profile-img" 
-                         onerror="this.src='/images/default-avatar.png'">
-                    <div>
-                        <div>${data.studentName}</div>
-                        <span class="small text-muted">${data.section}</span>
-                    </div>
+        <td><span class="text-muted small">${data.scanTime}</span></td>
+        <td class="fw-bold">${data.studentId}</td>
+        <td>
+            <div class="d-flex align-items-center gap-2">
+                <img src="${normalizeImagePath(data.profileImage)}" 
+                     alt="Profile" 
+                     class="table-profile-img" 
+                     style="width: 30px; height: 30px; border-radius: 50%;"
+                     onerror="this.src='/images/default-avatar.png'">
+                <div>
+                    <div>${data.studentName}</div>
+                    <span class="small text-muted">${data.section}</span>
                 </div>
-            </td>
-            <td><span class="status-badge status-present">${data.status}</span></td>
-        `;
+            </div>
+        </td>
+        <td><span class="status-badge status-present">${data.status}</span></td>
+        <td class="text-end">
+            <button type="button" 
+                    onclick="window.removeAttendee('${id}', this)" 
+                    class="btn btn-sm btn-outline-danger border-0">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
         tableBody.prepend(row);
     }
+
+    
 
     // --- UI HELPERS ---
     function playSound(audio) {
@@ -476,3 +513,44 @@ function exportToPdf() {
     doc.autoTable({ html: '#attendance-table', startY: 25 });
     doc.save(`Attendance_Log_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
+
+// AT THE VERY BOTTOM OF YOUR JS FILE (Outside the DOMContentLoaded)
+window.removeAttendee = function (recordId, button) {
+    // If ID is 0 or undefined, the backend didn't send it correctly
+    if (!recordId || recordId === "0" || recordId === "undefined") {
+        alert("Cannot delete: Missing Record ID. Please refresh the page.");
+        return;
+    }
+
+    if (!confirm("Are you sure you want to remove this record?")) return;
+
+    const row = button.closest('tr');
+    row.style.opacity = '0.5';
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    fetch('/Officer/DeleteAttendance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token
+        },
+        body: JSON.stringify({ id: parseInt(recordId) })
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                row.remove();
+                if (tableBody.children.length === 0) { // tableBody is available from the parent scope
+                    emptyState.style.display = 'block';
+                }
+            } else {
+                alert("Error: " + data.message);
+                row.style.opacity = '1';
+            }
+        })
+        .catch(err => {
+            console.error("Delete Error:", err);
+            row.style.opacity = '1';
+        });
+};

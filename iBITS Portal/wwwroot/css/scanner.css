@@ -599,6 +599,21 @@
 /*                    TABLE STYLING                               */
 /* ============================================================= */
 
+#attendance-table-body td {
+    position: relative;
+    z-index: 5;
+}
+
+#attendance-table-body button {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure the table isn't being covered by the sticky header */
+#attendance-table thead {
+    z-index: 10;
+}
+
 #attendance-table thead th {
     background-color: rgba(0, 0, 0, 0.3);
     color: var(--gold-text);
@@ -787,3 +802,4 @@
     justify-content: center;
     align-items: center;
 }
+

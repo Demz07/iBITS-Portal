@@ -40,6 +40,24 @@ namespace iBITS_Portal.Controllers
             return scannedData;
         }
 
+        //NEW ADDED CODE
+        [HttpPost]
+        public async Task<IActionResult> DeleteAttendance([FromBody] DeleteRequest model)
+        {
+            var record = await _context.Attendances.FindAsync(model.Id);
+            if (record == null) return Json(new { success = false, message = "Record not found" });
+
+            _context.Attendances.Remove(record);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        public class DeleteRequest
+        {
+            public int Id { get; set; }
+        }
+
 
 
         // ============================================================
@@ -105,16 +123,59 @@ namespace iBITS_Portal.Controllers
             return View(await _context.Attendances.Include(a => a.StudentNumNavigation).Include(a => a.Event).ToListAsync());
         }
 
-        // ============================================================
+        //// ============================================================
+        //// QR SCANNER
+        //// ============================================================
+        //[Authorize(Roles = "Org Secretary, Class Secretary")]
+        //public async Task<IActionResult> Scanner()
+        //{
+        //    var today = DateOnly.FromDateTime(DateTime.Now);
+
+        //    //naedit == dapat 1
+        //    var events = await _context.Events.Where(e => e.EventDate == today).OrderBy(e => e.EventDate).ToListAsync();
+
+        //    // Pass section info for Class Secretary
+        //    if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
+        //    {
+        //        var user = await _userManager.GetUserAsync(User);
+        //        var secretary = await _context.Students.FindAsync(user.UserName);
+        //        ViewBag.SecretarySection = secretary?.YearLevelSection;
+        //    }
+
+        //    return View(events);
+        //}
+
+        //nabago ulit ============================================================
         // QR SCANNER
         // ============================================================
         [Authorize(Roles = "Org Secretary, Class Secretary")]
         public async Task<IActionResult> Scanner()
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var now = DateTime.Now;
+            var today = DateOnly.FromDateTime(now);
 
-            //naedit == dapat 1
-            var events = await _context.Events.Where(e => e.EventDate == today).OrderBy(e => e.EventDate).ToListAsync();
+            // 1. Fetch all events for today from the database
+            var allEventsToday = await _context.Events
+                .Where(e => e.EventDate == today)
+                .OrderBy(e => e.StartTime)
+                .ToListAsync();
+
+            // 2. Filter in-memory to show ONLY ACTIVE events
+            // (Where Start Time has passed AND End Time hasn't arrived yet)
+            var activeEvents = allEventsToday.Where(ev =>
+            {
+                if (!ev.EventDate.HasValue || !ev.StartTime.HasValue) return false;
+
+                // Combine Date and Time into a full DateTime object
+                var eventStart = ev.EventDate.Value.ToDateTime(ev.StartTime.Value);
+                var eventEnd = ev.CalculatedEndTime;
+
+                // Condition: Start <= Now < End
+                bool hasStarted = eventStart <= now;
+                bool hasNotEnded = !eventEnd.HasValue || eventEnd.Value > now;
+
+                return hasStarted && hasNotEnded;
+            }).ToList();
 
             // Pass section info for Class Secretary
             if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
@@ -124,7 +185,8 @@ namespace iBITS_Portal.Controllers
                 ViewBag.SecretarySection = secretary?.YearLevelSection;
             }
 
-            return View(events);
+            // Return only the filtered active events to the View
+            return View(activeEvents);
         }
 
         [HttpPost]
@@ -151,23 +213,12 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = $"Student with ID '{studentId}' not found." });
                 }
 
-                //// Security: Check Section for Class Secretary role
-                //if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
-                //{
-                //    var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
-                //    if (secretaryUser?.YearLevelSection != student.YearLevelSection)
-                //    {
-                //        return Json(new { success = false, message = $"Scan failed: Student belongs to a different section ({student.YearLevelSection})." });
-                //    }
-                //}
-
-                // nadagdag 2 Security: Check Course and Section for Class Secretary role
+                // Security: Check Course and Section for Class Secretary role
                 if (User.IsInRole("Class Secretary") && !User.IsInRole("Org Secretary"))
                 {
                     var secretaryUser = await _context.Students.FindAsync(_userManager.GetUserName(User));
                     if (secretaryUser != null)
                     {
-                        // Tinitingnan kung parehong Course (BSIT vs DIT) at Section (Year Level)
                         bool isSameCourse = string.Equals(secretaryUser.Course?.Trim(), student.Course?.Trim(), StringComparison.OrdinalIgnoreCase);
                         bool isSameSection = string.Equals(secretaryUser.YearLevelSection?.Trim(), student.YearLevelSection?.Trim(), StringComparison.OrdinalIgnoreCase);
 
@@ -184,26 +235,35 @@ namespace iBITS_Portal.Controllers
                     return Json(new { success = false, message = $"{student.FullName} has already been scanned for this event." });
                 }
 
-                // Add attendance record
-                _context.Attendances.Add(new Attendance { StudentNum = studentId, EventId = request.EventId, AttendanceStatus = "Present" });
-                await _context.SaveChangesAsync();
+                // --- FIXED PART START ---
+                // Create the object first so we can access its ID after saving
+                var newAttendance = new Attendance
+                {
+                    StudentNum = studentId,
+                    EventId = request.EventId,
+                    AttendanceStatus = "Present"
+                };
+
+                _context.Attendances.Add(newAttendance);
+                await _context.SaveChangesAsync(); // The ID is generated here
+                                                   // --- FIXED PART END ---
 
                 // Return rich data for the UI
                 return Json(new
                 {
                     success = true,
                     message = "Attendance recorded successfully.",
+                    attendanceId = newAttendance.AttendanceId, // <-- CRITICAL: You must return the ID here!
                     scanTime = DateTime.Now.ToString("h:mm:ss tt"),
                     studentId = student.StudentNum,
                     studentName = student.FullName,
-                    profileImage = student.StudentImage, // <-- ADDED
-                    section = student.YearLevelSection ?? "N/A", // <-- ADDED
+                    profileImage = student.StudentImage,
+                    section = student.YearLevelSection ?? "N/A",
                     status = "Present"
                 });
             }
             catch (Exception ex)
             {
-                // Log the exception ex
                 return Json(new { success = false, message = "An unexpected server error occurred." });
             }
         }

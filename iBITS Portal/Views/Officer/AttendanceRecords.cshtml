@@ -115,7 +115,8 @@
 <!-- BULK ACTION BAR (Only for Org Secretary) -->
 @if (canEdit)
 {
-    <div id="bulkActionBar" class="glass-panel">
+    <!-- Added style="display: none;" -->
+    <div id="bulkActionBar" class="glass-panel" style="display: none;">
         <form asp-action="BulkUpdateStatus" method="post" id="bulkForm">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="text-strong">
@@ -131,6 +132,7 @@
                         <option value="Excused">Mark Excused</option>
                     </select>
                     <button type="submit" class="btn btn-gold-outline px-4">Apply to Selected</button>
+                    <!-- Ensure deselectAll() is updated as shown above -->
                     <button type="button" class="btn btn-outline-light" onclick="deselectAll()">Cancel</button>
                 </div>
             </div>
