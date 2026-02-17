@@ -817,6 +817,62 @@ namespace iBITS_Portal.Controllers
 
             ViewBag.ProgramYearStats = programYearStats;
 
+            // Program-Year breakdown for FINES
+            var programYearFinesStats = fines
+                .Where(f => !string.IsNullOrEmpty(f.StudentNumNavigation.YearLevelSection)
+                         && !string.IsNullOrEmpty(f.StudentNumNavigation.Course))
+                .GroupBy(f => {
+                    var course = f.StudentNumNavigation.Course ?? "Unknown";
+                    var section = f.StudentNumNavigation.YearLevelSection;
+                    var parts = section.Split('-');
+
+                    if (parts.Length >= 2)
+                    {
+                        var year = parts[0];
+                        var sectionNum = parts[1];
+                        return $"{course} Year {year} Section {sectionNum}";
+                    }
+                    return "Unknown";
+                })
+                .Select(g => new
+                {
+                    ProgramYear = g.Key,
+                    TotalFines = g.Sum(f => f.Amount ?? 0),
+                    PaidFines = g.Where(f => f.FinesStatus?.ToUpper() == "PAID"
+                                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted
+                                         && !f.IsAwaitingValidation).Sum(f => f.Amount ?? 0)
+                })
+                .OrderBy(s => s.ProgramYear)
+                .ToList();
+
+            ViewBag.ProgramYearFinesStats = programYearFinesStats;
+
+            // Program-Year breakdown for COMBINED (Fees + Fines)
+            var allProgramYears = programYearStats.Select(p => p.ProgramYear)
+                .Union(programYearFinesStats.Select(p => p.ProgramYear))
+                .Distinct()
+                .OrderBy(p => p)
+                .ToList();
+
+            var programYearCombinedStats = allProgramYears.Select(py => {
+                var feesStat = programYearStats.FirstOrDefault(p => p.ProgramYear == py);
+                var finesStat = programYearFinesStats.FirstOrDefault(p => p.ProgramYear == py);
+
+                var totalFees = feesStat?.TotalFees ?? 0;
+                var paidFees = feesStat?.PaidFees ?? 0;
+                var totalFines = finesStat?.TotalFines ?? 0;
+                var paidFines = finesStat?.PaidFines ?? 0;
+
+                return new
+                {
+                    ProgramYear = py,
+                    TotalCombined = totalFees + totalFines,
+                    PaidCombined = paidFees + paidFines
+                };
+            }).ToList();
+
+            ViewBag.ProgramYearCombinedStats = programYearCombinedStats;
+
             // Calculate monthly trends - Last 3 months by default
             var defaultStartDate = DateTime.Now.AddMonths(-3);
             var defaultEndDate = DateTime.Now;
@@ -867,185 +923,7 @@ namespace iBITS_Portal.Controllers
             return View();
         }
 
-        // ============================================================
-        // API: Get Monthly Trends with Flexible Filtering
-        // Supports 3 filter modes: Quick, Month, Date Range
-        // ============================================================
-        [HttpGet]
-        [Authorize(Roles = "Org Treasurer")]
-        public async Task<IActionResult> GetMonthlyTrends(
-            string filterType,      // 'quick', 'month', 'daterange'
-            string? quickRange,     // 'lastWeek', 'lastMonth', 'last3Months', etc.
-            string? academicYear,   // '2025-2026'
-            int? month,             // 1-12 (January=1)
-            int? year,              // 2026
-            DateTime? fromDate,     // Custom start date
-            DateTime? toDate        // Custom end date
-        )
-        {
-            try
-            {
-                DateTime startDate;
-                DateTime endDate = DateTime.Now;
-                string filterLabel = "";
-
-                // Determine date range based on filter type
-                if (filterType == "quick")
-                {
-                    // Quick filter mode
-                    var currentYear = DateTime.Now.Year;
-                    var academicYearStartYear = academicYear?.Split('-')[0];
-                    int.TryParse(academicYearStartYear, out int acadYear);
-
-                    if (acadYear == 0) acadYear = currentYear;
-
-                    switch (quickRange)
-                    {
-                        case "lastWeek":
-                            startDate = DateTime.Now.AddDays(-7);
-                            filterLabel = "Last Week";
-                            break;
-                        case "lastMonth":
-                            startDate = DateTime.Now.AddMonths(-1);
-                            filterLabel = "Last Month";
-                            break;
-                        case "last3Months":
-                            startDate = DateTime.Now.AddMonths(-3);
-                            filterLabel = "Last 3 Months";
-                            break;
-                        case "last6Months":
-                            startDate = DateTime.Now.AddMonths(-6);
-                            filterLabel = "Last 6 Months";
-                            break;
-                        case "currentSemester":
-                            // Aug-Jan or Feb-Jul
-                            if (DateTime.Now.Month >= 8)
-                            {
-                                startDate = new DateTime(currentYear, 8, 1);
-                                filterLabel = "Current Semester (Aug-Jan)";
-                            }
-                            else
-                            {
-                                startDate = new DateTime(currentYear, 2, 1);
-                                filterLabel = "Current Semester (Feb-Jul)";
-                            }
-                            break;
-                        case "fullYear":
-                            startDate = new DateTime(acadYear, 8, 1);
-                            filterLabel = $"Academic Year {academicYear}";
-                            break;
-                        default:
-                            startDate = DateTime.Now.AddMonths(-3);
-                            filterLabel = "Last 3 Months";
-                            break;
-                    }
-                }
-                else if (filterType == "month")
-                {
-                    // Specific month filter
-                    if (!month.HasValue || !year.HasValue)
-                    {
-                        return Json(new { success = false, message = "Month and Year are required" });
-                    }
-
-                    startDate = new DateTime(year.Value, month.Value, 1);
-                    endDate = startDate.AddMonths(1).AddDays(-1);
-
-                    var monthName = new DateTime(year.Value, month.Value, 1).ToString("MMMM yyyy");
-                    filterLabel = monthName;
-                }
-                else if (filterType == "daterange")
-                {
-                    // Custom date range filter
-                    if (!fromDate.HasValue || !toDate.HasValue)
-                    {
-                        return Json(new { success = false, message = "From Date and To Date are required" });
-                    }
-
-                    if (toDate.Value < fromDate.Value)
-                    {
-                        return Json(new { success = false, message = "To Date must be after From Date" });
-                    }
-
-                    // Max range: 1 year
-                    if ((toDate.Value - fromDate.Value).TotalDays > 365)
-                    {
-                        return Json(new { success = false, message = "Date range cannot exceed 1 year" });
-                    }
-
-                    startDate = fromDate.Value;
-                    endDate = toDate.Value;
-                    filterLabel = $"{startDate:MMM dd, yyyy} - {endDate:MMM dd, yyyy}";
-                }
-                else
-                {
-                    return Json(new { success = false, message = "Invalid filter type" });
-                }
-
-                // Fetch fees and fines with collection dates in range
-                var fees = await _context.Fees
-                    .Include(f => f.StudentNumNavigation)
-                    .Include(f => f.Remittance)
-                    .Where(f => f.CollectionDate.HasValue
-                             && f.CollectionDate >= startDate
-                             && f.CollectionDate <= endDate
-                             && f.FeeStatus != null && f.FeeStatus.ToUpper() == "PAID"
-                             && f.RemittanceStatus == FeeRemittanceStatus.Remitted
-                             && !f.IsAwaitingValidation)
-                    .ToListAsync();
-
-                var fines = await _context.Fines
-                    .Include(f => f.StudentNumNavigation)
-                    .Include(f => f.Remittance)
-                    .Where(f => f.CollectionDate.HasValue
-                             && f.CollectionDate >= startDate
-                             && f.CollectionDate <= endDate
-                             && f.FinesStatus != null && f.FinesStatus.ToUpper() == "PAID"
-                             && f.RemittanceStatus == FeeRemittanceStatus.Remitted
-                             && !f.IsAwaitingValidation)
-                    .ToListAsync();
-
-                // Group by month for chart display
-                var monthlyData = new List<object>();
-                var currentMonth = new DateTime(startDate.Year, startDate.Month, 1);
-                var endMonth = new DateTime(endDate.Year, endDate.Month, 1);
-
-                while (currentMonth <= endMonth)
-                {
-                    var monthStart = currentMonth;
-                    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-
-                    var feesInMonth = fees.Where(f =>
-                        f.CollectionDate >= monthStart &&
-                        f.CollectionDate <= monthEnd).Sum(f => f.Amount ?? 0);
-
-                    var finesInMonth = fines.Where(f =>
-                        f.CollectionDate >= monthStart &&
-                        f.CollectionDate <= monthEnd).Sum(f => f.Amount ?? 0);
-
-                    monthlyData.Add(new
-                    {
-                        Month = monthStart.ToString("MMM yyyy"),
-                        FeesCollected = feesInMonth,
-                        FinesCollected = finesInMonth
-                    });
-
-                    currentMonth = currentMonth.AddMonths(1);
-                }
-
-                return Json(new
-                {
-                    success = true,
-                    filterType = filterType,
-                    filterLabel = filterLabel,
-                    data = monthlyData
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
+        // Duplicate method removed - see line 5778 for the active GetMonthlyTrends method
 
         // ============================================================
         // POST PAYMENT REMINDER (Org Treasurer)
@@ -5672,7 +5550,107 @@ namespace iBITS_Portal.Controllers
 
         #endregion
 
-    }
+        // ============================================================
+        // GET AVAILABLE DATES - Returns months/years with data for filtering
+        // ============================================================
+        [HttpGet]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> GetAvailableDates()
+        {
+            try
+            {
+                // Get all validated remittances with collection dates
+                // First get all remittances that are validated
+                var validatedRemittanceIds = await _context.Remittances
+                    .Where(r => r.Status == "Validated")
+                    .Select(r => r.RemittanceId)
+                    .ToListAsync();
+
+                var feesWithDates = await _context.Fees
+                    .Where(f => f.CollectionDate.HasValue 
+                        && f.FeeStatus != null 
+                        && f.FeeStatus.ToUpper() == "PAID"
+                        && f.RemittanceStatus == "Remitted"
+                        && f.RemittanceId.HasValue 
+                        && validatedRemittanceIds.Contains(f.RemittanceId.Value))
+                    .Select(f => f.CollectionDate.Value)
+                    .ToListAsync();
+
+                var finesWithDates = await _context.Fines
+                    .Where(f => f.CollectionDate.HasValue 
+                        && f.FinesStatus != null 
+                        && f.FinesStatus.ToUpper() == "PAID"
+                        && f.RemittanceStatus == "Remitted"
+                        && f.RemittanceId.HasValue 
+                        && validatedRemittanceIds.Contains(f.RemittanceId.Value))
+                    .Select(f => f.CollectionDate.Value)
+                    .ToListAsync();
+
+                var allDates = feesWithDates.Union(finesWithDates).OrderBy(d => d).ToList();
+
+                if (!allDates.Any())
+                {
+                    return Json(new { success = true, hasData = false });
+                }
+
+                // Get unique year-month combinations
+                var availableMonths = allDates
+                    .Select(d => new { year = d.Year, month = d.Month })
+                    .Distinct()
+                    .OrderBy(m => m.year)
+                    .ThenBy(m => m.month)
+                    .Select(m => new { year = m.year, month = m.month })
+                    .ToList();
+
+                // Get min and max dates for date range picker
+                var minDate = allDates.Min();
+                var maxDate = allDates.Max();
+
+                // Determine available academic years based on data
+                var academicYears = new List<string>();
+                var minYear = minDate.Year;
+                var maxYear = maxDate.Year;
+
+                // Generate academic years (e.g., 2025-2026)
+                for (int y = minYear; y <= maxYear; y++)
+                {
+                    academicYears.Add($"{y}-{y + 1}");
+                }
+
+                // Determine which quick filters have data
+                var now = DateTime.Now;
+                var quickFilters = new
+                {
+                    lastWeek = allDates.Any(d => d >= now.AddDays(-7)),
+                    lastMonth = allDates.Any(d => d >= now.AddMonths(-1)),
+                    last3Months = allDates.Any(d => d >= now.AddMonths(-3)),
+                    last6Months = allDates.Any(d => d >= now.AddMonths(-6)),
+                    currentSemester = allDates.Any(d => 
+                        (now.Month >= 8 && d >= new DateTime(now.Year, 8, 1) && d <= new DateTime(now.Year, 12, 31)) ||
+                        (now.Month < 8 && d >= new DateTime(now.Year, 1, 1) && d <= new DateTime(now.Year, 7, 31))
+                    ),
+                    fullYear = allDates.Any()
+                };
+
+                return Json(new
+                {
+                    success = true,
+                    hasData = true,
+                    availableMonths = availableMonths,
+                    minDate = minDate.ToString("yyyy-MM-dd"),
+                    maxDate = maxDate.ToString("yyyy-MM-dd"),
+                    academicYears = academicYears,
+                    quickFilters = quickFilters
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // Collection Trends method removed
+}
 
     // ============================================================
     // REQUEST MODELS FOR BULK ACTIONS

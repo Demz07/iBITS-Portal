@@ -65,8 +65,142 @@
                 box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
             }
         }
+
+        /* No Data Message Styles */
+        .no-data-message {
+            color: #fff;
+            padding: 60px 20px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 20px auto;
+        }
+
+        .no-data-message i {
+            font-size: 64px;
+            opacity: 0.5;
+            color: #FFD700;
+        }
+
+        .no-data-message h5 {
+            color: #FFD700;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .no-data-message p {
+            color: #ccc;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        /* Custom Modal Styles */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-modal {
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(20, 20, 20, 0.98));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease;
+        }
+
+        .custom-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .custom-modal-icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+        }
+
+        .custom-modal-icon.error {
+            color: #dc3545;
+        }
+
+        .custom-modal-icon.warning {
+            color: #fbbf24;
+        }
+
+        .custom-modal-icon.info {
+            color: #3b82f6;
+        }
+
+        .custom-modal-title {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .custom-modal-body {
+            color: #ccc;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .custom-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @@keyframes slideDown {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 }
+
+<!-- Custom Modal -->
+<div id="customModalOverlay" class="custom-modal-overlay" onclick="closeCustomModal(event)">
+    <div class="custom-modal" onclick="event.stopPropagation()">
+        <div class="custom-modal-header">
+            <i id="customModalIcon" class="bi custom-modal-icon"></i>
+            <h5 id="customModalTitle" class="custom-modal-title"></h5>
+        </div>
+        <div id="customModalBody" class="custom-modal-body"></div>
+        <div class="custom-modal-footer">
+            <button class="btn btn-sm" onclick="closeCustomModal()" 
+                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700; padding: 8px 20px;">
+                <i class="bi bi-check-circle me-1"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- HEADER -->
 <div class="glass-panel d-flex justify-content-between align-items-center mb-4">
@@ -246,146 +380,6 @@
     </div>
 </div>
 
-<!-- MONTHLY COLLECTION TRENDS -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="glass-panel">
-            <h5 class="glass-header-title mb-3">
-                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends
-            </h5>
-
-            <!-- Filter Tabs -->
-            <ul class="nav nav-tabs mb-3" id="filterTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="quick-filter-tab" data-bs-toggle="tab" 
-                            data-bs-target="#quick-filter" type="button" role="tab">
-                        <i class="bi bi-lightning-charge me-1"></i> Quick Filter
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="month-filter-tab" data-bs-toggle="tab" 
-                            data-bs-target="#month-filter" type="button" role="tab">
-                        <i class="bi bi-calendar-month me-1"></i> By Month
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="daterange-filter-tab" data-bs-toggle="tab" 
-                            data-bs-target="#daterange-filter" type="button" role="tab">
-                        <i class="bi bi-calendar-range me-1"></i> Date Range
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content -->
-            <div class="tab-content mb-3" id="filterTabContent">
-                <!-- Quick Filter Tab -->
-                <div class="tab-pane fade show active" id="quick-filter" role="tabpanel">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">Time Range</label>
-                            <select id="quickRange" class="form-select form-select-sm">
-                                <option value="lastWeek">Last Week</option>
-                                <option value="lastMonth">Last Month</option>
-                                <option value="last3Months" selected>Last 3 Months</option>
-                                <option value="last6Months">Last 6 Months</option>
-                                <option value="currentSemester">Current Semester</option>
-                                <option value="fullYear">Full Academic Year</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">Academic Year</label>
-                            <select id="academicYear" class="form-select form-select-sm">
-                                <option value="2025-2026" selected>2025-2026</option>
-                                <option value="2024-2025">2024-2025</option>
-                                <option value="2023-2024">2023-2024</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
-                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
-                                <i class="bi bi-funnel me-1"></i> Apply Filter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- By Month Tab -->
-                <div class="tab-pane fade" id="month-filter" role="tabpanel">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">Month</label>
-                            <select id="monthSelect" class="form-select form-select-sm">
-                                <option value="1">January</option>
-                                <option value="2" selected>February</option>
-                                <option value="3">March</option>
-                                <option value="4">April</option>
-                                <option value="5">May</option>
-                                <option value="6">June</option>
-                                <option value="7">July</option>
-                                <option value="8">August</option>
-                                <option value="9">September</option>
-                                <option value="10">October</option>
-                                <option value="11">November</option>
-                                <option value="12">December</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">Year</label>
-                            <select id="yearSelect" class="form-select form-select-sm">
-                                <option value="2026" selected>2026</option>
-                                <option value="2025">2025</option>
-                                <option value="2024">2024</option>
-                                <option value="2023">2023</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
-                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
-                                <i class="bi bi-funnel me-1"></i> Apply Filter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Date Range Tab -->
-                <div class="tab-pane fade" id="daterange-filter" role="tabpanel">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">From Date</label>
-                            <input type="date" id="fromDate" class="form-control form-control-sm" 
-                                   value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-white">To Date</label>
-                            <input type="date" id="toDate" class="form-control form-control-sm" 
-                                   value="@DateTime.Now.ToString("yyyy-MM-dd")">
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-sm w-100" onclick="applyFilter()" 
-                                    style="background-color: #FFD700; color: #000; font-weight: bold; border: 2px solid #FFD700;">
-                                <i class="bi bi-funnel me-1"></i> Apply Filter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Current Filter Label -->
-            <div class="mb-2">
-                <small class="text-muted">
-                    <i class="bi bi-filter-circle me-1"></i> 
-                    Showing: <span id="currentFilterLabel" class="text-gold fw-bold">Last 3 Months</span>
-                </small>
-            </div>
-
-            <!-- Chart -->
-            <div style="position: relative; height: 350px;">
-                <canvas id="trendsChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- PROGRAM-YEAR BREAKDOWN -->
 <div class="row mt-4">
     <div class="col-12">
@@ -393,7 +387,34 @@
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-diagram-3-fill me-2 text-gold"></i> Paid/Unpaid by Program-Year
             </h5>
-            @if (ViewBag.ProgramYearStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearStats).Any())
+
+            <!-- Tabs for Fees/Fines/Combined -->
+            <ul class="nav nav-tabs mb-3" id="programYearTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="py-fees-tab" data-bs-toggle="tab" 
+                            data-bs-target="#py-fees" type="button" role="tab">
+                        <i class="bi bi-cash-coin me-1"></i> Fees
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="py-fines-tab" data-bs-toggle="tab" 
+                            data-bs-target="#py-fines" type="button" role="tab">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Fines
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="py-combined-tab" data-bs-toggle="tab" 
+                            data-bs-target="#py-combined" type="button" role="tab">
+                        <i class="bi bi-collection me-1"></i> Combined
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="programYearTabContent">
+                <!-- Fees Tab -->
+                <div class="tab-pane fade show active" id="py-fees" role="tabpanel">
+                    @if (ViewBag.ProgramYearStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearStats).Any())
             {
                 @foreach (var stat in ViewBag.ProgramYearStats)
                 {
@@ -442,8 +463,98 @@
             }
             else
             {
-                <p class="text-center text-muted py-4">No program-year data available.</p>
+                <p class="text-center text-muted py-4">No program-year fees data available.</p>
             }
+                </div>
+
+                <!-- Fines Tab -->
+                <div class="tab-pane fade" id="py-fines" role="tabpanel">
+                    @if (ViewBag.ProgramYearFinesStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearFinesStats).Any())
+                    {
+                        @foreach (var stat in ViewBag.ProgramYearFinesStats)
+                        {
+                            var programYearTotal = (decimal)stat.TotalFines;
+                            var programYearPaid = (decimal)stat.PaidFines;
+                            var programYearUnpaid = programYearTotal - programYearPaid;
+
+                            <div class="section-breakdown-card">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0 text-white">@stat.ProgramYear</h6>
+                                </div>
+                                <div class="row text-center mt-3">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Total Expected</small>
+                                        <h6 class="text-white mb-0">₱@programYearTotal.ToString("N2")</h6>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Paid</small>
+                                        <h6 class="text-success mb-0">₱@programYearPaid.ToString("N2")</h6>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Unpaid</small>
+                                        <h6 class="text-danger mb-0">₱@programYearUnpaid.ToString("N2")</h6>
+                                    </div>
+                                </div>
+                                <div class="progress mt-3" style="height: 20px; background-color: rgba(255, 255, 255, 0.1);">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F2"))%"
+                                         aria-valuenow="@programYearPaid" aria-valuemin="0" aria-valuemax="@programYearTotal">
+                                        @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F1"))%
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-center text-muted py-4">No program-year fines data available.</p>
+                    }
+                </div>
+
+                <!-- Combined Tab -->
+                <div class="tab-pane fade" id="py-combined" role="tabpanel">
+                    @if (ViewBag.ProgramYearCombinedStats != null && ((IEnumerable<dynamic>)ViewBag.ProgramYearCombinedStats).Any())
+                    {
+                        @foreach (var stat in ViewBag.ProgramYearCombinedStats)
+                        {
+                            var programYearTotal = (decimal)stat.TotalCombined;
+                            var programYearPaid = (decimal)stat.PaidCombined;
+                            var programYearUnpaid = programYearTotal - programYearPaid;
+
+                            <div class="section-breakdown-card">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0 text-white">@stat.ProgramYear</h6>
+                                </div>
+                                <div class="row text-center mt-3">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Total Expected</small>
+                                        <h6 class="text-white mb-0">₱@programYearTotal.ToString("N2")</h6>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Paid</small>
+                                        <h6 class="text-success mb-0">₱@programYearPaid.ToString("N2")</h6>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Unpaid</small>
+                                        <h6 class="text-danger mb-0">₱@programYearUnpaid.ToString("N2")</h6>
+                                    </div>
+                                </div>
+                                <div class="progress mt-3" style="height: 20px; background-color: rgba(255, 255, 255, 0.1);">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F2"))%"
+                                         aria-valuenow="@programYearPaid" aria-valuemin="0" aria-valuemax="@programYearTotal">
+                                        @((programYearTotal > 0 ? (programYearPaid / programYearTotal * 100) : 0).ToString("F1"))%
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-center text-muted py-4">No program-year combined data available.</p>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -462,242 +573,252 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
     <script>
-        // Monthly Trends Line Chart
-        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
-        const monthlyTrends = @Html.Raw(Json.Serialize(ViewBag.MonthlyTrends ?? new List<object>()));
+        // Collection Trends removed - no chart variables needed
         
-        // Debug: Log the data
-        console.log('Initial Monthly Trends Data:', monthlyTrends);
-        console.log('Number of months:', monthlyTrends.length);
         
-        // Global chart variable
-        let trendsChart = null;
-        
-        // Initialize chart
-        function initializeTrendsChart(data) {
-            // Destroy existing chart if any
-            if (trendsChart) {
-                trendsChart.destroy();
+        // ============================================================
+        // CUSTOM MODAL FUNCTIONS
+        // ============================================================
+        function showCustomModal(title, message, type = 'error') {
+            const modal = document.getElementById('customModalOverlay');
+            const icon = document.getElementById('customModalIcon');
+            const titleEl = document.getElementById('customModalTitle');
+            const bodyEl = document.getElementById('customModalBody');
+            
+            // Set icon based on type
+            icon.className = 'bi custom-modal-icon ' + type;
+            switch(type) {
+                case 'error':
+                    icon.classList.add('bi-x-circle-fill');
+                    break;
+                case 'warning':
+                    icon.classList.add('bi-exclamation-triangle-fill');
+                    break;
+                case 'info':
+                    icon.classList.add('bi-info-circle-fill');
+                    break;
+                default:
+                    icon.classList.add('bi-x-circle-fill');
             }
-
-            // Check if we have data
-            if (!data || data.length === 0) {
-                // Show no data message
-                const canvas = document.getElementById('trendsChart');
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('No collection data available for the selected period', canvas.width / 2, canvas.height / 2);
+            
+            titleEl.textContent = title;
+            bodyEl.innerHTML = message;
+            modal.classList.add('show');
+        }
+        
+        function closeCustomModal(event) {
+            if (event && event.target !== document.getElementById('customModalOverlay')) {
                 return;
             }
-
-            // Debug: Log raw data first
-            console.log('Raw data received:', data);
-            console.log('First item:', data[0]);
-            console.log('Property names:', data[0] ? Object.keys(data[0]) : 'no data');
-
-            // Calculate max value for Y-axis scale
-            const feesData = data.map(t => t.feesCollected || t.FeesCollected || 0);
-            const finesData = data.map(t => t.finesCollected || t.FinesCollected || 0);
-            const labels = data.map(t => t.month || t.Month || 'Unknown');
-            const maxFees = Math.max(...feesData);
-            const maxFines = Math.max(...finesData);
-            const maxValue = Math.max(maxFees, maxFines);
-            const suggestedMaxValue = maxValue > 0 ? maxValue * 1.2 : 100;
-
-            console.log('Processed Chart Data:', {
-                labels: labels,
-                feesData: feesData,
-                finesData: finesData,
-                maxValue: maxValue,
-                suggestedMax: suggestedMaxValue
-            });
-
-            trendsChart = new Chart(trendsCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Fees Collected',
-                            data: feesData,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 5,
-                            pointHoverRadius: 8,
-                            pointBackgroundColor: '#3b82f6',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2
-                        },
-                        {
-                            label: 'Fines Collected',
-                            data: finesData,
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 5,
-                            pointHoverRadius: 8,
-                            pointBackgroundColor: '#f59e0b',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: { 
-                                color: '#fff', 
-                                font: { size: 14, weight: 'bold' },
-                                padding: 20,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: '#FFD700',
-                            borderWidth: 1,
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            suggestedMax: suggestedMaxValue,
-                            ticks: { 
-                                color: '#fff',
-                                font: { size: 12, weight: 'bold' },
-                                padding: 10,
-                                callback: function(value) {
-                                    // Format large numbers with K/M suffix
-                                    if (value >= 1000000) {
-                                        return '₱' + (value / 1000000).toFixed(1) + 'M';
-                                    } else if (value >= 1000) {
-                                        return '₱' + (value / 1000).toFixed(1) + 'K';
-                                    }
-                                    return '₱' + value.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
-                                }
-                            },
-                            grid: { 
-                                color: 'rgba(255, 255, 255, 0.15)',
-                                drawBorder: true,
-                                borderColor: 'rgba(255, 255, 255, 0.3)',
-                                borderWidth: 2
-                            }
-                        },
-                        x: {
-                            display: true,
-                            position: 'bottom',
-                            ticks: { 
-                                color: '#fff',
-                                font: { size: 12, weight: 'bold' },
-                                padding: 10,
-                                maxRotation: 0,
-                                minRotation: 0,
-                                autoSkip: false
-                            },
-                            grid: { 
-                                display: false,
-                                drawBorder: true,
-                                borderColor: 'rgba(255, 255, 255, 0.3)',
-                                borderWidth: 2
-                            }
-                        }
-                    }
-                }
-            });
+            document.getElementById('customModalOverlay').classList.remove('show');
         }
-
-        // Apply Filter Function
-        function applyFilter() {
-            // Determine which tab is active
-            const activeTab = document.querySelector('#filterTabs .nav-link.active').id;
-            let params = {};
-            
-            if (activeTab === 'quick-filter-tab') {
-                // Quick Filter mode
-                params = {
-                    filterType: 'quick',
-                    quickRange: document.getElementById('quickRange').value,
-                    academicYear: document.getElementById('academicYear').value
-                };
-            } else if (activeTab === 'month-filter-tab') {
-                // By Month mode
-                params = {
-                    filterType: 'month',
-                    month: document.getElementById('monthSelect').value,
-                    year: document.getElementById('yearSelect').value
-                };
-            } else if (activeTab === 'daterange-filter-tab') {
-                // Date Range mode
-                const fromDate = document.getElementById('fromDate').value;
-                const toDate = document.getElementById('toDate').value;
-                
-                // Validation
-                if (!fromDate || !toDate) {
-                    alert('Please select both From Date and To Date');
-                    return;
-                }
-                
-                if (new Date(toDate) < new Date(fromDate)) {
-                    alert('To Date must be after From Date');
-                    return;
-                }
-                
-                params = {
-                    filterType: 'daterange',
-                    fromDate: fromDate,
-                    toDate: toDate
-                };
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCustomModal();
             }
-            
-            // Show loading indicator
-            document.getElementById('currentFilterLabel').innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Loading...';
-            
-            // Make AJAX call
-            fetch('/Officer/GetMonthlyTrends?' + new URLSearchParams(params))
-                .then(response => response.json())
-                .then(result => {
-                    console.log('Filter Result:', result);
+        });
+        
+        // Collection Trends removed - no initialization needed
+
+        // ============================================================
+        // LOAD AVAILABLE DATES AND DISABLE FILTERS WITHOUT DATA
+        // ============================================================
+        let availableMonthsData = [];
+        let minAvailableDate = null;
+        let maxAvailableDate = null;
+
+        // Fetch available dates from server
+        fetch('/Officer/GetAvailableDates')
+            .then(response => {
+                console.log('GetAvailableDates response status:', response.status);
+                return response.json();
+            })
+            .then(result => {
+                console.log('GetAvailableDates result:', result);
+                
+                if (result.success && result.hasData) {
+                    availableMonthsData = result.availableMonths;
+                    minAvailableDate = result.minDate;
+                    maxAvailableDate = result.maxDate;
+
+                    console.log('Available months:', availableMonthsData);
+                    console.log('Date range:', minAvailableDate, 'to', maxAvailableDate);
+
+                    // Set min/max for date range pickers
+                    document.getElementById('fromDate').setAttribute('min', minAvailableDate);
+                    document.getElementById('fromDate').setAttribute('max', maxAvailableDate);
+                    document.getElementById('toDate').setAttribute('min', minAvailableDate);
+                    document.getElementById('toDate').setAttribute('max', maxAvailableDate);
+
+                    // Disable months without data
+                    disableMonthsWithoutData();
                     
-                    if (result.success) {
-                        // Update filter label
-                        document.getElementById('currentFilterLabel').textContent = result.filterLabel;
-                        
-                        // Update chart
-                        initializeTrendsChart(result.data);
-                    } else {
-                        alert('Error: ' + result.message);
-                        document.getElementById('currentFilterLabel').textContent = 'Error loading data';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching trends:', error);
-                    alert('Failed to load data. Please try again.');
-                    document.getElementById('currentFilterLabel').textContent = 'Error';
-                });
+                    // Populate year dropdown with only years that have data
+                    populateYearsWithData();
+
+                    // Disable quick filters without data
+                    disableQuickFiltersWithoutData(result.quickFilters);
+
+                    // Populate academic years
+                    populateAcademicYears(result.academicYears);
+                } else if (result.success && !result.hasData) {
+                    console.warn('No validated remittance data available');
+                } else {
+                    console.error('Error from server:', result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading available dates:', error);
+            });
+
+        // Function to disable months that don't have data
+        function disableMonthsWithoutData() {
+            const monthSelect = document.getElementById('monthSelect');
+            const yearSelect = document.getElementById('yearSelect');
+
+            // Listen to year changes to update month availability
+            yearSelect.addEventListener('change', function() {
+                updateMonthAvailability();
+            });
+
+            // Initial update
+            updateMonthAvailability();
         }
 
-        // Initialize chart with default data on page load
-        initializeTrendsChart(monthlyTrends);
+        function updateMonthAvailability() {
+            const selectedYear = parseInt(document.getElementById('yearSelect').value);
+            const monthSelect = document.getElementById('monthSelect');
+            
+            // Get all month options
+            const monthOptions = monthSelect.querySelectorAll('option');
+            
+            monthOptions.forEach(option => {
+                const monthValue = parseInt(option.value);
+                
+                // Check if this year-month combination has data
+                const hasData = availableMonthsData.some(m => m.year === selectedYear && m.month === monthValue);
+                
+                if (hasData) {
+                    option.disabled = false;
+                    option.style.color = '';
+                } else {
+                    option.disabled = true;
+                    option.style.color = '#666';
+                }
+            });
+
+            // If current selection is disabled, select the first enabled option
+            if (monthSelect.selectedOptions[0]?.disabled) {
+                const firstEnabled = Array.from(monthOptions).find(opt => !opt.disabled);
+                if (firstEnabled) {
+                    monthSelect.value = firstEnabled.value;
+                }
+            }
+        }
+
+        function populateYearsWithData() {
+            // Get unique years from available months
+            const uniqueYears = [...new Set(availableMonthsData.map(m => m.year))].sort((a, b) => b - a);
+            
+            const yearSelect = document.getElementById('yearSelect');
+            yearSelect.innerHTML = ''; // Clear existing options
+            
+            uniqueYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                
+                // Select current year if available
+                if (year === new Date().getFullYear()) {
+                    option.selected = true;
+                }
+                
+                yearSelect.appendChild(option);
+            });
+
+            // If current year not in list, select the most recent
+            if (!uniqueYears.includes(new Date().getFullYear()) && uniqueYears.length > 0) {
+                yearSelect.value = uniqueYears[0];
+            }
+
+            // Update month availability after populating years
+            updateMonthAvailability();
+        }
+
+        function disableQuickFiltersWithoutData(quickFilters) {
+            const quickRangeSelect = document.getElementById('quickRange');
+            const options = quickRangeSelect.querySelectorAll('option');
+
+            options.forEach(option => {
+                const value = option.value;
+                let hasData = false;
+
+                switch(value) {
+                    case 'lastWeek':
+                        hasData = quickFilters.lastWeek;
+                        break;
+                    case 'lastMonth':
+                        hasData = quickFilters.lastMonth;
+                        break;
+                    case 'last3Months':
+                        hasData = quickFilters.last3Months;
+                        break;
+                    case 'last6Months':
+                        hasData = quickFilters.last6Months;
+                        break;
+                    case 'currentSemester':
+                        hasData = quickFilters.currentSemester;
+                        break;
+                    case 'fullYear':
+                        hasData = quickFilters.fullYear;
+                        break;
+                }
+
+                if (!hasData) {
+                    option.disabled = true;
+                    option.style.color = '#666';
+                } else {
+                    option.disabled = false;
+                    option.style.color = '';
+                }
+            });
+
+            // If current selection is disabled, select the first enabled option
+            if (quickRangeSelect.selectedOptions[0]?.disabled) {
+                const firstEnabled = Array.from(options).find(opt => !opt.disabled);
+                if (firstEnabled) {
+                    quickRangeSelect.value = firstEnabled.value;
+                }
+            }
+        }
+
+        function populateAcademicYears(academicYears) {
+            const academicYearSelect = document.getElementById('academicYear');
+            academicYearSelect.innerHTML = ''; // Clear existing options
+
+            if (academicYears && academicYears.length > 0) {
+                academicYears.reverse().forEach(year => { // Reverse to show newest first
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    
+                    // Select the most recent academic year
+                    if (year === academicYears[academicYears.length - 1]) {
+                        option.selected = true;
+                    }
+                    
+                    academicYearSelect.appendChild(option);
+                });
+            } else {
+                // Fallback if no academic years found
+                const option = document.createElement('option');
+                option.value = '2025-2026';
+                option.textContent = '2025-2026';
+                academicYearSelect.appendChild(option);
+            }
+        }
 
         // Financial Doughnut Chart
         const ctx = document.getElementById('financialChart').getContext('2d');
@@ -744,24 +865,7 @@
             try {
                 alert('Generating images... This may take a few seconds.');
 
-                // Capture Collection Trends chart
-                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
-                const trendsCanvas = await html2canvas(trendsSection, {
-                    backgroundColor: '#1a1a2e',
-                    scale: 2
-                });
-                
-                // Download Collection Trends image
-                const trendsImg = trendsCanvas.toDataURL('image/png');
-                const link1 = document.createElement('a');
-                link1.href = trendsImg;
-                link1.download = 'collection_trends_' + new Date().toISOString().split('T')[0] + '.png';
-                document.body.appendChild(link1);
-                link1.click();
-                document.body.removeChild(link1);
-
-                // Small delay before next export
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Collection Trends section removed from export
 
                 // Capture Program-Year section
                 const programYearSection = document.querySelectorAll('.glass-panel')[document.querySelectorAll('.glass-panel').length - 1];
@@ -815,11 +919,7 @@
                 pdf.text('Pending Fines: PHP ' + (@pendingFines).toLocaleString(), 20, 69);
                 pdf.text('Grand Total: PHP ' + (@(totalCollections + pendingFees + pendingFines)).toLocaleString(), 20, 76);
 
-                // Add Collection Trends chart
-                const trendsSection = document.querySelector('.glass-panel:has(#trendsChart)');
-                const trendsCanvas = await html2canvas(trendsSection, { scale: 1 });
-                const trendsImg = trendsCanvas.toDataURL('image/jpeg', 0.7);
-                pdf.addImage(trendsImg, 'JPEG', 20, 85, 170, 80);
+                // Collection Trends section removed from PDF export
 
                 // Page 2
                 pdf.addPage();
@@ -860,17 +960,8 @@
                 const ws1 = XLSX.utils.aoa_to_sheet(statsData);
                 XLSX.utils.book_append_sheet(wb, ws1, 'Quick Stats');
 
-                // Sheet 2: Monthly Trends
-                if (monthlyTrends && monthlyTrends.length > 0) {
-                    const monthlyData = monthlyTrends.map(item => ({
-                        Month: item.Month || item.month || 'Unknown',
-                        'Fees Collected': item.FeesCollected || item.feesCollected || 0,
-                        'Fines Collected': item.FinesCollected || item.finesCollected || 0,
-                        'Total': (item.FeesCollected || item.feesCollected || 0) + (item.FinesCollected || item.finesCollected || 0)
-                    }));
-                    const ws2 = XLSX.utils.json_to_sheet(monthlyData);
-                    XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Trends');
-                }
+                
+                // Monthly Trends sheet removed
 
                 XLSX.writeFile(wb, 'OrgTreasury_Data_' + new Date().toISOString().split('T')[0] + '.xlsx');
                 alert('Excel file exported successfully!');
@@ -879,5 +970,34 @@
                 alert('Failed to export Excel: ' + error.message);
             }
         }
+
+        // ============================================================
+        // GROUPING HELPER FUNCTIONS
+        // ============================================================
+        
+        // Collection Trends grouping functions removed
+
+        // Add event listeners for grouping radio buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const groupingRadios = document.querySelectorAll('input[name="groupBy"]');
+            groupingRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    applyFilter(); // Re-apply filter with new grouping
+                });
+            });
+        });
+        
+        // ============================================================
+
+          // Update sum
+
+        // Collection Trends summary cards function removed
+
+// Up
+
+        // Collection Trends chart function removed
+
+// Load initial data on page load
+        loadCollectionTrends('last30days');
     </script>
 }
