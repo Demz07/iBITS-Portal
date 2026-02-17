@@ -94,6 +94,72 @@
             margin: 5px 0;
         }
 
+        /* Collection Trends Styles */
+        .period-btn {
+            min-width: 110px;
+        }
+
+        .period-btn.active {
+            background-color: #FFD700;
+            color: #000;
+            border-color: #FFD700;
+        }
+
+        /* Compact Summary Cards */
+        .summary-card-compact {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .summary-card-compact:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-card-compact h6 {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .summary-card-compact small {
+            font-size: 11px;
+        }
+
+        .top-days-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .top-days-list li {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #FFD700;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .top-days-list .date {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .top-days-list .amount {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .top-days-list .breakdown {
+            color: #999;
+            font-size: 12px;
+        }
+
         /* Custom Modal Styles */
         .custom-modal-overlay {
             position: fixed;
@@ -335,8 +401,14 @@
             <h5 class="glass-header-title mb-3">
                 <i class="bi bi-pie-chart-fill me-2 text-gold"></i> Financial Overview
             </h5>
-            <div style="position: relative; height: 400px;">
+            <div id="financialChartContainer" style="position: relative; height: 400px;">
                 <canvas id="financialChart"></canvas>
+                <div id="financialNoData" class="no-data-message" style="display: none;">
+                    <i class="bi bi-pie-chart"></i>
+                    <h5>No Financial Data Available</h5>
+                    <p>There are no fee or fine records to display.</p>
+                    <p>Data will appear once students make payments.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -374,6 +446,69 @@
                 }
                 <div class="progress-bar bg-success" role="progressbar" style="width: @collectionRate%" aria-valuenow="@collectionRate" aria-valuemin="0" aria-valuemax="100">
                     @collectionRate.ToString("F1")%
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COLLECTION TRENDS -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="glass-panel">
+            <h5 class="glass-header-title mb-3">
+                <i class="bi bi-graph-up me-2 text-gold"></i> Collection Trends
+                <span id="currentPeriodLabel" class="badge badge-gold ms-2">Last 30 Days</span>
+            </h5>
+
+            <!-- Period Selector -->
+            <div class="mb-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <label class="text-muted small me-2">Quick Periods:</label>
+                    <button class="btn btn-sm btn-outline-gold period-btn" data-period="thisweek">
+                        <i class="bi bi-calendar-week me-1"></i> This Week
+                    </button>
+                    <button class="btn btn-sm btn-outline-gold period-btn" data-period="thismonth">
+                        <i class="bi bi-calendar-month me-1"></i> This Month
+                    </button>
+                    <button class="btn btn-sm btn-outline-gold period-btn active" data-period="last30days">
+                        <i class="bi bi-clock-history me-1"></i> Last 30 Days
+                    </button>
+                    <button class="btn btn-sm btn-outline-gold period-btn" data-period="last90days">
+                        <i class="bi bi-calendar3-range me-1"></i> Last 90 Days
+                    </button>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <label class="text-muted small me-2">Custom Range:</label>
+                    <input type="date" id="customStartDate" class="form-control form-control-sm" style="width: 150px;">
+                    <span class="text-muted">to</span>
+                    <input type="date" id="customEndDate" class="form-control form-control-sm" style="width: 150px;">
+                    <button class="btn btn-sm btn-gold" id="applyCustomRange">
+                        <i class="bi bi-check-circle me-1"></i> Apply
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="row">
+                <div class="col-lg-8 mb-3">
+                    <div style="position: relative; height: 400px;">
+                        <canvas id="collectionTrendsChart"></canvas>
+                        <div id="collectionTrendsNoData" class="no-data-message" style="display: none;">
+                            <i class="bi bi-bar-chart"></i>
+                            <h5>No Collection Data Available</h5>
+                            <p>There are no validated collections for the selected period.</p>
+                            <p>Try selecting a different date range or check back later.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 5 Collection Days -->
+                <div class="col-lg-4 mb-3">
+                    <h6 class="text-gold mb-3"><i class="bi bi-trophy me-2"></i>Top Collection Days</h6>
+                    <ul id="topDaysList" class="top-days-list">
+                        <li style="text-align: center; color: #999;">Loading...</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -573,11 +708,194 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     
     <script>
-        // Collection Trends removed - no chart variables needed
-        
-        
+        // Collection Trends Bar Chart Variables
+        let collectionTrendsChart = null;
+        let currentPeriod = 'last30days';
+
+        // ============================================================
+        // LOAD COLLECTION TRENDS DATA
+        // ============================================================
+        function loadCollectionTrendsData(period = null, startDate = null, endDate = null) {
+            console.log('Loading Collection Trends:', period, startDate, endDate);
+            
+            // Update active button
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (period) {
+                const activeBtn = document.querySelector(`[data-period="${period}"]`);
+                if (activeBtn) activeBtn.classList.add('active');
+                currentPeriod = period;
+            }
+            
+            // Show loading
+            document.getElementById('currentPeriodLabel').innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Loading...';
+            
+            // Build query parameters
+            let params = new URLSearchParams();
+            
+            if (period && period !== 'custom') {
+                params.append('period', period);
+            } else if (startDate && endDate) {
+                params.append('period', 'custom');
+                params.append('startDate', startDate);
+                params.append('endDate', endDate);
+            } else {
+                params.append('period', 'last30days');
+            }
+            
+            // Fetch data
+            fetch(`/Officer/GetCollectionTrendsData?${params}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(result => {
+                    console.log('Collection Trends Result:', result);
+                    
+                    if (result.success) {
+                        // Update period label
+                        document.getElementById('currentPeriodLabel').textContent = result.periodLabel;
+                        
+                        // Update top days list
+                        updateTopDaysList(result.topDays);
+                        
+                        // Update chart
+                        updateCollectionTrendsChart(result.data, result.grouping);
+                    } else {
+                        showCustomModal('Error Loading Data', result.message || 'Failed to load collection trends.', 'error');
+                        document.getElementById('currentPeriodLabel').textContent = 'Error';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading collection trends:', error);
+                    showCustomModal('Data Load Failed', 
+                        'Unable to retrieve collection trends data. Please check your connection and try again.', 
+                        'error');
+                    document.getElementById('currentPeriodLabel').textContent = 'Error';
+                });
+        }
+
         // ============================================================
         // CUSTOM MODAL FUNCTIONS
+        // ============================================================
+        // UPDATE TOP DAYS LIST
+        // ============================================================
+        function updateTopDaysList(topDays) {
+            const listContainer = document.getElementById('topDaysList');
+            
+            if (!topDays || topDays.length === 0) {
+                listContainer.innerHTML = '<li style="text-align: center; color: #999;">No collection data available</li>';
+                return;
+            }
+            
+            listContainer.innerHTML = topDays.map((day, index) => `
+                <li>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge badge-gold me-2">#${index + 1}</span>
+                            <span class="date">${day.date}</span>
+                        </div>
+                        <div class="text-end">
+                            <div class="amount">₱${day.amount.toLocaleString()}</div>
+                            <div class="breakdown">Fees: ₱${day.fees.toLocaleString()} | Fines: ₱${day.fines.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // ============================================================
+        // UPDATE COLLECTION TRENDS CHART
+        // ============================================================
+        function updateCollectionTrendsChart(data, grouping) {
+            const canvas = document.getElementById('collectionTrendsChart');
+            const noDataDiv = document.getElementById('collectionTrendsNoData');
+            
+            if (!data || data.length === 0) {
+                canvas.style.display = 'none';
+                noDataDiv.style.display = 'block';
+                if (collectionTrendsChart) {
+                    collectionTrendsChart.destroy();
+                    collectionTrendsChart = null;
+                }
+                return;
+            }
+            
+            canvas.style.display = 'block';
+            noDataDiv.style.display = 'none';
+            
+            const labels = data.map(d => d.label);
+            const feesData = data.map(d => d.fees);
+            const finesData = data.map(d => d.fines);
+            
+            if (collectionTrendsChart) {
+                collectionTrendsChart.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            collectionTrendsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Fees',
+                            data: feesData,
+                            backgroundColor: 'rgba(255, 215, 0, 0.8)',
+                            borderColor: 'rgba(255, 215, 0, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Fines',
+                            data: finesData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#fff', font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString();
+                                },
+                                footer: function(tooltipItems) {
+                                    let total = 0;
+                                    tooltipItems.forEach(item => { total += item.parsed.y; });
+                                    return 'Total: ₱' + total.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#fff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#fff',
+                                callback: function(value) { return '₱' + value.toLocaleString(); }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
         // ============================================================
         function showCustomModal(title, message, type = 'error') {
             const modal = document.getElementById('customModalOverlay');
@@ -820,41 +1138,66 @@
             }
         }
 
-        // Financial Doughnut Chart
-        const ctx = document.getElementById('financialChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Paid Fees', 'Paid Fines', 'Unpaid Fees', 'Unpaid Fines'],
-                datasets: [{
-                    data: [@totalFeesCollected, @totalFinesCollected, @pendingFees, @pendingFines],
-                    backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
-                    borderWidth: 2,
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#fff',
-                            padding: 20,
-                            font: { size: 14 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+        // ============================================================
+        // FINANCIAL OVERVIEW PIE CHART
+        // ============================================================
+        
+        // Check if we have financial data
+        const totalFeesCollected = @totalFeesCollected;
+        const totalFinesCollected = @totalFinesCollected;
+        const pendingFees = @pendingFees;
+        const pendingFines = @pendingFines;
+        
+        const hasFinancialData = (totalFeesCollected + totalFinesCollected + pendingFees + pendingFines) > 0;
+        
+        const financialCanvas = document.getElementById('financialChart');
+        const financialNoDataDiv = document.getElementById('financialNoData');
+        
+        if (!hasFinancialData) {
+            // Hide canvas and show no-data message
+            financialCanvas.style.display = 'none';
+            financialNoDataDiv.style.display = 'block';
+        } else {
+            // Show canvas and hide no-data message
+            financialCanvas.style.display = 'block';
+            financialNoDataDiv.style.display = 'none';
+            
+            // Initialize the pie chart
+            const ctx = financialCanvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Paid Fees', 'Paid Fines', 'Unpaid Fees', 'Unpaid Fines'],
+                    datasets: [{
+                        data: [totalFeesCollected, totalFinesCollected, pendingFees, pendingFines],
+                        backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
+                        borderWidth: 2,
+                        borderColor: 'rgba(255, 255, 255, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#fff',
+                                padding: 20,
+                                font: { size: 14 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // ============================================================
         // EXPORT FUNCTIONS
@@ -995,9 +1338,51 @@
 
 // Up
 
-        // Collection Trends chart function removed
-
-// Load initial data on page load
-        loadCollectionTrends('last30days');
+        // ============================================================
+        // EVENT LISTENERS - COLLECTION TRENDS
+        // ============================================================
+        
+        // Period button click handlers
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const period = this.getAttribute('data-period');
+                loadCollectionTrendsData(period);
+            });
+        });
+        
+        // Custom date range apply button
+        document.getElementById('applyCustomRange').addEventListener('click', function() {
+            const startDate = document.getElementById('customStartDate').value;
+            const endDate = document.getElementById('customEndDate').value;
+            
+            if (!startDate || !endDate) {
+                showCustomModal('Invalid Date Selection', 'Please select both start and end dates.', 'warning');
+                return;
+            }
+            
+            if (new Date(endDate) < new Date(startDate)) {
+                showCustomModal('Invalid Date Range', 'End date must be after start date.', 'warning');
+                return;
+            }
+            
+            if (new Date(endDate) > new Date()) {
+                showCustomModal('Invalid Date Range', 'Cannot select future dates.', 'warning');
+                return;
+            }
+            
+            const daysDiff = (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24);
+            if (daysDiff > 365) {
+                showCustomModal('Invalid Date Range', 'Date range cannot exceed 1 year (365 days).', 'warning');
+                return;
+            }
+            
+            // Clear active buttons
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            
+            loadCollectionTrendsData('custom', startDate, endDate);
+        });
+        
+        // Load initial data on page load
+        loadCollectionTrendsData('last30days');
     </script>
 }

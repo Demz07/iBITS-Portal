@@ -13,8 +13,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace iBITS_Portal.Controllers
@@ -923,7 +926,287 @@ namespace iBITS_Portal.Controllers
             return View();
         }
 
-        // Duplicate method removed - see line 5778 for the active GetMonthlyTrends method
+        // ============================================================
+        // GET COLLECTION TRENDS DATA - BAR CHART (VALIDATED REMITTANCES ONLY)
+        // ============================================================
+        [HttpGet]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> GetCollectionTrendsData(string period = null, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            try
+            {
+                // Since we're using Org Treasurer role authorization, 
+                // we can get all fees/fines for this organization through validated remittances
+                DateTime rangeStart;
+                DateTime rangeEnd;
+                string periodLabel;
+                var now = DateTime.Now;
+
+                // Determine date range based on period
+                switch (period?.ToLower())
+                {
+                    case "thisweek":
+                        // Get start of current week (Sunday)
+                        var daysSinceSunday = (int)now.DayOfWeek;
+                        rangeStart = now.AddDays(-daysSinceSunday).Date;
+                        rangeEnd = now;
+                        periodLabel = "This Week";
+                        break;
+
+                    case "thismonth":
+                        rangeStart = new DateTime(now.Year, now.Month, 1);
+                        rangeEnd = now;
+                        periodLabel = $"{now:MMMM yyyy}";
+                        break;
+
+                    case "last30days":
+                        rangeStart = now.AddDays(-30);
+                        rangeEnd = now;
+                        periodLabel = "Last 30 Days";
+                        break;
+
+                    case "last90days":
+                        rangeStart = now.AddDays(-90);
+                        rangeEnd = now;
+                        periodLabel = "Last 90 Days";
+                        break;
+
+                    case "custom":
+                        if (!startDate.HasValue || !endDate.HasValue)
+                        {
+                            return Json(new { success = false, message = "Please provide both start and end dates." });
+                        }
+
+                        if (endDate.Value < startDate.Value)
+                        {
+                            return Json(new { success = false, message = "End date must be after start date." });
+                        }
+
+                        if (endDate.Value > DateTime.Now)
+                        {
+                            return Json(new { success = false, message = "Cannot select future dates." });
+                        }
+
+                        var daysDiff = (endDate.Value - startDate.Value).Days;
+                        if (daysDiff > 365)
+                        {
+                            return Json(new { success = false, message = "Date range cannot exceed 1 year (365 days)." });
+                        }
+
+                        rangeStart = startDate.Value.Date;
+                        rangeEnd = endDate.Value.Date;
+                        periodLabel = $"{rangeStart:MMM dd, yyyy} - {rangeEnd:MMM dd, yyyy}";
+                        break;
+
+                    default:
+                        // Default to Last 30 Days
+                        rangeStart = now.AddDays(-30);
+                        rangeEnd = now;
+                        periodLabel = "Last 30 Days";
+                        break;
+                }
+
+                // Get ALL PAID fees and fines (same logic as dashboard top cards)
+                // This includes both validated remittances AND direct Org Treasurer payments
+                var allFees = await _context.Fees
+                    .Where(f => f.CollectionDate.HasValue
+                        && f.CollectionDate.Value.Date >= rangeStart.Date
+                        && f.CollectionDate.Value.Date <= rangeEnd.Date)
+                    .ToListAsync();
+
+                var allFines = await _context.Fines
+                    .Where(f => f.CollectionDate.HasValue
+                        && f.CollectionDate.Value.Date >= rangeStart.Date
+                        && f.CollectionDate.Value.Date <= rangeEnd.Date)
+                    .ToListAsync();
+
+                // Filter for PAID status only (same as dashboard "Fees Collected" and "Fines Collected")
+                // Includes both validated remittances AND direct Org Treasurer payments
+                var paidFees = allFees
+                    .Where(f => f.FeeStatus != null 
+                        && f.FeeStatus.ToUpper() == "PAID"
+                        && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                    .ToList();
+
+                var paidFines = allFines
+                    .Where(f => f.FinesStatus != null 
+                        && f.FinesStatus.ToUpper() == "PAID"
+                        && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
+                    .ToList();
+
+                // Debug logging
+                Console.WriteLine($"[Collection Trends] Date range: {rangeStart:yyyy-MM-dd} to {rangeEnd:yyyy-MM-dd}");
+                Console.WriteLine($"[Collection Trends] Total fees in range: {allFees.Count}");
+                Console.WriteLine($"[Collection Trends] Paid fees: {paidFees.Count}");
+                Console.WriteLine($"[Collection Trends] Total fines in range: {allFines.Count}");
+                Console.WriteLine($"[Collection Trends] Paid fines: {paidFines.Count}");
+
+                // Get all unique collection dates
+                var allDates = paidFees.Select(f => f.CollectionDate.Value.Date)
+                    .Union(paidFines.Select(f => f.CollectionDate.Value.Date))
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .ToList();
+
+                if (allDates.Count == 0)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        data = new List<object>(),
+                        periodLabel = periodLabel,
+                        summary = new
+                        {
+                            totalCollections = 0,
+                            totalFees = 0,
+                            totalFines = 0,
+                            dailyAverage = 0,
+                            peakDay = "",
+                            peakAmount = 0,
+                            collectionDays = 0,
+                            totalDays = (rangeEnd - rangeStart).Days + 1
+                        },
+                        topDays = new List<object>()
+                    });
+                }
+
+                // Determine grouping based on range
+                int totalDays = (rangeEnd - rangeStart).Days;
+                string grouping;
+
+                if (totalDays <= 31)
+                {
+                    grouping = "daily";
+                }
+                else if (totalDays <= 90)
+                {
+                    grouping = "weekly";
+                }
+                else
+                {
+                    grouping = "monthly";
+                }
+
+                // Group data based on grouping type
+                var chartData = new List<object>();
+
+                if (grouping == "daily")
+                {
+                    // Daily grouping
+                    foreach (var date in allDates)
+                    {
+                        var dayFees = paidFees.Where(f => f.CollectionDate.Value.Date == date).Sum(f => f.Amount ?? 0);
+                        var dayFines = paidFines.Where(f => f.CollectionDate.Value.Date == date).Sum(f => f.Amount ?? 0);
+
+                        chartData.Add(new
+                        {
+                            label = date.ToString("MMM dd"),
+                            fees = dayFees,
+                            fines = dayFines,
+                            total = dayFees + dayFines,
+                            date = date.ToString("yyyy-MM-dd")
+                        });
+                    }
+                }
+                else if (grouping == "weekly")
+                {
+                    // Weekly grouping
+                    var weeklyGroups = allDates
+                        .GroupBy(d => CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(d, CalendarWeekRule.FirstDay, DayOfWeek.Sunday))
+                        .ToList();
+
+                    foreach (var week in weeklyGroups)
+                    {
+                        var weekStart = week.Min();
+                        var weekEnd = week.Max();
+                        var weekFees = paidFees.Where(f => week.Contains(f.CollectionDate.Value.Date)).Sum(f => f.Amount ?? 0);
+                        var weekFines = paidFines.Where(f => week.Contains(f.CollectionDate.Value.Date)).Sum(f => f.Amount ?? 0);
+
+                        chartData.Add(new
+                        {
+                            label = weekStart == weekEnd ? weekStart.ToString("MMM dd") : $"{weekStart:MMM dd} - {weekEnd:MMM dd}",
+                            fees = weekFees,
+                            fines = weekFines,
+                            total = weekFees + weekFines,
+                            date = weekStart.ToString("yyyy-MM-dd")
+                        });
+                    }
+                }
+                else // monthly
+                {
+                    // Monthly grouping
+                    var monthlyGroups = allDates
+                        .GroupBy(d => new { d.Year, d.Month })
+                        .ToList();
+
+                    foreach (var monthGroup in monthlyGroups)
+                    {
+                        var firstDay = new DateTime(monthGroup.Key.Year, monthGroup.Key.Month, 1);
+                        var monthFees = paidFees.Where(f => f.CollectionDate.Value.Year == monthGroup.Key.Year && f.CollectionDate.Value.Month == monthGroup.Key.Month).Sum(f => f.Amount ?? 0);
+                        var monthFines = paidFines.Where(f => f.CollectionDate.Value.Year == monthGroup.Key.Year && f.CollectionDate.Value.Month == monthGroup.Key.Month).Sum(f => f.Amount ?? 0);
+
+                        chartData.Add(new
+                        {
+                            label = firstDay.ToString("MMM yyyy"),
+                            fees = monthFees,
+                            fines = monthFines,
+                            total = monthFees + monthFines,
+                            date = firstDay.ToString("yyyy-MM-dd")
+                        });
+                    }
+                }
+
+                // Calculate summary statistics
+                var totalFees = paidFees.Sum(f => f.Amount ?? 0);
+                var totalFines = paidFines.Sum(f => f.Amount ?? 0);
+                var totalCollections = totalFees + totalFines;
+                var collectionDays = allDates.Count;
+                var dailyAverage = collectionDays > 0 ? totalCollections / collectionDays : 0;
+
+                // Find peak day
+                var dailyTotals = allDates.Select(d => new
+                {
+                    date = d,
+                    total = paidFees.Where(f => f.CollectionDate.Value.Date == d).Sum(f => f.Amount ?? 0) +
+                            paidFines.Where(f => f.CollectionDate.Value.Date == d).Sum(f => f.Amount ?? 0)
+                }).OrderByDescending(x => x.total).ToList();
+
+                var peakDay = dailyTotals.FirstOrDefault();
+
+                // Get top 5 collection days
+                var topDays = dailyTotals.Take(5).Select(d => new
+                {
+                    date = d.date.ToString("MMM dd, yyyy"),
+                    amount = d.total,
+                    fees = paidFees.Where(f => f.CollectionDate.Value.Date == d.date).Sum(f => f.Amount ?? 0),
+                    fines = paidFines.Where(f => f.CollectionDate.Value.Date == d.date).Sum(f => f.Amount ?? 0)
+                }).ToList();
+
+                return Json(new
+                {
+                    success = true,
+                    data = chartData,
+                    periodLabel = periodLabel,
+                    grouping = grouping,
+                    summary = new
+                    {
+                        totalCollections = totalCollections,
+                        totalFees = totalFees,
+                        totalFines = totalFines,
+                        dailyAverage = dailyAverage,
+                        peakDay = peakDay?.date.ToString("MMM dd, yyyy") ?? "",
+                        peakAmount = peakDay?.total ?? 0,
+                        collectionDays = collectionDays,
+                        totalDays = (rangeEnd - rangeStart).Days + 1
+                    },
+                    topDays = topDays
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
 
         // ============================================================
         // POST PAYMENT REMINDER (Org Treasurer)
