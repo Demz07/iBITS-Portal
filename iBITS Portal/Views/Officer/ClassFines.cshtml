@@ -463,7 +463,7 @@
                 <div class="fine-category-header d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapse-@categoryName.Replace(" ", "-").Replace("(", "").Replace(")", "")" aria-expanded="false">
                     <div>
                         <h6 class="text-white mb-1 fw-bold">
-                            <i class="bi bi-chevron-down collapse-icon me-2" style="transition: transform 0.3s; transform: rotate(-90deg);"></i>
+                            <i class="bi bi-chevron-up collapse-icon me-2" style="transition: all 0.3s ease;"></i>
                             @categoryName
                             @if (isClosed)
                             {
@@ -770,21 +770,44 @@
         // DYNAMIC FILTER LOGIC
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle collapse icon rotation
-            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
-                const targetId = header.getAttribute('data-bs-target');
-                const collapseElement = document.querySelector(targetId);
-                const icon = header.querySelector('.collapse-icon');
-                
-                if (collapseElement && icon) {
-                    collapseElement.addEventListener('show.bs.collapse', function() {
-                        icon.style.transform = 'rotate(0deg)';
-                    });
-                    collapseElement.addEventListener('hide.bs.collapse', function() {
-                        icon.style.transform = 'rotate(-90deg)';
-                    });
-                }
-            });
+            // Handle collapse icon switching between chevron-right and chevron-down
+            // Small timeout to ensure Bootstrap is fully initialized
+            setTimeout(() => {
+                document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
+                    const targetId = header.getAttribute('data-bs-target');
+                    const collapseElement = document.querySelector(targetId);
+                    const icon = header.querySelector('.collapse-icon');
+                    
+                    if (collapseElement && icon) {
+                        // Function to update icon
+                        const updateIcon = (isExpanded) => {
+                            if (isExpanded) {
+                                // Expanded: show chevron-down
+                                icon.classList.remove('bi-chevron-up');
+                                icon.classList.add('bi-chevron-down');
+                                header.setAttribute('aria-expanded', 'true');
+                            } else {
+                                // Collapsed: show chevron-up
+                                icon.classList.remove('bi-chevron-down');
+                                icon.classList.add('bi-chevron-up');
+                                header.setAttribute('aria-expanded', 'false');
+                            }
+                        };
+                        
+                        // Set initial state based on whether collapse is shown
+                        updateIcon(collapseElement.classList.contains('show'));
+                        
+                        // Add event listeners for collapse state changes
+                        collapseElement.addEventListener('show.bs.collapse', function() {
+                            updateIcon(true);
+                        });
+                        
+                        collapseElement.addEventListener('hide.bs.collapse', function() {
+                            updateIcon(false);
+                        });
+                    }
+                });
+            }, 100);
 
             const filterSearch = document.getElementById('filterSearch');
             const filterFineType = document.getElementById('filterFineType');
