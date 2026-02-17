@@ -34,6 +34,178 @@
     </div>
 }
 
+<!-- EVENT FILTER PANEL (Collapsible) -->
+<div class="glass-panel mb-3">
+    <!-- Filter Header -->
+    <div class="p-3 d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+        <div class="d-flex align-items-center gap-3">
+            <h6 class="mb-0" style="color: var(--gold-text); font-weight: 600;">
+                <i class="bi bi-funnel-fill me-2"></i>Filters
+            </h6>
+            <!-- Active Filter Badges -->
+            <div id="activeFilterBadges" class="d-flex flex-wrap gap-2"></div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" id="clearAllFilters" class="btn btn-sm" 
+                    style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 4px 10px; font-size: 0.8rem;">
+                <i class="bi bi-x-circle me-1"></i>Clear
+            </button>
+            <i class="bi bi-chevron-down" id="filterToggleIcon" style="color: var(--gold-text); transition: transform 0.3s;"></i>
+        </div>
+    </div>
+
+    <!-- Collapsible Filter Form -->
+    <div class="collapse show" id="filterCollapse">
+        <div class="p-3 pt-0" style="border-top: 1px solid var(--border-color);">
+            <form id="eventFilterForm" method="get" asp-action="Events">
+                <div class="row g-2">
+                    <!-- Search Bar -->
+                    <div class="col-md-3">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-search me-1"></i>Search
+                        </label>
+                        <input type="text" 
+                               name="search" 
+                               id="searchInput"
+                               class="form-control glass-input filter-trigger" 
+                               placeholder="Search events..."
+                               value="@ViewBag.CurrentSearch">
+                    </div>
+
+                    <!-- Academic Year Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-calendar3 me-1"></i>Academic Year
+                        </label>
+                        <select name="acadYear" 
+                                id="acadYearFilter" 
+                                class="form-select glass-dropdown filter-trigger">
+                            <option value="">All Years</option>
+                            @if (ViewBag.AcademicYears != null)
+                            {
+                                foreach (var year in ViewBag.AcademicYears)
+                                {
+                                    var isSelected = ViewBag.CurrentAcadYear == year;
+                                    <option value="@year" selected="@isSelected">@year</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Event Type Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-tag me-1"></i>Type
+                        </label>
+                        <select name="eventType" 
+                                id="eventTypeFilter" 
+                                class="form-select glass-dropdown filter-trigger">
+                            <option value="">All Types</option>
+                            <option value="iBITS Event" selected="@(ViewBag.CurrentEventType == "iBITS Event")">iBITS Event</option>
+                            <option value="Non-iBITS Event" selected="@(ViewBag.CurrentEventType == "Non-iBITS Event")">Non-iBITS Event</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-clock-history me-1"></i>Status
+                        </label>
+                        <select name="status" 
+                                id="statusFilter" 
+                                class="form-select glass-dropdown filter-trigger">
+                            <option value="">All</option>
+                            <option value="upcoming" selected="@(ViewBag.CurrentStatus == "upcoming")">Upcoming</option>
+                            <option value="today" selected="@(ViewBag.CurrentStatus == "today")">Today</option>
+                            <option value="past" selected="@(ViewBag.CurrentStatus == "past")">Past</option>
+                        </select>
+                    </div>
+
+                    <!-- Closure Status Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-lock me-1"></i>Closure
+                        </label>
+                        <select name="isClosed" 
+                                id="isClosedFilter" 
+                                class="form-select glass-dropdown filter-trigger">
+                            <option value="">All Events</option>
+                            <option value="false" selected="@(ViewBag.CurrentIsClosed == "false")">Open Only</option>
+                            <option value="true" selected="@(ViewBag.CurrentIsClosed == "true")">Closed Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date Range Row -->
+                <div class="row g-2 mt-2">
+                    <!-- Date From -->
+                    <div class="col-md-3">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-calendar-check me-1"></i>Date From
+                        </label>
+                        <input type="date" 
+                               name="dateFrom" 
+                               id="dateFromFilter"
+                               class="form-control glass-input filter-trigger" 
+                               value="@ViewBag.CurrentDateFrom">
+                    </div>
+
+                    <!-- Date To -->
+                    <div class="col-md-3">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-calendar-x me-1"></i>Date To
+                        </label>
+                        <input type="date" 
+                               name="dateTo" 
+                               id="dateToFilter"
+                               class="form-control glass-input filter-trigger" 
+                               value="@ViewBag.CurrentDateTo">
+                    </div>
+                </div>
+
+                <!-- Quick Filter Buttons -->
+                <div class="mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
+                    <small class="text-muted mb-2 d-block" style="color: var(--text-main); font-size: 0.8rem;">Quick Filters:</small>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="quick-filter-btn" data-filter="week">
+                            <i class="bi bi-calendar-week"></i> This Week
+                        </button>
+                        <button type="button" class="quick-filter-btn" data-filter="month">
+                            <i class="bi bi-calendar-month"></i> This Month
+                        </button>
+                        <button type="button" class="quick-filter-btn" data-filter="upcoming">
+                            <i class="bi bi-arrow-right-circle"></i> Upcoming
+                        </button>
+                        <button type="button" class="quick-filter-btn" data-filter="past">
+                            <i class="bi bi-clock-history"></i> Past
+                        </button>
+                        <button type="button" class="quick-filter-btn" data-filter="open">
+                            <i class="bi bi-unlock"></i> Open
+                        </button>
+                        <button type="button" class="quick-filter-btn" data-filter="closed">
+                            <i class="bi bi-lock"></i> Closed
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Results Count Info Bar -->
+@if (ViewBag.FilterApplied == true)
+{
+    <div class="mb-3 p-3" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 8px;">
+        <i class="bi bi-info-circle me-2" style="color: #60a5fa;"></i>
+        <span style="color: var(--text-strong);">
+            Showing <strong>@Model.TotalCount</strong> event(s) matching your filters
+        </span>
+        <a href="@Url.Action("Events")" class="ms-3" style="color: var(--gold-text); text-decoration: none;">
+            <i class="bi bi-x-circle"></i> Clear filters
+        </a>
+    </div>
+}
+
 <!-- EVENTS GRID -->
 <div class="row g-4">
     @if (Model != null && Model.Items != null && Model.Items.Any())
@@ -464,7 +636,6 @@
 
     <!-- Custom Events JS (Uses the External File) -->
     <script src="~/js/events.js"></script>
-}
 
     <script>
         $(document).ready(function () {
@@ -494,8 +665,230 @@
                     $('#createEventModal select').val('iBITS Event').trigger('change');
                 }
             });
+
+            // ========================================
+            // EVENT FILTER FUNCTIONALITY
+            // ========================================
+            
+            // Real-time filtering with debounce
+            let filterTimeout;
+            document.querySelectorAll('.filter-trigger').forEach(input => {
+                input.addEventListener('change', function() {
+                    clearTimeout(filterTimeout);
+                    filterTimeout = setTimeout(() => {
+                        document.getElementById('eventFilterForm').submit();
+                    }, 300);
+                });
+                
+                // For text input, use keyup with debounce
+                if (input.type === 'text') {
+                    input.addEventListener('keyup', function() {
+                        clearTimeout(filterTimeout);
+                        filterTimeout = setTimeout(() => {
+                            document.getElementById('eventFilterForm').submit();
+                        }, 800); // Longer delay for typing
+                    });
+                }
+            });
+            
+            // Collapse icon rotation
+            const filterCollapse = document.getElementById('filterCollapse');
+            const filterToggleIcon = document.getElementById('filterToggleIcon');
+            
+            filterCollapse.addEventListener('show.bs.collapse', function () {
+                filterToggleIcon.style.transform = 'rotate(180deg)';
+            });
+            
+            filterCollapse.addEventListener('hide.bs.collapse', function () {
+                filterToggleIcon.style.transform = 'rotate(0deg)';
+            });
+            
+            // Update active filter badges
+            function updateFilterBadges() {
+                const badges = [];
+                const form = document.getElementById('eventFilterForm');
+                
+                // Check search
+                const search = document.getElementById('searchInput').value;
+                if (search) badges.push({ label: 'Search: ' + search, icon: 'search' });
+                
+                // Check academic year
+                const acadYear = document.getElementById('acadYearFilter').value;
+                if (acadYear) badges.push({ label: acadYear, icon: 'calendar3' });
+                
+                // Check event type
+                const eventType = document.getElementById('eventTypeFilter').value;
+                if (eventType) badges.push({ label: eventType, icon: 'tag' });
+                
+                // Check status
+                const status = document.getElementById('statusFilter').value;
+                if (status) badges.push({ label: status.charAt(0).toUpperCase() + status.slice(1), icon: 'clock-history' });
+                
+                // Check closure
+                const isClosed = document.getElementById('isClosedFilter').value;
+                if (isClosed === 'true') badges.push({ label: 'Closed', icon: 'lock' });
+                if (isClosed === 'false') badges.push({ label: 'Open', icon: 'unlock' });
+                
+                // Check dates
+                const dateFrom = document.getElementById('dateFromFilter').value;
+                const dateTo = document.getElementById('dateToFilter').value;
+                if (dateFrom || dateTo) {
+                    const dateLabel = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : 
+                                      dateFrom ? `From ${dateFrom}` : `To ${dateTo}`;
+                    badges.push({ label: dateLabel, icon: 'calendar-range' });
+                }
+                
+                // Render badges
+                const container = document.getElementById('activeFilterBadges');
+                container.innerHTML = badges.map(b => 
+                    `<span class="badge" style="background: var(--gold-dim); color: var(--gold-text); font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 500;">
+                        <i class="bi bi-${b.icon} me-1"></i>${b.label}
+                    </span>`
+                ).join('');
+            }
+            
+            // Call on page load
+            updateFilterBadges();
+            
+            // Quick Filter Buttons
+            document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    const form = document.getElementById('eventFilterForm');
+                    
+                    // Clear existing filters
+                    form.querySelectorAll('input, select').forEach(input => {
+                        if (input.type !== 'submit' && input.type !== 'button') {
+                            input.value = '';
+                        }
+                    });
+                    
+                    const today = new Date();
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    
+                    switch(filter) {
+                        case 'week':
+                            document.getElementById('dateFromFilter').value = formatDate(today);
+                            const nextWeek = new Date(today);
+                            nextWeek.setDate(today.getDate() + 7);
+                            document.getElementById('dateToFilter').value = formatDate(nextWeek);
+                            break;
+                            
+                        case 'month':
+                            document.getElementById('dateFromFilter').value = formatDate(today);
+                            const nextMonth = new Date(today);
+                            nextMonth.setMonth(today.getMonth() + 1);
+                            document.getElementById('dateToFilter').value = formatDate(nextMonth);
+                            break;
+                            
+                        case 'upcoming':
+                            document.getElementById('statusFilter').value = 'upcoming';
+                            break;
+                            
+                        case 'past':
+                            document.getElementById('statusFilter').value = 'past';
+                            break;
+                            
+                        case 'open':
+                            document.getElementById('isClosedFilter').value = 'false';
+                            break;
+                            
+                        case 'closed':
+                            document.getElementById('isClosedFilter').value = 'true';
+                            break;
+                    }
+                    
+                    form.submit();
+                });
+            });
+            
+            // Clear All Filters Button
+            document.getElementById('clearAllFilters').addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent collapse toggle
+                window.location.href = '@Url.Action("Events")';
+            });
         });
     </script>
+
+    <style>
+        /* Glass Input & Dropdown Styles */
+        .glass-input,
+        .glass-dropdown {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            color: var(--text-strong) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 38px !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .glass-input:focus,
+        .glass-dropdown:focus {
+            outline: none !important;
+            border-color: var(--gold-primary) !important;
+            box-shadow: 0 0 0 3px var(--gold-dim) !important;
+            background: var(--input-bg) !important;
+        }
+
+        /* Dropdown options styling */
+        .glass-dropdown option {
+            background: var(--bg-glass) !important;
+            color: var(--text-strong) !important;
+            padding: 10px !important;
+        }
+
+        .glass-dropdown option:hover {
+            background: var(--gold-dim) !important;
+            color: var(--gold-text) !important;
+        }
+
+        /* Quick Filter Buttons */
+        .quick-filter-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-filter-btn:hover {
+            background: var(--gold-dim);
+            border-color: var(--gold-primary);
+            color: var(--gold-text);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .quick-filter-btn:active {
+            transform: translateY(0);
+        }
+
+        .quick-filter-btn i {
+            font-size: 0.9rem;
+        }
+
+        /* Ensure glass panel uses theme variables */
+        .glass-panel {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-soft);
+        }
+    </style>
 }
-
-

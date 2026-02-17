@@ -188,14 +188,14 @@
         <div class="row g-3">
             <!-- Search Filter -->
             <div class="col-md-3">
-                <label class="form-label small text-muted">Search Student</label>
-                <input type="text" id="filterSearch" name="searchString" class="form-control form-control-sm" placeholder="Name or ID..." value="@ViewData["SearchFilter"]">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Search Student</label>
+                <input type="text" id="filterSearch" name="searchString" class="form-control glass-input" placeholder="Name or ID..." value="@ViewData["SearchFilter"]">
             </div>
 
             <!-- Fine Type Filter -->
             <div class="col-md-2">
-                <label class="form-label small text-muted">Fine Type</label>
-                <select id="filterFineType" name="fineType" class="form-select form-select-sm">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Fine Type</label>
+                <select id="filterFineType" name="fineType" class="form-select glass-dropdown">
                     <option value="">All Types</option>
                     <option value="event" selected="@("event".Equals(ViewData["FineTypeFilter"]))">Event</option>
                     <option value="manual" selected="@("manual".Equals(ViewData["FineTypeFilter"]))">Manual</option>
@@ -204,8 +204,8 @@
 
             <!-- Dynamic Event Filter -->
             <div class="col-md-2" id="eventFilterContainer" style="display:none;">
-                <label class="form-label small text-muted">Event</label>
-                <select id="filterEvent" name="eventId" class="form-select form-select-sm">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Event</label>
+                <select id="filterEvent" name="eventId" class="form-select glass-dropdown">
                     <option value="">All Events</option>
                     @foreach (var evt in ViewBag.Events)
                     {
@@ -216,8 +216,8 @@
 
             <!-- Dynamic Reason Filter -->
             <div class="col-md-2" id="reasonFilterContainer" style="display:none;">
-                <label class="form-label small text-muted">Fine Reason</label>
-                <select id="filterReason" name="manualFineReason" class="form-select form-select-sm">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Fine Reason</label>
+                <select id="filterReason" name="manualFineReason" class="form-select glass-dropdown">
                     <option value="">All Reasons</option>
                     @foreach (var reason in ViewBag.ManualFineReasons)
                     {
@@ -228,24 +228,24 @@
 
             <!-- Status Filter -->
             <div class="col-md-2">
-                <label class="form-label small text-muted">Status</label>
-                <select id="filterStatus" name="statusFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "Unpaid", "Paid", "Waived" }, (string)ViewData["StatusFilter"]))">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Status</label>
+                <select id="filterStatus" name="statusFilter" class="form-select glass-dropdown" asp-items="@(new SelectList(new[] { "Unpaid", "Paid", "Waived" }, (string)ViewData["StatusFilter"]))">
                     <option value="">All Statuses</option>
                 </select>
             </div>
 
             <!-- Program Filter -->
             <div class="col-md-2">
-                <label class="form-label small text-muted">Program</label>
-                <select id="filterProgram" name="programFilter" class="form-select form-select-sm" asp-items="@(new SelectList(new[] { "BSIT", "DIT" }, (string)ViewData["ProgramFilter"]))">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Program</label>
+                <select id="filterProgram" name="programFilter" class="form-select glass-dropdown" asp-items="@(new SelectList(new[] { "BSIT", "DIT" }, (string)ViewData["ProgramFilter"]))">
                     <option value="">All Programs</option>
                 </select>
             </div>
 
             <!-- Year Level Filter -->
             <div class="col-md-2">
-                <label class="form-label small text-muted">Year Level</label>
-                <select id="filterYearLevel" name="yearLevelFilter" class="form-select form-select-sm">
+                <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Year Level</label>
+                <select id="filterYearLevel" name="yearLevelFilter" class="form-select glass-dropdown">
                     <option value="">All Years</option>
                     <option value="1" selected="@("1".Equals(ViewData["YearLevelFilter"]))">1st Year</option>
                     <option value="2" selected="@("2".Equals(ViewData["YearLevelFilter"]))">2nd Year</option>
@@ -582,8 +582,56 @@
             window.location.href = '/Admin/ExportFinesToExcel';
         }
     </script>
+Tool call argument 'replace' pruned from message history.
+
+    <style>
+        /* Glass Morphism Dropdown Styles */
+        .glass-dropdown {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            color: var(--text-strong) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 38px !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .glass-input:focus,
+        .glass-dropdown:focus {
+            outline: none !important;
+            border-color: var(--gold-primary) !important;
+            box-shadow: 0 0 0 3px var(--gold-dim) !important;
+            background: var(--input-bg) !important;
+        }
+
+        /* Dropdown options styling */
+        .glass-dropdown option {
+            background: var(--bg-glass) !important;
+            color: var(--text-strong) !important;
+            padding: 10px !important;
+        }
+
+        .glass-dropdown option:hover {
+            background: var(--gold-dim) !important;
+            color: var(--gold-text) !important;
+        }
+
+        .glass-input {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            color: var(--text-strong) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 38px !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .glass-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+    </style>
     <script src="~/js/fines.js" asp-append-version="true"></script>
 }
-
-
-

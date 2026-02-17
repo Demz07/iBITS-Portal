@@ -245,22 +245,7 @@ body {
         background: var(--gold-dim);
     }
 
-.form-control, .form-select {
-    background-color: var(--input-bg) !important;
-    border: 1px solid var(--input-border) !important;
-    color: var(--text-strong) !important;
-    border-radius: 8px;
-}
-
-    .form-control:focus, .form-select:focus {
-        border-color: var(--gold-primary) !important;
-        box-shadow: 0 0 0 3px var(--gold-dim) !important;
-    }
-
-    /* Input placeholders */
-    .form-control::placeholder {
-        color: rgba(148, 163, 184, 0.6) !important;
-    }
+Tool call argument 'replace' pruned from message history.
 
 /* --- BADGES --- */
 .badge-paid {
@@ -829,3 +814,4 @@ body {
         height: 28px;
     }
 }
+

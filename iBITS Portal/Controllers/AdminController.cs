@@ -2267,7 +2267,16 @@ namespace iBITS_Portal.Controllers
         // EVENT MANAGEMENT
         // =========================================================
         [HttpGet]
-        public async Task<IActionResult> Events(int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> Events(
+            int pageNumber = 1, 
+            int pageSize = 10,
+            string? search = null,
+            string? acadYear = null,
+            string? eventType = null,
+            string? status = null,
+            string? dateFrom = null,
+            string? dateTo = null,
+            string? isClosed = null)
         {
             // --- ADDITION: Run the Auto-Close Logic ---
             // This checks for expired events and assigns fines immediately when the page loads.
@@ -2275,10 +2284,101 @@ namespace iBITS_Portal.Controllers
             // ------------------------------------------
 
             ViewBag.PageSize = pageSize;
+            
+            // Start with base query
             var eventsQuery = _context.Events
                 .Include(e => e.Attendances)
-                .OrderByDescending(e => e.EventDate)
                 .AsQueryable();
+
+            // Track if any filters are applied
+            bool filterApplied = false;
+
+            // Apply Search Filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                eventsQuery = eventsQuery.Where(e => 
+                    (e.EventName != null && e.EventName.Contains(search)) ||
+                    (e.EventDesc != null && e.EventDesc.Contains(search)) ||
+                    (e.EventLocation != null && e.EventLocation.Contains(search))
+                );
+                filterApplied = true;
+            }
+
+            // Apply Academic Year Filter
+            if (!string.IsNullOrWhiteSpace(acadYear))
+            {
+                eventsQuery = eventsQuery.Where(e => e.AcadYear == acadYear);
+                filterApplied = true;
+            }
+
+            // Apply Event Type Filter
+            if (!string.IsNullOrWhiteSpace(eventType))
+            {
+                eventsQuery = eventsQuery.Where(e => e.EventType == eventType);
+                filterApplied = true;
+            }
+
+            // Apply Status Filter (Upcoming, Today, Past)
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var today = DateOnly.FromDateTime(DateTime.Now);
+                
+                switch (status.ToLower())
+                {
+                    case "upcoming":
+                        eventsQuery = eventsQuery.Where(e => e.EventDate.HasValue && e.EventDate.Value > today);
+                        break;
+                    case "today":
+                        eventsQuery = eventsQuery.Where(e => e.EventDate.HasValue && e.EventDate.Value == today);
+                        break;
+                    case "past":
+                        eventsQuery = eventsQuery.Where(e => e.EventDate.HasValue && e.EventDate.Value < today);
+                        break;
+                }
+                filterApplied = true;
+            }
+
+            // Apply Date From Filter
+            if (!string.IsNullOrWhiteSpace(dateFrom) && DateOnly.TryParse(dateFrom, out var fromDate))
+            {
+                eventsQuery = eventsQuery.Where(e => e.EventDate.HasValue && e.EventDate.Value >= fromDate);
+                filterApplied = true;
+            }
+
+            // Apply Date To Filter
+            if (!string.IsNullOrWhiteSpace(dateTo) && DateOnly.TryParse(dateTo, out var toDate))
+            {
+                eventsQuery = eventsQuery.Where(e => e.EventDate.HasValue && e.EventDate.Value <= toDate);
+                filterApplied = true;
+            }
+
+            // Apply IsClosed Filter
+            if (!string.IsNullOrWhiteSpace(isClosed) && bool.TryParse(isClosed, out var closedStatus))
+            {
+                eventsQuery = eventsQuery.Where(e => e.IsClosed == closedStatus);
+                filterApplied = true;
+            }
+
+            // Order by EventDate descending
+            eventsQuery = eventsQuery.OrderByDescending(e => e.EventDate);
+
+            // Pass current filter values to ViewBag for maintaining state
+            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentAcadYear = acadYear;
+            ViewBag.CurrentEventType = eventType;
+            ViewBag.CurrentStatus = status;
+            ViewBag.CurrentDateFrom = dateFrom;
+            ViewBag.CurrentDateTo = dateTo;
+            ViewBag.CurrentIsClosed = isClosed;
+            ViewBag.FilterApplied = filterApplied;
+
+            // Get distinct academic years for dropdown
+            ViewBag.AcademicYears = await _context.Events
+                .Where(e => e.AcadYear != null)
+                .Select(e => e.AcadYear)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
 
             var pagedEvents = await PagedList<Event>.CreateAsync(eventsQuery, pageNumber, pageSize);
             return View(pagedEvents);

@@ -215,14 +215,14 @@
     <div class="row g-3">
         <!-- Search Filter -->
         <div class="col-md-3">
-            <label class="form-label small text-muted">Search</label>
-            <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ref ID, Student Name or ID...">
+            <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Search</label>
+            <input type="text" id="filterSearch" class="form-control glass-input" placeholder="Ref ID, Student Name or ID...">
         </div>
 
         <!-- Fee Name Filter -->
         <div class="col-md-2">
-            <label class="form-label small text-muted">Fee Name</label>
-            <select id="filterFeeName" class="form-select form-select-sm">
+            <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Fee Name</label>
+            <select id="filterFeeName" class="form-select glass-dropdown">
                 <option value="">All Fees</option>
                 @if (ViewBag.FeeNames != null)
                 {
@@ -236,8 +236,8 @@
 
         <!-- Program Filter -->
         <div class="col-md-2">
-            <label class="form-label small text-muted">Program</label>
-            <select id="filterProgram" class="form-select form-select-sm">
+            <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Program</label>
+            <select id="filterProgram" class="form-select glass-dropdown">
                 <option value="">All Programs</option>
                 <option value="BSIT">BSIT</option>
                 <option value="DIT">DIT</option>
@@ -245,9 +245,9 @@
         </div>
 
         <!-- Year Level Filter -->
-        <div class="col-md-1">
-            <label class="form-label small text-muted">Year Level</label>
-            <select id="filterYear" class="form-select form-select-sm">
+        <div class="col-md-2">
+            <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Year Level</label>
+            <select id="filterYear" class="form-select glass-dropdown">
                 <option value="">All Years</option>
                 <option value="1">1st Year</option>
                 <option value="2">2nd Year</option>
@@ -257,16 +257,14 @@
         </div>
 
         <!-- Status Filter -->
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Status</label>
-            <select id="filterStatus" class="form-select form-select-sm">
+        <div class="col-md-3">
+            <label class="form-label small" style="color: var(--gold-text); font-weight: 500;">Status</label>
+            <select id="filterStatus" class="form-select glass-dropdown">
                 <option value="">All Status</option>
                 <option value="paid">Paid</option>
                 <option value="pending">Pending/Unpaid</option>
             </select>
         </div>
-
-
     </div>
 </div>
 
@@ -710,6 +708,41 @@
         }
     </script>
     <script src="~/js/payments.js" asp-append-version="true"></script>
+
+    <style>
+        /* Glass Input & Dropdown Styles */
+        .glass-input,
+        .glass-dropdown {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            color: var(--text-strong) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 38px !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .glass-input:focus,
+        .glass-dropdown:focus {
+            outline: none !important;
+            border-color: var(--gold-primary) !important;
+            box-shadow: 0 0 0 3px var(--gold-dim) !important;
+            background: var(--input-bg) !important;
+        }
+
+        /* Dropdown options styling */
+        .glass-dropdown option {
+            background: var(--bg-glass) !important;
+            color: var(--text-strong) !important;
+            padding: 10px !important;
+        }
+
+        .glass-dropdown option:hover {
+            background: var(--gold-dim) !important;
+            color: var(--gold-text) !important;
+        }
+    </style>
 }
 
 
