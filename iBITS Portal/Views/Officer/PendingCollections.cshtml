@@ -479,7 +479,7 @@
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
-                                    <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
                                         <i class="bi bi-send me-1"></i> Remit to Org Treasurer
                                     </a>
                                 </div>
@@ -692,7 +692,7 @@
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
-                                    <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit">
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
                                         <i class="bi bi-send me-1"></i> Remit to Org Treasurer
                                     </a>
                                 </div>
