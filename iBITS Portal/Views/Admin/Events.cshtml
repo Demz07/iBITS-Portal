@@ -300,6 +300,12 @@
                                         <i class="bi bi-exclamation-triangle-fill"></i>
                                     </button>
 
+                                    <button class="btn btn-sm btn-glass text-warning"
+                                            title="Archive Event"
+                                            onclick="archiveEvent(@item.EventId, '@item.EventName')">
+                                        <i class="bi bi-archive-fill"></i>
+                                    </button>
+
                                     <button class="btn btn-sm btn-manage-event"
                                             style="font-size: 0.75rem; padding: 5px 12px;"
                                             data-bs-toggle="modal"
@@ -813,6 +819,31 @@
                 window.location.href = '@Url.Action("Events")';
             });
         });
+
+        // Archive Event Function
+        function archiveEvent(eventId, eventName) {
+            if (confirm(`Are you sure you want to archive the event "${eventName}"? This will remove it from the active events list.`)) {
+                $.ajax({
+                    url: '@Url.Action("ArchiveEvent", "Admin")',
+                    type: 'POST',
+                    data: { 
+                        eventId: eventId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Event archived successfully!');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while archiving the event.');
+                    }
+                });
+            }
+        }
     </script>
 
     <style>

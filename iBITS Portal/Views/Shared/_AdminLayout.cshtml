@@ -130,6 +130,13 @@
                     </a>
                 </li>
 
+                <!-- Semester Management Link -->
+                <li class="@(action == "SemesterManagement" ? "active" : "")">
+                    <a asp-controller="Admin" asp-action="SemesterManagement">
+                        <i class="bi bi-calendar3-range-fill"></i> Semester Management
+                    </a>
+                </li>
+
                 <!-- ============================================= -->
                 <!-- FINANCIALS DROPDOWN STARTS HERE               -->
                 <!-- ============================================= -->
@@ -205,21 +212,25 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Selector -->
-                    <div class="academic-year-selector d-none d-md-flex align-items-center gap-2">
-                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
-                        <select id="academicYearSelect" class="form-select academic-year-dropdown" title="Set Current Academic Year">
-                            @{
-                                int currentYear = DateTime.Now.Year;
-                                string currentAY = ViewBag.CurrentAcademicYear ?? $"A.Y. {currentYear}-{currentYear + 1}";
-                                for (int year = currentYear + 1; year >= currentYear - 5; year--)
-                                {
-                                    string ayValue = $"A.Y. {year}-{year + 1}";
-                                    <option value="@ayValue" selected="@(currentAY == ayValue)">@ayValue</option>
-                                }
-                            }
-                        </select>
-                    </div>
+                    <!-- Current Semester Display -->
+                    @{
+                        var currentSemester = ViewBag.CurrentSemester as iBITS_Portal.Models.Semester;
+                    }
+                    @if (currentSemester != null && currentSemester.AcademicYear != null)
+                    {
+                        <div class="current-semester-display d-none d-lg-flex flex-column" style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; padding: 8px 12px;">
+                            <div style="font-size: 0.7rem; color: var(--gold-primary); font-weight: 600; letter-spacing: 0.5px;">
+                                <i class="bi bi-calendar-check-fill me-1"></i>CURRENT SEMESTER
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-primary); font-weight: 700; margin-top: 2px;">
+                                @currentSemester.AcademicYear.YearName - @currentSemester.SemesterName
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;">
+                                @currentSemester.StartDate.ToString("MMM dd, yyyy") - @currentSemester.EndDate.ToString("MMM dd, yyyy")
+                            </div>
+                        </div>
+                    }
+                    
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
                         <div style="font-weight:bold; color:var(--text-strong);">Administrator</div>
@@ -345,23 +356,6 @@
                 $('#statusModalIcon').removeClass().addClass('bi bi-check-circle-fill text-success');
                 new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
             }
-            
-
-            // Academic Year AJAX logic
-            $('#academicYearSelect').on('change', function () {
-                var selectedYear = $(this).val();
-                $.ajax({
-                    url: '@Url.Action("SetCurrentAcademicYear", "Admin")',
-                    type: 'POST',
-                    data: { academicYear: selectedYear },
-                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                    success: function (response) {
-                        if (response.success && typeof showToast === 'function') {
-                            showToast('Academic year updated to ' + selectedYear, 'success');
-                        }
-                    }
-                });
-            });
         });
     </script>
 

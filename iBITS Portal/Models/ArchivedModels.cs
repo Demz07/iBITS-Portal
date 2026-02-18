@@ -94,4 +94,155 @@ namespace iBITS_Portal.Models
         [StringLength(500)]
         public string? ArchiveNotes { get; set; }
     }
+
+    [Table("ArchivedFees")]
+    public class ArchivedFee
+    {
+        [Key]
+        public int ArchivedFeeId { get; set; }
+
+        // Original Fee Data
+        public int FeeId { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        public string FeeName { get; set; } = null!;
+        
+        [Required]
+        [StringLength(450)]
+        public string StudentNum { get; set; } = null!;
+        
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Amount { get; set; }
+        
+        public DateTime? DueDate { get; set; }
+        
+        public DateTime? CollectionDate { get; set; }
+        
+        [StringLength(20)]
+        public string? Status { get; set; }
+        
+        public string? AcadYear { get; set; }
+
+        // Archive Metadata
+        [Required]
+        public DateTime ArchivedDate { get; set; }
+
+        [Required]
+        [StringLength(450)]
+        public string ArchivedBy { get; set; } = null!;
+
+        [Required]
+        public string ArchiveReason { get; set; } = "Semester Closure";
+
+        [StringLength(500)]
+        public string? ArchiveNotes { get; set; }
+        
+        public int? SemesterId { get; set; }
+    }
+
+    [Table("ArchivedFines")]
+    public class ArchivedFine
+    {
+        [Key]
+        public int ArchivedFineId { get; set; }
+
+        // Original Fine Data
+        public int FineId { get; set; }
+        
+        [Required]
+        [StringLength(450)]
+        public string StudentNum { get; set; } = null!;
+        
+        public int? EventId { get; set; }
+        
+        [StringLength(200)]
+        public string? EventName { get; set; }
+        
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Amount { get; set; }
+        
+        [StringLength(50)]
+        public string? Reason { get; set; }
+        
+        public DateTime? FineDate { get; set; }
+        
+        public DateTime? CollectionDate { get; set; }
+        
+        [StringLength(20)]
+        public string? Status { get; set; }
+
+        // Archive Metadata
+        [Required]
+        public DateTime ArchivedDate { get; set; }
+
+        [Required]
+        [StringLength(450)]
+        public string ArchivedBy { get; set; } = null!;
+
+        [Required]
+        public string ArchiveReason { get; set; } = "Semester Closure";
+
+        [StringLength(500)]
+        public string? ArchiveNotes { get; set; }
+        
+        public int? SemesterId { get; set; }
+    }
+
+    [Table("ArchivedStudents")]
+    public class ArchivedStudent
+    {
+        [Key]
+        public int ArchivedStudentId { get; set; }
+
+        // Original Student Data
+        [Required]
+        [StringLength(450)]
+        public string StudentNum { get; set; } = null!;
+        
+        [Required]
+        [StringLength(100)]
+        public string StudentFn { get; set; } = null!;
+        
+        [StringLength(100)]
+        public string? StudentMn { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        public string StudentLn { get; set; } = null!;
+        
+        [StringLength(50)]
+        public string? Program { get; set; }
+        
+        public int? YearLevel { get; set; }
+        
+        [StringLength(50)]
+        public string? Section { get; set; }
+        
+        [StringLength(100)]
+        public string? Email { get; set; }
+        
+        [StringLength(20)]
+        public string? ContactNum { get; set; }
+
+        // Archive Metadata
+        [Required]
+        public DateTime ArchivedDate { get; set; }
+
+        [Required]
+        [StringLength(450)]
+        public string ArchivedBy { get; set; } = null!;
+
+        [Required]
+        public string ArchiveReason { get; set; } = "Semester Closure";
+
+        [StringLength(500)]
+        public string? ArchiveNotes { get; set; }
+        
+        public int? SemesterId { get; set; }
+        
+        public int FeesArchived { get; set; }
+        
+        public int FinesArchived { get; set; }
+    }
 }

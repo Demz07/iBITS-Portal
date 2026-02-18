@@ -3,6 +3,7 @@
 using iBITS_Portal.Data;
 using iBITS_Portal.Models;
 using iBITS_Portal.Utilities;
+using iBITS_Portal.Filters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,7 +51,13 @@ namespace iBITS_Portal
                 options.AccessDeniedPath = "/Identity/Account/AccessDenied";
             });
 
-            builder.Services.AddControllersWithViews();
+            // Register CurrentSemesterFilter globally
+            builder.Services.AddScoped<CurrentSemesterFilter>();
+            
+            builder.Services.AddControllersWithViews(options =>
+            {
+                options.Filters.AddService<CurrentSemesterFilter>();
+            });
 
             var app = builder.Build();
 

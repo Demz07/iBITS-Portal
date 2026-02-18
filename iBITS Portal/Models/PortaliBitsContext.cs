@@ -42,6 +42,20 @@ public partial class PortaliBitsContext : DbContext
     // ANNOUNCEMENT DISMISSAL TRACKING
     // ============================================================
     public virtual DbSet<UserAnnouncementDismissal> UserAnnouncementDismissals { get; set; }
+    
+    // ============================================================
+    // SEMESTER & ACADEMIC YEAR SYSTEM
+    // ============================================================
+    public virtual DbSet<AcademicYear> AcademicYears { get; set; }
+    public virtual DbSet<Semester> Semesters { get; set; }
+    public virtual DbSet<StudentSemester> StudentSemesters { get; set; }
+    
+    // ============================================================
+    // ARCHIVE SYSTEM (Fees, Fines, Students)
+    // ============================================================
+    public virtual DbSet<ArchivedFee> ArchivedFees { get; set; }
+    public virtual DbSet<ArchivedFine> ArchivedFines { get; set; }
+    public virtual DbSet<ArchivedStudent> ArchivedStudents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -399,6 +413,30 @@ public partial class PortaliBitsContext : DbContext
                   .HasForeignKey(d => d.AnnouncementId)
                   .HasConstraintName("FK_UserAnnouncementDismissal_Announcement")
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================
+        // SEMESTER & ACADEMIC YEAR RELATIONSHIPS
+        // ============================================================
+        modelBuilder.Entity<Semester>(entity =>
+        {
+            entity.HasOne(s => s.AcademicYear)
+                .WithMany(ay => ay.Semesters)
+                .HasForeignKey(s => s.AcademicYearId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudentSemester>(entity =>
+        {
+            entity.HasOne(ss => ss.Semester)
+                .WithMany(s => s.StudentSemesters)
+                .HasForeignKey(ss => ss.SemesterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ss => ss.Student)
+                .WithMany()
+                .HasForeignKey(ss => ss.StudentNum)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

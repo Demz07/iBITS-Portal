@@ -1,0 +1,498 @@
+@{
+    ViewData["Title"] = "Semester Management";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var academicYears = ViewBag.AcademicYears as List<iBITS_Portal.Models.AcademicYear>;
+    var currentSemester = ViewBag.CurrentSemester as iBITS_Portal.Models.Semester;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+}
+
+<style>
+    .glass-panel {
+        background: rgba(11, 26, 51, 0.4);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .current-semester-badge {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(194, 157, 43, 0.2));
+        border: 2px solid var(--gold-primary);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .current-semester-badge h3 {
+        color: var(--gold-primary);
+        margin: 0;
+        font-size: 24px;
+    }
+
+    .current-semester-badge p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 8px 0 0 0;
+    }
+
+    .ay-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .ay-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(212, 175, 55, 0.4);
+    }
+
+    .semester-item {
+        background: rgba(11, 26, 51, 0.3);
+        border-left: 3px solid transparent;
+        padding: 12px 16px;
+        margin: 8px 0;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .semester-item.active {
+        border-left-color: #28a745;
+        background: rgba(40, 167, 69, 0.1);
+    }
+
+    .semester-item.current {
+        border-left-color: var(--gold-primary);
+        background: rgba(212, 175, 55, 0.1);
+    }
+
+    .btn-gold {
+        background: linear-gradient(135deg, #d4af37, #c29d2b);
+        border: none;
+        color: #0b1a33;
+        font-weight: 600;
+        padding: 10px 24px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-gold:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+        color: #0b1a33;
+    }
+
+    .form-control-dark {
+        background: rgba(11, 26, 51, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 8px;
+        padding: 10px 16px;
+    }
+
+    .form-control-dark:focus {
+        background: rgba(11, 26, 51, 0.8);
+        border-color: var(--gold-primary);
+        color: white;
+        box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
+    }
+
+    .modal-dark {
+        background: rgba(11, 26, 51, 0.95);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 16px;
+    }
+
+    .modal-dark .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-dark .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="text-white mb-2">
+                <i class="bi bi-calendar3-range-fill text-warning me-2"></i>
+                Semester Management
+            </h2>
+            <p class="text-muted">Manage Academic Years and Semesters</p>
+        </div>
+    </div>
+
+    <!-- Current Semester Display -->
+    @if (currentSemester != null)
+    {
+        <div class="current-semester-badge">
+            <h3>
+                <i class="bi bi-star-fill me-2"></i>
+                Current: @currentSemester.AcademicYear?.YearName - @currentSemester.SemesterName
+            </h3>
+            <p>
+                @currentSemester.StartDate.ToString("MMM dd, yyyy") - @currentSemester.EndDate.ToString("MMM dd, yyyy")
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            No current semester set. Please create an Academic Year and Semester below.
+        </div>
+    }
+
+    <div class="row">
+        <!-- Left Column: Create Forms -->
+        <div class="col-md-5">
+            <!-- Create Academic Year -->
+            <div class="glass-panel">
+                <h4 class="text-white mb-3">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Create Academic Year
+                </h4>
+                <form id="createAYForm">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Year Name</label>
+                        <input type="text" class="form-control form-control-dark" id="ayYearName" 
+                               placeholder="e.g., 2025-2026" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Start Date</label>
+                        <input type="date" class="form-control form-control-dark" id="ayStartDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">End Date</label>
+                        <input type="date" class="form-control form-control-dark" id="ayEndDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-gold w-100">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Create Academic Year
+                    </button>
+                </form>
+            </div>
+
+            <!-- Create Semester -->
+            <div class="glass-panel mt-4">
+                <h4 class="text-white mb-3">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Create Semester
+                </h4>
+                <form id="createSemesterForm">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Academic Year</label>
+                        <select class="form-control form-control-dark" id="semesterAYId" required>
+                            <option value="">Select Academic Year</option>
+                            @if (academicYears != null)
+                            {
+                                @foreach (var ay in academicYears)
+                                {
+                                    <option value="@ay.AcademicYearId">@ay.YearName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Semester Name</label>
+                        <select class="form-control form-control-dark" id="semesterName" required>
+                            <option value="">Select Semester</option>
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="Summer">Summer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Start Date</label>
+                        <input type="date" class="form-control form-control-dark" id="semesterStartDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">End Date</label>
+                        <input type="date" class="form-control form-control-dark" id="semesterEndDate" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="semesterIsCurrent">
+                        <label class="form-check-label text-white" for="semesterIsCurrent">
+                            Set as Current Semester
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-gold w-100">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Create Semester
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Existing Data -->
+        <div class="col-md-7">
+            <div class="glass-panel">
+                <h4 class="text-white mb-3">
+                    <i class="bi bi-calendar3 me-2"></i>
+                    Academic Years & Semesters
+                </h4>
+
+                @if (academicYears != null && academicYears.Any())
+                {
+                    @foreach (var ay in academicYears)
+                    {
+                        <div class="ay-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="text-warning mb-0">
+                                        <i class="bi bi-calendar-event me-2"></i>
+                                        @ay.YearName
+                                    </h5>
+                                    <p class="text-muted small mb-0 mt-1">
+                                        @ay.StartDate.ToString("MMM dd, yyyy") - @ay.EndDate.ToString("MMM dd, yyyy")
+                                    </p>
+                                </div>
+                                <button class="btn btn-sm btn-danger delete-ay-btn" 
+                                        data-ay-id="@ay.AcademicYearId" 
+                                        data-ay-name="@ay.YearName"
+                                        title="Delete Academic Year">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            @if (ay.Semesters != null && ay.Semesters.Any())
+                            {
+                                @foreach (var sem in ay.Semesters.OrderBy(s => s.SemesterName))
+                                {
+                                    <div class="semester-item @(sem.IsCurrent ? "current" : "") @(sem.IsActive ? "active" : "")">
+                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                            <div>
+                                                <strong class="text-white">@sem.SemesterName</strong>
+                                                @if (sem.IsCurrent)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-2">Current</span>
+                                                }
+                                                @if (sem.IsActive)
+                                                {
+                                                    <span class="badge bg-success ms-2">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary ms-2">Inactive</span>
+                                                }
+                                                <br>
+                                                <small class="text-muted">
+                                                    @sem.StartDate.ToString("MMM dd, yyyy") - @sem.EndDate.ToString("MMM dd, yyyy")
+                                                </small>
+                                            </div>
+                                            <button class="btn btn-sm btn-danger delete-sem-btn" 
+                                                    data-sem-id="@sem.SemesterId" 
+                                                    data-sem-name="@sem.SemesterName"
+                                                    data-ay-name="@ay.YearName"
+                                                    title="Delete Semester">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div>
+                                            @if (!sem.IsCurrent)
+                                            {
+                                                <button class="btn btn-sm btn-outline-warning me-2" 
+                                                        onclick="setCurrentSemester(@sem.SemesterId)">
+                                                    <i class="bi bi-star"></i> Set Current
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    onclick="toggleSemesterActive(@sem.SemesterId)">
+                                                <i class="bi bi-toggle-@(sem.IsActive ? "on" : "off")"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">No semesters created yet.</p>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted text-center">No Academic Years created yet. Create one using the form on the left.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Configure toastr
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+
+        // Create Academic Year
+        $('#createAYForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            $.ajax({
+                url: '@Url.Action("CreateAcademicYear", "Admin")',
+                type: 'POST',
+                data: {
+                    yearName: $('#ayYearName').val(),
+                    startDate: $('#ayStartDate').val(),
+                    endDate: $('#ayEndDate').val(),
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        location.reload();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('An error occurred while creating Academic Year.');
+                }
+            });
+        });
+
+        // Create Semester
+        $('#createSemesterForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            $.ajax({
+                url: '@Url.Action("CreateSemester", "Admin")',
+                type: 'POST',
+                data: {
+                    academicYearId: $('#semesterAYId').val(),
+                    semesterName: $('#semesterName').val(),
+                    startDate: $('#semesterStartDate').val(),
+                    endDate: $('#semesterEndDate').val(),
+                    isCurrent: $('#semesterIsCurrent').is(':checked'),
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        location.reload();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('An error occurred while creating Semester.');
+                }
+            });
+        });
+
+        // Set Current Semester
+        function setCurrentSemester(semesterId) {
+            if (!confirm('Set this as the current semester? This will affect new student imports.')) return;
+            
+            $.ajax({
+                url: '@Url.Action("SetCurrentSemester", "Admin")',
+                type: 'POST',
+                data: {
+                    semesterId: semesterId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        location.reload();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('An error occurred.');
+                }
+            });
+        }
+
+        // Toggle Semester Active
+        function toggleSemesterActive(semesterId) {
+            $.ajax({
+                url: '@Url.Action("ToggleSemesterActive", "Admin")',
+                type: 'POST',
+                data: {
+                    semesterId: semesterId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success('Semester status updated!');
+                        location.reload();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function() {
+                    toastr.error('An error occurred.');
+                }
+            });
+        }
+
+        // ======================= DELETE ACADEMIC YEAR =======================
+        $(document).on('click', '.delete-ay-btn', function() {
+            var ayId = $(this).data('ay-id');
+            var ayName = $(this).data('ay-name');
+            
+            if (confirm(`Are you sure you want to delete Academic Year "${ayName}"?\n\nThis will also delete all semesters under this academic year.\n\nThis action cannot be undone!`)) {
+                $.ajax({
+                    url: '@Url.Action("DeleteAcademicYear", "Admin")',
+                    type: 'POST',
+                    data: { academicYearId: ayId },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            location.reload();
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Failed to delete academic year');
+                    }
+                });
+            }
+        });
+
+        // ======================= DELETE SEMESTER =======================
+        $(document).on('click', '.delete-sem-btn', function() {
+            var semId = $(this).data('sem-id');
+            var semName = $(this).data('sem-name');
+            var ayName = $(this).data('ay-name');
+            
+            if (confirm(`Are you sure you want to delete "${semName}" from ${ayName}?\n\nThis action cannot be undone!`)) {
+                $.ajax({
+                    url: '@Url.Action("DeleteSemester", "Admin")',
+                    type: 'POST',
+                    data: { semesterId: semId },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            location.reload();
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Failed to delete semester');
+                    }
+                });
+            }
+        });
+    </script>
+}

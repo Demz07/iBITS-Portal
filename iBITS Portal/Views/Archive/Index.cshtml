@@ -23,8 +23,13 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="payments-tab" data-bs-toggle="pill" data-bs-target="#payments" type="button" role="tab">
-                    <i class="bi bi-credit-card me-2"></i>Payments
+                <button class="nav-link" id="fees-tab" data-bs-toggle="pill" data-bs-target="#fees" type="button" role="tab">
+                    <i class="bi bi-cash-coin me-2"></i>Fees
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fines-tab" data-bs-toggle="pill" data-bs-target="#fines" type="button" role="tab">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Fines
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -113,8 +118,8 @@
             </div>
         </div>
 
-        <!-- PAYMENTS TABLE -->
-        <div class="tab-pane fade" id="payments" role="tabpanel">
+        <!-- FEES TABLE -->
+        <div class="tab-pane fade" id="fees" role="tabpanel">
             <div class="glass-panel p-0">
                 <div class="table-responsive p-3">
                     <table class="table table-glass align-middle">
@@ -123,11 +128,38 @@
                                 <th>Fee Name</th>
                                 <th>Student</th>
                                 <th>Amount</th>
-                                <th>Due Date</th>
+                                <th>Academic Year</th>
+                                <th>Semester</th>
                                 <th>Status</th>
+                                <th>Archived Date</th>
                             </tr>
                         </thead>
-                        <tbody id="paymentsTableBody">
+                        <tbody id="feesTableBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINES TABLE -->
+        <div class="tab-pane fade" id="fines" role="tabpanel">
+            <div class="glass-panel p-0">
+                <div class="table-responsive p-3">
+                    <table class="table table-glass align-middle">
+                        <thead>
+                            <tr>
+                                <th>Fine Reason</th>
+                                <th>Student</th>
+                                <th>Amount</th>
+                                <th>Event</th>
+                                <th>Academic Year</th>
+                                <th>Semester</th>
+                                <th>Status</th>
+                                <th>Archived Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="finesTableBody">
                             <!-- JS Populated -->
                         </tbody>
                     </table>

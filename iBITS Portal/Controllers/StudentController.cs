@@ -19,6 +19,26 @@ namespace iBITS_Portal.Controllers
             _userManager = userManager;
         }
 
+        // Set Current Semester for all views
+        public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+        {
+            base.OnActionExecuting(context);
+            
+            System.Diagnostics.Debug.WriteLine("===== STUDENT CONTROLLER: OnActionExecuting called =====");
+            
+            var currentSemester = _context.Semesters
+                .AsNoTracking()
+                .Include(s => s.AcademicYear)
+                .FirstOrDefault(s => s.IsCurrent == true);
+            
+            System.Diagnostics.Debug.WriteLine($"Current Semester: {currentSemester?.SemesterName ?? "NULL"}");
+            System.Diagnostics.Debug.WriteLine($"Academic Year: {currentSemester?.AcademicYear?.YearName ?? "NULL"}");
+            
+            ViewBag.CurrentSemester = currentSemester;
+            
+            System.Diagnostics.Debug.WriteLine($"ViewBag set: {ViewBag.CurrentSemester != null}");
+        }
+
         // ==============================================================
         // PAGE ACTIONS (Return Views)
         // ==============================================================

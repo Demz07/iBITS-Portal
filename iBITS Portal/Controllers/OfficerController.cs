@@ -34,6 +34,27 @@ namespace iBITS_Portal.Controllers
             _userManager = userManager;
         }
 
+        // Set Current Semester for all views
+        public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+        {
+            base.OnActionExecuting(context);
+            
+            System.Diagnostics.Debug.WriteLine("===== OFFICER CONTROLLER: OnActionExecuting called =====");
+            
+            // Load current semester with academic year for navbar display
+            var currentSemester = _context.Semesters
+                .AsNoTracking()
+                .Include(s => s.AcademicYear)
+                .FirstOrDefault(s => s.IsCurrent == true);
+            
+            System.Diagnostics.Debug.WriteLine($"Current Semester: {currentSemester?.SemesterName ?? "NULL"}");
+            System.Diagnostics.Debug.WriteLine($"Academic Year: {currentSemester?.AcademicYear?.YearName ?? "NULL"}");
+            
+            ViewBag.CurrentSemester = currentSemester;
+            
+            System.Diagnostics.Debug.WriteLine($"ViewBag set: {ViewBag.CurrentSemester != null}");
+        }
+
         // ============================================================
         // HELPER: Parse Student Number from QR Code
         // ============================================================
@@ -5933,6 +5954,83 @@ namespace iBITS_Portal.Controllers
         }
 
         // Collection Trends method removed
+
+        // =========================================================
+        // ARCHIVE FEE
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> ArchiveFee(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees.FindAsync(feeId);
+                if (fee == null)
+                    return Json(new { success = false, message = "Fee not found" });
+
+                var archivedFee = new ArchivedFee
+                {
+                    FeeId = fee.FeeId,
+                    FeeName = fee.FeeName,
+                    StudentNum = fee.StudentNum,
+                    Amount = fee.Amount,
+                    DueDate = fee.FeesDueDate.HasValue ? fee.FeesDueDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    CollectionDate = fee.CollectionDate,
+                    Status = fee.FeeStatus,
+                    AcadYear = fee.AcadYear,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = User.Identity.Name ?? "System",
+                    ArchiveReason = "Manual Archive by Officer"
+                };
+
+                _context.ArchivedFees.Add(archivedFee);
+                _context.Fees.Remove(fee);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fee archived successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // ARCHIVE FINE
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> ArchiveFine(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines.FindAsync(fineId);
+                if (fine == null)
+                    return Json(new { success = false, message = "Fine not found" });
+
+                var archivedFine = new ArchivedFine
+                {
+                    FineId = fine.FineId,
+                    StudentNum = fine.StudentNum,
+                    Amount = fine.Amount,
+                    FineDate = fine.FinesStartDate.HasValue ? fine.FinesStartDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    CollectionDate = fine.CollectionDate,
+                    Status = fine.FinesStatus,
+                    Reason = fine.Description,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = User.Identity.Name ?? "System",
+                    ArchiveReason = "Manual Archive by Officer"
+                };
+
+                _context.ArchivedFines.Add(archivedFine);
+                _context.Fines.Remove(fine);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fine archived successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
 }
 
     // ============================================================
@@ -5961,7 +6059,6 @@ namespace iBITS_Portal.Controllers
         public List<int> FeeIds { get; set; }
         public string Confirmation { get; set; }
     }
-
 
 }
 

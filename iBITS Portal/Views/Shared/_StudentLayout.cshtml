@@ -41,9 +41,9 @@
     <!-- CUSTOM STYLES -->
     <link rel="stylesheet" href="~/css/portal-layout.css" />
 
-    <!-- Academic Year Badge Styles -->
+    <!-- Current Semester Badge Styles -->
     <style>
-        .academic-year-badge {
+        .current-semester-badge {
             background: rgba(11, 26, 51, 0.6);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -54,12 +54,12 @@
             transition: all 0.3s ease;
         }
 
-            .academic-year-badge:hover {
+            .current-semester-badge:hover {
                 border-color: rgba(212, 175, 55, 0.6);
                 box-shadow: 0 6px 25px rgba(212, 175, 55, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
             }
 
-        .academic-year-text {
+        .current-semester-text {
             color: var(--gold-primary);
             font-weight: 700;
             font-size: 1rem;
@@ -211,13 +211,28 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Display -->
-                    <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Academic Year">
-                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
-                        <span id="currentAcademicYear" class="academic-year-text">
-                            @(ViewBag.CurrentAcademicYear ?? $"A.Y. {DateTime.Now.Year}-{DateTime.Now.Year + 1}")
-                        </span>
-                    </div>
+                    <!-- Current Semester Display (No Dates) -->
+                    @{
+                        var currentSemester = ViewBag.CurrentSemester as iBITS_Portal.Models.Semester;
+                    }
+                    @if (currentSemester != null && currentSemester.AcademicYear != null)
+                    {
+                        <div class="current-semester-badge d-none d-md-flex align-items-center gap-2" title="Current Semester">
+                            <i class="bi bi-calendar-check" style="color: var(--gold-primary); font-size: 1rem;"></i>
+                            <span class="current-semester-text">
+                                @currentSemester.AcademicYear.YearName - @currentSemester.SemesterName
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="current-semester-badge d-none d-md-flex align-items-center gap-2" title="No Current Semester">
+                            <i class="bi bi-exclamation-circle" style="color: #ff6b6b; font-size: 1rem;"></i>
+                            <span class="current-semester-text" style="color: #ff6b6b;">
+                                No Current Semester
+                            </span>
+                        </div>
+                    }
 
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
 

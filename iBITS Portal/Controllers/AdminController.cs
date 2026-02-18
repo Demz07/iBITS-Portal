@@ -58,6 +58,21 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
+        // OVERRIDE: SET CURRENT SEMESTER IN VIEWBAG FOR ALL VIEWS
+        // =========================================================
+        public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+        {
+            base.OnActionExecuting(context);
+            
+            // Load current semester for navbar display
+            var currentSemester = _context.Semesters
+                .Include(s => s.AcademicYear)
+                .FirstOrDefault(s => s.IsCurrent);
+            
+            ViewBag.CurrentSemester = currentSemester;
+        }
+
+        // =========================================================
         // HELPER: POPULATE DROPDOWNS DYNAMICALLY
         // =========================================================
         // Replace the existing PopulateFilterDropdowns method
@@ -2158,6 +2173,11 @@ namespace iBITS_Portal.Controllers
 
             try
             {
+                // Get current semester for auto-enrollment
+                var currentSemester = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .FirstOrDefaultAsync(s => s.IsCurrent);
+                
                 var lines = await System.IO.File.ReadAllLinesAsync(filePath);
 
                 for (int i = 1; i < lines.Length; i++)
@@ -2224,6 +2244,32 @@ namespace iBITS_Portal.Controllers
                             }
 
                             _context.Students.Add(student);
+                            
+                            // Auto-enroll student to current semester if exists
+                            if (currentSemester != null)
+                            {
+                                // Extract year level from YearLevelSection (e.g., "3-1" -> 3)
+                                int? yearLevel = null;
+                                if (!string.IsNullOrEmpty(yearLevelSection) && yearLevelSection.Contains('-'))
+                                {
+                                    var parts = yearLevelSection.Split('-');
+                                    if (int.TryParse(parts[0], out int yr)) yearLevel = yr;
+                                }
+                                
+                                var studentSemester = new StudentSemester
+                                {
+                                    StudentNum = studentNum,
+                                    SemesterId = currentSemester.SemesterId,
+                                    IsActive = true,
+                                    Section = yearLevelSection,
+                                    YearLevel = yearLevel,
+                                    EnrollmentDate = DateTime.Now,
+                                    EnrollmentStatus = "Active"
+                                };
+                                
+                                _context.StudentSemesters.Add(studentSemester);
+                            }
+                            
                             successCount++;
                         }
                         else
@@ -5399,6 +5445,242 @@ namespace iBITS_Portal.Controllers
             var fileName = $"ActivityLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
 
             return File(csvData, "text/csv", fileName);
+        }
+
+        // ============================================================
+        // SEMESTER MANAGEMENT ACTIONS
+        // ============================================================
+
+        [HttpGet]
+        public async Task<IActionResult> SemesterManagement()
+        {
+            var academicYears = await _context.AcademicYears
+                .Include(ay => ay.Semesters)
+                .OrderByDescending(ay => ay.YearName)
+                .ToListAsync();
+
+            var currentSemester = await _context.Semesters
+                .Include(s => s.AcademicYear)
+                .FirstOrDefaultAsync(s => s.IsCurrent);
+
+            ViewBag.AcademicYears = academicYears;
+            ViewBag.CurrentSemester = currentSemester;
+
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateAcademicYear(string yearName, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var academicYear = new AcademicYear
+                {
+                    YearName = yearName,
+                    StartDate = DateOnly.FromDateTime(startDate),
+                    EndDate = DateOnly.FromDateTime(endDate),
+                    IsActive = true
+                };
+
+                _context.AcademicYears.Add(academicYear);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Academic Year created successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateSemester(int academicYearId, string semesterName, DateTime startDate, DateTime endDate, bool isCurrent)
+        {
+            try
+            {
+                // If setting as current, unset all other current semesters
+                if (isCurrent)
+                {
+                    var allSemesters = await _context.Semesters.ToListAsync();
+                    foreach (var sem in allSemesters)
+                    {
+                        sem.IsCurrent = false;
+                    }
+                }
+
+                var semester = new Semester
+                {
+                    AcademicYearId = academicYearId,
+                    SemesterName = semesterName,
+                    StartDate = DateOnly.FromDateTime(startDate),
+                    EndDate = DateOnly.FromDateTime(endDate),
+                    IsCurrent = isCurrent,
+                    IsActive = true
+                };
+
+                _context.Semesters.Add(semester);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Semester created successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SetCurrentSemester(int semesterId)
+        {
+            try
+            {
+                // Unset all current semesters
+                var allSemesters = await _context.Semesters.ToListAsync();
+                foreach (var sem in allSemesters)
+                {
+                    sem.IsCurrent = false;
+                }
+
+                // Set the selected semester as current
+                var semester = await _context.Semesters.FindAsync(semesterId);
+                if (semester != null)
+                {
+                    semester.IsCurrent = true;
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true, message = "Current semester updated successfully!" });
+                }
+
+                return Json(new { success = false, message = "Semester not found!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleSemesterActive(int semesterId)
+        {
+            try
+            {
+                var semester = await _context.Semesters.FindAsync(semesterId);
+                if (semester != null)
+                {
+                    semester.IsActive = !semester.IsActive;
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true, isActive = semester.IsActive });
+                }
+
+                return Json(new { success = false, message = "Semester not found!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // DELETE ACADEMIC YEAR
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> DeleteAcademicYear(int academicYearId)
+        {
+            try
+            {
+                var academicYear = await _context.AcademicYears
+                    .Include(ay => ay.Semesters)
+                    .FirstOrDefaultAsync(ay => ay.AcademicYearId == academicYearId);
+
+                if (academicYear == null)
+                    return Json(new { success = false, message = "Academic Year not found" });
+
+                // Check if any semester is current
+                if (academicYear.Semesters.Any(s => s.IsCurrent))
+                {
+                    return Json(new { success = false, message = "Cannot delete Academic Year that contains the current semester. Please set another semester as current first." });
+                }
+
+                // Delete all semesters under this academic year
+                _context.Semesters.RemoveRange(academicYear.Semesters);
+                
+                // Delete the academic year
+                _context.AcademicYears.Remove(academicYear);
+                
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"Academic Year '{academicYear.YearName}' and all its semesters deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error deleting academic year: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // DELETE SEMESTER
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> DeleteSemester(int semesterId)
+        {
+            try
+            {
+                var semester = await _context.Semesters
+                    .Include(s => s.AcademicYear)
+                    .FirstOrDefaultAsync(s => s.SemesterId == semesterId);
+
+                if (semester == null)
+                    return Json(new { success = false, message = "Semester not found" });
+
+                // Check if it's the current semester
+                if (semester.IsCurrent)
+                {
+                    return Json(new { success = false, message = "Cannot delete the current semester. Please set another semester as current first." });
+                }
+
+                _context.Semesters.Remove(semester);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"{semester.SemesterName} deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error deleting semester: {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // ARCHIVE EVENT
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> ArchiveEvent(int eventId)
+        {
+            try
+            {
+                var evt = await _context.Events.FindAsync(eventId);
+                if (evt == null)
+                    return Json(new { success = false, message = "Event not found" });
+
+                var archivedEvent = new ArchivedEvent
+                {
+                    EventId = evt.EventId,
+                    EventName = evt.EventName,
+                    EventDate = evt.EventDate,
+                    EventType = evt.EventType,
+                    EventDesc = evt.EventDesc,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = User.Identity.Name ?? "System"
+                };
+
+                _context.ArchivedEvents.Add(archivedEvent);
+                _context.Events.Remove(evt);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Event archived successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
         }
 
     }
