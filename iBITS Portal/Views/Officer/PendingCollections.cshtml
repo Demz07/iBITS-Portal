@@ -337,28 +337,6 @@
     </div>
 </div>
 
-<!-- BULK ACTION BAR (Hidden by default, shown when items selected) -->
-<div id="bulk-action-bar" class="glass-panel p-3 mb-4" style="display: none; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1)); border: 2px solid rgba(16, 185, 129, 0.4);">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span class="text-white fw-bold" id="selected-count">0 items selected</span>
-            <span class="text-muted ms-2">|</span>
-            <span class="text-white ms-2">Total: <strong id="selected-total" style="color: var(--gold-primary);">₱0.00</strong></span>
-        </div>
-        <div>
-            <button type="button" id="view-selected-btn" class="btn btn-sm btn-outline-light me-2">
-                <i class="bi bi-list-check me-1"></i> View Selected (<span id="selected-count-badge">0</span>)
-            </button>
-            <button type="button" id="bulk-remit-btn" class="btn btn-sm btn-success me-2">
-                <i class="bi bi-send-fill me-1"></i> Bulk Remit Selected
-            </button>
-            <button type="button" id="cancel-selection-btn" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-x-circle me-1"></i> Cancel Selection
-            </button>
-        </div>
-    </div>
-</div>
 
 <!-- TABS NAVIGATION -->
 <ul class="nav nav-tabs" id="collectionsTab" role="tablist">
@@ -534,14 +512,6 @@
                                                 title="Collapse/Expand">
                                             <i class="bi bi-chevron-down"></i>
                                         </button>
-                                        <div class="form-check">
-                                            <input class="form-check-input select-all-category" type="checkbox" 
-                                                   id="select-all-@feeName.Replace(" ", "-")" 
-                                                   data-category="@feeName">
-                                            <label class="form-check-label text-muted small" for="select-all-@feeName.Replace(" ", "-")">
-                                                Select All
-                                            </label>
-                                        </div>
                                         <div>
                                             <h5 class="text-white mb-1">@feeName</h5>
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
@@ -557,7 +527,6 @@
                                     <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
                                         <thead>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                                <th style="color: var(--gold-primary); width: 40px;"><i class="bi bi-check-square"></i></th>
                                                 <th style="color: var(--gold-primary);">Student</th>
                                                 <th style="color: var(--gold-primary);">Student #</th>
                                                 <th style="color: var(--gold-primary);">Amount</th>
@@ -587,14 +556,6 @@
                                                     data-collection-date="@(fee.CollectionDate?.ToString("yyyy-MM-dd") ?? "")"
                                                     data-category="@feeName"
                                                     data-fee-id="@fee.FeeId">
-                                                    <td>
-                                                        <input type="checkbox" class="form-check-input fee-checkbox" 
-                                                               data-category="@feeName"
-                                                               data-fee-id="@fee.FeeId"
-                                                               data-student-name="@fee.StudentNumNavigation?.FullName"
-                                                               data-student-num="@fee.StudentNum"
-                                                               data-amount="@(fee.Amount ?? 0)">
-                                                    </td>
                                                     <td>@fee.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fee.StudentNum</code></td>
                                                     <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
@@ -781,14 +742,6 @@
                                                 title="Collapse/Expand">
                                             <i class="bi bi-chevron-down"></i>
                                         </button>
-                                        <div class="form-check">
-                                            <input class="form-check-input select-all-category-fine" type="checkbox" 
-                                                   id="select-all-fine-@categoryName.Replace(" ", "-")" 
-                                                   data-category="@categoryName">
-                                            <label class="form-check-label text-muted small" for="select-all-fine-@categoryName.Replace(" ", "-")">
-                                                Select All
-                                            </label>
-                                        </div>
                                         <div>
                                             <h5 class="text-white mb-1">@categoryName</h5>
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
@@ -804,7 +757,6 @@
                                     <table class="table table-sm table-dark table-hover mb-0" style="background: transparent;">
                                         <thead>
                                             <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                                <th style="color: var(--gold-primary); width: 40px;"><i class="bi bi-check-square"></i></th>
                                                 <th style="color: var(--gold-primary);">Student</th>
                                                 <th style="color: var(--gold-primary);">Student #</th>
                                                 <th style="color: var(--gold-primary);">Amount</th>
@@ -834,14 +786,6 @@
                                                     data-collection-date="@(fine.CollectionDate?.ToString("yyyy-MM-dd") ?? "")"
                                                     data-category="@categoryName"
                                                     data-fine-id="@fine.FineId">
-                                                    <td>
-                                                        <input type="checkbox" class="form-check-input fine-checkbox" 
-                                                               data-category="@categoryName"
-                                                               data-fine-id="@fine.FineId"
-                                                               data-student-name="@fine.StudentNumNavigation?.FullName"
-                                                               data-student-num="@fine.StudentNum"
-                                                               data-amount="@(fine.Amount ?? 0)">
-                                                    </td>
                                                     <td>@fine.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fine.StudentNum</code></td>
                                                     <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
@@ -1063,118 +1007,6 @@
     
     console.log('Phase 1 features loaded: Search, Sort, Date Badges, Quick Stats');
     
-    // ======================= PHASE 2: BULK SELECTION =======================
-    
-    // Select All in Category - Fees
-    document.querySelectorAll('.select-all-category').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const category = this.getAttribute('data-category');
-            const categoryCheckboxes = document.querySelectorAll(`.fee-checkbox[data-category="${category}"]`);
-            categoryCheckboxes.forEach(cb => {
-                if (cb.closest('tr').style.display !== 'none') { // Only select visible rows
-                    cb.checked = this.checked;
-                }
-            });
-            updateBulkActionBar();
-        });
-    });
-    
-    // Select All in Category - Fines
-    document.querySelectorAll('.select-all-category-fine').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const category = this.getAttribute('data-category');
-            const categoryCheckboxes = document.querySelectorAll(`.fine-checkbox[data-category="${category}"]`);
-            categoryCheckboxes.forEach(cb => {
-                if (cb.closest('tr').style.display !== 'none') { // Only select visible rows
-                    cb.checked = this.checked;
-                }
-            });
-            updateBulkActionBar();
-        });
-    });
-    
-    // Individual checkbox changes
-    document.querySelectorAll('.fee-checkbox, .fine-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateBulkActionBar();
-            
-            // Update "Select All" checkbox for this category
-            const category = this.getAttribute('data-category');
-            const isFine = this.classList.contains('fine-checkbox');
-            const categoryCheckbox = isFine ? 
-                document.querySelector(`.select-all-category-fine[data-category="${category}"]`) :
-                document.querySelector(`.select-all-category[data-category="${category}"]`);
-            
-            if (categoryCheckbox) {
-                const allCheckboxes = document.querySelectorAll(isFine ? `.fine-checkbox[data-category="${category}"]` : `.fee-checkbox[data-category="${category}"]`);
-                const visibleCheckboxes = Array.from(allCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
-                const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
-                categoryCheckbox.checked = checkedCount > 0 && checkedCount === visibleCheckboxes.length;
-            }
-        });
-    });
-    
-    // Cancel Selection Button
-    document.getElementById('cancel-selection-btn')?.addEventListener('click', function() {
-        document.querySelectorAll('.fee-checkbox, .fine-checkbox, .select-all-category, .select-all-category-fine').forEach(cb => {
-            cb.checked = false;
-        });
-        updateBulkActionBar();
-    });
-    
-    // View Selected Button
-    document.getElementById('view-selected-btn')?.addEventListener('click', function() {
-        const selected = getSelectedItems();
-        if (selected.length === 0) return;
-        
-        let message = 'Selected Items:\n\n';
-        selected.forEach((item, index) => {
-            message += `${index + 1}. ${item.studentName} (${item.studentNum}) - ₱${item.amount}\n`;
-        });
-        alert(message);
-    });
-    
-    // Bulk Remit Button (placeholder - implement actual remittance logic)
-    document.getElementById('bulk-remit-btn')?.addEventListener('click', function() {
-        const selected = getSelectedItems();
-        if (selected.length === 0) return;
-        
-        if (confirm(`Are you sure you want to remit ${selected.length} selected items totaling ₱${selected.reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2)}?`)) {
-            alert('Bulk remittance functionality would be implemented here.\n\nSelected items would be sent to the server for processing.');
-            // TODO: Implement actual bulk remittance via AJAX
-        }
-    });
-    
-    function updateBulkActionBar() {
-        const selected = getSelectedItems();
-        const bulkBar = document.getElementById('bulk-action-bar');
-        
-        if (selected.length > 0) {
-            bulkBar.style.display = 'block';
-            const total = selected.reduce((sum, item) => sum + parseFloat(item.amount), 0);
-            document.getElementById('selected-count').textContent = `${selected.length} item${selected.length > 1 ? 's' : ''} selected`;
-            document.getElementById('selected-count-badge').textContent = selected.length;
-            document.getElementById('selected-total').textContent = `₱${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        } else {
-            bulkBar.style.display = 'none';
-        }
-    }
-    
-    function getSelectedItems() {
-        const selected = [];
-        document.querySelectorAll('.fee-checkbox:checked, .fine-checkbox:checked').forEach(cb => {
-            selected.push({
-                type: cb.classList.contains('fee-checkbox') ? 'fee' : 'fine',
-                id: cb.getAttribute(cb.classList.contains('fee-checkbox') ? 'data-fee-id' : 'data-fine-id'),
-                studentName: cb.getAttribute('data-student-name'),
-                studentNum: cb.getAttribute('data-student-num'),
-                amount: cb.getAttribute('data-amount'),
-                category: cb.getAttribute('data-category')
-            });
-        });
-        return selected;
-    }
-    
     // ======================= PHASE 2: DATE RANGE FILTER =======================
     
     // Date preset buttons - Fees
@@ -1346,7 +1178,7 @@
         console.log(`Exported ${visibleRows.length} ${type} records to Excel`);
     }
     
-    console.log('Phase 2 features loaded: Bulk Selection, Date Range Filter, Export to Excel');
+    console.log('Phase 2 features loaded: Date Range Filter, Export to Excel');
     
     // ======================= PHASE 3: AMOUNT RANGE FILTER =======================
     
