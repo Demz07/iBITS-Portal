@@ -266,8 +266,8 @@
             <button class="btn-gold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#createFineModal">
                 <i class="bi bi-plus-lg me-1"></i> Create Fine
             </button>
-            <button class="btn-gold-outline btn-sm" onclick="exportFines()">
-                <i class="bi bi-download me-1"></i> Export to Excel
+            <button class="btn-gold-outline btn-sm" data-bs-toggle="modal" data-bs-target="#exportFinesModal">
+                <i class="bi bi-download me-1"></i> Export Fines
             </button>
         </div>
     </div>
@@ -529,6 +529,32 @@
     </div>
 </div>
 
+<!-- Export Fines Modal -->
+<div class="modal fade" id="exportFinesModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: var(--gold-text);"><i class="bi bi-download me-2"></i> Export Fines</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-4">Choose your export format:</p>
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-gold" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel (.xlsx)
+                    </button>
+                    <button type="button" class="btn btn-gold-outline" onclick="exportToPDF()">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                    </button>
+                </div>
+                <p class="text-muted small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i> Only visible/filtered records will be exported
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Fine Modal -->
 <div class="modal fade" id="deleteFineModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -561,6 +587,10 @@
 @section Scripts {
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Include Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
         // Data passed from Controller
@@ -577,9 +607,141 @@
             new bootstrap.Modal(document.getElementById('deleteFineModal')).show();
         }
 
-        // Export Function
-        function exportFines() {
-            window.location.href = '/Admin/ExportFinesToExcel';
+        // Toast Notification Helper
+        function showToast(message, type = 'success') {
+            const toastId = 'toast-' + Date.now();
+            const iconClass = type === 'success' ? 'bi-check-circle-fill' : type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill';
+            const bgClass = type === 'success' ? 'bg-success' : type === 'warning' ? 'bg-warning' : 'bg-info';
+
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi ${iconClass} me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 3000 });
+            toast.show();
+            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+        }
+
+        // Export to Excel Function
+        function exportToExcel() {
+            const table = document.getElementById('finesTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+
+            if (rows.length === 0) {
+                showToast('No fines data available to export', 'warning');
+                return;
+            }
+
+            const data = rows.map(row => {
+                const fineId = row.getAttribute('data-fine-id');
+                const studentName = row.querySelector('td:nth-child(3) div:first-child')?.textContent.trim() || '';
+                const studentId = row.querySelector('td:nth-child(3) div:nth-child(2)')?.textContent.trim() || '';
+                const program = row.getAttribute('data-program') || '';
+                const yearLevel = row.getAttribute('data-year') || '';
+                const description = row.querySelector('td:nth-child(6)')?.textContent.trim() || '';
+                const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+                const status = row.getAttribute('data-status') || '';
+
+                return {
+                    'Fine ID': fineId,
+                    'Student Name': studentName,
+                    'Student ID': studentId,
+                    'Program': program,
+                    'Year Level': yearLevel,
+                    'Description': description,
+                    'Amount': amount,
+                    'Status': status.charAt(0).toUpperCase() + status.slice(1)
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Fines');
+
+            const today = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `AdminFines-${today}.xlsx`);
+
+            bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+            showToast(`Exported ${rows.length} fine record(s) to Excel`, 'success');
+        }
+
+        // Export to PDF Function
+        function exportToPDF() {
+            const table = document.getElementById('finesTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+
+            if (rows.length === 0) {
+                showToast('No fines data available to export', 'warning');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+
+            const data = rows.map(row => {
+                const fineId = row.getAttribute('data-fine-id');
+                const studentName = row.querySelector('td:nth-child(3) div:first-child')?.textContent.trim() || '';
+                const studentId = row.querySelector('td:nth-child(3) div:nth-child(2)')?.textContent.trim() || '';
+                const program = row.getAttribute('data-program') || '';
+                const yearLevel = row.getAttribute('data-year') || '';
+                const description = row.querySelector('td:nth-child(6)')?.textContent.trim() || '';
+                const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+                const status = row.getAttribute('data-status') || '';
+
+                return [
+                    fineId,
+                    studentName,
+                    studentId,
+                    program,
+                    yearLevel,
+                    description,
+                    'PHP ' + amount.toFixed(2),
+                    status.charAt(0).toUpperCase() + status.slice(1)
+                ];
+            });
+
+            doc.autoTable({
+                head: [['Fine ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Description', 'Amount', 'Status']],
+                body: data,
+                startY: 20,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0], fontStyle: 'bold' },
+                styles: { fontSize: 9 },
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    1: { cellWidth: 45 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 15 },
+                    5: { cellWidth: 60 },
+                    6: { cellWidth: 25 },
+                    7: { cellWidth: 25 }
+                }
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            doc.save(`AdminFines-${today}.pdf`);
+
+            bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
+            showToast(`Exported ${rows.length} fine record(s) to PDF`, 'success');
         }
     </script>
 Tool call argument 'replace' pruned from message history.

@@ -275,7 +275,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 style="color: var(--text-strong); margin: 0; font-weight: 700;">Fee Records</h5>
         <div>
-            <button type="button" class="btn-gold-outline btn-sm me-2" onclick="exportPayments()">
+            <button type="button" class="btn-gold-outline btn-sm me-2" data-bs-toggle="modal" data-bs-target="#exportFeesModal">
                 <i class="bi bi-download me-1"></i> Export Fees
             </button>
             <button class="btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#createFeeModal">
@@ -385,6 +385,33 @@
 
 <!-- REMOVED: Payment status change modals - Admin cannot change payment status -->
 <!-- Payment status changes are handled by Treasurers only -->
+
+<!-- Export Fees Modal -->
+<div class="modal fade" id="exportFeesModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: var(--gold-text);"><i class="bi bi-download me-2"></i> Export Fees</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-4">Choose your export format:</p>
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-gold" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel me-2"></i> Export to Excel (.xlsx)
+                    </button>
+                    <button type="button" class="btn btn-gold-outline" onclick="exportToPDF()">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> Export to PDF
+                    </button>
+                </div>
+                <p class="text-muted small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i> Only visible/filtered records will be exported
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- DELETE FEE MODAL -->
 <div class="modal fade" id="deleteFeeModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -677,6 +704,120 @@
             row.dataset.balance = balance;
         }
 
+        // Export to Excel Function
+        function exportToExcel() {
+            const table = document.getElementById('feesTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr.fee-row')).filter(row => row.style.display !== 'none');
+
+            if (rows.length === 0) {
+                showToast('warning', 'No fee data available to export');
+                return;
+            }
+
+            const data = rows.map(row => {
+                const feeId = row.getAttribute('data-fee-id');
+                const studentName = row.querySelector('td:nth-child(3) div:first-child')?.textContent.trim() || '';
+                const studentId = row.querySelector('td:nth-child(3) div:nth-child(2)')?.textContent.trim() || '';
+                const program = row.getAttribute('data-program') || '';
+                const yearLevel = row.getAttribute('data-yearlevel') || '';
+                const feeName = row.querySelector('td:nth-child(6)')?.textContent.trim() || '';
+                const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+                const paid = parseFloat(row.getAttribute('data-paid')) || 0;
+                const balance = parseFloat(row.getAttribute('data-balance')) || 0;
+                const status = row.getAttribute('data-status') || '';
+
+                return {
+                    'Fee ID': feeId,
+                    'Student Name': studentName,
+                    'Student ID': studentId,
+                    'Program': program,
+                    'Year': yearLevel,
+                    'Fee Name': feeName,
+                    'Amount': amount,
+                    'Paid': paid,
+                    'Balance': balance,
+                    'Status': status.charAt(0).toUpperCase() + status.slice(1)
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Fees');
+
+            const today = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `AdminFees-${today}.xlsx`);
+
+            bootstrap.Modal.getInstance(document.getElementById('exportFeesModal')).hide();
+            showToast('success', `Exported ${rows.length} fee record(s) to Excel`);
+        }
+
+        // Export to PDF Function
+        function exportToPDF() {
+            const table = document.getElementById('feesTable');
+            const rows = Array.from(table.querySelectorAll('tbody tr.fee-row')).filter(row => row.style.display !== 'none');
+
+            if (rows.length === 0) {
+                showToast('warning', 'No fee data available to export');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+
+            const data = rows.map(row => {
+                const feeId = row.getAttribute('data-fee-id');
+                const studentName = row.querySelector('td:nth-child(3) div:first-child')?.textContent.trim() || '';
+                const studentId = row.querySelector('td:nth-child(3) div:nth-child(2)')?.textContent.trim() || '';
+                const program = row.getAttribute('data-program') || '';
+                const yearLevel = row.getAttribute('data-yearlevel') || '';
+                const feeName = row.querySelector('td:nth-child(6)')?.textContent.trim() || '';
+                const amount = parseFloat(row.getAttribute('data-amount')) || 0;
+                const paid = parseFloat(row.getAttribute('data-paid')) || 0;
+                const balance = parseFloat(row.getAttribute('data-balance')) || 0;
+                const status = row.getAttribute('data-status') || '';
+
+                return [
+                    feeId,
+                    studentName,
+                    studentId,
+                    program,
+                    yearLevel,
+                    feeName,
+                    'PHP ' + amount.toFixed(2),
+                    'PHP ' + paid.toFixed(2),
+                    'PHP ' + balance.toFixed(2),
+                    status.charAt(0).toUpperCase() + status.slice(1)
+                ];
+            });
+
+            doc.autoTable({
+                head: [['Fee ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Fee Name', 'Amount', 'Paid', 'Balance', 'Status']],
+                body: data,
+                startY: 20,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0], fontStyle: 'bold' },
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    0: { cellWidth: 18 },
+                    1: { cellWidth: 40 },
+                    2: { cellWidth: 28 },
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 12 },
+                    5: { cellWidth: 45 },
+                    6: { cellWidth: 22 },
+                    7: { cellWidth: 22 },
+                    8: { cellWidth: 22 },
+                    9: { cellWidth: 20 }
+                }
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            doc.save(`AdminFees-${today}.pdf`);
+
+            bootstrap.Modal.getInstance(document.getElementById('exportFeesModal')).hide();
+            showToast('success', `Exported ${rows.length} fee record(s) to PDF`);
+        }
+
         // Toast notification
         function showToast(type, message) {
             // Create toast element
@@ -707,6 +848,10 @@
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
     </script>
+    <!-- Include Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="~/js/payments.js" asp-append-version="true"></script>
 
     <style>
