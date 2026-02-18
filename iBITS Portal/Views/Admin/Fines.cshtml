@@ -284,7 +284,7 @@
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
-
+                    <th style="width: 80px;">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
@@ -371,8 +371,11 @@
                                 <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                             }
                         </td>
-
-
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="archiveFine(@fine.FineId, '@student?.FullName', '@fine.Description')" title="Archive">
+                                <i class="bi bi-archive-fill"></i>
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -633,5 +636,22 @@ Tool call argument 'replace' pruned from message history.
             opacity: 0.7;
         }
     </style>
+    
+    <script>
+        // Archive Fine Function
+        function archiveFine(fineId, studentName, description) {
+            if (confirm(`Archive fine for ${studentName}?\n\nDescription: ${description}\n\nThis will move the fine to the archive.`)) {
+                $.post('@Url.Action("ArchiveFine", "Admin")', { fineId: fineId }, function(response) {
+                    if (response.success) {
+                        alert('Fine archived successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                });
+            }
+        }
+    </script>
+    
     <script src="~/js/fines.js" asp-append-version="true"></script>
 }

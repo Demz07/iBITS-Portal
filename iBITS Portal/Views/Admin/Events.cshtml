@@ -421,8 +421,19 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Academic Year*</label>
-                            <input type="text" name="AcadYear" class="form-control" placeholder="e.g., 2023-2024" required />
+                            <label class="form-label">Semester*</label>
+                            <select name="SemesterId" class="form-select" required>
+                                <option value="">Select Semester</option>
+                                @if (ViewBag.Semesters != null)
+                                {
+                                    foreach (var sem in (List<iBITS_Portal.Models.Semester>)ViewBag.Semesters)
+                                    {
+                                        <option value="@sem.SemesterId" selected="@(sem.IsCurrent)">
+                                            @sem.AcademicYear?.YearName - @sem.SemesterName
+                                        </option>
+                                    }
+                                }
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Event Type*</label>

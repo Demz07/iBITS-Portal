@@ -2426,6 +2426,14 @@ namespace iBITS_Portal.Controllers
                 .OrderByDescending(y => y)
                 .ToListAsync();
 
+            // Get semesters for event creation dropdown
+            ViewBag.Semesters = await _context.Semesters
+                .Include(s => s.AcademicYear)
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.AcademicYear.YearName)
+                .ThenBy(s => s.SemesterName)
+                .ToListAsync();
+
             var pagedEvents = await PagedList<Event>.CreateAsync(eventsQuery, pageNumber, pageSize);
             return View(pagedEvents);
         }
@@ -5498,9 +5506,12 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                // If setting as current, unset all other current semesters
+                // If setting as current, archive all data from previous semester
                 if (isCurrent)
                 {
+                    await ArchiveAllSemesterData();
+                    
+                    // Unset all other current semesters
                     var allSemesters = await _context.Semesters.ToListAsync();
                     foreach (var sem in allSemesters)
                     {
@@ -5521,12 +5532,101 @@ namespace iBITS_Portal.Controllers
                 _context.Semesters.Add(semester);
                 await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = "Semester created successfully!" });
+                return Json(new { success = true, message = "Semester created successfully! Previous data has been archived." });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+        }
+
+        private async Task ArchiveAllSemesterData()
+        {
+            var adminName = User.Identity?.Name ?? "System";
+            
+            // Archive all students
+            var students = await _context.Students.ToListAsync();
+            foreach (var student in students)
+            {
+                var archivedStudent = new ArchivedStudent
+                {
+                    StudentNum = student.StudentNum,
+                    StudentFn = student.StudentFn,
+                    StudentMn = student.StudentMn,
+                    StudentLn = student.StudentLn,
+                    Program = student.Course,
+                    Section = student.YearLevelSection,
+                    Email = student.StudentEmail,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = adminName,
+                    ArchiveReason = "Auto-archive: New semester created"
+                };
+                _context.ArchivedStudents.Add(archivedStudent);
+            }
+            _context.Students.RemoveRange(students);
+
+            // Archive all events
+            var events = await _context.Events.ToListAsync();
+            foreach (var evt in events)
+            {
+                var archivedEvent = new ArchivedEvent
+                {
+                    EventId = evt.EventId,
+                    EventName = evt.EventName,
+                    EventDate = evt.EventDate,
+                    EventType = evt.EventType,
+                    EventDesc = evt.EventDesc,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = adminName
+                };
+                _context.ArchivedEvents.Add(archivedEvent);
+            }
+            _context.Events.RemoveRange(events);
+
+            // Archive all fees
+            var fees = await _context.Fees.ToListAsync();
+            foreach (var fee in fees)
+            {
+                var archivedFee = new ArchivedFee
+                {
+                    FeeId = fee.FeeId,
+                    FeeName = fee.FeeName,
+                    StudentNum = fee.StudentNum,
+                    Amount = fee.Amount,
+                    DueDate = fee.FeesDueDate.HasValue ? fee.FeesDueDate.Value.ToDateTime(TimeOnly.MinValue) : null,
+                    CollectionDate = fee.CollectionDate,
+                    Status = fee.FeeStatus,
+                    AcadYear = fee.AcadYear,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = adminName,
+                    ArchiveReason = "Auto-archive: New semester created"
+                };
+                _context.ArchivedFees.Add(archivedFee);
+            }
+            _context.Fees.RemoveRange(fees);
+
+            // Archive all fines
+            var fines = await _context.Fines.ToListAsync();
+            foreach (var fine in fines)
+            {
+                var archivedFine = new ArchivedFine
+                {
+                    FineId = fine.FineId,
+                    StudentNum = fine.StudentNum,
+                    Amount = fine.Amount,
+                    FineDate = fine.FinesStartDate.HasValue ? fine.FinesStartDate.Value.ToDateTime(TimeOnly.MinValue) : null,
+                    CollectionDate = fine.CollectionDate,
+                    Status = fine.FinesStatus,
+                    Reason = fine.Description,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = adminName,
+                    ArchiveReason = "Auto-archive: New semester created"
+                };
+                _context.ArchivedFines.Add(archivedFine);
+            }
+            _context.Fines.RemoveRange(fines);
+
+            await _context.SaveChangesAsync();
         }
 
         [HttpPost]
@@ -5676,6 +5776,77 @@ namespace iBITS_Portal.Controllers
                 await _context.SaveChangesAsync();
 
                 return Json(new { success = true, message = "Event archived successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ArchiveFee(int feeId)
+        {
+            try
+            {
+                var fee = await _context.Fees.FindAsync(feeId);
+                if (fee == null)
+                    return Json(new { success = false, message = "Fee not found" });
+
+                var archivedFee = new ArchivedFee
+                {
+                    FeeId = fee.FeeId,
+                    FeeName = fee.FeeName,
+                    StudentNum = fee.StudentNum,
+                    Amount = fee.Amount,
+                    DueDate = fee.FeesDueDate.HasValue ? fee.FeesDueDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    CollectionDate = fee.CollectionDate,
+                    Status = fee.FeeStatus,
+                    AcadYear = fee.AcadYear,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = User.Identity.Name ?? "Admin",
+                    ArchiveReason = "Manual Archive by Admin"
+                };
+
+                _context.ArchivedFees.Add(archivedFee);
+                _context.Fees.Remove(fee);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fee archived successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ArchiveFine(int fineId)
+        {
+            try
+            {
+                var fine = await _context.Fines.FindAsync(fineId);
+                if (fine == null)
+                    return Json(new { success = false, message = "Fine not found" });
+
+                var archivedFine = new ArchivedFine
+                {
+                    FineId = fine.FineId,
+                    StudentNum = fine.StudentNum,
+                    Amount = fine.Amount,
+                    FineDate = fine.FinesStartDate.HasValue ? fine.FinesStartDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    CollectionDate = fine.CollectionDate,
+                    Status = fine.FinesStatus,
+                    Reason = fine.Description,
+                    ArchivedDate = DateTime.Now,
+                    ArchivedBy = User.Identity.Name ?? "Admin",
+                    ArchiveReason = "Manual Archive by Admin"
+                };
+
+                _context.ArchivedFines.Add(archivedFine);
+                _context.Fines.Remove(fine);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fine archived successfully" });
             }
             catch (Exception ex)
             {

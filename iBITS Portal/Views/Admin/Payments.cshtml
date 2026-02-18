@@ -297,7 +297,7 @@
                     <th>DESCRIPTION</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
-
+                    <th style="width: 80px;">ACTIONS</th>
                 </tr>
             </thead>
             <tbody>
@@ -368,15 +368,17 @@
                                     <span class="status-badge status-unpaid"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
                                 }
                             </td>
-
-
-
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="archiveFee(@fee.FeeId, '@student?.FullName', '@fee.FeeName')" title="Archive this fee">
+                                    <i class="bi bi-archive-fill"></i>
+                                </button>
+                            </td>
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
+                    <tr><td colspan="11" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No fee records found.</td></tr>
                 }
             </tbody>
         </table>
@@ -705,6 +707,32 @@
             const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
             bsToast.show();
             toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        // Archive Fee
+        function archiveFee(feeId, studentName, feeName) {
+            if (confirm(`Archive this fee?\n\nStudent: ${studentName}\nFee: ${feeName}\n\nThis will move the fee to the archive.`)) {
+                fetch('@Url.Action("ArchiveFee", "Admin")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ feeId: feeId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error archiving fee', 'error');
+                });
+            }
         }
     </script>
     <script src="~/js/payments.js" asp-append-version="true"></script>

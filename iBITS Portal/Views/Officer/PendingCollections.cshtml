@@ -479,7 +479,7 @@
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
-                                    <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit">
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit" onclick="event.stopPropagation()">
                                         <i class="bi bi-send me-1"></i> Remit to Org Treasurer
                                     </a>
                                 </div>
@@ -529,11 +529,6 @@
                                                         <small class="d-block text-muted mt-1">@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</small>
                                                     </td>
                                                     <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-warning" onclick="archiveFee(@fee.FeeId, '@fee.StudentNumNavigation?.FullName')" title="Archive">
-                                                            <i class="bi bi-archive-fill"></i>
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -697,7 +692,7 @@
                                             <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
-                                    <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit">
+                                    <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit" onclick="event.stopPropagation()">
                                         <i class="bi bi-send me-1"></i> Remit to Org Treasurer
                                     </a>
                                 </div>
@@ -712,7 +707,6 @@
                                                 <th style="color: var(--gold-primary);">Amount</th>
                                                 <th style="color: var(--gold-primary);">Collected</th>
                                                 <th style="color: var(--gold-primary);">Status</th>
-                                                <th style="color: var(--gold-primary); width: 80px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -748,11 +742,6 @@
                                                         <small class="d-block text-muted mt-1">@(fine.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</small>
                                                     </td>
                                                     <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-warning" onclick="archiveFine(@fine.FineId, '@fine.StudentNumNavigation?.FullName')" title="Archive">
-                                                            <i class="bi bi-archive-fill"></i>
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -1384,54 +1373,5 @@
     };
     
     console.log('Category Filter loaded: Filter by specific fee/fine categories');
-
-    // ======================= ARCHIVE FUNCTIONS =======================
-    function archiveFee(feeId, studentName) {
-        if (confirm(`Archive fee for ${studentName}? This will remove it from pending collections.`)) {
-            $.ajax({
-                url: '@Url.Action("ArchiveFee", "Officer")',
-                type: 'POST',
-                data: { 
-                    feeId: feeId,
-                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert('Fee archived successfully!');
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                },
-                error: function() {
-                    alert('An error occurred while archiving the fee.');
-                }
-            });
-        }
-    }
-
-    function archiveFine(fineId, studentName) {
-        if (confirm(`Archive fine for ${studentName}? This will remove it from pending collections.`)) {
-            $.ajax({
-                url: '@Url.Action("ArchiveFine", "Officer")',
-                type: 'POST',
-                data: { 
-                    fineId: fineId,
-                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert('Fine archived successfully!');
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                },
-                error: function() {
-                    alert('An error occurred while archiving the fine.');
-                }
-            });
-        }
-    }
 </script>
 }
