@@ -232,26 +232,6 @@
     }
     
     /* Phase 3 - View Toggle & Compact View */
-    .view-compact .table {
-        font-size: 0.85rem;
-    }
-    .view-compact .table td,
-    .view-compact .table th {
-        padding: 0.25rem 0.5rem;
-    }
-    .view-compact .date-badge {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-    }
-    
-    .view-list .fee-category-card {
-        margin-bottom: 0.5rem;
-    }
-    .view-list .category-content {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 0.5rem;
-    }
-    
     /* Category collapse animation */
     .category-content {
         transition: max-height 0.3s ease, opacity 0.3s ease;
@@ -433,9 +413,9 @@
                     </div>
                 </div>
                 
-                <!-- Amount Range & View Toggle -->
+                <!-- Amount Range -->
                 <div class="row g-3 align-items-center mt-2">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-cash text-muted"></i>
                             <span class="text-muted small">Amount Range:</span>
@@ -446,24 +426,6 @@
                             <button type="button" id="fees-clear-amount" class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-circle"></i>
                             </button>
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-grouped" autocomplete="off" checked>
-                            <label class="btn btn-outline-secondary" for="fees-view-grouped">
-                                <i class="bi bi-grid-3x3-gap"></i> Grouped
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-list" autocomplete="off">
-                            <label class="btn btn-outline-secondary" for="fees-view-list">
-                                <i class="bi bi-list-ul"></i> List
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="fees-view-toggle" id="fees-view-compact" autocomplete="off">
-                            <label class="btn btn-outline-secondary" for="fees-view-compact">
-                                <i class="bi bi-layout-text-sidebar"></i> Compact
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -564,6 +526,7 @@
                                                             <i class="bi @badgeIcon"></i>
                                                             @badgeText
                                                         </span>
+                                                        <small class="d-block text-muted mt-1">@(fee.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</small>
                                                     </td>
                                                     <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
                                                 </tr>
@@ -655,9 +618,9 @@
                     </div>
                 </div>
                 
-                <!-- Amount Range & View Toggle -->
+                <!-- Amount Range -->
                 <div class="row g-3 align-items-center mt-2">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-cash text-muted"></i>
                             <span class="text-muted small">Amount Range:</span>
@@ -668,24 +631,6 @@
                             <button type="button" id="fines-clear-amount" class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-circle"></i>
                             </button>
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-grouped" autocomplete="off" checked>
-                            <label class="btn btn-outline-secondary" for="fines-view-grouped">
-                                <i class="bi bi-grid-3x3-gap"></i> Grouped
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-list" autocomplete="off">
-                            <label class="btn btn-outline-secondary" for="fines-view-list">
-                                <i class="bi bi-list-ul"></i> List
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="fines-view-toggle" id="fines-view-compact" autocomplete="off">
-                            <label class="btn btn-outline-secondary" for="fines-view-compact">
-                                <i class="bi bi-layout-text-sidebar"></i> Compact
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -794,6 +739,7 @@
                                                             <i class="bi @badgeIcon"></i>
                                                             @badgeText
                                                         </span>
+                                                        <small class="d-block text-muted mt-1">@(fine.CollectionDate?.ToString("MMM dd, yyyy") ?? "N/A")</small>
                                                     </td>
                                                     <td><span class="status-collected"><i class="bi bi-check me-1"></i>Collected</span></td>
                                                 </tr>
@@ -1062,15 +1008,54 @@
         
         if (days === 'all') {
             rows.forEach(row => row.style.display = '');
+        } else if (days === '0') {
+            // Today filter - show only items collected today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            console.log('Today filter range:', today.toISOString(), 'to', tomorrow.toISOString());
+            
+            let matchCount = 0;
+            rows.forEach(row => {
+                const dateStr = row.getAttribute('data-collection-date');
+                if (dateStr) {
+                    // Parse date string as UTC to avoid timezone issues
+                    const dateParts = dateStr.split('-');
+                    const rowDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                    rowDate.setHours(0, 0, 0, 0);
+                    
+                    const isToday = (rowDate.getTime() >= today.getTime() && rowDate.getTime() < tomorrow.getTime());
+                    
+                    if (isToday) {
+                        row.style.display = '';
+                        matchCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            console.log(`Today filter: Found ${matchCount} items collected today out of ${rows.length} total rows`);
         } else {
+            // Last X days filter
             const cutoffDate = new Date();
+            cutoffDate.setHours(0, 0, 0, 0);
             cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
             
             rows.forEach(row => {
                 const dateStr = row.getAttribute('data-collection-date');
                 if (dateStr) {
-                    const rowDate = new Date(dateStr);
+                    // Parse date string as UTC to avoid timezone issues
+                    const dateParts = dateStr.split('-');
+                    const rowDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                    rowDate.setHours(0, 0, 0, 0);
                     row.style.display = rowDate >= cutoffDate ? '' : 'none';
+                } else {
+                    row.style.display = 'none';
                 }
             });
         }
@@ -1224,43 +1209,6 @@
         updateStats(type);
     }
     
-    // ======================= PHASE 3: VIEW TOGGLE =======================
-    
-    // Fees View Toggle
-    document.getElementById('fees-view-grouped')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fees', 'grouped');
-    });
-    document.getElementById('fees-view-list')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fees', 'list');
-    });
-    document.getElementById('fees-view-compact')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fees', 'compact');
-    });
-    
-    // Fines View Toggle
-    document.getElementById('fines-view-grouped')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fines', 'grouped');
-    });
-    document.getElementById('fines-view-list')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fines', 'list');
-    });
-    document.getElementById('fines-view-compact')?.addEventListener('change', function() {
-        if (this.checked) applyViewMode('fines', 'compact');
-    });
-    
-    function applyViewMode(type, mode) {
-        const container = document.getElementById(`${type}-categories-container`);
-        if (!container) return;
-        
-        // Remove all view classes
-        container.classList.remove('view-grouped', 'view-list', 'view-compact');
-        
-        // Add new view class
-        container.classList.add(`view-${mode}`);
-        
-        console.log(`Applied ${mode} view to ${type}`);
-    }
-    
     // ======================= PHASE 3: EXPAND/COLLAPSE CATEGORIES =======================
     
     document.querySelectorAll('.collapse-category-btn').forEach(btn => {
@@ -1325,7 +1273,7 @@
         });
     }
     
-    console.log('Phase 3 features loaded: Amount Range Filter, View Toggle, Expand/Collapse');
+    console.log('Phase 3 features loaded: Amount Range Filter, Expand/Collapse');
     
     // ======================= CATEGORY FILTER =======================
     
