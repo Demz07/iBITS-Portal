@@ -1563,5 +1563,119 @@
             }
         });
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // ============================================================
+        // EXPORT FEES DATA (WYSIWYG - What You See Is What You Get)
+        // ============================================================
+        
+        function exportToExcel() {
+            const visibleRows = document.querySelectorAll('#feesTable tbody tr.fee-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                showToast('warning', 'No visible data to export. Please adjust your filters.');
+                return;
+            }
+            
+            const data = [
+                ['Fee ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Fee Name', 'Amount', 'Paid', 'Balance', 'Status']
+            ];
+            
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 1) {
+                    const feeId = cells[1]?.textContent?.trim() || '';
+                    const studentInfo = cells[2];
+                    const studentName = studentInfo?.querySelector('div:first-child')?.textContent?.trim() || '';
+                    const studentId = studentInfo?.querySelector('.small')?.textContent?.trim() || '';
+                    const program = cells[3]?.textContent?.trim() || '';
+                    const year = cells[4]?.textContent?.trim() || '';
+                    const feeName = cells[5]?.textContent?.trim() || '';
+                    const amount = cells[6]?.textContent?.trim() || '';
+                    const paid = cells[7]?.textContent?.trim() || '';
+                    const balance = cells[8]?.textContent?.trim() || '';
+                    const status = cells[9]?.textContent?.trim() || '';
+                    
+                    data.push([feeId, studentName, studentId, program, year, feeName, amount, paid, balance, status]);
+                }
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            ws['!cols'] = [
+                { wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 10 }, 
+                { wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Org Fees');
+            XLSX.writeFile(wb, `OrgFees-Filtered-${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            showToast('success', `Exported ${visibleRows.length} fee record(s)`);
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const visibleRows = document.querySelectorAll('#feesTable tbody tr.fee-row:not([style*="display: none"])');
+            
+            if (visibleRows.length === 0) {
+                showToast('warning', 'No visible data to export. Please adjust your filters.');
+                return;
+            }
+            
+            doc.setFontSize(18);
+            doc.text('Organization Fees Report (Filtered)', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Records: ${visibleRows.length}`, 14, 28);
+            
+            const tableData = [];
+            visibleRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 1) {
+                    const feeId = cells[1]?.textContent?.trim() || '';
+                    const studentInfo = cells[2];
+                    const studentName = studentInfo?.querySelector('div:first-child')?.textContent?.trim() || '';
+                    const studentId = studentInfo?.querySelector('.small')?.textContent?.trim() || '';
+                    const program = cells[3]?.textContent?.trim() || '';
+                    const year = cells[4]?.textContent?.trim() || '';
+                    const feeName = cells[5]?.textContent?.trim() || '';
+                    // Extract amounts and format with proper Peso sign (use PHP instead of Unicode for PDF compatibility)
+                    const amountText = cells[6]?.textContent?.trim() || '';
+                    const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, '');
+                    const paidText = cells[7]?.textContent?.trim() || '';
+                    const paid = 'PHP ' + paidText.replace(/[^\d.,]/g, '');
+                    const balanceText = cells[8]?.textContent?.trim() || '';
+                    const balance = 'PHP ' + balanceText.replace(/[^\d.,]/g, '');
+                    const status = cells[9]?.textContent?.trim() || '';
+                    
+                    tableData.push([feeId, studentName, studentId, program, year, feeName, amount, paid, balance, status]);
+                }
+            });
+            
+            doc.autoTable({
+                head: [['Fee ID', 'Student Name', 'Student ID', 'Program', 'Year', 'Fee Name', 'Amount', 'Paid', 'Balance', 'Status']],
+                body: tableData,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
+                styles: { fontSize: 7, cellPadding: 1.5 },
+                columnStyles: {
+                    0: { cellWidth: 15 }, 1: { cellWidth: 40 }, 2: { cellWidth: 30 }, 3: { cellWidth: 18 },
+                    4: { cellWidth: 12 }, 5: { cellWidth: 45 }, 6: { cellWidth: 22 }, 7: { cellWidth: 22 }, 
+                    8: { cellWidth: 22 }, 9: { cellWidth: 18 }
+                }
+            });
+            
+            doc.save(`OrgFees-Filtered-${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            showToast('success', `Exported ${visibleRows.length} fee record(s) to PDF`);
+        }
+    </script>
+    <script src="~/js/officer-fees.js" asp-append-version="true"></script>
 }
 
