@@ -390,10 +390,24 @@
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <form asp-action="ArchiveStudent" method="post" onsubmit="return confirm('Toggle status for @student.StudentNum?');">
-                                                <input type="hidden" name="id" value="@student.StudentNum" />
-                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-archive-fill me-2"></i> @(student.Classification == "Active" ? "Archive" : "Activate") Student</button>
-                                            </form>
+                                            @if (student.IsArchived != true)
+                                            {
+                                                @* If student is ACTIVE, we check for debt before archiving *@
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        onclick="confirmArchiveStudent('@student.StudentNum', '@student.StudentLn, @student.StudentFn')">
+                                                    <i class="bi bi-archive-fill me-2"></i> Archive Student
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                @* If student is ALREADY archived, we just activate them normally *@
+                                                <form asp-action="ArchiveStudent" method="post">
+                                                    <input type="hidden" name="id" value="@student.StudentNum" />
+                                                    <button type="submit" class="dropdown-item text-success">
+                                                        <i class="bi bi-person-check-fill me-2"></i> Activate Student
+                                                    </button>
+                                                </form>
+                                            }
                                         </li>
                                     </ul>
                                 </div>
@@ -526,6 +540,42 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-warning fw-bold">Register Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: STUDENT ARCHIVE DEBT WARNING ================= -->
+<div class="modal fade" id="studentArchiveWarningModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal" style="border: 1px solid #f59e0b;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-warning"><i class="bi bi-exclamation-octagon-fill me-2"></i> Unsettled Balance Detected</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="ArchiveStudent" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="debtStudentId" name="id" />
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-wallet2 text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="text-light fw-bold" id="debtStudentName"></h5>
+                    <p class="text-muted">This student still has an outstanding balance:</p>
+
+                    <div class="p-3 mb-3 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
+                        <h3 class="text-warning fw-bold mb-0" id="debtAmountDisplay">₱0.00</h3>
+                        <small class="text-muted" id="debtBreakdownDisplay"></small>
+                    </div>
+
+                    <p class="text-muted small">
+                        Archiving this student will move their unpaid records to the <strong>Archive History</strong> and remove them from active collection reports.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Yes, Archive with Debt</button>
                 </div>
             </form>
         </div>
@@ -684,6 +734,73 @@
 
             const breakdownText = breakdownParts.length > 0 ? `(${breakdownParts.join(', ')})` : '';
             document.getElementById('programBreakdown').textContent = breakdownText;
+        }
+
+
+
+
+                // Function to handle the Archive Check
+        function confirmArchiveStudent(studentId, studentName) {
+            // 1. Show loading state on cursor
+            document.body.style.cursor = 'wait';
+
+            // 2. Call the Controller check we created in Step 1
+            $.ajax({
+                url: '/Admin/CheckStudentDebt',
+                type: 'GET',
+                data: { id: studentId },
+                success: function (response) {
+                    document.body.style.cursor = 'default';
+
+                    if (response.hasDebt) {
+                        // SCENARIO A: Student owes money -> Show the Warning Modal
+                        $('#debtStudentId').val(studentId);
+                        $('#debtStudentName').text(studentName);
+                        $('#debtAmountDisplay').text('₱' + response.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+                        $('#debtBreakdownDisplay').text(response.details);
+
+                        $('#studentArchiveWarningModal').modal('show');
+                    } else {
+                        // SCENARIO B: No debt -> Show standard browser confirmation
+                        if (confirm("Are you sure you want to archive " + studentName + "? This will move their paid records to history.")) {
+                            submitArchiveForm(studentId);
+                        }
+                    }
+                },
+                error: function () {
+                    document.body.style.cursor = 'default';
+                    // Fallback: If AJAX fails, just try to archive normally
+                    if (confirm("Proceed with archiving student " + studentId + "?")) {
+                        submitArchiveForm(studentId);
+                    }
+                }
+            });
+        }
+
+              function submitArchiveForm(studentId) {
+            // Look for the token anywhere on the page
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            if (!token) {
+                alert("Security token missing. Please refresh the page.");
+                return;
+            }
+
+            const form = $('<form>', {
+                "method": "POST",
+                "action": "/Admin/ArchiveStudent"
+            }).append($('<input>', {
+                "type": "hidden",
+                "name": "id",
+                "value": studentId
+            })).append($('<input>', {
+                "type": "hidden",
+                "name": "__RequestVerificationToken",
+                "value": token
+            }));
+
+            $('body').append(form);
+            form.submit();
         }
     </script>
     <script src="~/js/student-records.js" asp-append-version="true"></script>

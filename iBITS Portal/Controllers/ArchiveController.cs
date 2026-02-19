@@ -177,23 +177,33 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                var query = _context.ArchivedEvents.AsQueryable();
+                // We use a very simple query first to see if the table is even readable
+                var query = _context.ArchivedEvents.AsNoTracking().AsQueryable();
 
-                if (archiveYear.HasValue)
+                if (archiveYear.HasValue && archiveYear.Value > 0)
                 {
+                    // Use EF.Functions to be safe with SQL dates
                     query = query.Where(e => e.ArchivedDate.Year == archiveYear.Value);
                 }
 
                 var events = await query
                     .OrderByDescending(e => e.ArchivedDate)
+                    .Select(e => new {
+                        eventName = e.EventName ?? "Unnamed Event",
+                        eventDate = e.EventDate,
+                        eventLocation = e.EventLocation ?? "N/A",
+                        archiveReason = e.ArchiveReason ?? "Manual Archive"
+                    })
                     .ToListAsync();
 
                 return Json(events);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching archived events");
-                return StatusCode(500, "Internal Server Error");
+                // This is the most important part: 
+                // It sends the ACTUAL error message to the browser console.
+                var innerError = ex.InnerException != null ? ex.InnerException.Message : "";
+                return StatusCode(500, new { message = ex.Message, details = innerError });
             }
         }
 

@@ -354,6 +354,15 @@
                                             data-non-ibits-fine-org-officer="@item.NonIbitsFineForOrgOfficer">
                                         <i class="bi bi-eye-fill me-1"></i> View Details
                                     </button>
+
+                                    <!-- NEW ARCHIVE BUTTON (Only shows when Closed) -->
+    <button class="btn btn-sm btn-glass text-danger ms-1"
+            style="font-size: 0.75rem; padding: 5px 12px; border: 1px solid rgba(220, 53, 69, 0.3);"
+            title="Archive Event"
+            onclick="initiateArchiveCheck('@item.EventId', '@item.EventName')">
+        <i class="bi bi-archive-fill me-1"></i> Archive
+    </button>
+
                                 }
                             </div>
                         </div> <!-- End Footer -->
@@ -596,6 +605,83 @@
     </div>
 </div>
 
+<!-- ================= MODAL: ARCHIVE WARNING (UNPAID FINES) ================= -->
+<div class="modal fade" id="archiveWarningModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal" style="border: 1px solid #f59e0b;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Unsettled Fines Detected
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <!-- FORM SUBMITS TO ARCHIVE ACTION -->
+            <form asp-action="ArchiveEvent" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="warnEventId" name="eventId" />
+                
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-cash-stack text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="text-light fw-bold mb-3" id="warnEventName"></h5>
+                    
+                    <div class="alert alert-warning glass-alert text-start">
+                        <strong>Attention:</strong> There are unpaid fines linked to this event.
+                        <ul class="mb-0 mt-2 small">
+                            <li>Students Owing: <strong id="warnStudentCount">0</strong></li>
+                            <li>Total Pending: <strong id="warnAmount">₱0.00</strong></li>
+                        </ul>
+                    </div>
+
+                    <p class="text-muted small mt-3">
+                        If you proceed, these fines will be moved to the <strong>Archive History</strong> and removed from the active student balances. 
+                        <br><br>
+                        Are you sure you want to proceed?
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <!-- ALLOWS ACTION -->
+                    <button type="submit" class="btn btn-warning">Yes, Archive Anyway</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: CONFIRM ARCHIVE (CLEAN) ================= -->
+<div class="modal fade" id="archiveConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-gold">
+                    <i class="bi bi-archive-fill me-2"></i> Confirm Archive
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="ArchiveEvent" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="archiveEventId" name="eventId" />
+                <div class="modal-body">
+                    <p class="text-light">
+                        Are you sure you want to archive <strong id="archiveEventName" class="text-gold"></strong>?
+                    </p>
+                    <div class="alert alert-info glass-alert small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        The event will be moved to history. All records are settled and safe to archive.
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gold">Confirm Archive</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- ================= MODAL: CLOSE EVENT & ASSIGN FINES ================= -->
 <div class="modal fade" id="closeEventModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -807,12 +893,52 @@
                 });
             });
             
+
             // Clear All Filters Button
             document.getElementById('clearAllFilters').addEventListener('click', function(e) {
                 e.stopPropagation(); // Prevent collapse toggle
                 window.location.href = '@Url.Action("Events")';
             });
         });
+
+         function initiateArchiveCheck(eventId, eventName) {
+        // 1. Set Loading Cursor
+        document.body.style.cursor = 'wait';
+
+        // 2. Check Database for Debt
+        $.ajax({
+            url: '/Admin/CheckEventBalance',
+            type: 'GET',
+            data: { eventId: eventId },
+            success: function(response) {
+                document.body.style.cursor = 'default';
+
+                if (response.hasDebt === true) {
+                    // SCENARIO A: Has Debt -> Show WARNING Modal
+                    $('#warnEventId').val(eventId);
+                    $('#warnEventName').text(eventName);
+                    $('#warnStudentCount').text(response.pendingStudents);
+                    $('#warnAmount').text('₱' + response.pendingAmount.toLocaleString('en-US', {minimumFractionDigits: 2}));
+                    
+                    $('#archiveWarningModal').modal('show');
+                } else {
+                    // SCENARIO B: Clean -> Show STANDARD Confirm Modal
+                    $('#archiveEventId').val(eventId);
+                    $('#archiveEventName').text(eventName);
+                    
+                    $('#archiveConfirmModal').modal('show');
+                }
+            },
+            error: function(err) {
+                document.body.style.cursor = 'default';
+                console.error(err);
+                // Fallback: If check fails, show standard modal
+                $('#archiveEventId').val(eventId);
+                $('#archiveEventName').text(eventName);
+                $('#archiveConfirmModal').modal('show');
+            }
+        });
+    }
     </script>
 
     <style>

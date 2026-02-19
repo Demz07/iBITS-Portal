@@ -11,9 +11,11 @@ namespace iBITS_Portal.Models
 
         public int EventId { get; set; }
 
+        [Required]
         public string EventName { get; set; } = null!;
 
-        public string EventLocation { get; set; } = null!;
+        // ADDED '?' TO ALLOW NULLS FROM DB
+        public string? EventLocation { get; set; }
 
         public DateOnly? EventDate { get; set; }
 
@@ -23,13 +25,17 @@ namespace iBITS_Portal.Models
 
         public TimeOnly? EndTime { get; set; }
 
-        public string EventDuration { get; set; } = null!;
+        // ADDED '?' TO ALLOW NULLS FROM DB
+        public string? EventDuration { get; set; }
 
-        public string AcadYear { get; set; } = null!;
+        // ADDED '?' TO ALLOW NULLS FROM DB
+        public string? AcadYear { get; set; }
 
-        public string EventDesc { get; set; } = null!;
+        // ADDED '?' TO ALLOW NULLS FROM DB
+        public string? EventDesc { get; set; }
 
-        public string EventType { get; set; } = null!;
+        // ADDED '?' TO ALLOW NULLS FROM DB
+        public string? EventType { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal? FineForMember { get; set; }
@@ -56,8 +62,8 @@ namespace iBITS_Portal.Models
         [StringLength(450)]
         public string ArchivedBy { get; set; } = null!;
 
-        [Required]
-        public string ArchiveReason { get; set; } = "Event Deletion";
+        // Removed [Required] here because it might be null in old records
+        public string? ArchiveReason { get; set; } = "Event Deletion";
 
         [StringLength(500)]
         public string? ArchiveNotes { get; set; }

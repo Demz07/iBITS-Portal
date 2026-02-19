@@ -2019,45 +2019,81 @@ namespace iBITS_Portal.Controllers
                 return RedirectToAction(nameof(StudentRecords));
             }
 
-            // Get Current Academic Year to tag the archive record
-            var currentAcadYear = await GetCurrentAcademicYear();
+            var adminUser = await _userManager.GetUserAsync(User);
+            var adminName = adminUser?.UserName ?? "Admin";
 
-            if (student.Classification == "Active" || string.IsNullOrEmpty(student.Classification))
+            try
             {
-                // ARCHIVE ACTION
-                student.Classification = "Archived";
-                student.IsArchived = true;
-                student.ArchiveStatus = "Manually Archived";
-                student.ArchiveDate = DateOnly.FromDateTime(DateTime.Now);
-
-                // IMPORTANT: Ensure SchoolYearEnrolled matches the current filter logic
-                // If it's null, set it to current so it shows up in the latest archive list
-                if (string.IsNullOrEmpty(student.SchoolYearEnrolled))
+                if (student.IsArchived != true)
                 {
-                    student.SchoolYearEnrolled = currentAcadYear;
+                    // ARCHIVE ACTION: Call the Stored Procedure
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "EXEC sp_ArchiveStudentFinancials @p0, @p1",
+                        id,
+                        adminName
+                    );
+
+                    await LogAction("Archive Student", $"Archived student {id} and moved financials to history.");
+                    TempData["Message"] = $"Student {id} and all related fees/fines have been archived.";
                 }
+                else
+                {
+                    // ACTIVATE ACTION: Just flip the bit (Financials remain in Archive)
+                    student.Classification = "Active";
+                    student.IsArchived = false;
+                    student.ArchiveStatus = null;
+                    student.ArchiveDate = null;
+                    _context.Students.Update(student);
+                    await _context.SaveChangesAsync();
 
-                await LogAction("Archive Student", $"Archived student {id}");
-                TempData["Message"] = $"Student {id} has been archived.";
+                    await LogAction("Activate Student", $"Activated student {id}. Note: Past financials remain archived.");
+                    TempData["Message"] = $"Student {id} has been activated.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // ACTIVATE ACTION
-                student.Classification = "Active";
-                student.IsArchived = false;
-                student.ArchiveStatus = null;
-                student.ArchiveDate = null;
-
-                await LogAction("Activate Student", $"Activated student {id}");
-                TempData["Message"] = $"Student {id} has been activated.";
+                _logger.LogError(ex, "Error archiving student {StudentNum}", id);
+                // This will show the EXACT reason (e.g., "Invalid column name 'BatchId'")
+                TempData["Error"] = "Archive Failed: " + (ex.InnerException?.Message ?? ex.Message);
             }
-
-            _context.Students.Update(student);
-            await _context.SaveChangesAsync();
 
             string referringUrl = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrEmpty(referringUrl)) return Redirect(referringUrl);
-            return RedirectToAction(nameof(StudentRecords));
+            return !string.IsNullOrEmpty(referringUrl) ? Redirect(referringUrl) : RedirectToAction(nameof(StudentRecords));
+        }
+
+
+
+        // =========================================================
+        // AJAX: Check Student Debt before Archiving
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> CheckStudentDebt(string id)
+        {
+            try
+            {
+                // 1. Calculate Unpaid Fees
+                var unpaidFees = await _context.Fees
+                    .Where(f => f.StudentNum == id && f.AmountPaid < f.Amount)
+                    .SumAsync(f => (f.Amount ?? 0) - f.AmountPaid);
+
+                // 2. Calculate Unpaid Fines
+                var unpaidFines = await _context.Fines
+                    .Where(f => f.StudentNum == id && f.AmountPaid < f.Amount)
+                    .SumAsync(f => (f.Amount ?? 0) - f.AmountPaid);
+
+                var totalDebt = unpaidFees + unpaidFines;
+
+                return Json(new
+                {
+                    hasDebt = totalDebt > 0,
+                    amount = totalDebt,
+                    details = $"Fees: ₱{unpaidFees:N2}, Fines: ₱{unpaidFines:N2}"
+                });
+            }
+            catch (Exception)
+            {
+                return Json(new { hasDebt = false }); // Fallback
+            }
         }
 
         // =========================================================
@@ -2671,6 +2707,74 @@ namespace iBITS_Portal.Controllers
             return RedirectToAction("Events");
         }
 
+
+
+        // =========================================================
+        // AJAX: CHECK EVENT BALANCE (Warning System)
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> CheckEventBalance(int eventId)
+        {
+            try
+            {
+                // Execute the SQL Check
+                var result = await _context.Database
+                    .SqlQueryRaw<BalanceCheckResult>("EXEC sp_CheckEventUnpaidBalance @p0", eventId)
+                    .ToListAsync();
+
+                var data = result.FirstOrDefault();
+
+                if (data != null && data.PendingAmount > 0)
+                {
+                    // Return "hasDebt: true" but NOT "canArchive: false"
+                    // We just provide the info so the frontend can show the specific warning
+                    return Json(new
+                    {
+                        hasDebt = true,
+                        pendingStudents = data.PendingStudents,
+                        pendingAmount = data.PendingAmount
+                    });
+                }
+
+                return Json(new { hasDebt = false });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking event balance");
+                return Json(new { hasDebt = false, error = "Check failed" });
+            }
+        }
+
+        // =========================================================
+        // ACTION: ARCHIVE EVENT (Now allows execution)
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ArchiveEvent(int eventId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var adminName = user?.UserName ?? "Admin";
+
+            try
+            {
+                // Execute the Archive Procedure (Now unblocked in SQL)
+                await _context.Database.ExecuteSqlRawAsync(
+                    "EXEC sp_ArchiveEvent @p0, @p1",
+                    eventId,
+                    adminName
+                );
+
+                await LogAction("Archive Event", $"Archived event ID {eventId} and moved records to history.");
+                TempData["Message"] = "Event archived successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error archiving event");
+                TempData["Error"] = "An error occurred while archiving.";
+            }
+
+            return RedirectToAction("Events");
+        }
 
         // =========================================================
         // FINE MANAGEMENT - ENHANCED AUTO-GENERATION
@@ -5419,6 +5523,15 @@ namespace iBITS_Portal.Controllers
         public decimal Amount { get; set; }
         public DateTime? DateCreated { get; set; }
         public int StudentCount { get; set; }
+    }
+
+    // =========================================================
+    // HELPER CLASS (Put this at the bottom of AdminController.cs)
+    // =========================================================
+    public class BalanceCheckResult
+    {
+        public int PendingStudents { get; set; }
+        public decimal PendingAmount { get; set; }
     }
 }
 
