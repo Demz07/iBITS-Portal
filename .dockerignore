@@ -1,0 +1,23 @@
+# Exclude migrations backup
+iBITS Portal/Migrations_BACKUP_SQLSERVER/
+
+# Exclude bin and obj folders
+**/bin/
+**/obj/
+
+# Exclude user-specific files
+**/*.user
+**/.vs/
+
+# Exclude git
+.git/
+.gitignore
+
+# Exclude deployment scripts
+Deploy_Scripts/
+Azure_Deploy_Scripts/
+PostgreSQL_Migration/
+
+# Exclude documentation
+*.md
+!README.md
