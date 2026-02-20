@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/HomeController.cs
 // ============================================================
 
@@ -76,17 +76,17 @@ namespace iBITS_Portal.Controllers
             {
                 return RedirectToAction("ProfileSetup", "Account");
             }
-
-            // Pending role change (optional feature)
-            var pendingChange = await _context.PendingRoleChanges
-                .FirstOrDefaultAsync(p => p.StudentNumber == user.UserName && !p.IsConfirmed && !p.IsDeclined);
-
-            if (pendingChange != null)
+            // Pending role change (optional feature) - with error handling
+            PendingRoleChange? pendingChange = null;
+            try
             {
-                return RedirectToPage("/Account/ConfirmRoleChange", new { area = "Identity" });
+                pendingChange = await _context.PendingRoleChanges
+                    .FirstOrDefaultAsync(p => p.StudentNumber == user.UserName && !p.IsConfirmed && !p.IsDeclined);
             }
-
-            // ================== DASHBOARD DATA ==================
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not check pending role changes for {UserName}", user.UserName);
+            }
             var today = DateOnly.FromDateTime(DateTime.Today);
 
             // Current events: all for today (not closed)
@@ -234,7 +234,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.UpcomingEvents = upcomingEvents;
             ViewBag.Announcements = announcements;
 
-            // ✅ Provide header avatar to _StudentLayout.cshtml
+            // ? Provide header avatar to _StudentLayout.cshtml
             ViewBag.StudentImage = string.IsNullOrWhiteSpace(student.StudentImage)
                 ? "/images/default-avatar.png"
                 : student.StudentImage;
