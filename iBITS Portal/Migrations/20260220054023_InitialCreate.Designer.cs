@@ -12,8 +12,8 @@ using iBITS_Portal.Models;
 namespace iBITS_Portal.Migrations
 {
     [DbContext(typeof(PortaliBitsContext))]
-    [Migration("20260220051131_InitialCreate_PostgreSQL")]
-    partial class InitialCreate_PostgreSQL
+    [Migration("20260220054023_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

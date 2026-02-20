@@ -12,8 +12,8 @@ using iBITS_Portal.Data;
 namespace iBITS_Portal.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260220051213_InitialCreate_Identity")]
-    partial class InitialCreate_Identity
+    [Migration("20260220054052_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
