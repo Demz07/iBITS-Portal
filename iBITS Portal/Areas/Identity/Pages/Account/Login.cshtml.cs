@@ -158,7 +158,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                     // =========================================================
                     // END: Pending role change check
                     // =========================================================
-
+                    return RedirectToAction("Index", "Home");
                     return LocalRedirect(returnUrl);
                 }
 
