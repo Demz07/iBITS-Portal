@@ -501,7 +501,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(50)
@@ -619,7 +619,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(50)
@@ -724,7 +724,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("FeeName")
                         .HasMaxLength(200)
@@ -767,7 +767,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("SubmittedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");

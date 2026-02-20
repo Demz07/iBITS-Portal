@@ -129,7 +129,7 @@ public partial class PortaliBitsContext : DbContext
             entity.ToTable("PaymentTransactions");
 
             entity.Property(e => e.PaymentDate)
-                .HasDefaultValueSql("GETDATE()");
+                .HasDefaultValueSql("NOW()");
 
             entity.HasOne(d => d.Fee)
                 .WithMany()
@@ -158,7 +158,7 @@ public partial class PortaliBitsContext : DbContext
             entity.ToTable("FinePaymentTransactions");
 
             entity.Property(e => e.PaymentDate)
-                .HasDefaultValueSql("GETDATE()");
+                .HasDefaultValueSql("NOW()");
 
             entity.HasOne(d => d.Fine)
                 .WithMany()
@@ -216,7 +216,7 @@ public partial class PortaliBitsContext : DbContext
                 .HasMaxLength(450);
 
             entity.Property(e => e.SubmittedDate)
-                .HasDefaultValueSql("GETDATE()");
+                .HasDefaultValueSql("NOW()");
 
             entity.Property(e => e.Status)
                 .IsRequired()
@@ -236,7 +236,7 @@ public partial class PortaliBitsContext : DbContext
                 .HasMaxLength(20);
 
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("GETDATE()");
+                .HasDefaultValueSql("NOW()");
 
             // Unique constraint on BatchCode
             entity.HasIndex(e => e.BatchCode)

@@ -12,7 +12,7 @@ using iBITS_Portal.Models;
 namespace iBITS_Portal.Migrations
 {
     [DbContext(typeof(PortaliBitsContext))]
-    [Migration("20260220054524_InitialCreate")]
+    [Migration("20260220055731_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -504,7 +504,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(50)
@@ -622,7 +622,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(50)
@@ -727,7 +727,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("FeeName")
                         .HasMaxLength(200)
@@ -770,7 +770,7 @@ namespace iBITS_Portal.Migrations
                     b.Property<DateTime>("SubmittedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
