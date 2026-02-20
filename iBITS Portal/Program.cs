@@ -55,6 +55,37 @@ namespace iBITS_Portal
 
             var app = builder.Build();
 
+            // AUTO-RUN MIGRATIONS ON STARTUP (for Railway)
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogInformation("Running database migrations...");
+
+                    // Migrate PortaliBitsContext
+                    var portalDb = services.GetRequiredService<PortaliBitsContext>();
+                    await portalDb.Database.MigrateAsync();
+                    logger.LogInformation("PortaliBitsContext migration completed");
+
+                    // Migrate ApplicationDbContext
+                    var identityDb = services.GetRequiredService<ApplicationDbContext>();
+                    await identityDb.Database.MigrateAsync();
+                    logger.LogInformation("ApplicationDbContext migration completed");
+
+                    // Initialize roles
+                    await RoleInitializer.InitializeAsync(services);
+                    logger.LogInformation("Roles initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occurred during database migration or seeding.");
+                    throw; // Re-throw to prevent app from starting with broken DB
+                }
+            }
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseMigrationsEndPoint();
@@ -76,20 +107,6 @@ namespace iBITS_Portal
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
             app.MapRazorPages();
-
-            using (var scope = app.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                try
-                {
-                    await RoleInitializer.InitializeAsync(services);
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred during DB seeding.");
-                }
-            }
 
             app.Run();
         }
