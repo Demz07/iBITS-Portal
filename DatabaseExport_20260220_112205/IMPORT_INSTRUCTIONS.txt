@@ -1,0 +1,77 @@
+========================================
+DATABASE IMPORT INSTRUCTIONS
+========================================
+
+Your database has been exported to CSV files.
+These files are ready to import into Railway PostgreSQL.
+
+EXPORT LOCATION:
+C:\Users\Dave\source\repos\iBITS Portal\DatabaseExport_20260220_112205
+
+TABLES EXPORTED: 10 tables
+
+========================================
+HOW TO IMPORT TO RAILWAY
+========================================
+
+METHOD 1: Using Railway Dashboard (Easiest)
+--------------------------------------------
+1. Deploy your app to Railway first
+2. Add PostgreSQL database service
+3. Go to PostgreSQL service
+4. Click 'Data' tab
+5. Use 'Import' feature to upload CSV files
+
+METHOD 2: Using psql Command Line
+----------------------------------
+1. Get your Railway PostgreSQL connection string
+2. Install psql (PostgreSQL client)
+3. Connect: psql [your-railway-database-url]
+4. For each CSV file, run:
+   \copy table_name FROM 'file.csv' WITH (FORMAT csv, HEADER true);
+
+METHOD 3: Using DBeaver (Recommended)
+--------------------------------------
+1. Download DBeaver: https://dbeaver.io/download/
+2. Create new PostgreSQL connection using Railway credentials
+3. Right-click table -> Import Data
+4. Select CSV file and map columns
+5. Execute import
+
+========================================
+IMPORTANT NOTES
+========================================
+
+1. Import tables in the ORDER listed above (due to foreign keys)
+2. You may need to disable foreign key checks during import
+3. After import, verify row counts match your original database
+4. Some identity columns may need to be reset
+
+========================================
+TABLE ORDER (Import in this sequence)
+========================================
+1. AspNetRoles
+2. AspNetUsers
+3. AspNetUserRoles
+4. AspNetUserClaims
+5. AspNetUserLogins
+6. AspNetUserTokens
+7. AspNetRoleClaims
+8. Student
+9. Officer
+10. Event
+11. Fee
+12. Fine
+13. Attendance
+14. Announcement
+15. UserAnnouncementDismissal
+16. Remittance
+17. RemittanceItem
+18. PaymentTransaction
+19. ActivityLog
+20. PendingRoleChange
+21. SystemSetting
+22. ArchivedStudent
+23. ArchivedOfficer
+24. ArchivedEvent
+

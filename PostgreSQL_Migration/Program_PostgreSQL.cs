@@ -1,4 +1,4 @@
-// Program.cs
+// Program.cs - PostgreSQL Version for Railway Deployment
 
 using iBITS_Portal.Data;
 using iBITS_Portal.Models;
@@ -14,10 +14,11 @@ namespace iBITS_Portal
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 1. Database Connection
+            // 1. Database Connection - UPDATED FOR POSTGRESQL
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+            // CHANGED: UseSqlServer → UseNpgsql
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(connectionString));
 
@@ -43,7 +44,6 @@ namespace iBITS_Portal
             // 3. FEATURE: Secure Session Management (5-Minute Auto-Logout)
             builder.Services.ConfigureApplicationCookie(options =>
             {
-                // UPDATED: Changed to 15 Minutes
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
                 options.SlidingExpiration = true;
                 options.LoginPath = "/Identity/Account/Login";
