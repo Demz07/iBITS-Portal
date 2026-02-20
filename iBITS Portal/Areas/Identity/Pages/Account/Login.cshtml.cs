@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Areas/Identity/Pages/Account/Login.cshtml.cs
 // ============================================================
 // UPDATED: Added pending role change check after successful login.
