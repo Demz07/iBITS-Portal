@@ -24,5 +24,5 @@ EXPOSE 8080
 # Set environment variable for port
 ENV ASPNETCORE_URLS=http://+:8080
 
-# Start the application
+# Start the application - FIXED: Use the DLL name directly
 ENTRYPOINT ["dotnet", "iBITS Portal.dll"]
