@@ -49,6 +49,20 @@ namespace iBITS_Portal
                 options.AccessDeniedPath = "/Identity/Account/AccessDenied";
             });
 
+            // FEATURE: Configure form and file upload limits
+            builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB for file uploads
+                options.ValueLengthLimit = 10 * 1024 * 1024; // 10 MB for form values
+                options.ValueCountLimit = 1024; // Max number of form values
+            });
+
+            // Configure Kestrel server limits for Railway
+            builder.WebHost.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+            });
+
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();

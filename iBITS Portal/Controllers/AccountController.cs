@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/AccountController.cs (FINAL COMPLETE)
 // ============================================================
 
@@ -172,7 +172,7 @@ namespace iBITS_Portal.Controllers
                     if (model.ProfilePicture.Length > 5 * 1024 * 1024) return Json(new { success = false, message = "File size must be less than 5MB." });
 
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles");
-                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder); // ✅ ensure folder exists
+                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder); // ? ensure folder exists
 
                     var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
                     var filePath = Path.Combine(uploadsFolder, fileName);
@@ -318,6 +318,8 @@ namespace iBITS_Portal.Controllers
         // ============================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB limit
+        [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
         public async Task<IActionResult> UpdateProfilePicture(IFormFile profilePicture)
         {
             var user = await _userManager.GetUserAsync(User);
