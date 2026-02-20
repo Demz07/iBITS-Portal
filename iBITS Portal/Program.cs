@@ -14,8 +14,9 @@ namespace iBITS_Portal
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 1. Database Connection
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+            // 1. Database Connection - Railway compatible
+            var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                ?? builder.Configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
