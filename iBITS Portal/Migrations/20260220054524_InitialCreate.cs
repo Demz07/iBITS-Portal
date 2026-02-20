@@ -253,7 +253,7 @@ namespace iBITS_Portal.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     StudentNum = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Message = table.Column<string>(type: "text", nullable: true),
                     NotificationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false),
                     NotificationType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),

@@ -546,7 +546,7 @@ namespace iBITS_Portal.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("NotificationDate")
                         .HasColumnType("timestamp with time zone");

@@ -12,7 +12,7 @@ using iBITS_Portal.Data;
 namespace iBITS_Portal.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260220054052_InitialCreate")]
+    [Migration("20260220054549_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

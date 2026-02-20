@@ -12,7 +12,7 @@ using iBITS_Portal.Models;
 namespace iBITS_Portal.Migrations
 {
     [DbContext(typeof(PortaliBitsContext))]
-    [Migration("20260220054023_InitialCreate")]
+    [Migration("20260220054524_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -549,7 +549,7 @@ namespace iBITS_Portal.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("NotificationDate")
                         .HasColumnType("timestamp with time zone");

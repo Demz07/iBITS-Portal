@@ -23,7 +23,7 @@ namespace iBITS_Portal.Models
         [StringLength(200)]
         public string? Title { get; set; }
 
-        [Column(TypeName = "nvarchar(max)")]
+        // FIXED: Removed TypeName - PostgreSQL will use 'text' automatically
         public string? Message { get; set; }
 
         public DateTime? NotificationDate { get; set; }
