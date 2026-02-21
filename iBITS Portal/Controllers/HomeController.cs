@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Controllers/HomeController.cs
 // ============================================================
 
@@ -33,46 +33,35 @@ namespace iBITS_Portal.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
-            _logger.LogInformation("========== INDEX ACTION STARTED ==========");
-            _logger.LogInformation("User authenticated: {IsAuthenticated}", User?.Identity?.IsAuthenticated ?? false);
-            _logger.LogInformation("User name: {UserName}", User?.Identity?.Name ?? "null");
-            _logger.LogInformation("Checking if user is signed in...");
             if (!_signInManager.IsSignedIn(User))
             {
-                _logger.LogInformation("User not signed in, redirecting to LandingPage");
                 return RedirectToAction("LandingPage");
             }
 
             var user = await _userManager.GetUserAsync(User);
-            _logger.LogInformation("Retrieved user from UserManager: {UserName}", user?.UserName ?? "null");
-            _logger.LogInformation("Checking if user or username is null...");
             if (user == null || user.UserName == null)
             {
                 await _signInManager.SignOutAsync();
                 return View("Gateway");
             }
 
-            _logger.LogInformation("Checking if user is Admin...");
             if (await _userManager.IsInRoleAsync(user, "Admin"))
             {
                 return RedirectToAction("Index", "Admin");
             }
 
             // If still using default password, force password setup
-            _logger.LogInformation("Checking if using default password...");
             bool isDefaultPassword = await _userManager.CheckPasswordAsync(user, user.UserName);
             if (isDefaultPassword)
             {
                 return RedirectToAction("SecuritySetup", "Account");
             }
 
-            _logger.LogInformation("Querying Students table for username: {UserName}", user.UserName);
             var student = await _context.Students
                 .Include(s => s.Officer)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.StudentNum == user.UserName);
 
-            _logger.LogInformation("Student record retrieved: {Found}", student != null);
             if (student == null)
             {
                 _logger.LogError($"CRITICAL: Identity user '{user.UserName}' exists but has no matching Student record.");
@@ -89,7 +78,6 @@ namespace iBITS_Portal.Controllers
             }
             // Pending role change (optional feature) - with error handling
             PendingRoleChange? pendingChange = null;
-            _logger.LogInformation("Checking for pending role changes...");
             try
             {
                 pendingChange = await _context.PendingRoleChanges
@@ -102,7 +90,6 @@ namespace iBITS_Portal.Controllers
             var today = DateOnly.FromDateTime(DateTime.Today);
 
             // Current events: all for today (not closed)
-            _logger.LogInformation("Loading current events for today...");
             var currentEvents = await _context.Events
                 .Where(e => e.EventDate.HasValue && e.EventDate.Value == today && !e.IsClosed)
                 .OrderBy(e => e.StartTime.HasValue ? 0 : 1)
@@ -120,7 +107,6 @@ namespace iBITS_Portal.Controllers
             ViewBag.CurrentEvents = currentEvents;
 
             // Upcoming events: strictly future
-            _logger.LogInformation("Loading upcoming events...");
             var upcomingEvents = await _context.Events
                 .Where(e => e.EventDate.HasValue && e.EventDate.Value > today && !e.IsClosed)
                 .OrderBy(e => e.EventDate)
@@ -139,7 +125,6 @@ namespace iBITS_Portal.Controllers
             // - not expired
             // - exclude Admin Notice
             // - supports comma-separated target audiences
-            _logger.LogInformation("Loading announcements...");
             var allAnnouncements = await _context.Announcements
                 .Where(a => (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
                             && a.AnnouncementType != "Admin Notice"
@@ -214,7 +199,6 @@ namespace iBITS_Portal.Controllers
             
             try
             {
-                _logger.LogInformation("Loading unpaid fees for student: {UserName}", user.UserName);
                 unpaidFees = await _context.Fees
                     .Where(f => f.StudentNum == user.UserName && f.FeeStatus != "Paid")
                     .ToListAsync();
@@ -226,7 +210,6 @@ namespace iBITS_Portal.Controllers
 
             try
             {
-                _logger.LogInformation("Loading unpaid fines for student: {UserName}", user.UserName);
                 unpaidFines = await _context.Fines
                     .Include(f => f.Attendance)
                     .Where(f => f.Attendance != null && f.Attendance.StudentNum == user.UserName && f.FinesStatus != "Paid")
@@ -247,7 +230,6 @@ namespace iBITS_Portal.Controllers
             
             try
             {
-                _logger.LogInformation("Calculating attendance rate...");
                 totalEvents = await _context.Events
                     .Where(e => e.EventDate.HasValue && e.EventDate.Value < today)
                     .CountAsync();
@@ -286,7 +268,6 @@ namespace iBITS_Portal.Controllers
 
             // ================== ADMIN NOTICES - WITH ERROR HANDLING ==================
             List<Notification> adminNotices = new List<Notification>();
-            _logger.LogInformation("Loading admin notices...");
             try
             {
                 adminNotices = await _context.Notifications
@@ -304,7 +285,6 @@ namespace iBITS_Portal.Controllers
 
 
 
-            _logger.LogInformation("========== INDEX ACTION COMPLETED SUCCESSFULLY ==========");
             return View("StudentDashboard");
         }
 
@@ -341,8 +321,6 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> DismissAnnouncement(int id)
         {
             var user = await _userManager.GetUserAsync(User);
-            _logger.LogInformation("Retrieved user from UserManager: {UserName}", user?.UserName ?? "null");
-            _logger.LogInformation("Checking if user or username is null...");
             if (user == null || user.UserName == null)
             {
                 return Json(new { success = false, message = "User not authenticated" });
@@ -379,8 +357,6 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> DismissNotification(int id)
         {
             var user = await _userManager.GetUserAsync(User);
-            _logger.LogInformation("Retrieved user from UserManager: {UserName}", user?.UserName ?? "null");
-            _logger.LogInformation("Checking if user or username is null...");
             if (user == null || user.UserName == null)
             {
                 return Json(new { success = false, message = "User not authenticated" });
@@ -414,7 +390,6 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> GetAllEventsJson()
         {
             var user = await _userManager.GetUserAsync(User);
-            _logger.LogInformation("Retrieved user from UserManager: {UserName}", user?.UserName ?? "null");
             if (user == null) return Json(new { success = false, message = "User not found" });
 
             var today = DateOnly.FromDateTime(DateTime.Today);
