@@ -1,4 +1,4 @@
-﻿@{
+@{
     //_Layout.cshtml
 }
 
@@ -48,7 +48,8 @@
             &copy; 2025 - iBITS_Portal - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    
+    <script src="~/js/error-tracker.js" asp-append-version="true"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
