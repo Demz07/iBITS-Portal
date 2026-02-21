@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/HomeController.cs
 // ============================================================
 
@@ -7,7 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+
+using System.Diagnostics;
 
 namespace iBITS_Portal.Controllers
 {
@@ -430,7 +431,11 @@ namespace iBITS_Portal.Controllers
         [AllowAnonymous] public IActionResult LandingPageAbout() => View();
         [AllowAnonymous] public IActionResult LandingPagePeople() => View();
         [AllowAnonymous] public IActionResult LandingDevelopers() => View();
+    
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
     }
 }
-
-
