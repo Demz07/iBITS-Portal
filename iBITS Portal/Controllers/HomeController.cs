@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Controllers/HomeController.cs
 // ============================================================
 
@@ -192,34 +192,61 @@ namespace iBITS_Portal.Controllers
                 .ToList();
 
             // ============================================================
-            // NEW: FINANCIAL SUMMARY
+            // FINANCIAL SUMMARY - WITH ERROR HANDLING
             // ============================================================
-            var unpaidFees = await _context.Fees
-                .Where(f => f.StudentNum == user.UserName && f.FeeStatus != "Paid")
-                .ToListAsync();
+            List<Fee> unpaidFees = new List<Fee>();
+            List<Fine> unpaidFines = new List<Fine>();
+            
+            try
+            {
+                unpaidFees = await _context.Fees
+                    .Where(f => f.StudentNum == user.UserName && f.FeeStatus != "Paid")
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not load fees for {UserName}. Continuing with dashboard load.", user.UserName);
+            }
 
-            var unpaidFines = await _context.Fines
-                .Include(f => f.Attendance)
-                .Where(f => f.Attendance != null && f.Attendance.StudentNum == user.UserName && f.FinesStatus != "Paid")
-                .ToListAsync();
+            try
+            {
+                unpaidFines = await _context.Fines
+                    .Include(f => f.Attendance)
+                    .Where(f => f.Attendance != null && f.Attendance.StudentNum == user.UserName && f.FinesStatus != "Paid")
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not load fines for {UserName}. Continuing with dashboard load.", user.UserName);
+            }
 
             ViewBag.UnpaidFeesCount = unpaidFees.Count;
             ViewBag.UnpaidFinesCount = unpaidFines.Count;
             ViewBag.TotalBalanceDue = unpaidFees.Sum(f => f.Amount) + unpaidFines.Sum(f => f.Amount);
 
-            // Attendance rate (past events only)
-            var totalEvents = await _context.Events
-                .Where(e => e.EventDate.HasValue && e.EventDate.Value < today)
-                .CountAsync();
+            // Attendance rate (past events only) - WITH ERROR HANDLING
+            int totalEvents = 0;
+            int studentAttendances = 0;
+            
+            try
+            {
+                totalEvents = await _context.Events
+                    .Where(e => e.EventDate.HasValue && e.EventDate.Value < today)
+                    .CountAsync();
 
-            var studentAttendances = await _context.Attendances
-                .Include(a => a.Event)
-                .Where(a => a.StudentNum == user.UserName &&
-                            a.AttendanceStatus == "Present" &&
-                            a.Event != null &&
-                            a.Event.EventDate.HasValue &&
-                            a.Event.EventDate.Value < today)
-                .CountAsync();
+                studentAttendances = await _context.Attendances
+                    .Include(a => a.Event)
+                    .Where(a => a.StudentNum == user.UserName &&
+                                a.AttendanceStatus == "Present" &&
+                                a.Event != null &&
+                                a.Event.EventDate.HasValue &&
+                                a.Event.EventDate.Value < today)
+                    .CountAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not calculate attendance rate for {UserName}. Continuing with dashboard load.", user.UserName);
+            }
 
             var attendanceRate = totalEvents > 0
                 ? Math.Round((double)studentAttendances / totalEvents * 100, 1)
@@ -239,12 +266,19 @@ namespace iBITS_Portal.Controllers
                 ? "/images/default-avatar.png"
                 : student.StudentImage;
 
-            // ================== ADMIN NOTICES ==================
-            // Fetch individual notifications (Admin Notices) that haven't been read/dismissed
-            var adminNotices = await _context.Notifications
-    .Where(n => n.StudentNum == user.UserName && !n.IsRead && n.NotificationType == "Admin Notice")
-    .OrderByDescending(n => n.NotificationDate)
-    .ToListAsync();
+            // ================== ADMIN NOTICES - WITH ERROR HANDLING ==================
+            List<Notification> adminNotices = new List<Notification>();
+            try
+            {
+                adminNotices = await _context.Notifications
+                    .Where(n => n.StudentNum == user.UserName && !n.IsRead && n.NotificationType == "Admin Notice")
+                    .OrderByDescending(n => n.NotificationDate)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not load admin notices for {UserName}. Continuing with dashboard load.", user.UserName);
+            }
 
             ViewBag.AdminNotices = adminNotices;
             // ===================================================
@@ -398,4 +432,5 @@ namespace iBITS_Portal.Controllers
         [AllowAnonymous] public IActionResult LandingDevelopers() => View();
     }
 }
+
 
