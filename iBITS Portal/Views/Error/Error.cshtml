@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Error";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 72px;"></i>
+                    </div>
+                    
+                    <h1 class="display-4 text-danger mb-3">
+                        @(ViewBag.ErrorMessage ?? "Oops! Something went wrong")
+                    </h1>
+                    
+                    <p class="lead text-muted mb-4">
+                        @(ViewBag.ErrorDescription ?? "We encountered an unexpected error. Our team has been notified.")
+                    </p>
+
+                    @if (ViewBag.StatusCode != null)
+                    {
+                        <div class="alert alert-light mb-4">
+                            <strong>Error Code:</strong> @ViewBag.StatusCode
+                        </div>
+                    }
+
+                    @if (ViewBag.RequestId != null)
+                    {
+                        <div class="alert alert-light mb-4">
+                            <small><strong>Request ID:</strong> @ViewBag.RequestId</small>
+                        </div>
+                    }
+
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-primary btn-lg me-2">
+                            <i class="fas fa-home"></i> Go to Home
+                        </a>
+                        <a href="javascript:history.back()" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            If this problem persists, please contact the administrator.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+</style>
