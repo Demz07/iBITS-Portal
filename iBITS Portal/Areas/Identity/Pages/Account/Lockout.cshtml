@@ -1,0 +1,327 @@
+﻿@page
+@model LockoutModel
+@{
+    ViewData["Title"] = "Account Locked";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Locked - iBITS Portal</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-deep: #030a16;
+            --gold-primary: #D4AF37;
+            --gold-light: #F9E076;
+            --gold-glow: rgba(212, 175, 55, 0.4);
+            --text-muted: #94a3b8;
+            --red-primary: #dc3545;
+            --red-glow: rgba(220, 53, 69, 0.4);
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-deep);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #matrixCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .top-header {
+            position: absolute;
+            top: 30px; left: 40px;
+            display: flex;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .header-logo {
+            width: 60px; height: 60px;
+            object-fit: contain;
+            margin-right: 15px;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+        }
+
+        .uni-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        .campus-name {
+            font-weight: 400;
+            font-size: 0.9rem;
+            color: var(--gold-primary);
+            letter-spacing: 2px;
+            margin-top: 2px;
+        }
+
+        .center-wrapper {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lockout-card {
+            width: 100%;
+            max-width: 520px;
+            padding: 60px 50px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 30px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6), 0 0 60px rgba(220, 53, 69, 0.1);
+            text-align: center;
+            animation: cardEntrance 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .lock-icon {
+            font-size: 4rem;
+            color: var(--red-primary);
+            display: block;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 20px var(--red-glow));
+            animation: lockPulse 2s ease-in-out infinite;
+        }
+
+        .lockout-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .lockout-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .countdown-wrapper {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 16px;
+            padding: 20px 30px;
+            margin-bottom: 2rem;
+        }
+
+        .countdown-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .countdown-timer {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--red-primary);
+            font-family: monospace;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px var(--red-glow);
+        }
+
+        .attempt-bar-wrapper {
+            margin-bottom: 2rem;
+        }
+
+        .attempt-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .attempt-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .attempt-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #dc3545, #ff6b6b);
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--red-glow);
+        }
+
+        .unlock-notice {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .unlock-notice span {
+            color: var(--gold-primary);
+            font-weight: 600;
+        }
+
+        .btn-return {
+            display: inline-block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 30px;
+            border-radius: 12px;
+        }
+
+        .btn-return:hover {
+            color: var(--gold-primary);
+            border-color: var(--gold-primary);
+        }
+
+        @@keyframes cardEntrance {
+            from { opacity: 0; transform: translateY(40px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @@keyframes lockPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px var(--red-glow)); }
+            50%       { transform: scale(1.08); filter: drop-shadow(0 0 25px var(--red-glow)); }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrixCanvas"></canvas>
+
+    <div class="top-header">
+        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
+        <div>
+            <div class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</div>
+            <div class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</div>
+        </div>
+    </div>
+
+    <div class="center-wrapper">
+        <div class="lockout-card">
+
+            <i class="bi bi-lock-fill lock-icon"></i>
+
+            <div class="lockout-title">ACCESS LOCKED</div>
+            <p class="lockout-subtitle">
+                Too many failed login attempts.<br>
+                Your account has been temporarily locked for security.
+            </p>
+
+            <!-- Countdown Timer -->
+            <div class="countdown-wrapper">
+                <div class="countdown-label"><i class="bi bi-clock me-1"></i> Try again in</div>
+                <div class="countdown-timer" id="countdownTimer">05:00</div>
+            </div>
+
+            <!-- Attempt Progress Bar -->
+            <div class="attempt-bar-wrapper">
+                <div class="attempt-bar-label">
+                    <span>Failed Attempts</span>
+                    <span>5 / 5</span>
+                </div>
+                <div class="attempt-bar">
+                    <div class="attempt-bar-fill"></div>
+                </div>
+            </div>
+
+            <p class="unlock-notice">
+                Your account will automatically unlock after <span>5 minutes</span>.
+            </p>
+
+            <a href="/Identity/Account/Login" class="btn-return">
+                <i class="bi bi-arrow-left me-2"></i>Back to Login
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Background
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        const fontSize = 26;
+        const columns = canvas.width / fontSize;
+        const drops = [];
+        for (let x = 0; x < columns; x++) { drops[x] = 1; }
+        function draw() {
+            ctx.fillStyle = 'rgba(3, 10, 22, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#dc3545';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = "01".charAt(Math.floor(Math.random() * 2));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(draw, 33);
+
+        // Countdown Timer
+        const lockoutEndRaw = '@(Model.LockoutEndIso)';
+        let totalSeconds = 5 * 60; // default 5 minutes
+
+        if (lockoutEndRaw) {
+            try {
+                const lockoutEnd = new Date(lockoutEndRaw);
+                const now = new Date();
+                const diffMs = lockoutEnd - now;
+                if (diffMs > 0) { totalSeconds = Math.floor(diffMs / 1000); }
+            } catch(e) {}
+        }
+
+        function updateTimer() {
+            if (totalSeconds <= 0) {
+                document.getElementById('countdownTimer').textContent = '00:00';
+                document.getElementById('countdownTimer').style.color = '#28a745';
+                setTimeout(() => { window.location.href = '/Identity/Account/Login'; }, 1500);
+                return;
+            }
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            document.getElementById('countdownTimer').textContent =
+                String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            totalSeconds--;
+        }
+
+        updateTimer();
+        setInterval(updateTimer, 1000);
+    </script>
+</body>
+</html>

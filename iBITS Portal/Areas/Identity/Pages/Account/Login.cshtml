@@ -267,7 +267,26 @@
                 color: var(--gold-primary);
             }
 
-        /* --- BUTTON --- */
+        
+        /* --- SPINNER --- */
+        .login-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @@keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .btn-gold:disabled {
+            opacity: 0.85;
+            cursor: not-allowed;
+        }
         .btn-gold {
             background: var(--gold-primary);
             color: #000;
@@ -313,6 +332,25 @@
             color: var(--gold-primary) !important;
             text-shadow: 0 0 8px var(--gold-primary);
             font-family: monospace !important;
+        }
+
+        /* --- ATTEMPT WARNING BANNER --- */
+        .attempt-warning {
+            background: rgba(220, 53, 69, 0.15);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            border-left: 4px solid #dc3545;
+            color: #ff6b6b;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            animation: warningPulse 0.4s ease-out;
+        }
+
+        @@keyframes warningPulse {
+            0% { opacity: 0; transform: translateX(-10px); }
+            100% { opacity: 1; transform: translateX(0); }
         }
 
         /* --- ANIMATIONS --- */
@@ -441,6 +479,14 @@
                 <form id="account" method="post">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
+                    @if (Model.AttemptWarning != null)
+                    {
+                        <div class="attempt-warning mb-3" id="attemptWarning">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            @Model.AttemptWarning
+                        </div>
+                    }
+
                     <div class="form-floating">
                         <input asp-for="Input.Email" type="text" class="form-control" autocomplete="off" placeholder="ID" />
                         <label asp-for="Input.Email">@(userType == "Admin" ? "Admin Username" : "Student ID / Username")</label>
@@ -461,7 +507,12 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="btn-gold">Initialize Session</button>
+                    <button type="submit" class="btn-gold" id="loginBtn" onclick="handleLoginSubmit(this)">
+    <span id="btnText">Initialize Session</span>
+    <span id="btnSpinner" style="display:none;">
+        <span class="login-spinner"></span> Authenticating...
+    </span>
+</button>
 
                     <div class="text-center">
                         <a href="@Url.Action("Gateway", "Home")" class="back-link">
@@ -513,7 +564,30 @@
     </script>
 
     <!-- Password Reveal Script -->
+    <!-- Password Reveal + Spinner + Enter Key Script -->
     <script>
+        function triggerLogin() {
+            var btnText = document.getElementById('btnText');
+            var btnSpinner = document.getElementById('btnSpinner');
+            var loginBtn = document.getElementById('loginBtn');
+            if (btnText) btnText.style.display = 'none';
+            if (btnSpinner) btnSpinner.style.display = 'inline-flex';
+            if (loginBtn) loginBtn.disabled = true;
+            var form = document.getElementById('account');
+            if (form) form.submit();
+        }
+
+        function handleLoginSubmit(btn) {
+            triggerLogin();
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerLogin();
+            }
+        });
+
         function matrixReveal() {
             const input = document.getElementById("passwordField");
             const btn = document.getElementById("toggleBtn");

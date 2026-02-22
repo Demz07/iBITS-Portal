@@ -59,6 +59,8 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
         [TempData]
         public string ErrorMessage { get; set; }
 
+        public string AttemptWarning { get; set; }
+
         public class InputModel
         {
             [Required]
@@ -73,7 +75,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public async Task OnGetAsync(string returnUrl = null, string warning = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
@@ -87,6 +89,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             ReturnUrl = returnUrl;
+            AttemptWarning = warning;
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
@@ -108,42 +111,47 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                     }
                 }
 
-                // 2. Attempt Login
-                var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                // 2. Check if user is already locked out before attempting login
+                var existingUser = await _userManager.FindByNameAsync(userName);
+                if (existingUser != null && await _userManager.IsLockedOutAsync(existingUser))
+                {
+                    var lockoutEnd = await _userManager.GetLockoutEndDateAsync(existingUser);
+                    TempData["LockoutEnd"] = lockoutEnd?.ToString("o");
+                    return RedirectToPage("./Lockout");
+                }
+
+                // 3. Attempt Login
+                var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
 
-                    // 3. Role-based Access Control
+                    // 4. Role-based Access Control
                     var currentUser = await _userManager.FindByNameAsync(userName);
                     bool isAdmin = currentUser != null && await _userManager.IsInRoleAsync(currentUser, "Admin");
-                    
+
                     // Check if user type matches the login route
                     if (UserType == "Admin" && !isAdmin)
                     {
-                        // Non-admin trying to access Admin Console
                         await _signInManager.SignOutAsync();
                         ModelState.AddModelError(string.Empty, "Access Denied: This login is for Administrators only.");
                         return Page();
                     }
                     else if (UserType == "Member" && isAdmin)
                     {
-                        // Admin trying to access Member portal
                         await _signInManager.SignOutAsync();
                         ModelState.AddModelError(string.Empty, "Access Denied: Administrators must use the Admin Console login.");
                         return Page();
                     }
-                    
+
                     // Redirect to appropriate dashboard
                     if (isAdmin)
                     {
                         return RedirectToAction("Index", "Admin");
                     }
 
-                    // =========================================================
-                    // NEW: Check for pending role change
-                    // =========================================================
+                    // Check for pending role change
                     var pendingRoleChange = await _context.PendingRoleChanges
                         .Where(p => p.StudentNumber == userName && !p.IsConfirmed && !p.IsDeclined)
                         .OrderByDescending(p => p.AssignedDate)
@@ -151,13 +159,9 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
 
                     if (pendingRoleChange != null)
                     {
-                        // Redirect to role confirmation page
                         _logger.LogInformation($"User {userName} has a pending role change. Redirecting to confirmation page.");
                         return RedirectToPage("./ConfirmRoleChange", new { changeId = pendingRoleChange.Id });
                     }
-                    // =========================================================
-                    // END: Pending role change check
-                    // =========================================================
 
                     return LocalRedirect(returnUrl);
                 }
@@ -166,14 +170,36 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
                 }
+
                 if (result.IsLockedOut)
                 {
                     _logger.LogWarning("User account locked out.");
+                    // Pass lockout end time to the lockout page
+                    if (existingUser != null)
+                    {
+                        var lockoutEnd = await _userManager.GetLockoutEndDateAsync(existingUser);
+                        TempData["LockoutEnd"] = lockoutEnd?.ToString("o");
+                    }
                     return RedirectToPage("./Lockout");
                 }
                 else
                 {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    // Show remaining attempts
+                    int remainingAttempts = 0;
+                    if (existingUser != null)
+                    {
+                        int failedCount = await _userManager.GetAccessFailedCountAsync(existingUser);
+                        remainingAttempts = 5 - failedCount;
+                    }
+
+                    if (remainingAttempts > 0 && existingUser != null)
+                    {
+                        ModelState.AddModelError(string.Empty, $"Invalid credentials. You have {remainingAttempts} attempt(s) remaining before your account is locked for 5 minutes.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    }
                     return Page();
                 }
             }
