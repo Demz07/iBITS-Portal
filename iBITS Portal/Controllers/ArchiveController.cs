@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using iBITS_Portal.Models;
+using iBITS_Portal.Utilities;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -44,7 +45,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.ArchiveYears = allYears;
 
             // Default to current year if list is empty
-            ViewBag.CurrentArchiveYear = allYears.Any() ? allYears.First() : DateTime.Now.Year;
+            ViewBag.CurrentArchiveYear = allYears.Any() ? allYears.First() : PhTimeHelper.Now.Year;
 
             return View();
         }
@@ -226,7 +227,7 @@ namespace iBITS_Portal.Controllers
                     Action = "Student Unarchive",
                     Description = $"Restored student: {student.StudentFn} {student.StudentLn}",
                     PerformedBy = currentUser,
-                    Timestamp = DateTime.Now
+                    Timestamp = PhTimeHelper.Now
                 };
                 _context.ActivityLogs.Add(logEntry);
 

@@ -13,11 +13,64 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    <style>
+        /* Force the layout to be fixed-height and manage scrolling internally */
+        .scrollable-content {
+            overflow-y: hidden !important;
+            display: flex;
+            flex-direction: column;
+            padding: 0 !important;
+        }
+
+        .dashboard-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dashboard-header {
+            flex-shrink: 0;
+            margin: 0 !important;
+            border-radius: 0;
+            padding: 20px 30px;
+            background: #030a16; /* Solid dark navy blue */
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="light"] .dashboard-header {
+            background: #ffffff;
+            border-bottom-color: rgba(194, 157, 43, 0.3);
+        }
+
+        .dashboard-scroll-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 30px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold-dim) transparent;
+        }
+
+        .dashboard-scroll-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .dashboard-scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .dashboard-scroll-area::-webkit-scrollbar-thumb {
+            background-color: var(--gold-dim);
+            border-radius: 10px;
+        }
+    </style>
 }
 
 <div class="dashboard-container">
     <!-- ============================================================ -->
-    <!-- HEADER SECTION                                               -->
+    <!-- HEADER SECTION (FIXED)                                       -->
     <!-- ============================================================ -->
     <div class="dashboard-header glass-panel">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -28,7 +81,7 @@
                 <p class="dashboard-subtitle mb-0">Overview of student statistics and analytics</p>
             </div>
 
-                </div>
+            <div>
                 <button class="btn-gold-outline" onclick="refreshDashboard()" title="Refresh Data" id="btnRefresh">
                     <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                 </button>
@@ -37,9 +90,13 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- QUICK ACTIONS PANEL (Collapsible)                            -->
+    <!-- SCROLLABLE CONTENT AREA                                      -->
     <!-- ============================================================ -->
-    <div class="quick-actions-panel glass-panel" id="quickActionsPanel">
+    <div class="dashboard-scroll-area">
+        <!-- ============================================================ -->
+        <!-- QUICK ACTIONS PANEL (Collapsible)                            -->
+        <!-- ============================================================ -->
+        <div class="quick-actions-panel glass-panel" id="quickActionsPanel">
         <div class="quick-actions-header" data-bs-toggle="collapse" data-bs-target="#quickActionsContent">
             <div class="d-flex align-items-center">
                 <i class="bi bi-lightning-charge-fill me-2 text-gold"></i>
@@ -534,7 +591,7 @@
         </div>
     </div>
 
-    </div> <!-- End dashboard-sections-wrapper -->
+    </div> <!-- End dashboard-scroll-area -->
 </div> <!-- End dashboard-container -->
 
 <!-- ============================================================ -->

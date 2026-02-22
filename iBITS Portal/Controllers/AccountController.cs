@@ -3,6 +3,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -174,7 +175,7 @@ namespace iBITS_Portal.Controllers
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles");
                     if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder); // ✅ ensure folder exists
 
-                    var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                    var fileName = $"{student.StudentNum}_{PhTimeHelper.Now:yyyyMMddHHmmss}{ext}";
                     var filePath = Path.Combine(uploadsFolder, fileName);
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
@@ -292,7 +293,7 @@ namespace iBITS_Portal.Controllers
                     if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
                 }
 
-                var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                var fileName = $"{student.StudentNum}_{PhTimeHelper.Now:yyyyMMddHHmmss}{ext}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
@@ -344,7 +345,7 @@ namespace iBITS_Portal.Controllers
                     if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
                 }
 
-                var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                var fileName = $"{student.StudentNum}_{PhTimeHelper.Now:yyyyMMddHHmmss}{ext}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {

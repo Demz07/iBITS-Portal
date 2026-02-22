@@ -1,4 +1,4 @@
-@* ============================================================ *@
+ï»¿@* ============================================================ *@
 @* FILE PATH: Views/Home/StudentDashboard.cshtml                *@
 @* ============================================================ *@
 @using iBITS_Portal.Models
@@ -398,7 +398,7 @@ var today = DateOnly.FromDateTime(phNow);
 
 <div class="page-header">
     <div class="welcome-message">
-        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! ??</h2>
+        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! ðŸ‘‹</h2>
         <span class="role-badge @badgeClass"><i class="bi @badgeIcon"></i> @displayRole</span>
     </div>
     <a href="#profileOffcanvas" data-bs-toggle="offcanvas" class="btn-my-profile">
@@ -431,7 +431,7 @@ var today = DateOnly.FromDateTime(phNow);
                          onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
 
                         @* Added '?' after NotificationDate below *@
-                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
+                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") ï¿½ Official Notice</small>
 
                         <p class="mb-0 mt-1 text-white">
                             <strong>@n.Title</strong> @* This displays the SUBJECT *@
@@ -454,7 +454,7 @@ var today = DateOnly.FromDateTime(phNow);
                          style="cursor: pointer;"
                          data-bs-toggle="modal"
                          data-bs-target="#modal@(reminder.Id)">
-                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") • @(reminder.AnnouncementType ?? "Payment Reminder")</small>
+                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") ï¿½ @(reminder.AnnouncementType ?? "Payment Reminder")</small>
                         <p class="mb-0 mt-1 text-white">
                             <strong>@((reminder.Title ?? string.Empty).Replace("Payment Reminder: ", ""))</strong>
                         </p>
@@ -467,7 +467,7 @@ var today = DateOnly.FromDateTime(phNow);
                     <div class="announcement-item" id="announcement-@announcement.Id">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") · Posted by @announcement.PostedBy</small>
+                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") ï¿½ Posted by @announcement.PostedBy</small>
                                 <p class="mb-0 mt-1 text-white">@announcement.Content</p>
                             </div>
                             <button class="btn btn-sm btn-link text-muted p-0 ms-2"
@@ -606,7 +606,7 @@ var today = DateOnly.FromDateTime(phNow);
                                         <span>@(string.IsNullOrWhiteSpace(evt.EventLocation) ? "TBA" : evt.EventLocation)</span>
                                     </div>
                                     <div class="ue-sub">
-                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd • MMM dd, yyyy") : "Date: TBA")
+                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd ï¿½ MMM dd, yyyy") : "Date: TBA")
                                     </div>
                                     <div class="mt-1">
                                         <span class="badge upcoming-event-badge"
@@ -926,7 +926,7 @@ var today = DateOnly.FromDateTime(phNow);
                     <i class="bi bi-bell-slash-fill text-warning mb-2" style="font-size:2.5rem;"></i>
                     <p class="mb-2 fw-bold">Are you sure?</p>
                     <p class="small text-muted mb-0">
-                        You won’t see this announcement again after dismissing it.
+                        You wonï¿½t see this announcement again after dismissing it.
                     </p>
                 </div>
             </div>

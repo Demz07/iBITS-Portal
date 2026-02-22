@@ -8,7 +8,7 @@ namespace iBITS_Portal.Utilities
     /// </summary>
     public static class PhTimeHelper
     {
-        private static readonly TimeZoneInfo PhTimeZone;
+        public static readonly TimeZoneInfo PhTimeZone;
 
         static PhTimeHelper()
         {

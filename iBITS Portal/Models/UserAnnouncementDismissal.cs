@@ -7,6 +7,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using iBITS_Portal.Utilities;
 
 namespace iBITS_Portal.Models
 {
@@ -23,7 +24,7 @@ namespace iBITS_Portal.Models
         public int AnnouncementId { get; set; }
 
         [Required]
-        public DateTime DismissedAt { get; set; } = DateTime.Now;
+        public DateTime DismissedAt { get; set; } = PhTimeHelper.Now;
 
         // Navigation properties
         [ForeignKey("StudentNum")]

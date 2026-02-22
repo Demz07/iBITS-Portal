@@ -182,7 +182,7 @@ namespace iBITS_Portal.Controllers
                 Action = action,
                 Description = description,
                 PerformedBy = currentUser?.UserName ?? "System",
-                Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"))
+                Timestamp = PhTimeHelper.Now
             };
             _context.ActivityLogs.Add(logEntry);
             await _context.SaveChangesAsync();
@@ -1087,7 +1087,7 @@ namespace iBITS_Portal.Controllers
                         StudentNum = student.StudentNum,
                         Title = subject,
                         Message = message,
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         NotificationType = "Admin Notice",
                         SentBy = posterName
@@ -3507,7 +3507,7 @@ namespace iBITS_Portal.Controllers
                         Title = "New Fine Issued",
                         Message = $"You have been issued a fine of ?{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
                         NotificationType = "Fine",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = "Admin"
                     };
@@ -4668,7 +4668,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = "Admin Override",
                     ProcessedBy = adminName,
                     TransactionReference = $"ADMIN-{PhTimeHelper.Now:yyyyMMddHHmmss}",
@@ -4686,7 +4686,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Confirmed",
                         Message = $"Your payment of ?{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -4762,7 +4762,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4783,7 +4783,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -4870,7 +4870,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4891,7 +4891,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -5050,7 +5050,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
                         TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
@@ -5066,7 +5066,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Payment Confirmed",
                             Message = $"Your payment of ?{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5148,7 +5148,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Revoked",
                         Message = $"Your payment record for '{fee.FeeName}' (?{previousAmountPaid:N2}) has been revoked by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -5225,7 +5225,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
                         TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
@@ -5241,7 +5241,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fine Payment Confirmed",
                             Message = $"Your payment of ?{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5328,7 +5328,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Revoked",
                         Message = $"Your payment record for '{fine.Description ?? "Fine"}' (?{previousAmountPaid:N2}) has been revoked.",
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -5401,7 +5401,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Excused",
                         Message = $"Your fine for '{fine.Description ?? "Fine"}' (?{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
                         NotificationType = "Fine",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = adminName
                     });

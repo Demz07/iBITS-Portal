@@ -86,7 +86,7 @@ namespace iBITS_Portal.Controllers
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students.FindAsync(user.UserName);
             string poster = (student != null) ? $"{student.StudentFn} {student.StudentLn}" : "Officer";
-            _context.Announcements.Add(new Announcement { Title = "Announcement", Content = content, PostedBy = poster, Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")) });
+            _context.Announcements.Add(new Announcement { Title = "Announcement", Content = content, PostedBy = poster, Timestamp = PhTimeHelper.Now });
             await _context.SaveChangesAsync();
             return RedirectToAction("Announcements");
         }
@@ -137,8 +137,8 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> Scanner()
         {
             // Use Philippine Time (UTC+8) to avoid timezone issues on hosted server
-            var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+            var phTimeZone = PhTimeHelper.PhTimeZone;
+            var now = PhTimeHelper.Now;
             var today = DateOnly.FromDateTime(now);
 
             // Fetch ALL non-closed events regardless of date (temporary fix for timezone issues)
@@ -233,7 +233,7 @@ namespace iBITS_Portal.Controllers
                     success = true,
                     message = "Attendance recorded successfully.",
                     attendanceId = newAttendance.AttendanceId, // <-- CRITICAL: Return the ID for delete functionality!
-                    scanTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")).ToString("h:mm:ss tt"),
+                    scanTime = PhTimeHelper.Now.ToString("h:mm:ss tt"),
                     studentId = student.StudentNum,
                     studentName = student.FullName,
                     profileImage = student.StudentImage,
@@ -489,16 +489,16 @@ namespace iBITS_Portal.Controllers
                 {
                     // Class Treasurer collects payment - NOT yet validated, needs remittance
                     fee.CollectedBy = treasurer.StudentNum;
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.CollectionDate = PhTimeHelper.Now;
                     // RemittanceStatus remains "NotRemitted" (default) - will not appear in Org Treasurer stats
                 }
                 else if (User.IsInRole("Org Treasurer"))
                 {
                     // Org Treasurer direct payment marking - bypass remittance system
                     fee.CollectedBy = treasurer.StudentNum;
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.CollectionDate = PhTimeHelper.Now;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fee.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")); // Official record date
+                    fee.OfficialPaymentDate = PhTimeHelper.Now; // Official record date
                     fee.RemittanceId = null; // Not part of batch remittance
                 }
 
@@ -510,7 +510,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -530,7 +530,7 @@ namespace iBITS_Portal.Controllers
                                  $"Payment method: {transaction.PaymentMethod}. " +
                                  (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -661,16 +661,16 @@ namespace iBITS_Portal.Controllers
                 {
                     // Class Treasurer collects payment - NOT yet validated, needs remittance
                     fine.CollectedBy = treasurer.StudentNum;
-                    fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.CollectionDate = PhTimeHelper.Now;
                     // RemittanceStatus remains "NotRemitted" (default) - will not appear in Org Treasurer stats
                 }
                 else if (User.IsInRole("Org Treasurer"))
                 {
                     // Org Treasurer direct payment marking - bypass remittance system
                     fine.CollectedBy = treasurer.StudentNum;
-                    fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.CollectionDate = PhTimeHelper.Now;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fine.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")); // Official record date
+                    fine.OfficialPaymentDate = PhTimeHelper.Now; // Official record date
                     fine.RemittanceId = null; // Not part of batch remittance
                 }
 
@@ -682,7 +682,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = fine.Amount ?? 0,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -702,7 +702,7 @@ namespace iBITS_Portal.Controllers
                                  $"Payment method: {transaction.PaymentMethod}. " +
                                  (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -1295,7 +1295,7 @@ namespace iBITS_Portal.Controllers
                 Title = "Payment Reminder: " + reminderTitle,
                 Content = content,
                 PostedBy = poster,
-                Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                Timestamp = PhTimeHelper.Now,
                 AnnouncementType = reminderType,
                 TargetAudience = targetAudience,
                 ExpiryDate = expiryDate
@@ -1314,7 +1314,7 @@ namespace iBITS_Portal.Controllers
                     StudentNum = student.StudentNum,
                     Title = announcement.Title,
                     Message = content,
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     NotificationType = "Payment Reminder",
                     SentBy = poster,
                     IsRead = false
@@ -1506,7 +1506,7 @@ namespace iBITS_Portal.Controllers
                               $"Reason: {(string.IsNullOrWhiteSpace(reason) ? "Not specified" : reason)}. " +
                               $"Please contact your Class Treasurer or Org Treasurer for clarification.",
                     NotificationType = "Payment Alert",
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     IsRead = false,
                     SentBy = treasurer?.StudentNum
                 });
@@ -1577,7 +1577,7 @@ namespace iBITS_Portal.Controllers
                     Message = $"Your payment for '{fee.FeeName}' (₱{fee.Amount:N2}) has been verified and locked by the Org Treasurer. " +
                               $"This payment is now permanently recorded and cannot be changed. Thank you for your payment!",
                     NotificationType = "Payment Confirmation",
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     IsRead = false,
                     SentBy = treasurer?.StudentNum
                 });
@@ -2222,9 +2222,9 @@ namespace iBITS_Portal.Controllers
 
                     // Org Treasurer direct marking - bypass remittance system
                     fee.CollectedBy = treasurer?.StudentNum;
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.CollectionDate = PhTimeHelper.Now;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fee.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")); // Official record date
+                    fee.OfficialPaymentDate = PhTimeHelper.Now; // Official record date
                     fee.RemittanceId = null; // Not part of batch remittance
                     _context.Fees.Update(fee);
 
@@ -2233,7 +2233,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Status Update",
                         ProcessedBy = treasurer?.StudentNum ?? "",
                         Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
@@ -2249,7 +2249,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fee Status Updated",
                             Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as {newStatus}.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = treasurer?.StudentNum
                         });
@@ -2346,9 +2346,9 @@ namespace iBITS_Portal.Controllers
 
                     // Org Treasurer direct marking - bypass remittance system
                     fine.CollectedBy = treasurer?.StudentNum;
-                    fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.CollectionDate = PhTimeHelper.Now;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fine.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")); // Official record date
+                    fine.OfficialPaymentDate = PhTimeHelper.Now; // Official record date
                     fine.RemittanceId = null; // Not part of batch remittance
                     _context.Fines.Update(fine);
 
@@ -2357,7 +2357,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Status Update",
                         ProcessedBy = treasurer?.StudentNum ?? "",
                         Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
@@ -2377,7 +2377,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Status Updated",
                         Message = $"Your fine '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been marked as {newStatus}.",
                         NotificationType = newStatus == "Excused" ? "Excuse" : "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = currentTreasurer?.StudentNum
                     });
@@ -2452,7 +2452,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer?.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2474,7 +2474,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -2558,7 +2558,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer?.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2580,7 +2580,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -2863,7 +2863,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2884,7 +2884,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -2977,7 +2977,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2998,7 +2998,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -3090,7 +3090,7 @@ namespace iBITS_Portal.Controllers
                 fine.FinesStatus = "Paid";
                 fine.AmountPaid = fine.Amount ?? 0;
                 fine.CollectedBy = treasurer.StudentNum;
-                fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                fine.CollectionDate = PhTimeHelper.Now;
 
                 _context.Fines.Update(fine);
 
@@ -3102,7 +3102,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = student?.StudentNum ?? "", // Use the student object found earlier
                     Amount = fine.Amount ?? 0,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = "Cash",
                     ProcessedBy = treasurer.StudentNum ?? "",
                     Notes = "Full payment recorded by Class Treasurer"
@@ -3118,7 +3118,7 @@ namespace iBITS_Portal.Controllers
                         Title = "✅ Fine Payment Receipt",
                         Message = $"Your fine '{fine.Description ?? "Fine"}' has been PAID.\n\nAmount: ₱{fine.Amount:N2}\nCollected by: {treasurer.FullName}",
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -3235,7 +3235,7 @@ namespace iBITS_Portal.Controllers
                                   $"Date: {PhTimeHelper.Now:MMM dd, yyyy hh:mm tt}\n\n" +
                                   $"Please contact your Class Treasurer for more details.",
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -4130,7 +4130,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
@@ -4146,7 +4146,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Payment Confirmed",
                             Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = treasurer.StudentNum
                         });
@@ -4236,7 +4236,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
@@ -4252,7 +4252,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fine Payment Confirmed",
                             Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed by {treasurer.FullName}.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = treasurer.StudentNum
                         });
@@ -4336,7 +4336,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Excused",
                         Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused by {treasurer?.FullName ?? "Org Treasurer"}. Reason: {reason ?? "Not specified"}",
                         NotificationType = "Fine",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -4434,7 +4434,7 @@ namespace iBITS_Portal.Controllers
                 fee.FeeStatus = "Paid";
                 fee.AmountPaid = fee.Amount ?? 0;
                 fee.CollectedBy = treasurer.StudentNum;
-                fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                fee.CollectionDate = PhTimeHelper.Now;
                 // RemittanceStatus stays "NotRemitted" until Class Treasurer initiates remittance
 
                 _context.Fees.Update(fee);
@@ -4445,7 +4445,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum,
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    PaymentDate = PhTimeHelper.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum,
                     TransactionReference = transactionRef?.Trim(),
@@ -4701,7 +4701,7 @@ namespace iBITS_Portal.Controllers
                                 Title = "Payment Officially Validated",
                                 Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
-                                NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                                NotificationDate = PhTimeHelper.Now,
                                 IsRead = false,
                                 SentBy = orgTreasurer.StudentNum
                             });
@@ -4737,7 +4737,7 @@ namespace iBITS_Portal.Controllers
                                 Title = "Fine Payment Officially Validated",
                                 Message = $"Your fine payment of ₱{fine.Amount:N2} for '{fine.Description}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
-                                NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                                NotificationDate = PhTimeHelper.Now,
                                 IsRead = false,
                                 SentBy = orgTreasurer.StudentNum
                             });
@@ -4752,7 +4752,7 @@ namespace iBITS_Portal.Controllers
                     Title = "Remittance Validated",
                     Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' (₱{remittance.TotalAmount:N2}) has been validated by {orgTreasurer.FullName}.",
                     NotificationType = "Remittance",
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     IsRead = false,
                     SentBy = orgTreasurer.StudentNum
                 });
@@ -4864,7 +4864,7 @@ namespace iBITS_Portal.Controllers
                     Title = "Remittance Rejected",
                     Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' has been rejected. Reason: {rejectionReason}. Please review and re-submit.",
                     NotificationType = "Remittance",
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     IsRead = false,
                     SentBy = orgTreasurer?.StudentNum
                 });
@@ -4957,8 +4957,8 @@ namespace iBITS_Portal.Controllers
                     fee.FeeStatus = "Paid";
                     fee.AmountPaid = fee.Amount ?? 0;
                     fee.CollectedBy = orgTreasurer?.StudentNum;
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
-                    fee.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")); // Direct payment by Org Treasurer
+                    fee.CollectionDate = PhTimeHelper.Now;
+                    fee.OfficialPaymentDate = PhTimeHelper.Now; // Direct payment by Org Treasurer
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Mark as remitted directly
 
                     // Create transaction
@@ -4967,7 +4967,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum,
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Admin Override",
                         ProcessedBy = orgTreasurer?.StudentNum ?? "",
                         Notes = "Payment recorded directly by Org Treasurer (Admin Override)"
@@ -4982,7 +4982,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fee Payment Recorded",
                             Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as paid by the Organization Treasurer.",
                             NotificationType = "Payment",
-                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                            NotificationDate = PhTimeHelper.Now,
                             IsRead = false,
                             SentBy = orgTreasurer?.StudentNum
                         });
@@ -5200,7 +5200,7 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid
                     fine.FinesStatus = "Paid";
-                    fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.CollectionDate = PhTimeHelper.Now;
                     fine.CollectedBy = treasurer.StudentNum;
 
                     // Create payment transaction for history
@@ -5209,7 +5209,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fine.FineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Class Treasurer"
@@ -5319,7 +5319,7 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid
                     fee.FeeStatus = "Paid";
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.CollectionDate = PhTimeHelper.Now;
                     fee.CollectedBy = treasurer.StudentNum;
 
                     // Create payment transaction for history
@@ -5328,7 +5328,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = fee.FeeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Class Treasurer"
@@ -5441,10 +5441,10 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid and remitted (Org Treasurer validates immediately)
                     fine.FinesStatus = "Paid";
-                    fine.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.CollectionDate = PhTimeHelper.Now;
                     fine.CollectedBy = treasurer.StudentNum;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted;
-                    fine.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fine.OfficialPaymentDate = PhTimeHelper.Now;
 
                     // Create payment transaction for history
                     var transaction = new FinePaymentTransaction
@@ -5452,7 +5452,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fine.FineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Org Treasurer (Validated)"
@@ -5565,10 +5565,10 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid and remitted (Org Treasurer validates immediately)
                     fee.FeeStatus = "Paid";
-                    fee.CollectionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.CollectionDate = PhTimeHelper.Now;
                     fee.CollectedBy = treasurer.StudentNum;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted;
-                    fee.OfficialPaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"));
+                    fee.OfficialPaymentDate = PhTimeHelper.Now;
 
                     // Create payment transaction for history
                     var transaction = new PaymentTransaction
@@ -5576,7 +5576,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = fee.FeeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        PaymentDate = PhTimeHelper.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Org Treasurer (Validated)"
@@ -5693,7 +5693,7 @@ namespace iBITS_Portal.Controllers
                         Message = $"Your payment of ₱{fine.Amount:N2} for '{fine.Description ?? "Fine"}' has been revoked by {treasurer?.FullName}. " +
                                   (string.IsNullOrEmpty(reason) ? "" : $"Reason: {reason}."),
                         NotificationType = "Payment",
-                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                        NotificationDate = PhTimeHelper.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
