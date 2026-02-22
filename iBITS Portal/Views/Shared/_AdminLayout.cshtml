@@ -88,6 +88,29 @@
             color: var(--gold-primary) !important;
             font-weight: 700;
         }
+        /* Philippine Date-Time Badge */
+        .datetime-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(139, 0, 0, 0.1));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-strong);
+            font-weight: 500;
+        }
+        
+        .datetime-badge i {
+            color: var(--gold-primary);
+            font-size: 1rem;
+        }
+        
+        .datetime-badge span {
+            color: var(--text-strong);
+        }
+
     </style>
 
     @await RenderSectionAsync("Styles", required: false)
@@ -219,6 +242,13 @@
                                 }
                             }
                         </select>
+                    </div>
+                    <!-- Philippine Date & Time Badge -->
+                    <div class="datetime-badge" id="phDateTime">
+                        <i class="bi bi-calendar3"></i>
+                        <span id="currentDate">Loading...</span>
+                        <i class="bi bi-clock ms-2"></i>
+                        <span id="currentTime">Loading...</span>
                     </div>
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
@@ -366,6 +396,27 @@
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        // Update Philippine Date & Time every second
+        function updatePhilippineDateTime() {
+            const now = new Date();
+            
+            // Format date: Feb 22, 2026
+            const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-PH', dateOptions);
+            
+            // Format time: 1:50:32 AM
+            const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeStr = now.toLocaleTimeString('en-PH', timeOptions);
+            
+            document.getElementById('currentDate').textContent = dateStr;
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        
+        // Update immediately and then every second
+        updatePhilippineDateTime();
+        setInterval(updatePhilippineDateTime, 1000);
+    </script>
 </body>
 </html>
 

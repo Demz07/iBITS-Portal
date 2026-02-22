@@ -1,4 +1,4 @@
-﻿@* ============================================================ *@
+@* ============================================================ *@
 @* FILE PATH: Views/Shared/_StudentLayout.cshtml                *@
 @* ============================================================ *@
 
@@ -52,6 +52,43 @@
             padding: 10px 18px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
             transition: all 0.3s ease;
+        }
+
+        /* Philippine Date & Time Badge */
+        .datetime-badge {
+            background: rgba(11, 26, 51, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 12px;
+            padding: 8px 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .datetime-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+            border-color: var(--gold-primary);
+        }
+
+        .datetime-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .datetime-date {
+            color: var(--gold-primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+
+        .datetime-time {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.75rem;
+            font-weight: 500;
         }
 
             .academic-year-badge:hover {
@@ -218,10 +255,18 @@
                             @(ViewBag.CurrentAcademicYear ?? $"A.Y. {DateTime.Now.Year}-{DateTime.Now.Year + 1}")
                         </span>
                     </div>
+                    <!-- Philippine Date & Time Badge -->
+                    <div class="datetime-badge d-none d-md-flex align-items-center gap-2" title="Philippine Standard Time">
+                        <i class="bi bi-clock" style="color: var(--gold-primary); font-size: 1rem;"></i>
+                        <div class="datetime-content">
+                            <span id="currentDate" class="datetime-date"></span>
+                            <span id="currentTime" class="datetime-time"></span>
+                        </div>
+                    </div>
 
                     <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
 
-                    <!-- ✅ Header Avatar only (chip/name removed) -->
+                    <!-- ? Header Avatar only (chip/name removed) -->
            
                     <button type="button" id="themeToggle" class="btn-toggle theme-btn" title="Toggle Theme">
                         <i class="bi bi-sun-fill" id="themeIcon"></i>
@@ -348,5 +393,31 @@
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <!-- Philippine Date & Time Update Script -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format date: Saturday, Feb 22, 2026
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-PH', dateOptions);
+            
+            // Format time: 1:50:30 AM
+            const timeStr = now.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+            
+            const dateEl = document.getElementById('currentDate');
+            const timeEl = document.getElementById('currentTime');
+            
+            if (dateEl) dateEl.textContent = dateStr;
+            if (timeEl) timeEl.textContent = timeStr;
+        }
+        
+        // Update immediately on load
+        updateDateTime();
+        
+        // Update every second
+        setInterval(updateDateTime, 1000);
+    </script>
+
 </body>
 </html>

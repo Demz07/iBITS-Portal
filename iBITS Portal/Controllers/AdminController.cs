@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/AdminController.cs
 // ============================================================
 // UPDATED: Added working ExportStudentsToExcel functionality
@@ -181,7 +181,7 @@ namespace iBITS_Portal.Controllers
                 Action = action,
                 Description = description,
                 PerformedBy = currentUser?.UserName ?? "System",
-                Timestamp = DateTime.Now
+                Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"))
             };
             _context.ActivityLogs.Add(logEntry);
             await _context.SaveChangesAsync();
@@ -1086,7 +1086,7 @@ namespace iBITS_Portal.Controllers
                         StudentNum = student.StudentNum,
                         Title = subject,
                         Message = message,
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         NotificationType = "Admin Notice",
                         SentBy = posterName
@@ -2087,7 +2087,7 @@ namespace iBITS_Portal.Controllers
                 {
                     hasDebt = totalDebt > 0,
                     amount = totalDebt,
-                    details = $"Fees: ₱{unpaidFees:N2}, Fines: ₱{unpaidFines:N2}"
+                    details = $"Fees: ?{unpaidFees:N2}, Fines: ?{unpaidFines:N2}"
                 });
             }
             catch (Exception)
@@ -2868,10 +2868,10 @@ namespace iBITS_Portal.Controllers
                 {
                     StudentNum = studentNum,
                     Title = "Fine Issued",
-                    Message = $"A fine of ₱{fine.Amount} has been issued for your absence at '{eventName}'. " +
+                    Message = $"A fine of ?{fine.Amount} has been issued for your absence at '{eventName}'. " +
                              $"Due date: {fine.FinesDueDate?.ToString("MMMM dd, yyyy")}. Please settle this at your earliest convenience.",
                     NotificationType = "Fine",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                     IsRead = false,
                     SentBy = "System"
                 };
@@ -3479,9 +3479,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = student.StudentNum,
                         Title = "New Fine Issued",
-                        Message = $"You have been issued a fine of ₱{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
+                        Message = $"You have been issued a fine of ?{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
                         NotificationType = "Fine",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = "Admin"
                     };
@@ -3812,7 +3812,7 @@ namespace iBITS_Portal.Controllers
                     _ => "All Year Levels"
                 };
 
-                TempData["Message"] = $"Fee '{FeeName}' (₱{Amount:N2}) for {AcadYear} successfully assigned to {feesCreated} students ({programDesc} - {yearDesc}).";
+                TempData["Message"] = $"Fee '{FeeName}' (?{Amount:N2}) for {AcadYear} successfully assigned to {feesCreated} students ({programDesc} - {yearDesc}).";
                 _logger.LogInformation($"Fee batch created: {FeeName}, BatchId: {batchId}, Amount: {Amount}, AcadYear: {AcadYear}, Applied to: {feesCreated} students ({programDesc} - {yearDesc})");
             }
             catch (Exception ex)
@@ -4642,7 +4642,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                     PaymentMethod = "Admin Override",
                     ProcessedBy = adminName,
                     TransactionReference = $"ADMIN-{DateTime.Now:yyyyMMddHHmmss}",
@@ -4658,9 +4658,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fee.StudentNum,
                         Title = "Payment Confirmed",
-                        Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
+                        Message = $"Your payment of ?{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -4736,7 +4736,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4748,8 +4748,8 @@ namespace iBITS_Portal.Controllers
                 {
                     var newBalance = (fee.Amount ?? 0) - fee.AmountPaid;
                     var message = newBalance <= 0
-                        ? $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
-                        : $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+                        ? $"Your payment of ?{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
+                        : $"Your payment of ?{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ?{newBalance:N2}.";
 
                     _context.Notifications.Add(new Notification
                     {
@@ -4757,17 +4757,17 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Record Fee Payment", $"Recorded payment of ₱{paymentAmount:N2} for fee ID {feeId}");
+                await LogAction("Record Fee Payment", $"Recorded payment of ?{paymentAmount:N2} for fee ID {feeId}");
 
-                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
-                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
+                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ?{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ?{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
             }
             catch (Exception ex)
             {
@@ -4819,7 +4819,7 @@ namespace iBITS_Portal.Controllers
 
                 if (paymentAmount > remainingBalance)
                 {
-                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    TempData["Error"] = $"Payment amount (?{paymentAmount:N2}) cannot exceed the remaining balance (?{remainingBalance:N2}).";
                     return RedirectToAction(nameof(Fines));
                 }
 
@@ -4844,7 +4844,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4856,8 +4856,8 @@ namespace iBITS_Portal.Controllers
                 {
                     var newBalance = (fine.Amount ?? 0) - fine.AmountPaid;
                     var message = newBalance <= 0
-                        ? $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
-                        : $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+                        ? $"Your payment of ?{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
+                        : $"Your payment of ?{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ?{newBalance:N2}.";
 
                     _context.Notifications.Add(new Notification
                     {
@@ -4865,17 +4865,17 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Record Fine Payment", $"Recorded payment of ₱{paymentAmount:N2} for fine ID {fineId}");
+                await LogAction("Record Fine Payment", $"Recorded payment of ?{paymentAmount:N2} for fine ID {fineId}");
 
-                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
-                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
+                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ?{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ?{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
             }
             catch (Exception ex)
             {
@@ -5024,7 +5024,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
                         TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
@@ -5038,9 +5038,9 @@ namespace iBITS_Portal.Controllers
                         {
                             StudentNum = fee.StudentNum,
                             Title = "Payment Confirmed",
-                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
+                            Message = $"Your payment of ?{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5120,16 +5120,16 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fee.StudentNum,
                         Title = "Payment Revoked",
-                        Message = $"Your payment record for '{fee.FeeName}' (₱{previousAmountPaid:N2}) has been revoked by the administrator.",
+                        Message = $"Your payment record for '{fee.FeeName}' (?{previousAmountPaid:N2}) has been revoked by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Revoke Fee Payment", $"Revoked payment for fee ID {feeId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+                await LogAction("Revoke Fee Payment", $"Revoked payment for fee ID {feeId}. Previous: ?{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
 
                 return Json(new { 
                     success = true, 
@@ -5199,7 +5199,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
                         TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
@@ -5213,9 +5213,9 @@ namespace iBITS_Portal.Controllers
                         {
                             StudentNum = fine.StudentNum,
                             Title = "Fine Payment Confirmed",
-                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
+                            Message = $"Your payment of ?{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5300,16 +5300,16 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fine.StudentNum,
                         Title = "Fine Payment Revoked",
-                        Message = $"Your payment record for '{fine.Description ?? "Fine"}' (₱{previousAmountPaid:N2}) has been revoked.",
+                        Message = $"Your payment record for '{fine.Description ?? "Fine"}' (?{previousAmountPaid:N2}) has been revoked.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Revoke Fine Payment", $"Revoked payment for fine ID {fineId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+                await LogAction("Revoke Fine Payment", $"Revoked payment for fine ID {fineId}. Previous: ?{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
 
                 return Json(new { 
                     success = true, 
@@ -5373,9 +5373,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fine.StudentNum,
                         Title = "Fine Excused",
-                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
+                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (?{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
                         NotificationType = "Fine",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -5534,6 +5534,7 @@ namespace iBITS_Portal.Controllers
         public decimal PendingAmount { get; set; }
     }
 }
+
 
 
 

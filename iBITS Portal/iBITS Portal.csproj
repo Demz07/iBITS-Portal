@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-iBITS_Portal-8d8f0fb2-95e2-471a-b405-58bb179c130a</UserSecretsId>
     <RootNamespace>iBITS_Portal</RootNamespace>
+    <!-- Reduce publish size -->
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,13 +18,22 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.22" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.22" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.22" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.22">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.22" />
+    <!-- Scaffolding only needed at design time, not in production -->
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.22">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Exclude unnecessary files from publish -->
+  <ItemGroup>
+    <None Remove="runtimes\linux-x86\**" />
+    <None Remove="runtimes\linux-arm\**" />
+    <None Remove="runtimes\osx\**" />
   </ItemGroup>
 
 </Project>

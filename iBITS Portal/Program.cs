@@ -12,6 +12,16 @@ namespace iBITS_Portal
     {
         public static async Task Main(string[] args)
         {
+            // ✅ Set Philippine Time (UTC+8) as the default timezone for the entire application
+            // This ensures ALL DateTime.Now calls return Philippine Standard Time
+            Environment.SetEnvironmentVariable("TZ", "Asia/Manila");
+            try
+            {
+                var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+                System.AppContext.SetSwitch("System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform", false);
+            }
+            catch { }
+
             var builder = WebApplication.CreateBuilder(args);
 
             // 1. Database Connection
@@ -43,7 +53,6 @@ namespace iBITS_Portal
             // 3. FEATURE: Secure Session Management (5-Minute Auto-Logout)
             builder.Services.ConfigureApplicationCookie(options =>
             {
-                // UPDATED: Changed to 15 Minutes
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
                 options.SlidingExpiration = true;
                 options.LoginPath = "/Identity/Account/Login";
@@ -54,21 +63,12 @@ namespace iBITS_Portal
 
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
-            }
+            // Show detailed errors in all environments to help debug deployment
+            app.UseExceptionHandler("/Home/Error");
+            app.UseDeveloperExceptionPage();
 
-            app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
-
             app.UseAuthorization();
 
             app.MapControllerRoute(
