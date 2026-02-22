@@ -9,6 +9,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -862,8 +863,8 @@ namespace iBITS_Portal.Controllers
             ViewBag.ProgramYearCombinedStats = programYearCombinedStats;
 
             // Calculate monthly trends - Last 3 months by default
-            var defaultStartDate = DateTime.Now.AddMonths(-3);
-            var defaultEndDate = DateTime.Now;
+            var defaultStartDate = PhTimeHelper.Now.AddMonths(-3);
+            var defaultEndDate = PhTimeHelper.Now;
 
             var monthlyTrends = new List<object>();
             var currentMonth = new DateTime(defaultStartDate.Year, defaultStartDate.Month, 1);
@@ -925,7 +926,7 @@ namespace iBITS_Portal.Controllers
                 DateTime rangeStart;
                 DateTime rangeEnd;
                 string periodLabel;
-                var now = DateTime.Now;
+                var now = PhTimeHelper.Now;
 
                 // Determine date range based on period
                 switch (period?.ToLower())
@@ -967,7 +968,7 @@ namespace iBITS_Portal.Controllers
                             return Json(new { success = false, message = "End date must be after start date." });
                         }
 
-                        if (endDate.Value > DateTime.Now)
+                        if (endDate.Value > PhTimeHelper.Now)
                         {
                             return Json(new { success = false, message = "Cannot select future dates." });
                         }
@@ -1220,7 +1221,7 @@ namespace iBITS_Portal.Controllers
                           || a.AnnouncementType == "Final Notice"
                           || a.AnnouncementType == "New Fee Posted")
                          && a.PostedBy == posterName
-                         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now))
+                         && (a.ExpiryDate == null || a.ExpiryDate > PhTimeHelper.Now))
                 .OrderByDescending(a => a.Timestamp)
                 .ToListAsync();
 
@@ -1254,7 +1255,7 @@ namespace iBITS_Portal.Controllers
             string poster = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
             // Calculate expiry date
-            DateTime? expiryDate = expiryDays > 0 ? DateTime.Now.AddDays(expiryDays) : (DateTime?)null;
+            DateTime? expiryDate = expiryDays > 0 ? PhTimeHelper.Now.AddDays(expiryDays) : (DateTime?)null;
 
             // ===== EDIT MODE: Update existing reminder =====
             if (reminderId.HasValue && reminderId.Value > 0)
@@ -1561,7 +1562,7 @@ namespace iBITS_Portal.Controllers
 
             // Lock the payment
             fee.IsPaymentLocked = true;
-            fee.PaymentLockedDate = DateTime.Now;
+            fee.PaymentLockedDate = PhTimeHelper.Now;
             fee.LockedBy = treasurer?.StudentNum;
 
             _context.Fees.Update(fee);
@@ -1684,7 +1685,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 fee.IsPaymentLocked = true;
-                fee.PaymentLockedDate = DateTime.Now;
+                fee.PaymentLockedDate = PhTimeHelper.Now;
                 fee.LockedBy = treasurer?.StudentNum;
 
                 locked++;
@@ -1934,7 +1935,7 @@ namespace iBITS_Portal.Controllers
                             AttendanceId = attendanceId,
                             Amount = fineAmount,
                             FinesStatus = "Unpaid",
-                            FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+                            FinesDueDate = DateOnly.FromDateTime(PhTimeHelper.Now.AddDays(7)),
                             Description = $"Absence Fine: {attendance.Event?.EventName ?? "Event"}",
                             AmountPaid = 0
                         });
@@ -1992,7 +1993,7 @@ namespace iBITS_Portal.Controllers
                                 AttendanceId = r.AttendanceId,
                                 Amount = fineAmount,
                                 FinesStatus = "Unpaid",
-                                FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+                                FinesDueDate = DateOnly.FromDateTime(PhTimeHelper.Now.AddDays(7)),
                                 Description = $"Absence Fine: {r.Event?.EventName ?? "Event"}",
                                 AmountPaid = 0
                             });
@@ -3231,7 +3232,7 @@ namespace iBITS_Portal.Controllers
                                   $"Amount: ₱{fine.Amount:N2}\n" +
                                   $"Status: UNPAID\n" +
                                   $"Revoked by: {treasurer.FullName}\n" +
-                                  $"Date: {DateTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
+                                  $"Date: {PhTimeHelper.Now:MMM dd, yyyy hh:mm tt}\n\n" +
                                   $"Please contact your Class Treasurer for more details.",
                         NotificationType = "Payment",
                         NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
@@ -3484,7 +3485,7 @@ namespace iBITS_Portal.Controllers
                     var acadYear = await _context.SystemSettings
                         .Where(s => s.SettingKey == "CurrentAcademicYear")
                         .Select(s => s.SettingValue)
-                        .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+                        .FirstOrDefaultAsync() ?? $"{PhTimeHelper.Now.Year}-{PhTimeHelper.Now.Year + 1}";
 
                     // Generate batch code
                     var batchCode = await GenerateRemittanceBatchCode();
@@ -3503,7 +3504,7 @@ namespace iBITS_Portal.Controllers
                         TotalAmount = fines.Sum(f => f.Amount ?? 0),
                         TotalStudents = fines.Count,
                         SubmittedBy = treasurer.StudentNum,
-                        SubmittedDate = DateTime.Now,
+                        SubmittedDate = PhTimeHelper.Now,
                         Status = RemittanceStatus.Pending,
                         AcademicYear = acadYear
                     };
@@ -3526,7 +3527,7 @@ namespace iBITS_Portal.Controllers
                             StudentNum = studentNum,
                             StudentName = studentName,
                             Amount = fine.Amount ?? 0,
-                            CollectionDate = fine.CollectionDate ?? DateTime.Now,
+                            CollectionDate = fine.CollectionDate ?? PhTimeHelper.Now,
                             PaymentMethod = "Cash" // Default, could be enhanced
                         };
                         _context.RemittanceItems.Add(item);
@@ -3578,7 +3579,7 @@ namespace iBITS_Portal.Controllers
                     var acadYearForFees = await _context.SystemSettings
                         .Where(s => s.SettingKey == "CurrentAcademicYear")
                         .Select(s => s.SettingValue)
-                        .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+                        .FirstOrDefaultAsync() ?? $"{PhTimeHelper.Now.Year}-{PhTimeHelper.Now.Year + 1}";
 
                     // Generate batch code
                     var batchCodeForFees = await GenerateRemittanceBatchCode();
@@ -3596,7 +3597,7 @@ namespace iBITS_Portal.Controllers
                         TotalAmount = fees.Sum(f => f.Amount ?? 0),
                         TotalStudents = fees.Count,
                         SubmittedBy = treasurer.StudentNum,
-                        SubmittedDate = DateTime.Now,
+                        SubmittedDate = PhTimeHelper.Now,
                         Status = RemittanceStatus.Pending,
                         RemittanceType = RemittanceType.Fee,
                         AcademicYear = acadYearForFees
@@ -3616,7 +3617,7 @@ namespace iBITS_Portal.Controllers
                             StudentNum = fee.StudentNum,
                             StudentName = fee.StudentNumNavigation?.FullName,
                             Amount = fee.Amount ?? 0,
-                            CollectionDate = fee.CollectionDate ?? DateTime.Now,
+                            CollectionDate = fee.CollectionDate ?? PhTimeHelper.Now,
                             PaymentMethod = "Cash" // Default, could be enhanced
                         };
                         _context.RemittanceItems.Add(item);
@@ -3847,7 +3848,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"OrgFees_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"OrgFees_Export_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3877,7 +3878,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"OrgFines_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"OrgFines_Export_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3913,7 +3914,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"Section_{section}_Fees_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"Section_{section}_Fees_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3952,7 +3953,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"Section_{section}_Fines_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"Section_{section}_Fines_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -4015,7 +4016,7 @@ namespace iBITS_Portal.Controllers
                 {
                     FeeName = feeName,
                     Amount = amount,
-                    FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+                    FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(PhTimeHelper.Now.AddDays(30)),
                     FeeStatus = "Unpaid",
                     StudentNum = student.StudentNum,
                     BatchId = batchId
@@ -4062,7 +4063,7 @@ namespace iBITS_Portal.Controllers
                 {
                     Description = fineReason,
                     Amount = amount,
-                    FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15)),
+                    FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(PhTimeHelper.Now.AddDays(15)),
                     FinesStatus = "Unpaid",
                     StudentNum = student.StudentNum,
                     BatchId = batchId
@@ -4132,7 +4133,7 @@ namespace iBITS_Portal.Controllers
                         PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.PaymentTransactions.Add(transaction);
@@ -4238,7 +4239,7 @@ namespace iBITS_Portal.Controllers
                         PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.FinePaymentTransactions.Add(transaction);
@@ -4369,7 +4370,7 @@ namespace iBITS_Portal.Controllers
         /// </summary>
         private async Task<string> GenerateRemittanceBatchCode()
         {
-            var year = DateTime.Now.Year.ToString();
+            var year = PhTimeHelper.Now.Year.ToString();
             var lastBatch = await _context.Remittances
                 .Where(r => r.BatchCode.StartsWith($"RMT-{year}-"))
                 .OrderByDescending(r => r.BatchCode)
@@ -4658,14 +4659,14 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // THE OFFICIAL VALIDATION DATE IS NOW
-                var validationDate = DateTime.Now;
+                var validationDate = PhTimeHelper.Now;
 
                 // Update remittance status
                 remittance.Status = RemittanceStatus.Validated;
                 remittance.ValidatedBy = orgTreasurer.StudentNum;
                 remittance.ValidationDate = validationDate;
                 remittance.ValidationNotes = validationNotes?.Trim();
-                remittance.UpdatedAt = DateTime.Now;
+                remittance.UpdatedAt = PhTimeHelper.Now;
 
                 _context.Remittances.Update(remittance);
 
@@ -4807,9 +4808,9 @@ namespace iBITS_Portal.Controllers
                 // Update remittance status to Rejected
                 remittance.Status = RemittanceStatus.Rejected;
                 remittance.ValidatedBy = orgTreasurer?.StudentNum;
-                remittance.ValidationDate = DateTime.Now;
+                remittance.ValidationDate = PhTimeHelper.Now;
                 remittance.RejectionReason = rejectionReason.Trim();
-                remittance.UpdatedAt = DateTime.Now;
+                remittance.UpdatedAt = PhTimeHelper.Now;
 
                 _context.Remittances.Update(remittance);
 
@@ -5079,7 +5080,7 @@ namespace iBITS_Portal.Controllers
 
             var validatedThisMonth = await _context.Remittances
                 .Where(r => r.Status == RemittanceStatus.Validated)
-                .Where(r => r.ValidationDate.HasValue && r.ValidationDate.Value.Month == DateTime.Now.Month)
+                .Where(r => r.ValidationDate.HasValue && r.ValidationDate.Value.Month == PhTimeHelper.Now.Month)
                 .ToListAsync();
 
             ViewBag.ValidatedThisMonthCount = validatedThisMonth.Count;
@@ -5117,12 +5118,12 @@ namespace iBITS_Portal.Controllers
             ViewBag.ProgramYearStats = programYearStats;
 
             // Calculate monthly trends for current academic year (Aug - Present)
-            var currentYear = DateTime.Now.Year;
-            var academicYearStart = DateTime.Now.Month >= 8
+            var currentYear = PhTimeHelper.Now.Year;
+            var academicYearStart = PhTimeHelper.Now.Month >= 8
                 ? new DateTime(currentYear, 8, 1)
                 : new DateTime(currentYear - 1, 8, 1);
 
-            var monthlyTrends = Enumerable.Range(0, (DateTime.Now.Year - academicYearStart.Year) * 12 + DateTime.Now.Month - academicYearStart.Month + 1)
+            var monthlyTrends = Enumerable.Range(0, (PhTimeHelper.Now.Year - academicYearStart.Year) * 12 + PhTimeHelper.Now.Month - academicYearStart.Month + 1)
                 .Select(offset => {
                     var month = academicYearStart.AddMonths(offset);
                     var monthStart = new DateTime(month.Year, month.Month, 1);
@@ -5739,7 +5740,7 @@ namespace iBITS_Portal.Controllers
 
                 // Lock the payment
                 fine.IsPaymentLocked = true;
-                fine.PaymentLockedDate = DateTime.Now;
+                fine.PaymentLockedDate = PhTimeHelper.Now;
                 fine.LockedBy = treasurer?.StudentNum;
 
                 await _context.SaveChangesAsync();
@@ -5796,7 +5797,7 @@ namespace iBITS_Portal.Controllers
 
                     // Lock the payment
                     fine.IsPaymentLocked = true;
-                    fine.PaymentLockedDate = DateTime.Now;
+                    fine.PaymentLockedDate = PhTimeHelper.Now;
                     fine.LockedBy = treasurer.StudentNum;
 
                     successCount++;
@@ -5886,7 +5887,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Determine which quick filters have data
-                var now = DateTime.Now;
+                var now = PhTimeHelper.Now;
                 var quickFilters = new
                 {
                     lastWeek = allDates.Any(d => d >= now.AddDays(-7)),

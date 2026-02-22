@@ -7,6 +7,7 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
+using iBITS_Portal.Utilities;
 
 namespace iBITS_Portal.Models
 {
@@ -53,7 +54,7 @@ namespace iBITS_Portal.Models
         /// The date and time when the role change was assigned by the admin.
         /// </summary>
         [Required]
-        public DateTime AssignedDate { get; set; } = DateTime.Now;
+        public DateTime AssignedDate { get; set; } = PhTimeHelper.Now;
 
         /// <summary>
         /// Indicates whether the student has confirmed/accepted the role change.

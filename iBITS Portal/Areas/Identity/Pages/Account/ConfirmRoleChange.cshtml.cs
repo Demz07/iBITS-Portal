@@ -6,6 +6,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -101,7 +102,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 }
 
                 pendingChange.IsConfirmed = true;
-                pendingChange.ConfirmedDate = DateTime.Now;
+                pendingChange.ConfirmedDate = PhTimeHelper.Now;
                 _context.PendingRoleChanges.Update(pendingChange);
                 await _context.SaveChangesAsync();
 
@@ -113,7 +114,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             else
             {
                 pendingChange.IsDeclined = true;
-                pendingChange.DeclinedDate = DateTime.Now;
+                pendingChange.DeclinedDate = PhTimeHelper.Now;
                 _context.PendingRoleChanges.Update(pendingChange);
                 await _context.SaveChangesAsync();
 

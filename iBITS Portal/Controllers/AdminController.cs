@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using iBITS_Portal.Utilities;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -294,8 +295,8 @@ namespace iBITS_Portal.Controllers
             }
 
             // Default: Generate based on current date
-            int currentYear = DateTime.Now.Year;
-            int currentMonth = DateTime.Now.Month;
+            int currentYear = PhTimeHelper.Now.Year;
+            int currentMonth = PhTimeHelper.Now.Month;
             // Academic year typically starts in June/August
             if (currentMonth >= 6)
             {
@@ -310,7 +311,7 @@ namespace iBITS_Portal.Controllers
         private List<string> GenerateAcademicYearOptions()
         {
             var options = new List<string>();
-            int currentYear = DateTime.Now.Year;
+            int currentYear = PhTimeHelper.Now.Year;
 
             // Generate years from 5 years ago to 2 years ahead
             for (int year = currentYear - 5; year <= currentYear + 2; year++)
@@ -340,7 +341,7 @@ namespace iBITS_Portal.Controllers
                 if (setting != null)
                 {
                     setting.SettingValue = academicYear;
-                    setting.LastUpdated = DateTime.Now;
+                    setting.LastUpdated = PhTimeHelper.Now;
                     setting.UpdatedBy = User.Identity?.Name ?? "Admin";
                 }
                 else
@@ -350,7 +351,7 @@ namespace iBITS_Portal.Controllers
                         SettingKey = "CurrentAcademicYear",
                         SettingValue = academicYear,
                         Description = "The current academic year for student enrollment",
-                        LastUpdated = DateTime.Now,
+                        LastUpdated = PhTimeHelper.Now,
                         UpdatedBy = User.Identity?.Name ?? "Admin"
                     };
                     _context.SystemSettings.Add(setting);
@@ -396,7 +397,7 @@ namespace iBITS_Portal.Controllers
                         SettingKey = "CurrentAcademicYear",
                         SettingValue = newAcademicYear,
                         Description = "The current academic year for the system",
-                        LastUpdated = DateTime.Now,
+                        LastUpdated = PhTimeHelper.Now,
                         UpdatedBy = currentUser?.UserName
                     };
                     _context.SystemSettings.Add(setting);
@@ -405,7 +406,7 @@ namespace iBITS_Portal.Controllers
                 {
                     // Update existing setting
                     setting.SettingValue = newAcademicYear;
-                    setting.LastUpdated = DateTime.Now;
+                    setting.LastUpdated = PhTimeHelper.Now;
                     setting.UpdatedBy = currentUser?.UserName;
                     _context.SystemSettings.Update(setting);
                 }
@@ -932,7 +933,7 @@ namespace iBITS_Portal.Controllers
                     .Where(e => e.EventDate.HasValue && e.EventDate.Value.Month == month && e.EventDate.Value.Year == year)
                     .ToListAsync();
 
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTimeHelper.Now);
                 var attendances = await _context.Attendances
                     .Where(a => events.Select(e => e.EventId).Contains(a.EventId ?? 0))
                     .ToListAsync();
@@ -986,7 +987,7 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTimeHelper.Now);
                 var events = await _context.Events.ToListAsync();
 
                 List<Event> filteredEvents;
@@ -1392,7 +1393,7 @@ namespace iBITS_Portal.Controllers
                     ws.Cell(1, 1).Value = "Dashboard Summary Report";
                     ws.Cell(1, 1).Style.Font.Bold = true;
                     ws.Cell(1, 1).Style.Font.FontSize = 16;
-                    ws.Cell(2, 1).Value = $"Generated: {DateTime.Now:MMMM dd, yyyy HH:mm}";
+                    ws.Cell(2, 1).Value = $"Generated: {PhTimeHelper.Now:MMMM dd, yyyy HH:mm}";
 
                     ws.Cell(4, 1).Value = "Metric";
                     ws.Cell(4, 2).Value = "Value";
@@ -1421,7 +1422,7 @@ namespace iBITS_Portal.Controllers
                 workbook.SaveAs(stream);
                 stream.Position = 0;
 
-                var fileName = $"iBITS_Dashboard_{reportType}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                var fileName = $"iBITS_Dashboard_{reportType}_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.xlsx";
                 return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
@@ -2357,7 +2358,7 @@ namespace iBITS_Portal.Controllers
             // Apply Status Filter (Upcoming, Today, Past)
             if (!string.IsNullOrWhiteSpace(status))
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTimeHelper.Now);
                 
                 switch (status.ToLower())
                 {
@@ -2422,13 +2423,11 @@ namespace iBITS_Portal.Controllers
 
         private async Task ProcessAutoCloseEvents()
         {
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
-            var timeNow = TimeOnly.FromDateTime(now);
+            var now = PhTimeHelper.Now;
+            var today = PhTimeHelper.Today;
+            var timeNow = PhTimeHelper.TimeNow;
 
             // 1. Find events that are NOT closed yet, but SHOULD be.
-            // Logic: (EndDate is in the past) OR (EndDate is today AND EndTime has passed)
-            // Note: If EndDate is null, we fallback to EventDate.
             var eventsToClose = await _context.Events
                 .Where(e => !e.IsClosed &&
                        ((e.EndDate ?? e.EventDate) < today ||
@@ -2437,12 +2436,10 @@ namespace iBITS_Portal.Controllers
 
             if (!eventsToClose.Any()) return; // No events to process
 
-            // 2. Get all active students (Same filter as your CloseEvent action)
+            // 2. Get all students excluding archived
             var activeStudents = await _context.Students
-                .Where(s => s.IsArchived != true && (s.Classification == null || s.Classification == "Active"))
+                .Where(s => s.IsArchived != true)
                 .ToListAsync();
-
-            int totalFinesGenerated = 0;
 
             foreach (var evt in eventsToClose)
             {
@@ -2450,6 +2447,8 @@ namespace iBITS_Portal.Controllers
                 var existingAttendance = await _context.Attendances
                     .Where(a => a.EventId == evt.EventId)
                     .ToListAsync();
+
+                var newAttendances = new List<Attendance>();
 
                 foreach (var student in activeStudents)
                 {
@@ -2465,12 +2464,25 @@ namespace iBITS_Portal.Controllers
                             AttendanceStatus = "Absent"
                         };
                         _context.Attendances.Add(attendance);
-                        // We save immediately so we get an AttendanceId for the fine generation
-                        await _context.SaveChangesAsync();
+                        newAttendances.Add(attendance);
                     }
+                }
 
-                    // B. Generate fine if status is "Absent"
-                    // We assume GenerateFineForAttendance exists in your controller based on your provided code
+                // Save all new attendances for this event to get IDs
+                if (newAttendances.Any())
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                // Refetch all attendances for this event to generate fines
+                var allAttendances = await _context.Attendances
+                    .Where(a => a.EventId == evt.EventId)
+                    .ToListAsync();
+
+                int totalFinesGenerated = 0;
+                foreach (var attendance in allAttendances)
+                {
+                    // B. Generate fine if status is "Absent" or "Excused"
                     if (attendance.AttendanceStatus == "Absent" || attendance.AttendanceStatus == "Excused")
                     {
                         bool fineCreated = await GenerateFineForAttendance(attendance.AttendanceId, notifyStudent: true);
@@ -2483,7 +2495,7 @@ namespace iBITS_Portal.Controllers
                 _context.Events.Update(evt);
 
                 // Log the auto-closure
-                await LogAction("Auto-Close Event", $"System automatically closed event '{evt.EventName}' and assigned fines.");
+                await LogAction("Auto-Close Event", $"System automatically closed event '{evt.EventName}' and assigned {totalFinesGenerated} fines.");
             }
 
             // Final save to commit the IsClosed status
@@ -2649,10 +2661,10 @@ namespace iBITS_Portal.Controllers
                 eventToClose.IsClosed = true;
                 _context.Events.Update(eventToClose);
 
-                // 3. Get all active students
+                // 3. Get all students excluding archived
                 var activeStudents = await _context.Students
                     .Include(s => s.Officer)
-                    .Where(s => s.IsArchived != true && (s.Classification == null || s.Classification == "Active"))
+                    .Where(s => s.IsArchived != true)
                     .ToListAsync();
 
                 // 4. Get existing attendance records for this event
@@ -2662,6 +2674,7 @@ namespace iBITS_Portal.Controllers
 
                 int finesGenerated = 0;
                 int attendanceCreated = 0;
+                var newAttendances = new List<Attendance>();
 
                 foreach (var student in activeStudents)
                 {
@@ -2677,12 +2690,25 @@ namespace iBITS_Portal.Controllers
                             AttendanceStatus = "Absent"
                         };
                         _context.Attendances.Add(attendance);
-                        // Save individually to get ID for fine generation
-                        await _context.SaveChangesAsync();
+                        newAttendances.Add(attendance);
                         attendanceCreated++;
                     }
+                }
 
-                    // Generate fine if status is "Absent" or "Excused"
+                // Save all new attendances at once to get IDs
+                if (newAttendances.Any())
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                // Now generate fines for all who should have one
+                // Refetch attendances to ensure we have all (including newly created ones with IDs)
+                var allAttendances = await _context.Attendances
+                    .Where(a => a.EventId == eventId)
+                    .ToListAsync();
+
+                foreach (var attendance in allAttendances)
+                {
                     if (attendance.AttendanceStatus == "Absent" || attendance.AttendanceStatus == "Excused")
                     {
                         bool fineCreated = await GenerateFineForAttendance(attendance.AttendanceId, notifyStudent: true);
@@ -2690,7 +2716,7 @@ namespace iBITS_Portal.Controllers
                     }
                 }
 
-                // Save the Event Update (IsClosed)
+                // Save the Event Update (IsClosed) and any remaining changes
                 await _context.SaveChangesAsync();
 
                 await LogAction("Close Event",
@@ -2809,8 +2835,8 @@ namespace iBITS_Portal.Controllers
                     StudentNum = attendance.StudentNum, // FIX: Set StudentNum for proper navigation
                     Amount = fineAmount,
                     FinesStatus = "Unpaid",
-                    FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
-                    FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(14)) // Default 2 weeks due date
+                    FinesStartDate = PhTimeHelper.Today,
+                    FinesDueDate = PhTimeHelper.Today.AddDays(14) // Default 2 weeks due date
                 };
 
                 _context.Fines.Add(fine);
@@ -2871,7 +2897,7 @@ namespace iBITS_Portal.Controllers
                     Message = $"A fine of ?{fine.Amount} has been issued for your absence at '{eventName}'. " +
                              $"Due date: {fine.FinesDueDate?.ToString("MMMM dd, yyyy")}. Please settle this at your earliest convenience.",
                     NotificationType = "Fine",
-                    NotificationDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
+                    NotificationDate = PhTimeHelper.Now,
                     IsRead = false,
                     SentBy = "System"
                 };
@@ -3245,7 +3271,7 @@ namespace iBITS_Portal.Controllers
 
             if (!string.IsNullOrEmpty(overdueFilter) && overdueFilter == "overdue")
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTimeHelper.Now);
                 query = query.Where(f => f.FinesStatus == "Unpaid" && f.FinesDueDate.HasValue && f.FinesDueDate.Value < today);
             }
 
@@ -3455,7 +3481,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 int count = 0;
-                var dueDate = FinesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15));
+                var dueDate = FinesDueDate ?? DateOnly.FromDateTime(PhTimeHelper.Now.AddDays(15));
 
                 // Generate a single, unique ID for this entire batch
                 var batchId = Guid.NewGuid().ToString();
@@ -3468,7 +3494,7 @@ namespace iBITS_Portal.Controllers
                         Description = FineReason,
                         StudentNum = student.StudentNum,
                         FinesStatus = "Unpaid",
-                        FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                        FinesStartDate = DateOnly.FromDateTime(PhTimeHelper.Now),
                         FinesDueDate = dueDate,
                         AttendanceId = null,
                         BatchId = batchId // Assign the same BatchId to all fines in this group
@@ -3748,7 +3774,7 @@ namespace iBITS_Portal.Controllers
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
-                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fines_Export_{DateTime.Now:yyyyMMdd}.xlsx");
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fines_Export_{PhTimeHelper.Now:yyyyMMdd}.xlsx");
                 }
             }
         }
@@ -3772,7 +3798,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Generate unique BatchId for this batch of fees
-                string batchId = $"FEE-{DateTime.Now:yyyyMMddHHmmss}";
+                string batchId = $"FEE-{PhTimeHelper.Now:yyyyMMddHHmmss}";
 
                 // Create fee records for each matching student
                 var feesCreated = 0;
@@ -3782,13 +3808,13 @@ namespace iBITS_Portal.Controllers
                     {
                         FeeName = FeeName,
                         Amount = Amount,
-                        FeesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                        FeesStartDate = DateOnly.FromDateTime(PhTimeHelper.Now),
                         FeesDueDate = FeesDueDate,
                         FeeStatus = "Pending",
                         AcadYear = AcadYear,
                         StudentNum = student.StudentNum,
                         BatchId = batchId,  // NEW: Assign BatchId
-                        DateCreated = DateTime.Now  // NEW: Set DateCreated
+                        DateCreated = PhTimeHelper.Now  // NEW: Set DateCreated
                     };
                     _context.Fees.Add(fee);
                     feesCreated++;
@@ -4009,7 +4035,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_StudentRecords_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_StudentRecords_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.xlsx";
                         await LogAction("Export Excel", $"Exported {students.Count} student records to Excel.");
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
@@ -4093,7 +4119,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_Attendance_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_Attendance_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.xlsx";
                         await LogAction("Export Excel", $"Exported {attendances.Count} attendance records to Excel.");
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
@@ -4163,7 +4189,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-                string fileName = $"iBITS_Attendance_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string fileName = $"iBITS_Attendance_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv";
 
                 await LogAction("Export CSV", $"Exported {attendances.Count} attendance records to CSV.");
 
@@ -4339,7 +4365,7 @@ namespace iBITS_Portal.Controllers
                 existingPending.NewRole = newRole;
                 existingPending.AssignedByAdminId = adminUser.Id;
                 existingPending.AssignedByAdminName = adminUser.UserName;
-                existingPending.AssignedDate = DateTime.Now;
+                existingPending.AssignedDate = PhTimeHelper.Now;
                 _context.PendingRoleChanges.Update(existingPending);
             }
             else
@@ -4351,7 +4377,7 @@ namespace iBITS_Portal.Controllers
                     NewRole = newRole,
                     AssignedByAdminId = adminUser.Id,
                     AssignedByAdminName = adminUser.UserName,
-                    AssignedDate = DateTime.Now,
+                    AssignedDate = PhTimeHelper.Now,
                     IsConfirmed = false,
                     IsDeclined = false
                 };
@@ -4450,7 +4476,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Return CSV file
-                var fileName = $"iBITS_StudentRecords_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                var fileName = $"iBITS_StudentRecords_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.csv";
                 var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
 
                 await LogAction("Export Selected Students", $"Exported {students.Count} selected students to Excel");
@@ -4500,7 +4526,7 @@ namespace iBITS_Portal.Controllers
                         student.Classification = "Archived";
                         student.IsArchived = true;
                         student.ArchiveStatus = "Bulk Archived";
-                        student.ArchiveDate = DateOnly.FromDateTime(DateTime.Now);
+                        student.ArchiveDate = DateOnly.FromDateTime(PhTimeHelper.Now);
 
                         if (string.IsNullOrEmpty(student.SchoolYearEnrolled))
                         {
@@ -4645,7 +4671,7 @@ namespace iBITS_Portal.Controllers
                     PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                     PaymentMethod = "Admin Override",
                     ProcessedBy = adminName,
-                    TransactionReference = $"ADMIN-{DateTime.Now:yyyyMMddHHmmss}",
+                    TransactionReference = $"ADMIN-{PhTimeHelper.Now:yyyyMMddHHmmss}",
                     Notes = $"Payment confirmed by Admin ({adminName})"
                 };
 
@@ -4964,7 +4990,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_Payments_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_Payments_{PhTimeHelper.Now:yyyyMMdd_HHmmss}.xlsx";
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
                 }
@@ -5027,7 +5053,7 @@ namespace iBITS_Portal.Controllers
                         PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.PaymentTransactions.Add(transaction);
@@ -5202,7 +5228,7 @@ namespace iBITS_Portal.Controllers
                         PaymentDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time")),
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTimeHelper.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.FinePaymentTransactions.Add(transaction);
@@ -5500,7 +5526,7 @@ namespace iBITS_Portal.Controllers
 
             // 3. Return the file
             var csvData = Encoding.UTF8.GetBytes(builder.ToString());
-            var fileName = $"ActivityLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+            var fileName = $"ActivityLogs_{PhTimeHelper.Now:yyyyMMdd_HHmm}.csv";
 
             return File(csvData, "text/csv", fileName);
         }

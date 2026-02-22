@@ -3,6 +3,7 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -87,9 +88,8 @@ namespace iBITS_Portal.Controllers
             }
 
             // Use Philippine Time (UTC+8)
-            var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-            var phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
-            var today = DateOnly.FromDateTime(phNow);
+            var today = PhTimeHelper.Today;
+            var phNow = PhTimeHelper.Now;
 
             // Current events: all for today (not closed)
             var currentEvents = await _context.Events
@@ -312,7 +312,7 @@ namespace iBITS_Portal.Controllers
             {
                 StudentNum = user.UserName,
                 AnnouncementId = id,
-                DismissedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"))
+                DismissedAt = PhTimeHelper.Now
             });
             await _context.SaveChangesAsync();
 
@@ -360,7 +360,7 @@ namespace iBITS_Portal.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Json(new { success = false, message = "User not found" });
 
-            var phTz = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTz));
+            var today = PhTimeHelper.Today;
 
             // 1. Upcoming Events (Strictly FUTURE events only)
             // Changed '>=' to '>' so today's events are excluded
