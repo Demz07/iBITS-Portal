@@ -233,7 +233,9 @@
                         <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
                         <select id="academicYearSelect" class="form-select academic-year-dropdown" title="Set Current Academic Year">
                             @{
-                                int currentYear = DateTime.Now.Year;
+                                var phTZ = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+var phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTZ);
+int currentYear = phNow.Year;
                                 string currentAY = ViewBag.CurrentAcademicYear ?? $"A.Y. {currentYear}-{currentYear + 1}";
                                 for (int year = currentYear + 1; year >= currentYear - 5; year--)
                                 {

@@ -23,7 +23,9 @@
     var adminNotices = ViewBag.AdminNotices as List<Notification> ?? new List<Notification>();
 
     // CURRENT ACTIVITY
-    var today = DateOnly.FromDateTime(DateTime.Today);
+    var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+var phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+var today = DateOnly.FromDateTime(phNow);
     bool showCurrentActivity = currentEvents.Any();
 
     // Upcoming (sidebar)
@@ -376,7 +378,7 @@
 
         }
 
-        /* ✅ Make Current Activity scroll inside the card body */
+        /* ? Make Current Activity scroll inside the card body */
         .current-activity-scroll {
             max-height: 360px;
             overflow-y: auto;
@@ -396,7 +398,7 @@
 
 <div class="page-header">
     <div class="welcome-message">
-        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! 👋</h2>
+        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! ??</h2>
         <span class="role-badge @badgeClass"><i class="bi @badgeIcon"></i> @displayRole</span>
     </div>
     <a href="#profileOffcanvas" data-bs-toggle="offcanvas" class="btn-my-profile">
@@ -429,7 +431,7 @@
                          onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
 
                         @* Added '?' after NotificationDate below *@
-                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
+                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") � Official Notice</small>
 
                         <p class="mb-0 mt-1 text-white">
                             <strong>@n.Title</strong> @* This displays the SUBJECT *@
@@ -452,7 +454,7 @@
                          style="cursor: pointer;"
                          data-bs-toggle="modal"
                          data-bs-target="#modal@(reminder.Id)">
-                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") • @(reminder.AnnouncementType ?? "Payment Reminder")</small>
+                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") � @(reminder.AnnouncementType ?? "Payment Reminder")</small>
                         <p class="mb-0 mt-1 text-white">
                             <strong>@((reminder.Title ?? string.Empty).Replace("Payment Reminder: ", ""))</strong>
                         </p>
@@ -465,7 +467,7 @@
                     <div class="announcement-item" id="announcement-@announcement.Id">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") · Posted by @announcement.PostedBy</small>
+                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") � Posted by @announcement.PostedBy</small>
                                 <p class="mb-0 mt-1 text-white">@announcement.Content</p>
                             </div>
                             <button class="btn btn-sm btn-link text-muted p-0 ms-2"
@@ -493,58 +495,64 @@
                     <div class="current-activity-scroll">
                         @foreach (var currentEvent in currentEvents)
                         {
-                            <div class="mb-4 p-3 rounded"
+                            var startDateStr = currentEvent.EventDate.HasValue ? currentEvent.EventDate.Value.ToString("yyyy-MM-dd") : "";
+                            var startTimeStr = currentEvent.StartTime.HasValue ? currentEvent.StartTime.Value.ToString(@"HH\:mm\:ss") : "00:00:00";
+                            var endDateStr = currentEvent.EndDate.HasValue ? currentEvent.EndDate.Value.ToString("yyyy-MM-dd") : startDateStr;
+                            var endTimeStr = currentEvent.EndTime.HasValue ? currentEvent.EndTime.Value.ToString(@"HH\:mm\:ss") : "23:59:59";
+
+                            <div class="mb-3 p-3 rounded current-event-item"
                                  style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h4 class="fw-bold text-white mb-2">@currentEvent.EventName</h4>
-
-                                        <div class="d-flex flex-wrap gap-3 small text-muted">
-                                            <div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="fw-bold text-white mb-2">@currentEvent.EventName</h5>
+                                        <div class="d-flex flex-wrap gap-3 small">
+                                            <div class="text-muted">
                                                 <i class="bi bi-calendar3 me-1 text-warning"></i>
-                                                <span>
-                                                    @(currentEvent.EventDate.HasValue? currentEvent.EventDate.Value.ToString("MMM dd, yyyy") : "Date: TBA")
-                                                </span>
+                                                @(currentEvent.EventDate.HasValue ? currentEvent.EventDate.Value.ToString("MMM dd, yyyy") : "Date: TBA")
                                             </div>
-
-                                            <div>
+                                            <div class="text-muted">
                                                 <i class="bi bi-clock me-1 text-warning"></i>
-                                                <span>
-                                                    @if (currentEvent.StartTime.HasValue)
-                                                    {
-                                                        @currentEvent.StartTime.Value.ToString("h:mm tt")
-                                                        if (currentEvent.EndTime.HasValue)
-                                                        {
-                                                            @: - @currentEvent.EndTime.Value.ToString("h:mm tt")
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        @:Time: TBA
-                                                    }
-                                                </span>
+                                                 @if (currentEvent.StartTime.HasValue)
+                                                 {
+                                                     @currentEvent.StartTime.Value.ToString("h:mm tt")
+                                                     @if (currentEvent.EndTime.HasValue)
+                                                     {
+                                                         @(" - " + currentEvent.EndTime.Value.ToString("h:mm tt"))
+                                                     }
+                                                 }
+                                                 else { <text>TBA</text> }
                                             </div>
-
-                                            <div>
+                                            <div class="text-muted">
                                                 <i class="bi bi-geo-alt-fill me-1 text-warning"></i>
-                                                <span>
-                                                    @(string.IsNullOrWhiteSpace(currentEvent.EventLocation) ? "Location: TBA" : currentEvent.EventLocation)
-                                                </span>
+                                                @(string.IsNullOrWhiteSpace(currentEvent.EventLocation) ? "TBA" : currentEvent.EventLocation)
                                             </div>
                                         </div>
+                                        <!-- Countdown -->
+                                        <div class="mt-2">
+                                            <span class="student-event-countdown small"
+                                                  data-start-date="@startDateStr"
+                                                  data-start-time="@startTimeStr"
+                                                  data-end-date="@endDateStr"
+                                                  data-end-time="@endTimeStr"
+                                                  style="color: var(--gold-primary);"></span>
+                                        </div>
                                     </div>
-
-                                    <span class="badge bg-primary">ONGOING</span>
+                                    <!-- Dynamic status badge -->
+                                    <span class="badge student-event-badge ms-2"
+                                          data-start-date="@startDateStr"
+                                          data-start-time="@startTimeStr"
+                                          data-end-date="@endDateStr"
+                                          data-end-time="@endTimeStr"
+                                          data-is-closed="@currentEvent.IsClosed.ToString().ToLower()"
+                                          style="font-size:0.75rem;">...</span>
                                 </div>
-
-                                <!-- EVENT DESCRIPTION -->
-                                <div class="mt-3 p-3 rounded"
-                                     style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
-                                    <h6 class="fw-bold text-white mb-2" style="opacity:0.9;">Event Description:</h6>
-                                    <p class="mb-0 text-muted small" style="white-space: pre-line;">
-                                        @(string.IsNullOrWhiteSpace(currentEvent.EventDesc) ? "No description available." : currentEvent.EventDesc)
-                                    </p>
-                                </div>
+                                @if (!string.IsNullOrWhiteSpace(currentEvent.EventDesc))
+                                {
+                                    <div class="mt-2 p-3 rounded"
+                                         style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
+                                        <p class="mb-0 text-muted small" style="white-space: pre-line;">@currentEvent.EventDesc</p>
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
@@ -570,6 +578,11 @@
                     <div class="upcoming-events-wrap">
                         @foreach (var evt in upcomingEventsDisplay.Take(4))
                         {
+                            var ueStartDateStr = evt.EventDate.HasValue ? evt.EventDate.Value.ToString("yyyy-MM-dd") : "";
+                            var ueStartTimeStr = evt.StartTime.HasValue ? evt.StartTime.Value.ToString(@"HH\:mm\:ss") : "00:00:00";
+                            var ueEndDateStr = evt.EndDate.HasValue ? evt.EndDate.Value.ToString("yyyy-MM-dd") : ueStartDateStr;
+                            var ueEndTimeStr = evt.EndTime.HasValue ? evt.EndTime.Value.ToString(@"HH\:mm\:ss") : "23:59:59";
+                            var ueIsClosedStr = evt.IsClosed ? "true" : "false";
                             <div class="upcoming-event-card">
                                 <div class="ue-date-badge">
                                     <div class="month">@evt.EventDate?.ToString("MMM")</div>
@@ -579,12 +592,37 @@
                                 <div class="ue-content">
                                     <div class="ue-title">@evt.EventName</div>
                                     <div class="ue-meta">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span>
+                                            @(evt.StartTime.HasValue ? evt.StartTime.Value.ToString("h:mm tt") : "TBA")
+                                            @if (evt.EndTime.HasValue)
+                                            {
+                                                <span> ? @evt.EndTime.Value.ToString("h:mm tt")</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <div class="ue-meta">
                                         <i class="bi bi-geo-alt-fill"></i>
                                         <span>@(string.IsNullOrWhiteSpace(evt.EventLocation) ? "TBA" : evt.EventLocation)</span>
                                     </div>
                                     <div class="ue-sub">
-                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd • MMM dd, yyyy") : "Date: TBA")
+                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd � MMM dd, yyyy") : "Date: TBA")
                                     </div>
+                                    <div class="mt-1">
+                                        <span class="badge upcoming-event-badge"
+                                              data-start-date="@ueStartDateStr"
+                                              data-start-time="@ueStartTimeStr"
+                                              data-end-date="@ueEndDateStr"
+                                              data-end-time="@ueEndTimeStr"
+                                              data-is-closed="@ueIsClosedStr"
+                                              style="background:rgba(59,130,246,0.3);color:#60a5fa;font-size:0.7rem;">UPCOMING</span>
+                                    </div>
+                                    <div class="small mt-1 upcoming-event-countdown"
+                                         data-start-date="@ueStartDateStr"
+                                         data-start-time="@ueStartTimeStr"
+                                         data-end-date="@ueEndDateStr"
+                                         data-end-time="@ueEndTimeStr"
+                                         style="color:#9ca3af;"></div>
                                 </div>
                             </div>
                         }
@@ -888,7 +926,7 @@
                     <i class="bi bi-bell-slash-fill text-warning mb-2" style="font-size:2.5rem;"></i>
                     <p class="mb-2 fw-bold">Are you sure?</p>
                     <p class="small text-muted mb-0">
-                        You won’t see this announcement again after dismissing it.
+                        You won�t see this announcement again after dismissing it.
                     </p>
                 </div>
             </div>
@@ -902,7 +940,7 @@
     </div>
 </div>
 
-@* ✅ NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
+@* ? NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
 <div class="modal fade" id="adminDismissConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(220,53,69,0.65); backdrop-filter: blur(18px);">
@@ -952,7 +990,7 @@
     <script>
         function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
 
-        // ✅ FIXED: Fetch events correctly instead of checking profile images
+        // ? FIXED: Fetch events correctly instead of checking profile images
         function loadUpcomingEvents() {
             const container = document.getElementById('upcomingEventsContent');
             if(!container) return;
@@ -984,7 +1022,7 @@
                 });
         }
 
-        // ✅ FIXED: Fetch history correctly
+        // ? FIXED: Fetch history correctly
         function loadEventHistory() {
             const container = document.getElementById('eventHistoryContent');
             if(!container) return;
@@ -1015,7 +1053,7 @@
                 });
         }
 
-        // ✅ Helper to render the cards (uses your design)
+        // ? Helper to render the cards (uses your design)
         function renderEventCard(item, isPastEvent) {
             // Parse the date safely
             const eventDate = new Date(item.eventDate);
@@ -1132,6 +1170,156 @@
             });
         });
 
+        // Philippine Time Event Status - uses same source as .datetime-badge
+        function getPhNowStudent() {
+            return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        }
+
+        function updateStudentEventBadges() {
+            const now = getPhNowStudent();
+
+            // Update status badges
+            document.querySelectorAll('.student-event-badge').forEach(badge => {
+                const start = new Date(`${badge.dataset.startDate}T${badge.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${badge.dataset.endDate}T${badge.dataset.endTime || '23:59:59'}`);
+                const isClosed = badge.dataset.isClosed === 'true';
+
+                if (isClosed || now > end) {
+                    badge.textContent = 'COMPLETED';
+                    badge.style.background = 'rgba(107,114,128,0.3)';
+                    badge.style.color = '#9ca3af';
+                } else if (now >= start && now <= end) {
+                    badge.textContent = 'HAPPENING';
+                    badge.style.background = 'rgba(16,185,129,0.3)';
+                    badge.style.color = '#34d399';
+                } else {
+                    badge.textContent = 'UPCOMING';
+                    badge.style.background = 'rgba(59,130,246,0.3)';
+                    badge.style.color = '#60a5fa';
+                }
+            });
+
+            // Update countdowns
+            document.querySelectorAll('.student-event-countdown').forEach(el => {
+                const start = new Date(`${el.dataset.startDate}T${el.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${el.dataset.endDate}T${el.dataset.endTime || '23:59:59'}`);
+
+                if (now < start) {
+                    const diff = start - now;
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    el.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Starts in: ${h}h ${m}m ${s}s`;
+                } else if (now >= start && now <= end) {
+                    const diff = end - now;
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    el.innerHTML = `<i class="bi bi-clock-fill me-1 text-success"></i>Ends in: ${h}h ${m}m ${s}s`;
+                } else {
+                    el.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Event has ended`;
+                    el.style.color = '#6b7280';
+                }
+            });
+        }
+
+        updateStudentEventBadges();
+        setInterval(updateStudentEventBadges, 1000);
+
+        // Also update upcoming event badges
+        function updateUpcomingBadges() {
+            const now = getPhNowStudent();
+            document.querySelectorAll('.upcoming-event-badge').forEach(badge => {
+                const start = new Date(`${badge.dataset.startDate}T${badge.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${badge.dataset.endDate}T${badge.dataset.endTime || '23:59:59'}`);
+                const isClosed = badge.dataset.isClosed === 'true';
+                if (isClosed || now > end) {
+                    badge.textContent = 'COMPLETED';
+                    badge.className = 'badge upcoming-event-badge';
+                    badge.style.cssText = 'background:rgba(107,114,128,0.3);color:#9ca3af;font-size:0.7rem;';
+                } else if (now >= start && now <= end) {
+                    badge.textContent = 'HAPPENING';
+                    badge.className = 'badge upcoming-event-badge';
+                    badge.style.cssText = 'background:rgba(16,185,129,0.3);color:#34d399;font-size:0.7rem;';
+                } else {
+                    badge.textContent = 'UPCOMING';
+                    badge.className = 'badge upcoming-event-badge';
+                    badge.style.cssText = 'background:rgba(59,130,246,0.3);color:#60a5fa;font-size:0.7rem;';
+                }
+            });
+            document.querySelectorAll('.upcoming-event-countdown').forEach(el => {
+                const start = new Date(`${el.dataset.startDate}T${el.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${el.dataset.endDate}T${el.dataset.endTime || '23:59:59'}`);
+                if (now < start) {
+                    const diff = start - now;
+                    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+                    el.innerHTML = `<i class='bi bi-hourglass-split me-1'></i>Starts in: ${h}h ${m}m ${s}s`;
+                } else if (now >= start && now <= end) {
+                    const diff = end - now;
+                    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+                    el.innerHTML = `<i class='bi bi-clock-fill me-1'></i>Ends in: ${h}h ${m}m ${s}s`;
+                } else {
+                    el.innerHTML = `<i class='bi bi-check-circle-fill me-1'></i>Ended`;
+                }
+            });
+        }
+        updateUpcomingBadges();
+        setInterval(updateUpcomingBadges, 1000);
+
+        // ===========================
+        // Philippine Time Badge + Countdown for Current Activity
+        // ===========================
+        function getPhNow() {
+            return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        }
+
+        function updateStudentEventBadges() {
+            const now = getPhNow();
+            document.querySelectorAll('.student-event-badge').forEach(badge => {
+                const start = new Date(`${badge.dataset.startDate}T${badge.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${badge.dataset.endDate}T${badge.dataset.endTime || '23:59:59'}`);
+                const isClosed = badge.dataset.isClosed === 'true';
+                if (isClosed || now > end) {
+                    badge.textContent = 'COMPLETED';
+                    badge.style.cssText = 'background:rgba(107,114,128,0.3);color:#9ca3af;border:1px solid #6b7280;font-size:0.75rem;';
+                } else if (now >= start && now <= end) {
+                    badge.textContent = 'HAPPENING';
+                    badge.style.cssText = 'background:rgba(16,185,129,0.3);color:#34d399;border:1px solid #10b981;font-size:0.75rem;';
+                } else {
+                    badge.textContent = 'UPCOMING';
+                    badge.style.cssText = 'background:rgba(59,130,246,0.3);color:#60a5fa;border:1px solid #3b82f6;font-size:0.75rem;';
+                }
+            });
+        }
+
+        function updateStudentEventCountdowns() {
+            const now = getPhNow();
+            document.querySelectorAll('.student-event-countdown').forEach(el => {
+                const start = new Date(`${el.dataset.startDate}T${el.dataset.startTime || '00:00:00'}`);
+                const end = new Date(`${el.dataset.endDate}T${el.dataset.endTime || '23:59:59'}`);
+                if (now > end) {
+                    el.textContent = '';
+                } else if (now >= start) {
+                    const diff = Math.max(0, Math.floor((end - now) / 1000));
+                    const h = Math.floor(diff / 3600);
+                    const m = Math.floor((diff % 3600) / 60);
+                    const s = diff % 60;
+                    el.textContent = `Ends in ${h}h ${m}m ${s}s`;
+                } else {
+                    const diff = Math.max(0, Math.floor((start - now) / 1000));
+                    const h = Math.floor(diff / 3600);
+                    const m = Math.floor((diff % 3600) / 60);
+                    const s = diff % 60;
+                    el.textContent = `Starts in ${h}h ${m}m ${s}s`;
+                }
+            });
+        }
+
+        updateStudentEventBadges();
+        updateStudentEventCountdowns();
+        setInterval(updateStudentEventBadges, 30000);
+        setInterval(updateStudentEventCountdowns, 1000);
+
         // ===========================
         // PROFILE PICTURE: Preview + AJAX Upload
         // ===========================
@@ -1194,7 +1382,7 @@
                                 navImg.src = data.imagePath + timestamp;
                             }
 
-                            // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
+                            // D. ? NEW: Update Right Sidebar (Offcanvas) Avatar
                             const sidebarImg = document.getElementById('offcanvasProfileImg');
                             if (sidebarImg && data.imagePath) {
                                 sidebarImg.src = data.imagePath + timestamp;
@@ -1228,13 +1416,13 @@
             new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
         }
 
-        // ✅ NEW: Open the nice confirm modal for Admin Notice
+        // ? NEW: Open the nice confirm modal for Admin Notice
         function openAdminDismissConfirm() {
             const modal = new bootstrap.Modal(document.getElementById('adminDismissConfirmModal'));
             modal.show();
         }
 
-        // ✅ NEW: Handle Admin Notice Dismiss (with toast after)
+        // ? NEW: Handle Admin Notice Dismiss (with toast after)
         document.addEventListener('DOMContentLoaded', function () {
             const adminConfirmBtn = document.getElementById('confirmAdminDismissBtn');
             if (!adminConfirmBtn) return;

@@ -1,4 +1,4 @@
-@* Views/Admin/Events.cshtml *@
+﻿@* Views/Admin/Events.cshtml *@
 
 @model iBITS_Portal.Models.PagedList<iBITS_Portal.Models.Event>
 @{
@@ -212,52 +212,22 @@
     {
         @foreach (var item in Model.Items)
         {
-            string statusClass = "badge-completed";
-            string statusText = "Completed";
-
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
-            var timeNow = TimeOnly.FromDateTime(now);
-
-            DateOnly effectiveEndDate = item.EndDate ?? item.EventDate ?? DateOnly.MaxValue;
-
-            bool isPastDate = effectiveEndDate < today;
-            bool isPastTimeToday = effectiveEndDate == today && item.EndTime.HasValue && item.EndTime.Value < timeNow;
-            bool isAutomaticallyClosed = isPastDate || isPastTimeToday;
-
-            // STATUS LOGIC
-            if (item.IsClosed || isAutomaticallyClosed)
-            {
-                statusClass = "badge-completed";
-                statusText = "Completed";
-            }
-            else if (item.EventDate.HasValue)
-            {
-                if (item.EventDate.Value > today)
-                {
-                    statusClass = "badge-upcoming";
-                    statusText = "Upcoming";
-                }
-                else if (item.EventDate.Value == today)
-                {
-                    if (item.StartTime.HasValue && item.StartTime.Value > timeNow)
-                    {
-                        statusClass = "badge-upcoming"; 
-                        statusText = "Upcoming";
-                    }
-                    else
-                    {
-                        statusClass = "badge-today";    
-                        statusText = "Happening Now";
-                    }
-                }
-            }
+                        string statusClass = "badge-upcoming";
+            string statusText = "Upcoming";
+            // Status will be determined by JavaScript using Philippine time
 
             <div class="col-md-6 col-lg-4">
                 <div class="glass-card">
                     <!-- Gradient Header & Status -->
                     <div class="event-header-gradient">
-                        <span class="status-badge @statusClass">@statusText</span>
+                        <span class="status-badge event-status-badge" 
+                              data-start-date="@(item.EventDate.HasValue ? item.EventDate.Value.ToString("yyyy-MM-dd") : "")"
+                              data-start-time="@item.StartTime?.ToString(@"HH\:mm\:ss")"
+                              data-end-date="@(item.EndDate.HasValue ? item.EndDate.Value.ToString("yyyy-MM-dd") : (item.EventDate.HasValue ? item.EventDate.Value.ToString("yyyy-MM-dd") : ""))"
+                              data-end-time="@item.EndTime?.ToString(@"HH\:mm\:ss")"
+                              data-is-closed="@item.IsClosed.ToString().ToLower()">
+                            ...
+                        </span>
                         <div class="event-date-sticker">
                             <span class="date-month">@(item.EventDate.HasValue? item.EventDate.Value.ToString("MMM") : "TBA")</span>
                             <span class="date-day">@(item.EventDate.HasValue? item.EventDate.Value.Day.ToString() : "--")</span>
@@ -270,7 +240,13 @@
                         <div class="event-meta">
                             <div class="meta-item">
                                 <i class="bi bi-clock"></i>
-                                <span>@(item.StartTime.HasValue? item.StartTime.Value.ToString(@"h\:mm tt") : "TBA")</span>
+                                <span>
+                                    @(item.StartTime.HasValue ? item.StartTime.Value.ToString("h:mm tt") : "TBA")
+                                    @if (item.EndTime.HasValue)
+                                    {
+                                        @:→ @item.EndTime.Value.ToString("h:mm tt")
+                                    }
+                                </span>
                             </div>
                             <div class="meta-item">
                                 <i class="bi bi-geo-alt"></i>
@@ -470,13 +446,13 @@
                     <hr class="my-3" style="border-color: var(--border-color);" />
                     <div class="row g-3">
                         <div class="col-12"><h6 class="text-gold"><i class="bi bi-star-fill me-2"></i>iBITS Event Fines</h6></div>
-                        <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" name="FineForMember" class="form-control" value="100.00" /></div>
-                        <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" name="FineForClassOfficer" class="form-control" value="150.00" /></div>
-                        <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" name="FineForOrgOfficer" class="form-control" value="300.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Member (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="FineForMember" class="form-control" value="100.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Class Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="FineForClassOfficer" class="form-control" value="150.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Org Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="FineForOrgOfficer" class="form-control" value="300.00" /></div>
                         <div class="col-12 mt-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Non-iBITS Event Fines</h6></div>
-                        <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" name="NonIbitsFineForMember" class="form-control" value="50.00" /></div>
-                        <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" name="NonIbitsFineForClassOfficer" class="form-control" value="100.00" /></div>
-                        <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" name="NonIbitsFineForOrgOfficer" class="form-control" value="150.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Member (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="NonIbitsFineForMember" class="form-control" value="50.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Class Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="NonIbitsFineForClassOfficer" class="form-control" value="100.00" /></div>
+                        <div class="col-md-4"><label class="form-label">Org Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" name="NonIbitsFineForOrgOfficer" class="form-control" value="150.00" /></div>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
@@ -553,13 +529,13 @@
 
                         <div class="row g-3">
                             <div class="col-12"><h6 class="text-gold"><i class="bi bi-star-fill me-2"></i>iBITS Event Fines</h6></div>
-                            <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editFineForMember" name="FineForMember" class="form-control" /></div>
-                            <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editFineForClassOfficer" name="FineForClassOfficer" class="form-control" /></div>
-                            <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editFineForOrgOfficer" name="FineForOrgOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Member (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editFineForMember" name="FineForMember" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Class Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editFineForClassOfficer" name="FineForClassOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Org Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editFineForOrgOfficer" name="FineForOrgOfficer" class="form-control" /></div>
                             <div class="col-12 mt-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Non-iBITS Event Fines</h6></div>
-                            <div class="col-md-4"><label class="form-label">Member (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForMember" name="NonIbitsFineForMember" class="form-control" /></div>
-                            <div class="col-md-4"><label class="form-label">Class Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForClassOfficer" name="NonIbitsFineForClassOfficer" class="form-control" /></div>
-                            <div class="col-md-4"><label class="form-label">Org Officer (₱)</label><input type="number" step="0.01" id="editNonIbitsFineForOrgOfficer" name="NonIbitsFineForOrgOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Member (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editNonIbitsFineForMember" name="NonIbitsFineForMember" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Class Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editNonIbitsFineForClassOfficer" name="NonIbitsFineForClassOfficer" class="form-control" /></div>
+                            <div class="col-md-4"><label class="form-label">Org Officer (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)</label><input type="number" step="0.01" id="editNonIbitsFineForOrgOfficer" name="NonIbitsFineForOrgOfficer" class="form-control" /></div>
                         </div>
                     </fieldset> <!-- END FIELDSET -->
                 </div>
@@ -586,7 +562,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="deleteEventId" name="eventId" />
                 <div class="modal-body">
-                    <p class="text-light">⚠️ This action cannot be undone. All attendance records associated with this event will be permanently deleted.</p>
+                    <p class="text-light">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â This action cannot be undone. All attendance records associated with this event will be permanently deleted.</p>
                     <div class="mb-3">
                         <label class="form-label">Confirm with your Admin Password</label>
                         <input type="password" name="Password" class="form-control" placeholder="Enter your password" required />
@@ -631,7 +607,7 @@
                         <strong>Attention:</strong> There are unpaid fines linked to this event.
                         <ul class="mb-0 mt-2 small">
                             <li>Students Owing: <strong id="warnStudentCount">0</strong></li>
-                            <li>Total Pending: <strong id="warnAmount">₱0.00</strong></li>
+                            <li>Total Pending: <strong id="warnAmount">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±0.00</strong></li>
                         </ul>
                     </div>
 
@@ -695,7 +671,7 @@
                 <input type="hidden" id="closeEventId" name="eventId" />
                 <div class="modal-body">
                     <p class="text-light">You are about to close event: <strong id="closeEventName"></strong></p>
-                    <p class="text-warning small">⚠️ This will automatically assign fines to all students marked as "Absent" for this event.</p>
+                    <p class="text-warning small">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â This will automatically assign fines to all students marked as "Absent" for this event.</p>
                     <div class="mb-3">
                         <label class="form-label">Confirm with your Admin Password</label>
                         <input type="password" name="Password" class="form-control" placeholder="Enter your password" required />
@@ -710,6 +686,45 @@
     </div>
 </div>
 
+
+<script>
+    // Philippine Time Badge Logic
+    function getPhNow() {
+        return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    }
+
+    function updateEventBadges() {
+        const now = getPhNow();
+        document.querySelectorAll('.event-status-badge').forEach(badge => {
+            const startDate = badge.dataset.startDate;
+            const startTime = badge.dataset.startTime;
+            const endDate = badge.dataset.endDate;
+            const endTime = badge.dataset.endTime;
+            const isClosed = badge.dataset.isClosed === 'true';
+
+            if (!startDate) return;
+
+            const start = new Date(`${startDate}T${startTime || '00:00:00'}`);
+            const end = endDate ? new Date(`${endDate}T${endTime || '23:59:59'}`) : null;
+
+            let status, cls;
+            if (isClosed || (end && now > end)) {
+                status = 'COMPLETED'; cls = 'badge-completed';
+            } else if (now >= start && (!end || now <= end)) {
+                status = 'HAPPENING'; cls = 'badge-today';
+            } else {
+                status = 'UPCOMING'; cls = 'badge-upcoming';
+            }
+
+            badge.textContent = status;
+            badge.className = `status-badge event-status-badge ${cls}`;
+        });
+    }
+
+    // Run immediately and every 30 seconds
+    updateEventBadges();
+    setInterval(updateEventBadges, 30000);
+</script>
 @section Scripts {
     <!-- jQuery (Required for Select2) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -918,7 +933,7 @@
                     $('#warnEventId').val(eventId);
                     $('#warnEventName').text(eventName);
                     $('#warnStudentCount').text(response.pendingStudents);
-                    $('#warnAmount').text('₱' + response.pendingAmount.toLocaleString('en-US', {minimumFractionDigits: 2}));
+                    $('#warnAmount').text('ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±' + response.pendingAmount.toLocaleString('en-US', {minimumFractionDigits: 2}));
                     
                     $('#archiveWarningModal').modal('show');
                 } else {

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/HomeController.cs
 // ============================================================
 
@@ -86,8 +86,10 @@ namespace iBITS_Portal.Controllers
                 return RedirectToPage("/Account/ConfirmRoleChange", new { area = "Identity" });
             }
 
-            // ================== DASHBOARD DATA ==================
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            // Use Philippine Time (UTC+8)
+            var phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+            var phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+            var today = DateOnly.FromDateTime(phNow);
 
             // Current events: all for today (not closed)
             var currentEvents = await _context.Events
@@ -126,7 +128,7 @@ namespace iBITS_Portal.Controllers
             // - exclude Admin Notice
             // - supports comma-separated target audiences
             var allAnnouncements = await _context.Announcements
-                .Where(a => (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now)
+                .Where(a => (a.ExpiryDate == null || a.ExpiryDate > phNow)
                             && a.AnnouncementType != "Admin Notice"
                             && !dismissedIds.Contains(a.Id))
                 .OrderByDescending(a => a.Timestamp)
@@ -234,7 +236,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.UpcomingEvents = upcomingEvents;
             ViewBag.Announcements = announcements;
 
-            // ✅ Provide header avatar to _StudentLayout.cshtml
+            // ? Provide header avatar to _StudentLayout.cshtml
             ViewBag.StudentImage = string.IsNullOrWhiteSpace(student.StudentImage)
                 ? "/images/default-avatar.png"
                 : student.StudentImage;
@@ -310,7 +312,7 @@ namespace iBITS_Portal.Controllers
             {
                 StudentNum = user.UserName,
                 AnnouncementId = id,
-                DismissedAt = DateTime.Now
+                DismissedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"))
             });
             await _context.SaveChangesAsync();
 
@@ -358,7 +360,7 @@ namespace iBITS_Portal.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Json(new { success = false, message = "User not found" });
 
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var phTz = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTz));
 
             // 1. Upcoming Events (Strictly FUTURE events only)
             // Changed '>=' to '>' so today's events are excluded
