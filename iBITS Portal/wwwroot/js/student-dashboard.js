@@ -16,7 +16,16 @@
     const eventDateInput = document.getElementById('eventDate');
     if (eventDateInput && eventDateInput.value) {
         // Parse date. If only YYYY-MM-DD is provided, we treat it as midnight local time
-        const targetDate = new Date(eventDateInput.value).getTime();
+        // Parse as Philippine midnight (UTC+8) to avoid 8-hour countdown error
+        const rawVal = eventDateInput.value;
+        // Force Philippine Time (UTC+8) for all date parsing
+        // If date-only (YYYY-MM-DD), treat as midnight PHT
+        // If full datetime without offset, append +08:00 to prevent UTC interpretation
+        const targetDate = rawVal.length === 10
+            ? new Date(rawVal + 'T00:00:00+08:00').getTime()
+            : (rawVal.includes('+') || rawVal.includes('Z')
+                ? new Date(rawVal).getTime()
+                : new Date(rawVal + '+08:00').getTime());
 
         const updateTimer = () => {
             const now = new Date().getTime();

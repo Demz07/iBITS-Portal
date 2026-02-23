@@ -1,4 +1,4 @@
-@* FILE PATH: Views/Officer/PaymentReminders.cshtml *@
+﻿@* FILE PATH: Views/Officer/PaymentReminders.cshtml *@
 @* OPTIMIZED VERSION with Expiry Date, Dynamic Targeting, Delete Functionality *@
 @{
     ViewData["Title"] = "Payment Reminders";
@@ -378,7 +378,7 @@
                             <h6 class="mb-0 text-warning">@reminder.Title</h6>
                             <div>
                                 <button type="button" class="btn btn-sm btn-outline-warning delete-btn me-1" 
-                                        onclick="editReminder(@reminder.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Title.Replace("Payment Reminder: ", "")))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Content))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.TargetAudience ?? ""))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.AnnouncementType ?? ""))', @(reminder.ExpiryDate.HasValue ? Math.Max(0, (int)(reminder.ExpiryDate.Value - DateTime.Now).TotalDays) : 0))">
+                                        onclick="editReminder(@reminder.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Title.Replace("Payment Reminder: ", "")))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.Content))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.TargetAudience ?? ""))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(reminder.AnnouncementType ?? ""))', @(reminder.ExpiryDate.HasValue ? Math.Max(0, (int)(reminder.ExpiryDate.Value - PhTime.Now).TotalDays) : 0))">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <form asp-action="DeletePaymentReminder" method="post" style="display:inline;" 
@@ -404,7 +404,7 @@
                             <small class="text-muted">
                                 @if (reminder.ExpiryDate.HasValue)
                                 {
-                                    var daysLeft = (reminder.ExpiryDate.Value - DateTime.Now).Days;
+                                    var daysLeft = (reminder.ExpiryDate.Value - PhTime.Now).Days;
                                     <i class="bi bi-clock me-1"></i>
                                     @if (daysLeft > 0)
                                     {
@@ -679,3 +679,4 @@
         }
     </script>
 }
+

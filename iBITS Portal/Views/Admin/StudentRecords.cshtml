@@ -756,7 +756,7 @@
                         // SCENARIO A: Student owes money -> Show the Warning Modal
                         $('#debtStudentId').val(studentId);
                         $('#debtStudentName').text(studentName);
-                        $('#debtAmountDisplay').text('₱' + response.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+                $('#debtAmountDisplay').text('₱' + response.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }));
                         $('#debtBreakdownDisplay').text(response.details);
 
                         $('#studentArchiveWarningModal').modal('show');

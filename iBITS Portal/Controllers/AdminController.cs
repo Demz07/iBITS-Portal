@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/AdminController.cs
 // ============================================================
 // UPDATED: Added working ExportStudentsToExcel functionality
@@ -181,7 +181,7 @@ namespace iBITS_Portal.Controllers
                 Action = action,
                 Description = description,
                 PerformedBy = currentUser?.UserName ?? "System",
-                Timestamp = DateTime.Now
+                Timestamp = PhTime.Now
             };
             _context.ActivityLogs.Add(logEntry);
             await _context.SaveChangesAsync();
@@ -294,8 +294,8 @@ namespace iBITS_Portal.Controllers
             }
 
             // Default: Generate based on current date
-            int currentYear = DateTime.Now.Year;
-            int currentMonth = DateTime.Now.Month;
+            int currentYear = PhTime.Now.Year;
+            int currentMonth = PhTime.Now.Month;
             // Academic year typically starts in June/August
             if (currentMonth >= 6)
             {
@@ -310,7 +310,7 @@ namespace iBITS_Portal.Controllers
         private List<string> GenerateAcademicYearOptions()
         {
             var options = new List<string>();
-            int currentYear = DateTime.Now.Year;
+            int currentYear = PhTime.Now.Year;
 
             // Generate years from 5 years ago to 2 years ahead
             for (int year = currentYear - 5; year <= currentYear + 2; year++)
@@ -340,7 +340,7 @@ namespace iBITS_Portal.Controllers
                 if (setting != null)
                 {
                     setting.SettingValue = academicYear;
-                    setting.LastUpdated = DateTime.Now;
+                    setting.LastUpdated = PhTime.Now;
                     setting.UpdatedBy = User.Identity?.Name ?? "Admin";
                 }
                 else
@@ -350,7 +350,7 @@ namespace iBITS_Portal.Controllers
                         SettingKey = "CurrentAcademicYear",
                         SettingValue = academicYear,
                         Description = "The current academic year for student enrollment",
-                        LastUpdated = DateTime.Now,
+                        LastUpdated = PhTime.Now,
                         UpdatedBy = User.Identity?.Name ?? "Admin"
                     };
                     _context.SystemSettings.Add(setting);
@@ -396,7 +396,7 @@ namespace iBITS_Portal.Controllers
                         SettingKey = "CurrentAcademicYear",
                         SettingValue = newAcademicYear,
                         Description = "The current academic year for the system",
-                        LastUpdated = DateTime.Now,
+                        LastUpdated = PhTime.Now,
                         UpdatedBy = currentUser?.UserName
                     };
                     _context.SystemSettings.Add(setting);
@@ -405,7 +405,7 @@ namespace iBITS_Portal.Controllers
                 {
                     // Update existing setting
                     setting.SettingValue = newAcademicYear;
-                    setting.LastUpdated = DateTime.Now;
+                    setting.LastUpdated = PhTime.Now;
                     setting.UpdatedBy = currentUser?.UserName;
                     _context.SystemSettings.Update(setting);
                 }
@@ -932,7 +932,7 @@ namespace iBITS_Portal.Controllers
                     .Where(e => e.EventDate.HasValue && e.EventDate.Value.Month == month && e.EventDate.Value.Year == year)
                     .ToListAsync();
 
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTime.Now);
                 var attendances = await _context.Attendances
                     .Where(a => events.Select(e => e.EventId).Contains(a.EventId ?? 0))
                     .ToListAsync();
@@ -986,7 +986,7 @@ namespace iBITS_Portal.Controllers
         {
             try
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTime.Now);
                 var events = await _context.Events.ToListAsync();
 
                 List<Event> filteredEvents;
@@ -1086,7 +1086,7 @@ namespace iBITS_Portal.Controllers
                         StudentNum = student.StudentNum,
                         Title = subject,
                         Message = message,
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         NotificationType = "Admin Notice",
                         SentBy = posterName
@@ -1392,7 +1392,7 @@ namespace iBITS_Portal.Controllers
                     ws.Cell(1, 1).Value = "Dashboard Summary Report";
                     ws.Cell(1, 1).Style.Font.Bold = true;
                     ws.Cell(1, 1).Style.Font.FontSize = 16;
-                    ws.Cell(2, 1).Value = $"Generated: {DateTime.Now:MMMM dd, yyyy HH:mm}";
+                    ws.Cell(2, 1).Value = $"Generated: {PhTime.Now:MMMM dd, yyyy HH:mm}";
 
                     ws.Cell(4, 1).Value = "Metric";
                     ws.Cell(4, 2).Value = "Value";
@@ -1421,7 +1421,7 @@ namespace iBITS_Portal.Controllers
                 workbook.SaveAs(stream);
                 stream.Position = 0;
 
-                var fileName = $"iBITS_Dashboard_{reportType}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                var fileName = $"iBITS_Dashboard_{reportType}_{PhTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
@@ -2087,7 +2087,7 @@ namespace iBITS_Portal.Controllers
                 {
                     hasDebt = totalDebt > 0,
                     amount = totalDebt,
-                    details = $"Fees: ₱{unpaidFees:N2}, Fines: ₱{unpaidFines:N2}"
+                    details = $"Fees: ?{unpaidFees:N2}, Fines: ?{unpaidFines:N2}"
                 });
             }
             catch (Exception)
@@ -2357,7 +2357,7 @@ namespace iBITS_Portal.Controllers
             // Apply Status Filter (Upcoming, Today, Past)
             if (!string.IsNullOrWhiteSpace(status))
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTime.Now);
                 
                 switch (status.ToLower())
                 {
@@ -2422,7 +2422,7 @@ namespace iBITS_Portal.Controllers
 
         private async Task ProcessAutoCloseEvents()
         {
-            var now = DateTime.Now;
+            var now = PhTime.Now;
             var today = DateOnly.FromDateTime(now);
             var timeNow = TimeOnly.FromDateTime(now);
 
@@ -2809,8 +2809,8 @@ namespace iBITS_Portal.Controllers
                     StudentNum = attendance.StudentNum, // FIX: Set StudentNum for proper navigation
                     Amount = fineAmount,
                     FinesStatus = "Unpaid",
-                    FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
-                    FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(14)) // Default 2 weeks due date
+                    FinesStartDate = DateOnly.FromDateTime(PhTime.Now),
+                    FinesDueDate = DateOnly.FromDateTime(PhTime.Now.AddDays(14)) // Default 2 weeks due date
                 };
 
                 _context.Fines.Add(fine);
@@ -2868,10 +2868,10 @@ namespace iBITS_Portal.Controllers
                 {
                     StudentNum = studentNum,
                     Title = "Fine Issued",
-                    Message = $"A fine of ₱{fine.Amount} has been issued for your absence at '{eventName}'. " +
+                    Message = $"A fine of ?{fine.Amount} has been issued for your absence at '{eventName}'. " +
                              $"Due date: {fine.FinesDueDate?.ToString("MMMM dd, yyyy")}. Please settle this at your earliest convenience.",
                     NotificationType = "Fine",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     IsRead = false,
                     SentBy = "System"
                 };
@@ -3245,7 +3245,7 @@ namespace iBITS_Portal.Controllers
 
             if (!string.IsNullOrEmpty(overdueFilter) && overdueFilter == "overdue")
             {
-                var today = DateOnly.FromDateTime(DateTime.Now);
+                var today = DateOnly.FromDateTime(PhTime.Now);
                 query = query.Where(f => f.FinesStatus == "Unpaid" && f.FinesDueDate.HasValue && f.FinesDueDate.Value < today);
             }
 
@@ -3455,7 +3455,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 int count = 0;
-                var dueDate = FinesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15));
+                var dueDate = FinesDueDate ?? DateOnly.FromDateTime(PhTime.Now.AddDays(15));
 
                 // Generate a single, unique ID for this entire batch
                 var batchId = Guid.NewGuid().ToString();
@@ -3468,7 +3468,7 @@ namespace iBITS_Portal.Controllers
                         Description = FineReason,
                         StudentNum = student.StudentNum,
                         FinesStatus = "Unpaid",
-                        FinesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                        FinesStartDate = DateOnly.FromDateTime(PhTime.Now),
                         FinesDueDate = dueDate,
                         AttendanceId = null,
                         BatchId = batchId // Assign the same BatchId to all fines in this group
@@ -3479,9 +3479,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = student.StudentNum,
                         Title = "New Fine Issued",
-                        Message = $"You have been issued a fine of ₱{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
+                        Message = $"You have been issued a fine of ?{Amount:N2} for '{FineReason}'. Due date: {dueDate:MMM dd, yyyy}.",
                         NotificationType = "Fine",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = "Admin"
                     };
@@ -3748,7 +3748,7 @@ namespace iBITS_Portal.Controllers
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
-                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fines_Export_{DateTime.Now:yyyyMMdd}.xlsx");
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fines_Export_{PhTime.Now:yyyyMMdd}.xlsx");
                 }
             }
         }
@@ -3772,7 +3772,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Generate unique BatchId for this batch of fees
-                string batchId = $"FEE-{DateTime.Now:yyyyMMddHHmmss}";
+                string batchId = $"FEE-{PhTime.Now:yyyyMMddHHmmss}";
 
                 // Create fee records for each matching student
                 var feesCreated = 0;
@@ -3782,13 +3782,13 @@ namespace iBITS_Portal.Controllers
                     {
                         FeeName = FeeName,
                         Amount = Amount,
-                        FeesStartDate = DateOnly.FromDateTime(DateTime.Now),
+                        FeesStartDate = DateOnly.FromDateTime(PhTime.Now),
                         FeesDueDate = FeesDueDate,
                         FeeStatus = "Pending",
                         AcadYear = AcadYear,
                         StudentNum = student.StudentNum,
                         BatchId = batchId,  // NEW: Assign BatchId
-                        DateCreated = DateTime.Now  // NEW: Set DateCreated
+                        DateCreated = PhTime.Now  // NEW: Set DateCreated
                     };
                     _context.Fees.Add(fee);
                     feesCreated++;
@@ -3812,7 +3812,7 @@ namespace iBITS_Portal.Controllers
                     _ => "All Year Levels"
                 };
 
-                TempData["Message"] = $"Fee '{FeeName}' (₱{Amount:N2}) for {AcadYear} successfully assigned to {feesCreated} students ({programDesc} - {yearDesc}).";
+                TempData["Message"] = $"Fee '{FeeName}' (?{Amount:N2}) for {AcadYear} successfully assigned to {feesCreated} students ({programDesc} - {yearDesc}).";
                 _logger.LogInformation($"Fee batch created: {FeeName}, BatchId: {batchId}, Amount: {Amount}, AcadYear: {AcadYear}, Applied to: {feesCreated} students ({programDesc} - {yearDesc})");
             }
             catch (Exception ex)
@@ -4009,7 +4009,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_StudentRecords_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_StudentRecords_{PhTime.Now:yyyyMMdd_HHmmss}.xlsx";
                         await LogAction("Export Excel", $"Exported {students.Count} student records to Excel.");
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
@@ -4093,7 +4093,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_Attendance_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_Attendance_{PhTime.Now:yyyyMMdd_HHmmss}.xlsx";
                         await LogAction("Export Excel", $"Exported {attendances.Count} attendance records to Excel.");
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
@@ -4163,7 +4163,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-                string fileName = $"iBITS_Attendance_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string fileName = $"iBITS_Attendance_{PhTime.Now:yyyyMMdd_HHmmss}.csv";
 
                 await LogAction("Export CSV", $"Exported {attendances.Count} attendance records to CSV.");
 
@@ -4339,7 +4339,7 @@ namespace iBITS_Portal.Controllers
                 existingPending.NewRole = newRole;
                 existingPending.AssignedByAdminId = adminUser.Id;
                 existingPending.AssignedByAdminName = adminUser.UserName;
-                existingPending.AssignedDate = DateTime.Now;
+                existingPending.AssignedDate = PhTime.Now;
                 _context.PendingRoleChanges.Update(existingPending);
             }
             else
@@ -4351,7 +4351,7 @@ namespace iBITS_Portal.Controllers
                     NewRole = newRole,
                     AssignedByAdminId = adminUser.Id,
                     AssignedByAdminName = adminUser.UserName,
-                    AssignedDate = DateTime.Now,
+                    AssignedDate = PhTime.Now,
                     IsConfirmed = false,
                     IsDeclined = false
                 };
@@ -4450,7 +4450,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Return CSV file
-                var fileName = $"iBITS_StudentRecords_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                var fileName = $"iBITS_StudentRecords_{PhTime.Now:yyyyMMdd_HHmmss}.csv";
                 var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
 
                 await LogAction("Export Selected Students", $"Exported {students.Count} selected students to Excel");
@@ -4500,7 +4500,7 @@ namespace iBITS_Portal.Controllers
                         student.Classification = "Archived";
                         student.IsArchived = true;
                         student.ArchiveStatus = "Bulk Archived";
-                        student.ArchiveDate = DateOnly.FromDateTime(DateTime.Now);
+                        student.ArchiveDate = DateOnly.FromDateTime(PhTime.Now);
 
                         if (string.IsNullOrEmpty(student.SchoolYearEnrolled))
                         {
@@ -4642,10 +4642,10 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = "Admin Override",
                     ProcessedBy = adminName,
-                    TransactionReference = $"ADMIN-{DateTime.Now:yyyyMMddHHmmss}",
+                    TransactionReference = $"ADMIN-{PhTime.Now:yyyyMMddHHmmss}",
                     Notes = $"Payment confirmed by Admin ({adminName})"
                 };
 
@@ -4658,9 +4658,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fee.StudentNum,
                         Title = "Payment Confirmed",
-                        Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
+                        Message = $"Your payment of ?{fee.Amount:N2} for '{fee.FeeName}' has been confirmed by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -4736,7 +4736,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4748,8 +4748,8 @@ namespace iBITS_Portal.Controllers
                 {
                     var newBalance = (fee.Amount ?? 0) - fee.AmountPaid;
                     var message = newBalance <= 0
-                        ? $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
-                        : $"Your payment of ₱{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+                        ? $"Your payment of ?{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. This fee is now FULLY PAID."
+                        : $"Your payment of ?{paymentAmount:N2} for '{fee.FeeName}' has been confirmed. Remaining balance: ?{newBalance:N2}.";
 
                     _context.Notifications.Add(new Notification
                     {
@@ -4757,17 +4757,17 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Record Fee Payment", $"Recorded payment of ₱{paymentAmount:N2} for fee ID {feeId}");
+                await LogAction("Record Fee Payment", $"Recorded payment of ?{paymentAmount:N2} for fee ID {feeId}");
 
-                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
-                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
+                var statusMsg = fee.FeeStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ?{(fee.Amount ?? 0) - fee.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ?{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
             }
             catch (Exception ex)
             {
@@ -4819,7 +4819,7 @@ namespace iBITS_Portal.Controllers
 
                 if (paymentAmount > remainingBalance)
                 {
-                    TempData["Error"] = $"Payment amount (₱{paymentAmount:N2}) cannot exceed the remaining balance (₱{remainingBalance:N2}).";
+                    TempData["Error"] = $"Payment amount (?{paymentAmount:N2}) cannot exceed the remaining balance (?{remainingBalance:N2}).";
                     return RedirectToAction(nameof(Fines));
                 }
 
@@ -4844,7 +4844,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = adminName,
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -4856,8 +4856,8 @@ namespace iBITS_Portal.Controllers
                 {
                     var newBalance = (fine.Amount ?? 0) - fine.AmountPaid;
                     var message = newBalance <= 0
-                        ? $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
-                        : $"Your payment of ₱{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ₱{newBalance:N2}.";
+                        ? $"Your payment of ?{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. This fine is now FULLY PAID."
+                        : $"Your payment of ?{paymentAmount:N2} for '{fine.Description ?? "Fine"}' has been confirmed. Remaining balance: ?{newBalance:N2}.";
 
                     _context.Notifications.Add(new Notification
                     {
@@ -4865,17 +4865,17 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Record Fine Payment", $"Recorded payment of ₱{paymentAmount:N2} for fine ID {fineId}");
+                await LogAction("Record Fine Payment", $"Recorded payment of ?{paymentAmount:N2} for fine ID {fineId}");
 
-                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ₱{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
-                TempData["Message"] = $"Payment of ₱{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
+                var statusMsg = fine.FinesStatus == "Paid" ? "FULLY PAID" : $"Partial (Balance: ?{(fine.Amount ?? 0) - fine.AmountPaid:N2})";
+                TempData["Message"] = $"Payment of ?{paymentAmount:N2} recorded successfully. Status: {statusMsg}";
             }
             catch (Exception ex)
             {
@@ -4964,7 +4964,7 @@ namespace iBITS_Portal.Controllers
                     {
                         workbook.SaveAs(stream);
                         stream.Position = 0;
-                        string fileName = $"iBITS_Payments_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                        string fileName = $"iBITS_Payments_{PhTime.Now:yyyyMMdd_HHmmss}.xlsx";
                         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                     }
                 }
@@ -5024,10 +5024,10 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTime.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.PaymentTransactions.Add(transaction);
@@ -5038,9 +5038,9 @@ namespace iBITS_Portal.Controllers
                         {
                             StudentNum = fee.StudentNum,
                             Title = "Payment Confirmed",
-                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
+                            Message = $"Your payment of ?{remainingBalance:N2} for '{fee.FeeName}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5120,16 +5120,16 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fee.StudentNum,
                         Title = "Payment Revoked",
-                        Message = $"Your payment record for '{fee.FeeName}' (₱{previousAmountPaid:N2}) has been revoked by the administrator.",
+                        Message = $"Your payment record for '{fee.FeeName}' (?{previousAmountPaid:N2}) has been revoked by the administrator.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Revoke Fee Payment", $"Revoked payment for fee ID {feeId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+                await LogAction("Revoke Fee Payment", $"Revoked payment for fee ID {feeId}. Previous: ?{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
 
                 return Json(new { 
                     success = true, 
@@ -5199,10 +5199,10 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = adminName,
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTime.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.FinePaymentTransactions.Add(transaction);
@@ -5213,9 +5213,9 @@ namespace iBITS_Portal.Controllers
                         {
                             StudentNum = fine.StudentNum,
                             Title = "Fine Payment Confirmed",
-                            Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
+                            Message = $"Your payment of ?{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = adminName
                         });
@@ -5300,16 +5300,16 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fine.StudentNum,
                         Title = "Fine Payment Revoked",
-                        Message = $"Your payment record for '{fine.Description ?? "Fine"}' (₱{previousAmountPaid:N2}) has been revoked.",
+                        Message = $"Your payment record for '{fine.Description ?? "Fine"}' (?{previousAmountPaid:N2}) has been revoked.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Revoke Fine Payment", $"Revoked payment for fine ID {fineId}. Previous: ₱{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
+                await LogAction("Revoke Fine Payment", $"Revoked payment for fine ID {fineId}. Previous: ?{previousAmountPaid:N2}, {transactions.Count} transaction(s) deleted.");
 
                 return Json(new { 
                     success = true, 
@@ -5373,9 +5373,9 @@ namespace iBITS_Portal.Controllers
                     {
                         StudentNum = fine.StudentNum,
                         Title = "Fine Excused",
-                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
+                        Message = $"Your fine for '{fine.Description ?? "Fine"}' (?{fine.Amount:N2}) has been excused. Reason: {reason ?? "Not specified"}",
                         NotificationType = "Fine",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = adminName
                     });
@@ -5500,7 +5500,7 @@ namespace iBITS_Portal.Controllers
 
             // 3. Return the file
             var csvData = Encoding.UTF8.GetBytes(builder.ToString());
-            var fileName = $"ActivityLogs_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+            var fileName = $"ActivityLogs_{PhTime.Now:yyyyMMdd_HHmm}.csv";
 
             return File(csvData, "text/csv", fileName);
         }

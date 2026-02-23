@@ -1266,16 +1266,16 @@ function escapeHtml(text) {
 
 function formatNotificationDate(dateString) {
     const date = new Date(dateString);
-    const now = new Date();
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })); // PHT-aware current time
     const diffInMs = now - date;
     const diffInHours = diffInMs / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-        return 'Today at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return 'Today at ' + date.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 48) {
-        return 'Yesterday at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return 'Yesterday at ' + date.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' });
     } else {
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return date.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
     }
 }
 

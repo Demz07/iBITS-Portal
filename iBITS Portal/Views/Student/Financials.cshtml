@@ -457,12 +457,12 @@
             transactions.forEach((tx) => {
                 const isFine = tx.type === 'Fine';
                 const paymentDate = new Date(tx.paymentDate);
-                const formattedDate = paymentDate.toLocaleDateString('en-US', {
+                const formattedDate = paymentDate.toLocaleDateString('en-PH', {
+                    timeZone: 'Asia/Manila',
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                 });
-
                 const typeClass = isFine ? 'fine' : 'fee';
                 const typeIcon = isFine ? 'bi-exclamation-octagon' : 'bi-receipt';
 

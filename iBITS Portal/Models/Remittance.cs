@@ -7,6 +7,7 @@
 // ============================================================
 
 using System;
+using iBITS_Portal.Helpers;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -86,7 +87,7 @@ namespace iBITS_Portal.Models
         /// Date when the remittance was submitted
         /// </summary>
         [Required]
-        public DateTime SubmittedDate { get; set; } = DateTime.Now;
+        public DateTime SubmittedDate { get; set; } = PhTime.Now;
 
         /// <summary>
         /// Current status: Pending, Validated, or Rejected
@@ -128,7 +129,7 @@ namespace iBITS_Portal.Models
         /// <summary>
         /// Record creation timestamp
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = PhTime.Now;
 
         /// <summary>
         /// Last update timestamp
@@ -188,7 +189,7 @@ namespace iBITS_Portal.Models
         /// Days since submission (for pending remittances)
         /// </summary>
         [NotMapped]
-        public int DaysPending => (DateTime.Now - SubmittedDate).Days;
+        public int DaysPending => (PhTime.Now - SubmittedDate).Days;
     }
 
     /// <summary>

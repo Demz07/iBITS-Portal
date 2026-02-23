@@ -744,7 +744,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Fees');
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
             XLSX.writeFile(wb, `AdminFees-${today}.xlsx`);
 
             bootstrap.Modal.getInstance(document.getElementById('exportFeesModal')).hide();
@@ -811,7 +811,7 @@
                 }
             });
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
             doc.save(`AdminFees-${today}.pdf`);
 
             bootstrap.Modal.getInstance(document.getElementById('exportFeesModal')).hide();
@@ -889,5 +889,6 @@
         }
     </style>
 }
+
 
 

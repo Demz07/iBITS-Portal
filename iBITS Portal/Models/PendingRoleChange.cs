@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Models/PendingRoleChange.cs
 // ============================================================
 // NEW FILE: Model for tracking pending role changes that require
@@ -6,6 +6,7 @@
 // ============================================================
 
 using System;
+using iBITS_Portal.Helpers;
 using System.ComponentModel.DataAnnotations;
 
 namespace iBITS_Portal.Models
@@ -53,7 +54,7 @@ namespace iBITS_Portal.Models
         /// The date and time when the role change was assigned by the admin.
         /// </summary>
         [Required]
-        public DateTime AssignedDate { get; set; } = DateTime.Now;
+        public DateTime AssignedDate { get; set; } = PhTime.Now;
 
         /// <summary>
         /// Indicates whether the student has confirmed/accepted the role change.

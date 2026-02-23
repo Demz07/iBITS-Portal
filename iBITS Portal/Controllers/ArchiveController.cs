@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Claims;
+using iBITS_Portal.Helpers;
 
 namespace iBITS_Portal.Controllers
 {
@@ -44,7 +45,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.ArchiveYears = allYears;
 
             // Default to current year if list is empty
-            ViewBag.CurrentArchiveYear = allYears.Any() ? allYears.First() : DateTime.Now.Year;
+            ViewBag.CurrentArchiveYear = allYears.Any() ? allYears.First() : PhTime.Now.Year;
 
             return View();
         }
@@ -226,7 +227,7 @@ namespace iBITS_Portal.Controllers
                     Action = "Student Unarchive",
                     Description = $"Restored student: {student.StudentFn} {student.StudentLn}",
                     PerformedBy = currentUser,
-                    Timestamp = DateTime.Now
+                    Timestamp = PhTime.Now
                 };
                 _context.ActivityLogs.Add(logEntry);
 

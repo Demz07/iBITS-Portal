@@ -1,4 +1,4 @@
-
+﻿
 
 @* FILE PATH: Views/Officer/AttendanceRecords.cshtml *@
 @model IEnumerable<iBITS_Portal.Models.Attendance>
@@ -377,7 +377,7 @@
         function exportToExcel() {
             const table = document.getElementById('attendanceTable');
             const wb = XLSX.utils.table_to_book(table, {sheet: "Attendance Records"});
-            XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) + '.xlsx');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -390,4 +390,5 @@
         });
     </script>
 }
+
 

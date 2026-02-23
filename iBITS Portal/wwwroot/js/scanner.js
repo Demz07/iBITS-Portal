@@ -494,7 +494,7 @@ function exportToExcel() {
         return;
     }
     const wb = XLSX.utils.table_to_book(table, { sheet: "Attendance" });
-    XLSX.writeFile(wb, `Attendance_Log_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `Attendance_Log_${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.xlsx`);
 }
 
 function exportToPdf() {
@@ -513,7 +513,7 @@ function exportToPdf() {
     }
     doc.text("Event Attendance Report", 14, 15);
     doc.autoTable({ html: '#attendance-table', startY: 25 });
-    doc.save(`Attendance_Log_${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(`Attendance_Log_${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.pdf`);
 }
 
 // AT THE VERY BOTTOM OF YOUR JS FILE (Outside the DOMContentLoaded)

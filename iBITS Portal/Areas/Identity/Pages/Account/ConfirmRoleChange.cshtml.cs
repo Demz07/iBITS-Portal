@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Areas/Identity/Pages/Account/ConfirmRoleChange.cshtml.cs
 // ============================================================
 // NEW FILE: Handles the logic for accepting/declining a role
@@ -6,9 +6,13 @@
 // ============================================================
 
 using iBITS_Portal.Models;
+using iBITS_Portal.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using iBITS_Portal.Helpers;
 using Microsoft.AspNetCore.Identity;
+using iBITS_Portal.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using iBITS_Portal.Helpers;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -101,7 +105,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 }
 
                 pendingChange.IsConfirmed = true;
-                pendingChange.ConfirmedDate = DateTime.Now;
+                pendingChange.ConfirmedDate = PhTime.Now;
                 _context.PendingRoleChanges.Update(pendingChange);
                 await _context.SaveChangesAsync();
 
@@ -113,7 +117,7 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             else
             {
                 pendingChange.IsDeclined = true;
-                pendingChange.DeclinedDate = DateTime.Now;
+                pendingChange.DeclinedDate = PhTime.Now;
                 _context.PendingRoleChanges.Update(pendingChange);
                 await _context.SaveChangesAsync();
 

@@ -1,4 +1,4 @@
-@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\CreateManualFee.cshtml *@
+﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\CreateManualFee.cshtml *@
 @* FILE PATH: Views/Officer/CreateManualFee.cshtml *@
 @{
     ViewData["Title"] = "Create Manual Fee";
@@ -86,7 +86,7 @@
                 <div class="mb-4">
                     <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text">₱</span>
+                        <span class="input-group-text">â‚±</span>
                         <input type="number" class="form-control" id="amount" name="amount" required 
                                step="0.01" min="0.01" placeholder="0.00">
                     </div>
@@ -134,7 +134,7 @@
                 <div class="alert alert-info">
                     <h6 class="mb-2"><i class="bi bi-info-circle me-2"></i> Preview</h6>
                     <p class="mb-1"><strong>Fee:</strong> <span id="previewFeeName">-</span></p>
-                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">₱0.00</span></p>
+                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">â‚±0.00</span></p>
                     <p class="mb-1"><strong>Due Date:</strong> <span id="previewDueDate">-</span></p>
                     <p class="mb-0"><strong>Target:</strong> <span id="previewScope">All Active Students</span></p>
                 </div>
@@ -187,7 +187,7 @@
         const section = document.getElementById('specificSection').value;
         
         document.getElementById('previewFeeName').textContent = feeName;
-        document.getElementById('previewAmount').textContent = '₱' + parseFloat(amount).toFixed(2);
+        document.getElementById('previewAmount').textContent = 'â‚±' + parseFloat(amount).toFixed(2);
         document.getElementById('previewDueDate').textContent = dueDate;
         
         if (scope === 'Section' && section) {
@@ -213,7 +213,8 @@
     document.getElementById('specificSection').addEventListener('input', updatePreview);
 
     // Set minimum date to today
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
     document.getElementById('dueDate').min = today;
 </script>
 }
+

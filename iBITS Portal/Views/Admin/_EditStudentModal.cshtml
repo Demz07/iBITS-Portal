@@ -77,7 +77,7 @@
                             <select asp-for="SchoolYearEnrolled" id="editSchoolYearEnrolled" class="form-select select2-modal" style="width: 100%;" required>
                                 <option value="">-- Select Year --</option>
                                 @{
-                                    int currentYear = DateTime.Now.Year;
+                                    int currentYear = PhTime.Now.Year;
                                     for (int year = currentYear - 5; year <= currentYear + 2; year++)
                                     {
                                         string ayValue = $"A.Y. {year}-{year + 1}";

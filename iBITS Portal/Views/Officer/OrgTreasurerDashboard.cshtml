@@ -1,4 +1,4 @@
-@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\OrgTreasurerDashboard.cshtml *@
+﻿@* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\OrgTreasurerDashboard.cshtml *@
 @* FILE PATH: Views/Officer/OrgTreasurerDashboard.cshtml *@
 @{
     ViewData["Title"] = "Organization Treasury Dashboard";
@@ -798,8 +798,8 @@
                             <span class="date">${day.date}</span>
                         </div>
                         <div class="text-end">
-                            <div class="amount">₱${day.amount.toLocaleString()}</div>
-                            <div class="breakdown">Fees: ₱${day.fees.toLocaleString()} | Fines: ₱${day.fines.toLocaleString()}</div>
+                            <div class="amount">${day.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}}</div>
+                            <div class="breakdown">Fees: ${day.fees.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })} | Fines: ${day.fines.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}}</div>
                         </div>
                     </div>
                 </li>
@@ -868,12 +868,12 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString();
+                                    return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 });
                                 },
                                 footer: function(tooltipItems) {
                                     let total = 0;
                                     tooltipItems.forEach(item => { total += item.parsed.y; });
-                                    return 'Total: ₱' + total.toLocaleString();
+                                    return 'Total: ₱' + total.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 });
                                 }
                             }
                         }
@@ -887,7 +887,7 @@
                             beginAtZero: true,
                             ticks: {
                                 color: '#fff',
-                                callback: function(value) { return '₱' + value.toLocaleString(); }
+                                callback: function(value) { return '₱' + value.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }); }
                             },
                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         }
@@ -1049,7 +1049,7 @@
                 option.textContent = year;
                 
                 // Select current year if available
-                if (year === new Date().getFullYear()) {
+                if (year === parseInt(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).split('-')[0])) {
                     option.selected = true;
                 }
                 
@@ -1057,7 +1057,7 @@
             });
 
             // If current year not in list, select the most recent
-            if (!uniqueYears.includes(new Date().getFullYear()) && uniqueYears.length > 0) {
+            if (!uniqueYears.includes(parseInt(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).split('-')[0])) && uniqueYears.length > 0) {
                 yearSelect.value = uniqueYears[0];
             }
 
@@ -1190,7 +1190,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+                                    return context.label + ': ₱' + context.parsed.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 });
                                 }
                             }
                         }
@@ -1220,7 +1220,7 @@
                 const pyImg = pyCanvas.toDataURL('image/png');
                 const link2 = document.createElement('a');
                 link2.href = pyImg;
-                link2.download = 'program_year_stats_' + new Date().toISOString().split('T')[0] + '.png';
+                link2.download = 'program_year_stats_' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) + '.png';
                 document.body.appendChild(link2);
                 link2.click();
                 document.body.removeChild(link2);
@@ -1247,7 +1247,7 @@
                 
                 pdf.setFontSize(10);
                 pdf.setTextColor(150, 150, 150);
-                pdf.text('Generated: ' + new Date().toLocaleString(), 20, 28);
+                pdf.text('Generated: ' + new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }), 20, 28);
                 
                 // Quick Stats
                 pdf.setFontSize(14);
@@ -1256,11 +1256,11 @@
                 
                 pdf.setFontSize(10);
                 pdf.setTextColor(0, 0, 0);
-                pdf.text('Total Fees Collected: PHP ' + (@totalFeesCollected).toLocaleString(), 20, 48);
-                pdf.text('Total Fines Collected: PHP ' + (@totalFinesCollected).toLocaleString(), 20, 55);
-                pdf.text('Pending Fees: PHP ' + (@pendingFees).toLocaleString(), 20, 62);
-                pdf.text('Pending Fines: PHP ' + (@pendingFines).toLocaleString(), 20, 69);
-                pdf.text('Grand Total: PHP ' + (@(totalCollections + pendingFees + pendingFines)).toLocaleString(), 20, 76);
+                pdf.text('Total Fees Collected: PHP ' + (@totalFeesCollected).toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }), 20, 48);
+                pdf.text('Total Fines Collected: PHP ' + (@totalFinesCollected).toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }), 20, 55);
+                pdf.text('Pending Fees: PHP ' + (@pendingFees).toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }), 20, 62);
+                pdf.text('Pending Fines: PHP ' + (@pendingFines).toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }), 20, 69);
+                pdf.text('Grand Total: PHP ' + (@(totalCollections + pendingFees + pendingFines)).toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }), 20, 76);
 
                 // Collection Trends section removed from PDF export
 
@@ -1275,7 +1275,7 @@
                 const pyImg = pyCanvas.toDataURL('image/jpeg', 0.7);
                 pdf.addImage(pyImg, 'JPEG', 20, 30, 170, 100);
 
-                pdf.save('OrgTreasury_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+                pdf.save('OrgTreasury_Report_' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) + '.pdf');
                 alert('PDF exported successfully!');
             } catch (error) {
                 console.error('PDF export error:', error);
@@ -1291,7 +1291,7 @@
                 // Sheet 1: Quick Stats
                 const statsData = [
                     ['Organization Treasury Dashboard'],
-                    ['Generated: ' + new Date().toLocaleString()],
+                    ['Generated: ' + new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })],
                     [],
                     ['Metric', 'Amount'],
                     ['Total Fees Collected', @totalFeesCollected],
@@ -1306,7 +1306,7 @@
                 
                 // Monthly Trends sheet removed
 
-                XLSX.writeFile(wb, 'OrgTreasury_Data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+                XLSX.writeFile(wb, 'OrgTreasury_Data_' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) + '.xlsx');
                 alert('Excel file exported successfully!');
             } catch (error) {
                 console.error('Excel export error:', error);
@@ -1365,7 +1365,7 @@
                 return;
             }
             
-            if (new Date(endDate) > new Date()) {
+            if (new Date(endDate) > new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }))) {
                 showCustomModal('Invalid Date Range', 'Cannot select future dates.', 'warning');
                 return;
             }

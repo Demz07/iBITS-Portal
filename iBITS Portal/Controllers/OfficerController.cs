@@ -19,6 +19,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using iBITS_Portal.Helpers;
 
 namespace iBITS_Portal.Controllers
 {
@@ -85,7 +86,7 @@ namespace iBITS_Portal.Controllers
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students.FindAsync(user.UserName);
             string poster = (student != null) ? $"{student.StudentFn} {student.StudentLn}" : "Officer";
-            _context.Announcements.Add(new Announcement { Title = "Announcement", Content = content, PostedBy = poster, Timestamp = DateTime.Now });
+            _context.Announcements.Add(new Announcement { Title = "Announcement", Content = content, PostedBy = poster, Timestamp = PhTime.Now });
             await _context.SaveChangesAsync();
             return RedirectToAction("Announcements");
         }
@@ -135,7 +136,7 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Secretary, Class Secretary")]
         public async Task<IActionResult> Scanner()
         {
-            var now = DateTime.Now;
+            var now = PhTime.Now;
             var today = DateOnly.FromDateTime(now);
 
             // 1. Fetch all events for today from the database (exclude closed/force-stopped events)
@@ -247,7 +248,7 @@ namespace iBITS_Portal.Controllers
                     success = true,
                     message = "Attendance recorded successfully.",
                     attendanceId = newAttendance.AttendanceId, // <-- CRITICAL: Return the ID for delete functionality!
-                    scanTime = DateTime.Now.ToString("h:mm:ss tt"),
+                    scanTime = PhTime.Now.ToString("h:mm:ss tt"),
                     studentId = student.StudentNum,
                     studentName = student.FullName,
                     profileImage = student.StudentImage,
@@ -503,16 +504,16 @@ namespace iBITS_Portal.Controllers
                 {
                     // Class Treasurer collects payment - NOT yet validated, needs remittance
                     fee.CollectedBy = treasurer.StudentNum;
-                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectionDate = PhTime.Now;
                     // RemittanceStatus remains "NotRemitted" (default) - will not appear in Org Treasurer stats
                 }
                 else if (User.IsInRole("Org Treasurer"))
                 {
                     // Org Treasurer direct payment marking - bypass remittance system
                     fee.CollectedBy = treasurer.StudentNum;
-                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectionDate = PhTime.Now;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fee.OfficialPaymentDate = DateTime.Now; // Official record date
+                    fee.OfficialPaymentDate = PhTime.Now; // Official record date
                     fee.RemittanceId = null; // Not part of batch remittance
                 }
 
@@ -524,7 +525,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -544,7 +545,7 @@ namespace iBITS_Portal.Controllers
                                  $"Payment method: {transaction.PaymentMethod}. " +
                                  (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -675,16 +676,16 @@ namespace iBITS_Portal.Controllers
                 {
                     // Class Treasurer collects payment - NOT yet validated, needs remittance
                     fine.CollectedBy = treasurer.StudentNum;
-                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectionDate = PhTime.Now;
                     // RemittanceStatus remains "NotRemitted" (default) - will not appear in Org Treasurer stats
                 }
                 else if (User.IsInRole("Org Treasurer"))
                 {
                     // Org Treasurer direct payment marking - bypass remittance system
                     fine.CollectedBy = treasurer.StudentNum;
-                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectionDate = PhTime.Now;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fine.OfficialPaymentDate = DateTime.Now; // Official record date
+                    fine.OfficialPaymentDate = PhTime.Now; // Official record date
                     fine.RemittanceId = null; // Not part of batch remittance
                 }
 
@@ -696,7 +697,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = fine.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -716,7 +717,7 @@ namespace iBITS_Portal.Controllers
                                  $"Payment method: {transaction.PaymentMethod}. " +
                                  (string.IsNullOrEmpty(transaction.TransactionReference) ? "" : $"Reference: {transaction.TransactionReference}."),
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -877,8 +878,8 @@ namespace iBITS_Portal.Controllers
             ViewBag.ProgramYearCombinedStats = programYearCombinedStats;
 
             // Calculate monthly trends - Last 3 months by default
-            var defaultStartDate = DateTime.Now.AddMonths(-3);
-            var defaultEndDate = DateTime.Now;
+            var defaultStartDate = PhTime.Now.AddMonths(-3);
+            var defaultEndDate = PhTime.Now;
 
             var monthlyTrends = new List<object>();
             var currentMonth = new DateTime(defaultStartDate.Year, defaultStartDate.Month, 1);
@@ -940,7 +941,7 @@ namespace iBITS_Portal.Controllers
                 DateTime rangeStart;
                 DateTime rangeEnd;
                 string periodLabel;
-                var now = DateTime.Now;
+                var now = PhTime.Now;
 
                 // Determine date range based on period
                 switch (period?.ToLower())
@@ -982,7 +983,7 @@ namespace iBITS_Portal.Controllers
                             return Json(new { success = false, message = "End date must be after start date." });
                         }
 
-                        if (endDate.Value > DateTime.Now)
+                        if (endDate.Value > PhTime.Now)
                         {
                             return Json(new { success = false, message = "Cannot select future dates." });
                         }
@@ -1235,7 +1236,7 @@ namespace iBITS_Portal.Controllers
                           || a.AnnouncementType == "Final Notice"
                           || a.AnnouncementType == "New Fee Posted")
                          && a.PostedBy == posterName
-                         && (a.ExpiryDate == null || a.ExpiryDate > DateTime.Now))
+                         && (a.ExpiryDate == null || a.ExpiryDate > PhTime.Now))
                 .OrderByDescending(a => a.Timestamp)
                 .ToListAsync();
 
@@ -1269,7 +1270,7 @@ namespace iBITS_Portal.Controllers
             string poster = treasurer != null ? $"{treasurer.StudentFn} {treasurer.StudentLn}" : "Org Treasurer";
 
             // Calculate expiry date
-            DateTime? expiryDate = expiryDays > 0 ? DateTime.Now.AddDays(expiryDays) : (DateTime?)null;
+            DateTime? expiryDate = expiryDays > 0 ? PhTime.Now.AddDays(expiryDays) : (DateTime?)null;
 
             // ===== EDIT MODE: Update existing reminder =====
             if (reminderId.HasValue && reminderId.Value > 0)
@@ -1309,7 +1310,7 @@ namespace iBITS_Portal.Controllers
                 Title = "Payment Reminder: " + reminderTitle,
                 Content = content,
                 PostedBy = poster,
-                Timestamp = DateTime.Now,
+                Timestamp = PhTime.Now,
                 AnnouncementType = reminderType,
                 TargetAudience = targetAudience,
                 ExpiryDate = expiryDate
@@ -1328,7 +1329,7 @@ namespace iBITS_Portal.Controllers
                     StudentNum = student.StudentNum,
                     Title = announcement.Title,
                     Message = content,
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     NotificationType = "Payment Reminder",
                     SentBy = poster,
                     IsRead = false
@@ -1520,7 +1521,7 @@ namespace iBITS_Portal.Controllers
                               $"Reason: {(string.IsNullOrWhiteSpace(reason) ? "Not specified" : reason)}. " +
                               $"Please contact your Class Treasurer or Org Treasurer for clarification.",
                     NotificationType = "Payment Alert",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     IsRead = false,
                     SentBy = treasurer?.StudentNum
                 });
@@ -1576,7 +1577,7 @@ namespace iBITS_Portal.Controllers
 
             // Lock the payment
             fee.IsPaymentLocked = true;
-            fee.PaymentLockedDate = DateTime.Now;
+            fee.PaymentLockedDate = PhTime.Now;
             fee.LockedBy = treasurer?.StudentNum;
 
             _context.Fees.Update(fee);
@@ -1591,7 +1592,7 @@ namespace iBITS_Portal.Controllers
                     Message = $"Your payment for '{fee.FeeName}' (₱{fee.Amount:N2}) has been verified and locked by the Org Treasurer. " +
                               $"This payment is now permanently recorded and cannot be changed. Thank you for your payment!",
                     NotificationType = "Payment Confirmation",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     IsRead = false,
                     SentBy = treasurer?.StudentNum
                 });
@@ -1699,7 +1700,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 fee.IsPaymentLocked = true;
-                fee.PaymentLockedDate = DateTime.Now;
+                fee.PaymentLockedDate = PhTime.Now;
                 fee.LockedBy = treasurer?.StudentNum;
 
                 locked++;
@@ -1949,7 +1950,7 @@ namespace iBITS_Portal.Controllers
                             AttendanceId = attendanceId,
                             Amount = fineAmount,
                             FinesStatus = "Unpaid",
-                            FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+                            FinesDueDate = DateOnly.FromDateTime(PhTime.Now.AddDays(7)),
                             Description = $"Absence Fine: {attendance.Event?.EventName ?? "Event"}",
                             AmountPaid = 0
                         });
@@ -2007,7 +2008,7 @@ namespace iBITS_Portal.Controllers
                                 AttendanceId = r.AttendanceId,
                                 Amount = fineAmount,
                                 FinesStatus = "Unpaid",
-                                FinesDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+                                FinesDueDate = DateOnly.FromDateTime(PhTime.Now.AddDays(7)),
                                 Description = $"Absence Fine: {r.Event?.EventName ?? "Event"}",
                                 AmountPaid = 0
                             });
@@ -2236,9 +2237,9 @@ namespace iBITS_Portal.Controllers
 
                     // Org Treasurer direct marking - bypass remittance system
                     fee.CollectedBy = treasurer?.StudentNum;
-                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectionDate = PhTime.Now;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fee.OfficialPaymentDate = DateTime.Now; // Official record date
+                    fee.OfficialPaymentDate = PhTime.Now; // Official record date
                     fee.RemittanceId = null; // Not part of batch remittance
                     _context.Fees.Update(fee);
 
@@ -2247,7 +2248,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Status Update",
                         ProcessedBy = treasurer?.StudentNum ?? "",
                         Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
@@ -2263,7 +2264,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fee Status Updated",
                             Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as {newStatus}.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = treasurer?.StudentNum
                         });
@@ -2360,9 +2361,9 @@ namespace iBITS_Portal.Controllers
 
                     // Org Treasurer direct marking - bypass remittance system
                     fine.CollectedBy = treasurer?.StudentNum;
-                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectionDate = PhTime.Now;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted; // Immediately validated
-                    fine.OfficialPaymentDate = DateTime.Now; // Official record date
+                    fine.OfficialPaymentDate = PhTime.Now; // Official record date
                     fine.RemittanceId = null; // Not part of batch remittance
                     _context.Fines.Update(fine);
 
@@ -2371,7 +2372,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Status Update",
                         ProcessedBy = treasurer?.StudentNum ?? "",
                         Notes = $"Status updated from '{oldStatus}' to '{newStatus}' by Org Treasurer"
@@ -2391,7 +2392,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Status Updated",
                         Message = $"Your fine '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been marked as {newStatus}.",
                         NotificationType = newStatus == "Excused" ? "Excuse" : "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = currentTreasurer?.StudentNum
                     });
@@ -2466,7 +2467,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer?.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2488,7 +2489,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -2572,7 +2573,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer?.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2594,7 +2595,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -2877,7 +2878,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -2898,7 +2899,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -2991,7 +2992,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = fine.StudentNum ?? "",
                     Amount = paymentAmount,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum ?? "",
                     TransactionReference = string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim(),
@@ -3012,7 +3013,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Payment Recorded",
                         Message = message,
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -3104,7 +3105,7 @@ namespace iBITS_Portal.Controllers
                 fine.FinesStatus = "Paid";
                 fine.AmountPaid = fine.Amount ?? 0;
                 fine.CollectedBy = treasurer.StudentNum;
-                fine.CollectionDate = DateTime.Now;
+                fine.CollectionDate = PhTime.Now;
 
                 _context.Fines.Update(fine);
 
@@ -3116,7 +3117,7 @@ namespace iBITS_Portal.Controllers
                     FineId = fineId,
                     StudentNum = student?.StudentNum ?? "", // Use the student object found earlier
                     Amount = fine.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = "Cash",
                     ProcessedBy = treasurer.StudentNum ?? "",
                     Notes = "Full payment recorded by Class Treasurer"
@@ -3132,7 +3133,7 @@ namespace iBITS_Portal.Controllers
                         Title = "✅ Fine Payment Receipt",
                         Message = $"Your fine '{fine.Description ?? "Fine"}' has been PAID.\n\nAmount: ₱{fine.Amount:N2}\nCollected by: {treasurer.FullName}",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -3246,10 +3247,10 @@ namespace iBITS_Portal.Controllers
                                   $"Amount: ₱{fine.Amount:N2}\n" +
                                   $"Status: UNPAID\n" +
                                   $"Revoked by: {treasurer.FullName}\n" +
-                                  $"Date: {DateTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
+                                  $"Date: {PhTime.Now:MMM dd, yyyy hh:mm tt}\n\n" +
                                   $"Please contact your Class Treasurer for more details.",
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer.StudentNum
                     });
@@ -3499,7 +3500,7 @@ namespace iBITS_Portal.Controllers
                     var acadYear = await _context.SystemSettings
                         .Where(s => s.SettingKey == "CurrentAcademicYear")
                         .Select(s => s.SettingValue)
-                        .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+                        .FirstOrDefaultAsync() ?? $"{PhTime.Now.Year}-{PhTime.Now.Year + 1}";
 
                     // Generate batch code
                     var batchCode = await GenerateRemittanceBatchCode();
@@ -3518,7 +3519,7 @@ namespace iBITS_Portal.Controllers
                         TotalAmount = fines.Sum(f => f.Amount ?? 0),
                         TotalStudents = fines.Count,
                         SubmittedBy = treasurer.StudentNum,
-                        SubmittedDate = DateTime.Now,
+                        SubmittedDate = PhTime.Now,
                         Status = RemittanceStatus.Pending,
                         AcademicYear = acadYear
                     };
@@ -3541,7 +3542,7 @@ namespace iBITS_Portal.Controllers
                             StudentNum = studentNum,
                             StudentName = studentName,
                             Amount = fine.Amount ?? 0,
-                            CollectionDate = fine.CollectionDate ?? DateTime.Now,
+                            CollectionDate = fine.CollectionDate ?? PhTime.Now,
                             PaymentMethod = "Cash" // Default, could be enhanced
                         };
                         _context.RemittanceItems.Add(item);
@@ -3593,7 +3594,7 @@ namespace iBITS_Portal.Controllers
                     var acadYearForFees = await _context.SystemSettings
                         .Where(s => s.SettingKey == "CurrentAcademicYear")
                         .Select(s => s.SettingValue)
-                        .FirstOrDefaultAsync() ?? $"{DateTime.Now.Year}-{DateTime.Now.Year + 1}";
+                        .FirstOrDefaultAsync() ?? $"{PhTime.Now.Year}-{PhTime.Now.Year + 1}";
 
                     // Generate batch code
                     var batchCodeForFees = await GenerateRemittanceBatchCode();
@@ -3611,7 +3612,7 @@ namespace iBITS_Portal.Controllers
                         TotalAmount = fees.Sum(f => f.Amount ?? 0),
                         TotalStudents = fees.Count,
                         SubmittedBy = treasurer.StudentNum,
-                        SubmittedDate = DateTime.Now,
+                        SubmittedDate = PhTime.Now,
                         Status = RemittanceStatus.Pending,
                         RemittanceType = RemittanceType.Fee,
                         AcademicYear = acadYearForFees
@@ -3631,7 +3632,7 @@ namespace iBITS_Portal.Controllers
                             StudentNum = fee.StudentNum,
                             StudentName = fee.StudentNumNavigation?.FullName,
                             Amount = fee.Amount ?? 0,
-                            CollectionDate = fee.CollectionDate ?? DateTime.Now,
+                            CollectionDate = fee.CollectionDate ?? PhTime.Now,
                             PaymentMethod = "Cash" // Default, could be enhanced
                         };
                         _context.RemittanceItems.Add(item);
@@ -3862,7 +3863,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"OrgFees_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"OrgFees_Export_{PhTime.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3892,7 +3893,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"OrgFines_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"OrgFines_Export_{PhTime.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3928,7 +3929,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"Section_{section}_Fees_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"Section_{section}_Fees_{PhTime.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -3967,7 +3968,7 @@ namespace iBITS_Portal.Controllers
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-            return File(bytes, "text/csv", $"Section_{section}_Fines_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            return File(bytes, "text/csv", $"Section_{section}_Fines_{PhTime.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         // ============================================================
@@ -4030,7 +4031,7 @@ namespace iBITS_Portal.Controllers
                 {
                     FeeName = feeName,
                     Amount = amount,
-                    FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+                    FeesDueDate = feesDueDate ?? DateOnly.FromDateTime(PhTime.Now.AddDays(30)),
                     FeeStatus = "Unpaid",
                     StudentNum = student.StudentNum,
                     BatchId = batchId
@@ -4077,7 +4078,7 @@ namespace iBITS_Portal.Controllers
                 {
                     Description = fineReason,
                     Amount = amount,
-                    FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(DateTime.Now.AddDays(15)),
+                    FinesDueDate = finesDueDate ?? DateOnly.FromDateTime(PhTime.Now.AddDays(15)),
                     FinesStatus = "Unpaid",
                     StudentNum = student.StudentNum,
                     BatchId = batchId
@@ -4144,10 +4145,10 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTime.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.PaymentTransactions.Add(transaction);
@@ -4160,7 +4161,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Payment Confirmed",
                             Message = $"Your payment of ₱{remainingBalance:N2} for '{fee.FeeName}' has been confirmed by {treasurer.FullName}.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = treasurer.StudentNum
                         });
@@ -4250,10 +4251,10 @@ namespace iBITS_Portal.Controllers
                         FineId = fineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = remainingBalance,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
-                        TransactionReference = $"CHK-{DateTime.Now:yyyyMMddHHmmss}",
+                        TransactionReference = $"CHK-{PhTime.Now:yyyyMMddHHmmss}",
                         Notes = "Payment marked via checkbox"
                     };
                     _context.FinePaymentTransactions.Add(transaction);
@@ -4266,7 +4267,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fine Payment Confirmed",
                             Message = $"Your payment of ₱{remainingBalance:N2} for '{fine.Description ?? "Fine"}' has been confirmed by {treasurer.FullName}.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = treasurer.StudentNum
                         });
@@ -4350,7 +4351,7 @@ namespace iBITS_Portal.Controllers
                         Title = "Fine Excused",
                         Message = $"Your fine for '{fine.Description ?? "Fine"}' (₱{fine.Amount:N2}) has been excused by {treasurer?.FullName ?? "Org Treasurer"}. Reason: {reason ?? "Not specified"}",
                         NotificationType = "Fine",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -4384,7 +4385,7 @@ namespace iBITS_Portal.Controllers
         /// </summary>
         private async Task<string> GenerateRemittanceBatchCode()
         {
-            var year = DateTime.Now.Year.ToString();
+            var year = PhTime.Now.Year.ToString();
             var lastBatch = await _context.Remittances
                 .Where(r => r.BatchCode.StartsWith($"RMT-{year}-"))
                 .OrderByDescending(r => r.BatchCode)
@@ -4448,7 +4449,7 @@ namespace iBITS_Portal.Controllers
                 fee.FeeStatus = "Paid";
                 fee.AmountPaid = fee.Amount ?? 0;
                 fee.CollectedBy = treasurer.StudentNum;
-                fee.CollectionDate = DateTime.Now;
+                fee.CollectionDate = PhTime.Now;
                 // RemittanceStatus stays "NotRemitted" until Class Treasurer initiates remittance
 
                 _context.Fees.Update(fee);
@@ -4459,7 +4460,7 @@ namespace iBITS_Portal.Controllers
                     FeeId = feeId,
                     StudentNum = fee.StudentNum,
                     Amount = fee.Amount ?? 0,
-                    PaymentDate = DateTime.Now,
+                    PaymentDate = PhTime.Now,
                     PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim(),
                     ProcessedBy = treasurer.StudentNum,
                     TransactionReference = transactionRef?.Trim(),
@@ -4673,14 +4674,14 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // THE OFFICIAL VALIDATION DATE IS NOW
-                var validationDate = DateTime.Now;
+                var validationDate = PhTime.Now;
 
                 // Update remittance status
                 remittance.Status = RemittanceStatus.Validated;
                 remittance.ValidatedBy = orgTreasurer.StudentNum;
                 remittance.ValidationDate = validationDate;
                 remittance.ValidationNotes = validationNotes?.Trim();
-                remittance.UpdatedAt = DateTime.Now;
+                remittance.UpdatedAt = PhTime.Now;
 
                 _context.Remittances.Update(remittance);
 
@@ -4715,7 +4716,7 @@ namespace iBITS_Portal.Controllers
                                 Title = "Payment Officially Validated",
                                 Message = $"Your payment of ₱{fee.Amount:N2} for '{fee.FeeName}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
-                                NotificationDate = DateTime.Now,
+                                NotificationDate = PhTime.Now,
                                 IsRead = false,
                                 SentBy = orgTreasurer.StudentNum
                             });
@@ -4751,7 +4752,7 @@ namespace iBITS_Portal.Controllers
                                 Title = "Fine Payment Officially Validated",
                                 Message = $"Your fine payment of ₱{fine.Amount:N2} for '{fine.Description}' has been officially validated and locked by the Organization Treasurer on {validationDate:MMMM dd, yyyy}.",
                                 NotificationType = "Payment",
-                                NotificationDate = DateTime.Now,
+                                NotificationDate = PhTime.Now,
                                 IsRead = false,
                                 SentBy = orgTreasurer.StudentNum
                             });
@@ -4766,7 +4767,7 @@ namespace iBITS_Portal.Controllers
                     Title = "Remittance Validated",
                     Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' (₱{remittance.TotalAmount:N2}) has been validated by {orgTreasurer.FullName}.",
                     NotificationType = "Remittance",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     IsRead = false,
                     SentBy = orgTreasurer.StudentNum
                 });
@@ -4822,9 +4823,9 @@ namespace iBITS_Portal.Controllers
                 // Update remittance status to Rejected
                 remittance.Status = RemittanceStatus.Rejected;
                 remittance.ValidatedBy = orgTreasurer?.StudentNum;
-                remittance.ValidationDate = DateTime.Now;
+                remittance.ValidationDate = PhTime.Now;
                 remittance.RejectionReason = rejectionReason.Trim();
-                remittance.UpdatedAt = DateTime.Now;
+                remittance.UpdatedAt = PhTime.Now;
 
                 _context.Remittances.Update(remittance);
 
@@ -4878,7 +4879,7 @@ namespace iBITS_Portal.Controllers
                     Title = "Remittance Rejected",
                     Message = $"Your remittance {remittance.BatchCode} for '{remittance.CategoryName}' has been rejected. Reason: {rejectionReason}. Please review and re-submit.",
                     NotificationType = "Remittance",
-                    NotificationDate = DateTime.Now,
+                    NotificationDate = PhTime.Now,
                     IsRead = false,
                     SentBy = orgTreasurer?.StudentNum
                 });
@@ -4971,8 +4972,8 @@ namespace iBITS_Portal.Controllers
                     fee.FeeStatus = "Paid";
                     fee.AmountPaid = fee.Amount ?? 0;
                     fee.CollectedBy = orgTreasurer?.StudentNum;
-                    fee.CollectionDate = DateTime.Now;
-                    fee.OfficialPaymentDate = DateTime.Now; // Direct payment by Org Treasurer
+                    fee.CollectionDate = PhTime.Now;
+                    fee.OfficialPaymentDate = PhTime.Now; // Direct payment by Org Treasurer
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted; // Mark as remitted directly
 
                     // Create transaction
@@ -4981,7 +4982,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = feeId,
                         StudentNum = fee.StudentNum,
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Admin Override",
                         ProcessedBy = orgTreasurer?.StudentNum ?? "",
                         Notes = "Payment recorded directly by Org Treasurer (Admin Override)"
@@ -4996,7 +4997,7 @@ namespace iBITS_Portal.Controllers
                             Title = "Fee Payment Recorded",
                             Message = $"Your fee '{fee.FeeName}' (₱{fee.Amount:N2}) has been marked as paid by the Organization Treasurer.",
                             NotificationType = "Payment",
-                            NotificationDate = DateTime.Now,
+                            NotificationDate = PhTime.Now,
                             IsRead = false,
                             SentBy = orgTreasurer?.StudentNum
                         });
@@ -5094,7 +5095,7 @@ namespace iBITS_Portal.Controllers
 
             var validatedThisMonth = await _context.Remittances
                 .Where(r => r.Status == RemittanceStatus.Validated)
-                .Where(r => r.ValidationDate.HasValue && r.ValidationDate.Value.Month == DateTime.Now.Month)
+                .Where(r => r.ValidationDate.HasValue && r.ValidationDate.Value.Month == PhTime.Now.Month)
                 .ToListAsync();
 
             ViewBag.ValidatedThisMonthCount = validatedThisMonth.Count;
@@ -5132,12 +5133,12 @@ namespace iBITS_Portal.Controllers
             ViewBag.ProgramYearStats = programYearStats;
 
             // Calculate monthly trends for current academic year (Aug - Present)
-            var currentYear = DateTime.Now.Year;
-            var academicYearStart = DateTime.Now.Month >= 8
+            var currentYear = PhTime.Now.Year;
+            var academicYearStart = PhTime.Now.Month >= 8
                 ? new DateTime(currentYear, 8, 1)
                 : new DateTime(currentYear - 1, 8, 1);
 
-            var monthlyTrends = Enumerable.Range(0, (DateTime.Now.Year - academicYearStart.Year) * 12 + DateTime.Now.Month - academicYearStart.Month + 1)
+            var monthlyTrends = Enumerable.Range(0, (PhTime.Now.Year - academicYearStart.Year) * 12 + PhTime.Now.Month - academicYearStart.Month + 1)
                 .Select(offset => {
                     var month = academicYearStart.AddMonths(offset);
                     var monthStart = new DateTime(month.Year, month.Month, 1);
@@ -5214,7 +5215,7 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid
                     fine.FinesStatus = "Paid";
-                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectionDate = PhTime.Now;
                     fine.CollectedBy = treasurer.StudentNum;
 
                     // Create payment transaction for history
@@ -5223,7 +5224,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fine.FineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Class Treasurer"
@@ -5333,7 +5334,7 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid
                     fee.FeeStatus = "Paid";
-                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectionDate = PhTime.Now;
                     fee.CollectedBy = treasurer.StudentNum;
 
                     // Create payment transaction for history
@@ -5342,7 +5343,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = fee.FeeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Class Treasurer"
@@ -5455,10 +5456,10 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid and remitted (Org Treasurer validates immediately)
                     fine.FinesStatus = "Paid";
-                    fine.CollectionDate = DateTime.Now;
+                    fine.CollectionDate = PhTime.Now;
                     fine.CollectedBy = treasurer.StudentNum;
                     fine.RemittanceStatus = FeeRemittanceStatus.Remitted;
-                    fine.OfficialPaymentDate = DateTime.Now;
+                    fine.OfficialPaymentDate = PhTime.Now;
 
                     // Create payment transaction for history
                     var transaction = new FinePaymentTransaction
@@ -5466,7 +5467,7 @@ namespace iBITS_Portal.Controllers
                         FineId = fine.FineId,
                         StudentNum = fine.StudentNum ?? "",
                         Amount = fine.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Org Treasurer (Validated)"
@@ -5579,10 +5580,10 @@ namespace iBITS_Portal.Controllers
 
                     // Mark as paid and remitted (Org Treasurer validates immediately)
                     fee.FeeStatus = "Paid";
-                    fee.CollectionDate = DateTime.Now;
+                    fee.CollectionDate = PhTime.Now;
                     fee.CollectedBy = treasurer.StudentNum;
                     fee.RemittanceStatus = FeeRemittanceStatus.Remitted;
-                    fee.OfficialPaymentDate = DateTime.Now;
+                    fee.OfficialPaymentDate = PhTime.Now;
 
                     // Create payment transaction for history
                     var transaction = new PaymentTransaction
@@ -5590,7 +5591,7 @@ namespace iBITS_Portal.Controllers
                         FeeId = fee.FeeId,
                         StudentNum = fee.StudentNum ?? "",
                         Amount = fee.Amount ?? 0,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = PhTime.Now,
                         PaymentMethod = "Cash",
                         ProcessedBy = treasurer.StudentNum ?? "",
                         Notes = "Bulk payment - Org Treasurer (Validated)"
@@ -5707,7 +5708,7 @@ namespace iBITS_Portal.Controllers
                         Message = $"Your payment of ₱{fine.Amount:N2} for '{fine.Description ?? "Fine"}' has been revoked by {treasurer?.FullName}. " +
                                   (string.IsNullOrEmpty(reason) ? "" : $"Reason: {reason}."),
                         NotificationType = "Payment",
-                        NotificationDate = DateTime.Now,
+                        NotificationDate = PhTime.Now,
                         IsRead = false,
                         SentBy = treasurer?.StudentNum
                     });
@@ -5754,7 +5755,7 @@ namespace iBITS_Portal.Controllers
 
                 // Lock the payment
                 fine.IsPaymentLocked = true;
-                fine.PaymentLockedDate = DateTime.Now;
+                fine.PaymentLockedDate = PhTime.Now;
                 fine.LockedBy = treasurer?.StudentNum;
 
                 await _context.SaveChangesAsync();
@@ -5811,7 +5812,7 @@ namespace iBITS_Portal.Controllers
 
                     // Lock the payment
                     fine.IsPaymentLocked = true;
-                    fine.PaymentLockedDate = DateTime.Now;
+                    fine.PaymentLockedDate = PhTime.Now;
                     fine.LockedBy = treasurer.StudentNum;
 
                     successCount++;
@@ -5901,7 +5902,7 @@ namespace iBITS_Portal.Controllers
                 }
 
                 // Determine which quick filters have data
-                var now = DateTime.Now;
+                var now = PhTime.Now;
                 var quickFilters = new
                 {
                     lastWeek = allDates.Any(d => d >= now.AddDays(-7)),

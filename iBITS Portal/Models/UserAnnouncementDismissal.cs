@@ -1,10 +1,11 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Models/UserAnnouncementDismissal.cs
 // ============================================================
 // Tracks which announcements have been dismissed by which students
 // ============================================================
 
 using System;
+using iBITS_Portal.Helpers;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -23,7 +24,7 @@ namespace iBITS_Portal.Models
         public int AnnouncementId { get; set; }
 
         [Required]
-        public DateTime DismissedAt { get; set; } = DateTime.Now;
+        public DateTime DismissedAt { get; set; } = PhTime.Now;
 
         // Navigation properties
         [ForeignKey("StudentNum")]

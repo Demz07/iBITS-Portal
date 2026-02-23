@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FILE PATH: Controllers/AccountController.cs (FINAL COMPLETE)
 // ============================================================
 
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using iBITS_Portal.Helpers;
 
 namespace iBITS_Portal.Controllers
 {
@@ -172,9 +173,9 @@ namespace iBITS_Portal.Controllers
                     if (model.ProfilePicture.Length > 5 * 1024 * 1024) return Json(new { success = false, message = "File size must be less than 5MB." });
 
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles");
-                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder); // ✅ ensure folder exists
+                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder); // ? ensure folder exists
 
-                    var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                    var fileName = $"{student.StudentNum}_{PhTime.Now:yyyyMMddHHmmss}{ext}";
                     var filePath = Path.Combine(uploadsFolder, fileName);
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
@@ -292,7 +293,7 @@ namespace iBITS_Portal.Controllers
                     if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
                 }
 
-                var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                var fileName = $"{student.StudentNum}_{PhTime.Now:yyyyMMddHHmmss}{ext}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
@@ -344,7 +345,7 @@ namespace iBITS_Portal.Controllers
                     if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
                 }
 
-                var fileName = $"{student.StudentNum}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                var fileName = $"{student.StudentNum}_{PhTime.Now:yyyyMMddHHmmss}{ext}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {

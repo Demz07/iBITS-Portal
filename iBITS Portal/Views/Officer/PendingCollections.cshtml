@@ -1,4 +1,4 @@
-@* FILE PATH: Views/Officer/PendingCollections.cshtml *@
+﻿@* FILE PATH: Views/Officer/PendingCollections.cshtml *@
 @* CLASS TREASURER - View payments ready for remittance (Fees & Fines) with Tabs *@
 @using iBITS_Portal.Models
 @{
@@ -311,7 +311,7 @@
             <p class="text-muted mb-0">These payments have been collected from students but are not yet visible to the Org Treasurer.</p>
         </div>
         <div class="col-md-4 text-end">
-            <div class="fs-2 fw-bold" style="color: var(--gold-primary);">₱@totalAmount.ToString("N2")</div>
+            <div class="fs-2 fw-bold" style="color: var(--gold-primary);">â‚±@totalAmount.ToString("N2")</div>
             <small class="text-muted">@totalFeesCount fees + @totalFinesCount fines = @totalCount total</small>
         </div>
     </div>
@@ -358,7 +358,7 @@
                             <input type="text" 
                                    id="fees-search" 
                                    class="search-input" 
-                                   placeholder="🔍 Search by student name or student number...">
+                                   placeholder="ðŸ” Search by student name or student number...">
                             <button type="button" id="fees-clear-search" class="clear-search" style="display: none;">
                                 <i class="bi bi-x-lg"></i> Clear
                             </button>
@@ -382,8 +382,8 @@
                             <select id="fees-sort" class="sort-select form-select">
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
-                                <option value="amount-asc">Amount (↑)</option>
-                                <option value="amount-desc">Amount (↓)</option>
+                                <option value="amount-asc">Amount (â†‘)</option>
+                                <option value="amount-desc">Amount (â†“)</option>
                                 <option value="date-desc" selected>Date (New)</option>
                                 <option value="date-asc">Date (Old)</option>
                             </select>
@@ -435,7 +435,7 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
-                    <div class="stat-value" id="fees-total-amount">₱@totalFeesAmount.ToString("N2")</div>
+                    <div class="stat-value" id="fees-total-amount">â‚±@totalFeesAmount.ToString("N2")</div>
                     <div class="stat-label">Total Amount</div>
                 </div>
                 <div class="stat-card">
@@ -445,7 +445,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-calculator"></i></div>
-                    <div class="stat-value" id="fees-avg-amount">₱@((totalFeesCount > 0 ? totalFeesAmount / totalFeesCount : 0).ToString("N2"))</div>
+                    <div class="stat-value" id="fees-avg-amount">â‚±@((totalFeesCount > 0 ? totalFeesAmount / totalFeesCount : 0).ToString("N2"))</div>
                     <div class="stat-label">Average Payment</div>
                 </div>
                 <div class="stat-card">
@@ -476,7 +476,7 @@
                                         </button>
                                         <div>
                                             <h5 class="text-white mb-1">@feeName</h5>
-                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                                            <small class="text-muted">@groupCount payments â€¢ â‚±@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
                                     <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
@@ -499,7 +499,7 @@
                                         <tbody>
                                             @foreach (var fee in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
                                             {
-                                                var daysAgo = fee.CollectionDate.HasValue ? (DateTime.Now - fee.CollectionDate.Value).Days : 999;
+                                                var daysAgo = fee.CollectionDate.HasValue ? (PhTime.Now - fee.CollectionDate.Value).Days : 999;
                                                 var badgeClass = daysAgo == 0 ? "date-badge-today" : 
                                                                  daysAgo <= 7 ? "date-badge-recent" : 
                                                                  daysAgo <= 14 ? "date-badge-warning" : "date-badge-urgent";
@@ -520,7 +520,7 @@
                                                     data-fee-id="@fee.FeeId">
                                                     <td>@fee.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fee.StudentNum</code></td>
-                                                    <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>â‚±@((fee.Amount ?? 0).ToString("N2"))</td>
                                                     <td>
                                                         <span class="date-badge @badgeClass">
                                                             <i class="bi @badgeIcon"></i>
@@ -563,7 +563,7 @@
                             <input type="text" 
                                    id="fines-search" 
                                    class="search-input" 
-                                   placeholder="🔍 Search by student name or student number...">
+                                   placeholder="ðŸ” Search by student name or student number...">
                             <button type="button" id="fines-clear-search" class="clear-search" style="display: none;">
                                 <i class="bi bi-x-lg"></i> Clear
                             </button>
@@ -587,8 +587,8 @@
                             <select id="fines-sort" class="sort-select form-select">
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
-                                <option value="amount-asc">Amount (↑)</option>
-                                <option value="amount-desc">Amount (↓)</option>
+                                <option value="amount-asc">Amount (â†‘)</option>
+                                <option value="amount-desc">Amount (â†“)</option>
                                 <option value="date-desc" selected>Date (New)</option>
                                 <option value="date-asc">Date (Old)</option>
                             </select>
@@ -640,7 +640,7 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                    <div class="stat-value" id="fines-total-amount">₱@totalFinesAmount.ToString("N2")</div>
+                    <div class="stat-value" id="fines-total-amount">â‚±@totalFinesAmount.ToString("N2")</div>
                     <div class="stat-label">Total Amount</div>
                 </div>
                 <div class="stat-card">
@@ -650,7 +650,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-calculator"></i></div>
-                    <div class="stat-value" id="fines-avg-amount">₱@((totalFinesCount > 0 ? totalFinesAmount / totalFinesCount : 0).ToString("N2"))</div>
+                    <div class="stat-value" id="fines-avg-amount">â‚±@((totalFinesCount > 0 ? totalFinesAmount / totalFinesCount : 0).ToString("N2"))</div>
                     <div class="stat-label">Average Payment</div>
                 </div>
                 <div class="stat-card">
@@ -689,7 +689,7 @@
                                         </button>
                                         <div>
                                             <h5 class="text-white mb-1">@categoryName</h5>
-                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
+                                            <small class="text-muted">@groupCount payments â€¢ â‚±@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
                                     <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
@@ -712,7 +712,7 @@
                                         <tbody>
                                             @foreach (var fine in group.OrderBy(f => f.StudentNumNavigation?.StudentLn))
                                             {
-                                                var daysAgo = fine.CollectionDate.HasValue ? (DateTime.Now - fine.CollectionDate.Value).Days : 999;
+                                                var daysAgo = fine.CollectionDate.HasValue ? (PhTime.Now - fine.CollectionDate.Value).Days : 999;
                                                 var badgeClass = daysAgo == 0 ? "date-badge-today" : 
                                                                  daysAgo <= 7 ? "date-badge-recent" : 
                                                                  daysAgo <= 14 ? "date-badge-warning" : "date-badge-urgent";
@@ -733,7 +733,7 @@
                                                     data-fine-id="@fine.FineId">
                                                     <td>@fine.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fine.StudentNum</code></td>
-                                                    <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>â‚±@((fine.Amount ?? 0).ToString("N2"))</td>
                                                     <td>
                                                         <span class="date-badge @badgeClass">
                                                             <i class="bi @badgeIcon"></i>
@@ -938,13 +938,13 @@
         
         const count = visibleRows.length;
         const avgAmount = count > 0 ? totalAmount / count : 0;
-        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' }) : 'N/A';
         
         // Update stat cards
         const prefix = type === 'fees' ? 'fees' : 'fines';
-        document.getElementById(`${prefix}-total-amount`).textContent = `₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById($("{$prefix}-total-amount")).textContent = "₱${ totalAmount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }";
         document.getElementById(`${prefix}-student-count`).textContent = count;
-        document.getElementById(`${prefix}-avg-amount`).textContent = `₱${avgAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById($("{$prefix}-avg-amount")).textContent = "₱${ avgAmount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }";
         document.getElementById(`${prefix}-oldest-date`).textContent = oldestDate;
         
         // Update tab badge
@@ -1010,23 +1010,13 @@
             rows.forEach(row => row.style.display = '');
         } else if (days === '0') {
             // Today filter - show only items collected today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            console.log('Today filter range:', today.toISOString(), 'to', tomorrow.toISOString());
+            const todayPH = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD (PHT)
             
             let matchCount = 0;
             rows.forEach(row => {
                 const dateStr = row.getAttribute('data-collection-date');
                 if (dateStr) {
-                    // Parse date string as UTC to avoid timezone issues
-                    const dateParts = dateStr.split('-');
-                    const rowDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                    rowDate.setHours(0, 0, 0, 0);
-                    
-                    const isToday = (rowDate.getTime() >= today.getTime() && rowDate.getTime() < tomorrow.getTime());
+                    const isToday = dateStr === todayPH;
                     
                     if (isToday) {
                         row.style.display = '';
@@ -1042,18 +1032,12 @@
             console.log(`Today filter: Found ${matchCount} items collected today out of ${rows.length} total rows`);
         } else {
             // Last X days filter
-            const cutoffDate = new Date();
-            cutoffDate.setHours(0, 0, 0, 0);
-            cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
+            const cutoffPH = new Date(Date.now() - parseInt(days) * 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD (PHT)
             
             rows.forEach(row => {
                 const dateStr = row.getAttribute('data-collection-date');
                 if (dateStr) {
-                    // Parse date string as UTC to avoid timezone issues
-                    const dateParts = dateStr.split('-');
-                    const rowDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                    rowDate.setHours(0, 0, 0, 0);
-                    row.style.display = rowDate >= cutoffDate ? '' : 'none';
+                    row.style.display = dateStr >= cutoffPH ? '' : 'none';
                 } else {
                     row.style.display = 'none';
                 }
@@ -1151,7 +1135,7 @@
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
         link.setAttribute('href', url);
         link.setAttribute('download', `Pending_${type}_Collections_${today}.csv`);
         link.style.visibility = 'hidden';
@@ -1346,13 +1330,13 @@
         
         const count = visibleRows.length;
         const avgAmount = count > 0 ? totalAmount / count : 0;
-        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+        const oldestDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d)))).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' }) : 'N/A';
         
         // Update stat cards
         const prefix = type === 'fees' ? 'fees' : 'fines';
-        document.getElementById(`${prefix}-total-amount`).textContent = `₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById($("{$prefix}-total-amount")).textContent = "₱${ totalAmount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }";
         document.getElementById(`${prefix}-student-count`).textContent = count;
-        document.getElementById(`${prefix}-avg-amount`).textContent = `₱${avgAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById($("{$prefix}-avg-amount")).textContent = "₱${ avgAmount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2, maximumFractionDigits: 2 }) }";
         document.getElementById(`${prefix}-oldest-date`).textContent = oldestDate;
         
         // Update tab badge
@@ -1375,3 +1359,5 @@
     console.log('Category Filter loaded: Filter by specific fee/fine categories');
 </script>
 }
+
+

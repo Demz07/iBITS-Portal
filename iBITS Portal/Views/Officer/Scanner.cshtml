@@ -1,4 +1,4 @@
-
+﻿
 @* C:\Users\Dave\OneDrive\Desktop\copies of code bases from the iBITS Portal\Scanner.cshtml *@
 @* FILE PATH: Views/Officer/Scanner.cshtml *@
 @model IEnumerable<iBITS_Portal.Models.Event>
@@ -77,7 +77,7 @@
                             <option value="0" selected disabled>-- Select an event to begin --</option>
                             @foreach (var ev in Model)
                             {
-                                var now = DateTime.Now;
+                                var now = PhTime.Now;
                                 var today = DateOnly.FromDateTime(now);
                                 var isActive = false;
                                 var statusText = "";
@@ -91,37 +91,37 @@
 
                                     if (isActive)
                                     {
-                                        statusText = "🟢 ACTIVE NOW";
+                                        statusText = "ðŸŸ¢ ACTIVE NOW";
                                         statusClass = "text-success fw-bold";
                                     }
                                     else if (eventStart > now)
                                     {
-                                        statusText = "⏰ UPCOMING";
+                                        statusText = "â° UPCOMING";
                                         statusClass = "text-info";
                                     }
                                     else if (endTime.HasValue && endTime.Value <= now)
                                     {
-                                        statusText = "❌ ENDED";
+                                        statusText = "âŒ ENDED";
                                         statusClass = "text-danger";
                                     }
                                     else
                                     {
-                                        statusText = "📅 SCHEDULED";
+                                        statusText = "ðŸ“… SCHEDULED";
                                         statusClass = "text-warning";
                                     }
                                 }
                                 else
                                 {
-                                    statusText = "📅 SCHEDULED";
+                                    statusText = "ðŸ“… SCHEDULED";
                                     statusClass = "text-warning";
                                 }
 
                                 <option value="@ev.EventId" data-active="@(isActive ? "true" : "false")">
                                     @ev.EventName (@ev.EventDate?.ToString("MMM dd"))
-                                    <span class="@statusClass">• @statusText</span>
+                                    <span class="@statusClass">â€¢ @statusText</span>
                                     @if (ev.StartTime.HasValue)
                                     {
-                                        <text>• @ev.StartTime.Value.ToString(@"h\:mm tt")</text>
+                                        <text>â€¢ @ev.StartTime.Value.ToString(@"h\:mm tt")</text>
                                     }
                                 </option>
                             }

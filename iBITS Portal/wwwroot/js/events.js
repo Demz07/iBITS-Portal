@@ -1,5 +1,5 @@
-$(document).ready(function () {
-    console.log("📅 Events Manager Initialized");
+﻿$(document).ready(function () {
+    console.log("ðŸ“… Events Manager Initialized");
 
     // =========================================================
     // 1. HELPER: DESTROY & INIT SELECT2
@@ -38,13 +38,13 @@ $(document).ready(function () {
         $('#createEndDate').val('').removeAttr('min');
     });
 
-    // --- Date Constraints (Timezone Safe) ---
-    // This gets local date part correctly regardless of UTC offset
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
+    // --- Date Constraints (Philippine Time Safe) ---
+    // Always use Asia/Manila timezone for correct PH date
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD format
+
+
+
+
 
     // Set min for start date as today
     $('#createEventDate').attr('min', today);
@@ -150,4 +150,6 @@ window.setCloseEventModal = function (id, name) {
     document.getElementById('closeEventId').value = id;
     document.getElementById('closeEventName').textContent = name;
 };
+
+
 

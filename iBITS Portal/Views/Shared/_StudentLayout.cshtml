@@ -215,7 +215,7 @@
                     <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Academic Year">
                         <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
                         <span id="currentAcademicYear" class="academic-year-text">
-                            @(ViewBag.CurrentAcademicYear ?? $"A.Y. {DateTime.Now.Year}-{DateTime.Now.Year + 1}")
+                            @(ViewBag.CurrentAcademicYear ?? $"A.Y. {PhTime.Now.Year}-{PhTime.Now.Year + 1}")
                         </span>
                     </div>
 

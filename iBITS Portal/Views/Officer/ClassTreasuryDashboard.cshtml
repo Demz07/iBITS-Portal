@@ -155,7 +155,7 @@
         <div class="stats-card">
             <i class="bi bi-wallet2 stats-icon text-success"></i>
             <h6 class="text-muted mb-1">Total Collections</h6>
-            <h3 class="fw-bold text-success mb-0">₱@totalCollections.ToString("N2")</h3>
+            <h3 class="fw-bold text-success mb-0">?@totalCollections.ToString("N2")</h3>
             <small class="text-muted">Fees + Fines</small>
         </div>
     </div>
@@ -165,7 +165,7 @@
         <div class="stats-card">
             <i class="bi bi-receipt stats-icon text-primary"></i>
             <h6 class="text-muted mb-1">Fees Collected</h6>
-            <h3 class="fw-bold text-primary mb-0">₱@totalFeesCollected.ToString("N2")</h3>
+            <h3 class="fw-bold text-primary mb-0">?@totalFeesCollected.ToString("N2")</h3>
             <small class="text-muted">From membership fees</small>
         </div>
     </div>
@@ -175,7 +175,7 @@
         <div class="stats-card">
             <i class="bi bi-exclamation-octagon stats-icon text-warning"></i>
             <h6 class="text-muted mb-1">Fines Collected</h6>
-            <h3 class="fw-bold text-warning mb-0">₱@totalFinesCollected.ToString("N2")</h3>
+            <h3 class="fw-bold text-warning mb-0">?@totalFinesCollected.ToString("N2")</h3>
             <small class="text-muted">From penalties</small>
         </div>
     </div>
@@ -185,7 +185,7 @@
         <div class="stats-card">
             <i class="bi bi-hourglass-split stats-icon text-danger"></i>
             <h6 class="text-muted mb-1">Pending Payments</h6>
-            <h3 class="fw-bold text-danger mb-0">₱@((pendingFees + pendingFines).ToString("N2"))</h3>
+            <h3 class="fw-bold text-danger mb-0">?@((pendingFees + pendingFines).ToString("N2"))</h3>
             <small class="text-muted">Outstanding balance</small>
         </div>
     </div>
@@ -218,7 +218,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-warning text-dark">@feesNotRemittedCount items</span>
-                                    <div class="fw-bold text-warning">₱@feesNotRemitted.ToString("N2")</div>
+                                    <div class="fw-bold text-warning">?@feesNotRemitted.ToString("N2")</div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
@@ -228,7 +228,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-info">@feesPendingValidationCount items</span>
-                                    <div class="fw-bold text-info">₱@feesPendingValidation.ToString("N2")</div>
+                                    <div class="fw-bold text-info">?@feesPendingValidation.ToString("N2")</div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
@@ -238,7 +238,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-success">@feesValidatedCount items</span>
-                                    <div class="fw-bold text-success">₱@feesValidated.ToString("N2")</div>
+                                    <div class="fw-bold text-success">?@feesValidated.ToString("N2")</div>
                                 </div>
                             </div>
                         </div>
@@ -259,7 +259,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-warning text-dark">@finesNotRemittedCount items</span>
-                                    <div class="fw-bold text-warning">₱@finesNotRemitted.ToString("N2")</div>
+                                    <div class="fw-bold text-warning">?@finesNotRemitted.ToString("N2")</div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
@@ -269,7 +269,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-info">@finesPendingValidationCount items</span>
-                                    <div class="fw-bold text-info">₱@finesPendingValidation.ToString("N2")</div>
+                                    <div class="fw-bold text-info">?@finesPendingValidation.ToString("N2")</div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
@@ -279,7 +279,7 @@
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-success">@finesValidatedCount items</span>
-                                    <div class="fw-bold text-success">₱@finesValidated.ToString("N2")</div>
+                                    <div class="fw-bold text-success">?@finesValidated.ToString("N2")</div>
                                 </div>
                             </div>
                         </div>
@@ -336,15 +336,15 @@
                     <tbody>
                         <tr>
                             <td><i class="bi bi-check-circle-fill text-success me-2"></i> Paid</td>
-                            <td class="text-end fw-bold text-success">₱@totalFeesCollected.ToString("N2")</td>
+                            <td class="text-end fw-bold text-success">?@totalFeesCollected.ToString("N2")</td>
                         </tr>
                         <tr>
                             <td><i class="bi bi-hourglass-split text-warning me-2"></i> Unpaid</td>
-                            <td class="text-end fw-bold text-warning">₱@pendingFees.ToString("N2")</td>
+                            <td class="text-end fw-bold text-warning">?@pendingFees.ToString("N2")</td>
                         </tr>
                         <tr class="table-active">
                             <td><i class="bi bi-calculator me-2"></i> Total Expected</td>
-                            <td class="text-end fw-bold text-white">₱@((totalFeesCollected + pendingFees).ToString("N2"))</td>
+                            <td class="text-end fw-bold text-white">?@((totalFeesCollected + pendingFees).ToString("N2"))</td>
                         </tr>
                     </tbody>
                 </table>
@@ -362,15 +362,15 @@
                     <tbody>
                         <tr>
                             <td><i class="bi bi-check-circle-fill text-success me-2"></i> Paid</td>
-                            <td class="text-end fw-bold text-success">₱@totalFinesCollected.ToString("N2")</td>
+                            <td class="text-end fw-bold text-success">?@totalFinesCollected.ToString("N2")</td>
                         </tr>
                         <tr>
                             <td><i class="bi bi-hourglass-split text-danger me-2"></i> Unpaid</td>
-                            <td class="text-end fw-bold text-danger">₱@pendingFines.ToString("N2")</td>
+                            <td class="text-end fw-bold text-danger">?@pendingFines.ToString("N2")</td>
                         </tr>
                         <tr class="table-active">
                             <td><i class="bi bi-calculator me-2"></i> Total Expected</td>
-                            <td class="text-end fw-bold text-white">₱@((totalFinesCollected + pendingFines).ToString("N2"))</td>
+                            <td class="text-end fw-bold text-white">?@((totalFinesCollected + pendingFines).ToString("N2"))</td>
                         </tr>
                     </tbody>
                 </table>
@@ -409,7 +409,7 @@
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ₱' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2});
+                            return context.label + ': ₱' + context.parsed.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 });
                         }
                     }
                 }
@@ -450,7 +450,7 @@
                     ticks: {
                         color: '#fff',
                         callback: function(value) {
-                            return '₱' + value.toLocaleString();
+                            return '₱' + value.toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
                         }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' }
@@ -467,7 +467,7 @@
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2});
+                            return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 });
                         }
                     }
                 }

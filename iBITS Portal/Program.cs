@@ -1,4 +1,4 @@
-// Program.cs
+﻿// Program.cs
 
 using iBITS_Portal.Data;
 using iBITS_Portal.Models;
@@ -53,6 +53,15 @@ namespace iBITS_Portal
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
+
+// ============================================================
+// Philippine Standard Time & Culture Settings
+// Ensures the app uses PH culture for formatting on any server
+// ============================================================
+var phCulture = new System.Globalization.CultureInfo("en-PH");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = phCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = phCulture;
+
 
             if (app.Environment.IsDevelopment())
             {

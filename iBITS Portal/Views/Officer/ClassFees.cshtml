@@ -1,4 +1,4 @@
-@* FILE PATH: Views/Officer/ClassFees.cshtml *@
+﻿@* FILE PATH: Views/Officer/ClassFees.cshtml *@
 @* CLASS TREASURER - FEES MANAGEMENT (Full Payment Only + Remittance) *@
 @model IEnumerable<iBITS_Portal.Models.Fee>
 @using iBITS_Portal.Models
@@ -256,7 +256,7 @@
             <i class="bi bi-piggy-bank me-2 text-purple"></i>
             <strong class="text-white">@pendingRemittanceCount payment(s)</strong>
             <span class="text-muted">ready for remittance</span>
-            <span class="text-white fw-bold ms-2">(₱@pendingRemittanceAmount.ToString("N2"))</span>
+            <span class="text-white fw-bold ms-2">(â‚±@pendingRemittanceAmount.ToString("N2"))</span>
         </div>
         <a asp-action="PendingCollections" class="btn btn-remit btn-sm">
             <i class="bi bi-send me-1"></i> Review & Remit to Org Treasurer
@@ -303,7 +303,7 @@
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalExpected">@totalExp.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Total Expected</div>
                     </div>
                 </div>
@@ -318,7 +318,7 @@
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalCollected">@totalCol.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
@@ -333,7 +333,7 @@
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalPendingCard">@totalPending.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
@@ -466,13 +466,13 @@
                             }
                         </h6>
                         <small class="text-muted">
-                            @categoryFees.Count students • ₱@((categoryFees.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
+                            @categoryFees.Count students â€¢ â‚±@((categoryFees.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
                             <span class="mx-2">|</span>
-                            <span class="text-success">@categoryPaid Paid</span> •
+                            <span class="text-success">@categoryPaid Paid</span> â€¢
                             <span class="text-warning">@categoryUnpaid Unpaid</span>
                             @if (categoryRemitted > 0 || (isClosed && categoryPaid > 0))
                             {
-                                <span class="mx-1">•</span>
+                                <span class="mx-1">â€¢</span>
                                 <span class="text-purple">@(isClosed? categoryPaid : categoryRemitted) Remitted</span>
                             }
                         </small>
@@ -580,7 +580,7 @@
                                         <td>
                                             <span class="text-white">@(student?.YearLevelSection ?? "N/A")</span>
                                         </td>
-                                        <td class="fw-bold" style="color: var(--gold-primary);">₱@((fee.Amount ?? 0).ToString("N2"))</td>
+                                        <td class="fw-bold" style="color: var(--gold-primary);">â‚±@((fee.Amount ?? 0).ToString("N2"))</td>
                                         <td>
                                             @if (isPaid)
                                             {
@@ -675,7 +675,7 @@
                     </div>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Amount:</span>
-                        <span class="fw-bold" style="color: var(--gold-primary);">₱<span id="confirmAmount"></span></span>
+                        <span class="fw-bold" style="color: var(--gold-primary);">â‚±<span id="confirmAmount"></span></span>
                     </div>
                 </div>
                 <p class="text-muted small mt-3 mb-0">
@@ -1167,7 +1167,7 @@
             ];
             
             XLSX.utils.book_append_sheet(wb, ws, 'Class Fees');
-            XLSX.writeFile(wb, `ClassFees-${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `ClassFees-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.xlsx`); // YYYY-MM-DD in PHT
             
             bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
             showToast('success', `Exported ${visibleRows.length} fee record(s)`);
@@ -1188,7 +1188,7 @@
             doc.text('Class Fees Report', 14, 15);
             
             doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Generated: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`, 14, 22);
             doc.text(`Records: ${visibleRows.length}`, 14, 28);
             
             const tableData = [];
@@ -1201,7 +1201,7 @@
                 const cells = row.querySelectorAll('td');
                 const program = cells[3]?.textContent?.trim() || '';
                 const yearSection = cells[4]?.textContent?.trim() || '';
-                // Extract amount and format with PHP instead of ₱ for PDF compatibility
+                // Extract amount and format with PHP instead of â‚± for PDF compatibility
                 const amountText = cells[5]?.textContent?.trim() || '';
                 const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, '');
                 const status = cells[6]?.textContent?.trim() || '';
@@ -1223,7 +1223,7 @@
                 }
             });
             
-            doc.save(`ClassFees-${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save(`ClassFees-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.pdf`); // YYYY-MM-DD in PHT
             
             bootstrap.Modal.getInstance(document.getElementById('exportClassFeesModal')).hide();
             showToast('success', `Exported ${visibleRows.length} fee record(s) to PDF`);
@@ -1255,3 +1255,4 @@
     </script>
     <script src="~/js/officer-fees.js" asp-append-version="true"></script>
 }
+

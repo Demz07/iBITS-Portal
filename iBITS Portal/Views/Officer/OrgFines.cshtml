@@ -1,4 +1,4 @@
-@* FILE PATH: Views/Officer/OrgFines.cshtml *@
+﻿@* FILE PATH: Views/Officer/OrgFines.cshtml *@
 @* ORG TREASURER - FINES MANAGEMENT (Edit UNPAID only, no partial payments) *@
 @model IEnumerable<iBITS_Portal.Models.Fine>
 @using iBITS_Portal.Models
@@ -103,7 +103,7 @@
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalExpected">@totalExp.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Total Expected</div>
                     </div>
                 </div>
@@ -118,7 +118,7 @@
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalCollected">@totalCol.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
@@ -133,7 +133,7 @@
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalPending">@totalPending.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
@@ -425,7 +425,7 @@
                                     <span>@description</span>
                                 }
                             </td>
-                            <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
+                            <td style="color: var(--gold-primary); font-weight: bold;">â‚±@fine.Amount?.ToString("N2")</td>
 
                             <!-- Status Badge -->
                             <td>
@@ -563,7 +563,7 @@
                                 <input type="text" name="fineReason" class="form-control" placeholder="e.g., Uniform Violation, Late Attendance" required />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Amount (₱) <span class="text-danger">*</span></label>
+                                <label class="form-label">Amount (â‚±) <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="0.00" required />
                             </div>
                         </div>
@@ -702,7 +702,7 @@
                     </div>
                     <div class="detail-row d-flex justify-content-between">
                         <span class="detail-label text-muted">Amount</span>
-                        <span class="detail-value text-gold fw-bold">₱<span id="confirmOrgFineAmount"></span></span>
+                        <span class="detail-value text-gold fw-bold">â‚±<span id="confirmOrgFineAmount"></span></span>
                     </div>
                 </div>
             </div>
@@ -741,7 +741,7 @@
                     </div>
                     <div class="detail-row d-flex justify-content-between">
                         <span class="detail-label text-muted">Amount</span>
-                        <span class="detail-value text-gold fw-bold">₱<span id="revokeFineAmount"></span></span>
+                        <span class="detail-value text-gold fw-bold">â‚±<span id="revokeFineAmount"></span></span>
                     </div>
                 </div>
 
@@ -787,7 +787,7 @@
                     </div>
                     <div class="detail-row d-flex justify-content-between">
                         <span class="detail-label text-muted">Amount</span>
-                        <span class="detail-value text-gold fw-bold">₱<span id="lockFineAmount"></span></span>
+                        <span class="detail-value text-gold fw-bold">â‚±<span id="lockFineAmount"></span></span>
                     </div>
                 </div>
 
@@ -867,22 +867,22 @@
                         <div class="row text-center">
                             <div class="col-4">
                                 <small class="text-muted d-block">Total Amount</small>
-                                <div class="fw-bold text-white">₱<span id="finePaymentTotalAmount">0.00</span></div>
+                                <div class="fw-bold text-white">â‚±<span id="finePaymentTotalAmount">0.00</span></div>
                             </div>
                             <div class="col-4">
                                 <small class="text-muted d-block">Already Paid</small>
-                                <div class="fw-bold text-success">₱<span id="finePaymentAlreadyPaid">0.00</span></div>
+                                <div class="fw-bold text-success">â‚±<span id="finePaymentAlreadyPaid">0.00</span></div>
                             </div>
                             <div class="col-4">
                                 <small class="text-muted d-block">Balance</small>
-                                <div class="fw-bold text-danger">₱<span id="finePaymentBalance">0.00</span></div>
+                                <div class="fw-bold text-danger">â‚±<span id="finePaymentBalance">0.00</span></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Payment Amount -->
                     <div class="mb-3">
-                        <label for="finePaymentAmount" class="form-label">Payment Amount (₱) <span class="text-danger">*</span></label>
+                        <label for="finePaymentAmount" class="form-label">Payment Amount (â‚±) <span class="text-danger">*</span></label>
                         <input type="number" step="0.01" min="0.01" class="form-control" id="finePaymentAmount" name="paymentAmount" required />
                         <small class="text-muted">Enter the amount being paid (max: <span id="fineMaxPaymentAmount">0.00</span>)</small>
                     </div>
@@ -1099,8 +1099,8 @@
                 statusBadge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Unpaid';
             }
 
-            amountPaidCell.textContent = '₱' + amountPaid.toFixed(2);
-            balanceCell.textContent = '₱' + balance.toFixed(2);
+            amountPaidCell.textContent = 'â‚±' + amountPaid.toFixed(2);
+            balanceCell.textContent = 'â‚±' + balance.toFixed(2);
             balanceCell.style.color = balance > 0 ? '#ef4444' : '#10b981';
             row.dataset.status = newStatus.toLowerCase();
             row.dataset.paid = amountPaid;
@@ -1490,7 +1490,7 @@
             ];
             
             XLSX.utils.book_append_sheet(wb, ws, 'Org Fines');
-            XLSX.writeFile(wb, `OrgFines-Filtered-${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `OrgFines-Filtered-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.xlsx`); // YYYY-MM-DD in PHT
             
             bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
             showToast('success', `Exported ${visibleRows.length} fine record(s)`);
@@ -1511,7 +1511,7 @@
             doc.text('Organization Fines Report (Filtered)', 14, 15);
             
             doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+            doc.text(`Generated: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`, 14, 22);
             doc.text(`Records: ${visibleRows.length}`, 14, 28);
             
             const tableData = [];
@@ -1527,7 +1527,7 @@
                     const description = cells[5]?.textContent?.trim() || '';
                     // Extract amount and format with proper Peso sign (use PHP instead of Unicode for PDF compatibility)
                     const amountText = cells[6]?.textContent?.trim() || '';
-                    const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, ''); // Use PHP instead of ₱ symbol
+                    const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, ''); // Use PHP instead of â‚± symbol
                     const status = cells[7]?.textContent?.trim() || '';
                     
                     tableData.push([fineId, studentName, studentId, program, year, description, amount, status]);
@@ -1547,7 +1547,7 @@
                 }
             });
             
-            doc.save(`OrgFines-Filtered-${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save(`OrgFines-Filtered-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.pdf`); // YYYY-MM-DD in PHT
             
             bootstrap.Modal.getInstance(document.getElementById('exportFinesModal')).hide();
             showToast('success', `Exported ${visibleRows.length} fine record(s) to PDF`);
@@ -1555,3 +1555,4 @@
     </script>
     <script src="~/js/officer-fines.js" asp-append-version="true"></script>
 }
+

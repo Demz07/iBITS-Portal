@@ -1,4 +1,4 @@
-﻿/* ======================================================= */
+/* ======================================================= */
 /* FILE PATH: wwwroot/js/archive.js                        */
 /* ======================================================= */
 
@@ -78,7 +78,7 @@ $(document).ready(function () {
             }
 
             data.forEach(s => {
-                const date = s.archiveDate ? new Date(s.archiveDate).toLocaleDateString() : '-';
+                const date = s.archiveDate ? new Date(s.archiveDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : '-';
                 const row = `
                     <tr>
                         <td class="font-monospace text-gold fw-bold">${s.studentNum}</td>
@@ -110,7 +110,7 @@ $(document).ready(function () {
             }
 
             data.forEach(p => {
-                const date = p.feesDueDate ? new Date(p.feesDueDate).toLocaleDateString() : '-';
+                const date = p.feesDueDate ? new Date(p.feesDueDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : '-';
                 const isPaid = (p.feeStatus && (p.feeStatus.toLowerCase() === 'paid' || p.feeStatus.toLowerCase() === 'completed'));
                 const badge = isPaid
                     ? '<span class="badge bg-success bg-opacity-25 text-success border border-success">PAID</span>'
@@ -123,7 +123,7 @@ $(document).ready(function () {
                             <div class="text-white fw-bold">${p.studentName}</div>
                             <small class="text-muted font-monospace">${p.studentNum}</small>
                         </td>
-                        <td class="text-gold fw-bold">₱${(p.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                        <td class="text-gold fw-bold">?${(p.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                         <td class="text-muted small">${date}</td>
                         <td>${badge}</td>
                     </tr>`;
@@ -145,7 +145,7 @@ $(document).ready(function () {
             }
 
             data.forEach(e => {
-                const date = e.eventDate ? new Date(e.eventDate).toLocaleDateString() : '-';
+                const date = e.eventDate ? new Date(e.eventDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : '-';
                 const row = `
                     <tr>
                         <td class="fw-bold text-white">${e.eventName}</td>
