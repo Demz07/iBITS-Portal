@@ -79,12 +79,28 @@
 
     // 4. DOWNLOAD QR
     $('#btnDownloadQr').on('click', function () {
+        // Try to get image or canvas
         const img = qrContainer.querySelector('img');
-        if (img) {
+        const canvas = qrContainer.querySelector('canvas');
+        let dataUrl = "";
+
+        if (img && img.src && img.src.startsWith('data:image')) {
+            dataUrl = img.src;
+        } else if (canvas) {
+            dataUrl = canvas.toDataURL("image/png");
+        }
+
+        if (dataUrl) {
             const link = document.createElement('a');
             link.download = `iBITS-ID-${studentId}.png`;
-            link.href = img.src;
+            link.href = dataUrl;
+            document.body.appendChild(link); // Necessary for some mobile browsers
             link.click();
+            document.body.removeChild(link);
+        } else {
+            // Fallback: If it's not ready, show a message
+            console.error("QR Code source not found or invalid.");
+            alert("Unable to download QR ID yet. Please wait a second and try again.");
         }
     });
 

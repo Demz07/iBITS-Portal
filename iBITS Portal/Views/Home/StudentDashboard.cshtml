@@ -1304,6 +1304,101 @@
             }
         })();
 
+        // ===========================
+        // EMAIL UPDATE: AJAX
+        // ===========================
+        (function () {
+            const form = document.getElementById('ajaxEmailForm');
+            const btn = document.getElementById('btnUpdateEmail');
+            const currentEmailInput = document.getElementById('currentStudentEmail');
+
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(form);
+                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
+
+                    const oldBtnHtml = btn ? btn.innerHTML : '';
+                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Updating...'; }
+
+                    fetch('@Url.Action("UpdateEmailAjax", "Account")', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: new URLSearchParams(formData)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            showPortalToast('success', 'Success', data.message || 'Email updated successfully!');
+                            if (currentEmailInput && formData.get('NewEmail')) {
+                                currentEmailInput.value = formData.get('NewEmail');
+                            }
+                            form.reset();
+                        } else {
+                            showPortalToast('danger', 'Update Failed', data.message || 'Unable to update email.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
+                    })
+                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
+                });
+            }
+        })();
+
+        // ===========================
+        // PASSWORD UPDATE: AJAX
+        // ===========================
+        (function () {
+            const form = document.getElementById('ajaxPasswordForm');
+            const btn = document.getElementById('btnUpdatePass');
+            const alertDiv = document.getElementById('passwordAlert');
+
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(form);
+                    const newPass = formData.get('NewPassword');
+                    const confirmPass = formData.get('ConfirmPassword');
+
+                    if (newPass !== confirmPass) {
+                        showPortalToast('danger', 'Mismatch', 'New passwords do not match.');
+                        return;
+                    }
+
+                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
+
+                    const oldBtnHtml = btn ? btn.innerHTML : '';
+                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Updating...'; }
+
+                    fetch('@Url.Action("ChangePasswordAjax", "Account")', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: new URLSearchParams(formData)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            showPortalToast('success', 'Success', data.message || 'Password updated successfully!');
+                            form.reset();
+                        } else {
+                            showPortalToast('danger', 'Update Failed', data.message || 'Please check your current password.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
+                    })
+                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
+                });
+            }
+        })();
+
 
         // sender notice
         let activeNoticeId = null;
