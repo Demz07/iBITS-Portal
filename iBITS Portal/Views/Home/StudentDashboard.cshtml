@@ -583,7 +583,10 @@
                     <div class="current-activity-scroll">
                         @foreach (var currentEvent in currentEvents)
                         {
-                            <div class="mb-4 p-3 rounded"
+                            var endTimeIso = currentEvent.CalculatedEndTime?.ToString("yyyy-MM-ddTHH:mm:ss");
+                            
+                            <div class="mb-4 p-3 rounded current-event-card"
+                                 data-end-time="@endTimeIso"
                                  style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <div>
@@ -597,22 +600,10 @@
                                                 </span>
                                             </div>
 
-                                            <div>
-                                                <i class="bi bi-clock me-1 text-warning"></i>
-                                                <span>
-                                                    @if (currentEvent.StartTime.HasValue)
-                                                    {
-                                                        @currentEvent.StartTime.Value.ToString("h:mm tt")
-                                                        if (currentEvent.EndTime.HasValue)
-                                                        {
-                                                            @: - @currentEvent.EndTime.Value.ToString("h:mm tt")
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        @:Time: TBA
-                                                    }
-                                                </span>
+                                            <div class="live-countdown-wrap">
+                                                <i class="bi bi-stopwatch me-1 text-gold"></i>
+                                                <span class="text-gold fw-bold">Ends in: </span>
+                                                <span class="event-countdown-timer text-white" id="timer-@currentEvent.EventId">Calculating...</span>
                                             </div>
 
                                             <div>
@@ -624,7 +615,7 @@
                                         </div>
                                     </div>
 
-                                    <span class="badge bg-primary">ONGOING</span>
+                                    <span class="badge bg-success pulse-happening">HAPPENING RIGHT NOW</span>
                                 </div>
 
                                 <!-- EVENT DESCRIPTION -->

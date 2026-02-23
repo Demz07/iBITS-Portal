@@ -114,7 +114,60 @@
             reader.readAsDataURL(event.target.files[0]);
         }
     });
+
+    // 6. INITIALIZE ACTIVITY COUNTDOWNS
+    initActivityCountdowns();
 });
+
+function initActivityCountdowns() {
+    const activityCards = document.querySelectorAll('.current-event-card');
+    
+    activityCards.forEach(card => {
+        const endTimeStr = card.dataset.endTime;
+        const timerDisplay = card.querySelector('.event-countdown-timer');
+        const badge = card.querySelector('.pulse-happening');
+        
+        if (!endTimeStr || !timerDisplay) return;
+
+        // Force PHT (UTC+8) interpretation
+        const targetDate = new Date(endTimeStr + '+08:00').getTime();
+
+        const updateInterval = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance <= 0) {
+                clearInterval(updateInterval);
+                timerDisplay.innerText = "SESSION ENDED";
+                timerDisplay.classList.remove('text-white');
+                timerDisplay.classList.add('text-danger');
+                
+                if (badge) {
+                    badge.innerText = "ENDED";
+                    badge.classList.remove('bg-success', 'pulse-happening');
+                    badge.classList.add('bg-danger');
+                }
+
+                // Start 3-minute removal timer
+                setTimeout(() => {
+                    card.style.transition = 'opacity 1s ease, transform 1s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    setTimeout(() => card.remove(), 1000);
+                }, 180000); // 3 minutes = 180,000ms
+                
+                return;
+            }
+
+            const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+            const format = (t) => t < 10 ? `0${t}` : t;
+            timerDisplay.innerText = `${format(h)}:${format(m)}:${format(s)}`;
+        }, 1000);
+    });
+}
 
 function updateTimerDisplay(d, h, m, s) {
     const format = (t) => t < 10 ? `0${t}` : t;

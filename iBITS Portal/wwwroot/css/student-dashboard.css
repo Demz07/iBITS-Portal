@@ -291,6 +291,35 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* HAPPENING RIGHT NOW PULSE */
+.pulse-happening {
+    animation: pulse-green 2s infinite;
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+.live-countdown-wrap {
+    display: flex;
+    align-items: center;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 2px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.event-countdown-timer {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 700;
+    margin-left: 5px;
+}
+
 /* ============================================================
    RESPONSIVE / MOBILE FIXES - student-dashboard.css
    ============================================================ */
