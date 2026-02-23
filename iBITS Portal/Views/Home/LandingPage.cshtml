@@ -68,7 +68,8 @@
 
     </nav>
 
-    <!-- Mobile Menu Overlay -->
+    <!-- Mobile Menu Overlay (Sidebar) -->
+    <div class="menu-backdrop" id="menuBackdrop"></div>
     <div class="landing-mobile-menu" id="landingMobileMenu">
         <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
         <a href="#home" onclick="closeMobileMenu()">Home</a>
@@ -94,7 +95,7 @@
             <p class="hero-description">
                 The iBITS Portal is a comprehensive digital platform developed specifically for student
                 organizations at the PUP Lopez, Quezon Branch. Created by the Institute of Brilliant
-                Information Technology Students (iBITS),<br> this system is designed to modernize campus
+                Information Technology Students (iBITS), this system is designed to modernize campus
                 administrative tasks through three core pillars.
             </p>
             <div class="hero-cta">
@@ -231,21 +232,25 @@
 const hamburger = document.getElementById('landingHamburger');
 const mobileMenu = document.getElementById('landingMobileMenu');
 const menuClose = document.getElementById('mobileMenuClose');
+const menuBackdrop = document.getElementById('menuBackdrop');
 
 function openMobileMenu() {
     hamburger.classList.add('active');
     mobileMenu.classList.add('active');
+    menuBackdrop.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 function closeMobileMenu() {
     hamburger.classList.remove('active');
     mobileMenu.classList.remove('active');
+    menuBackdrop.classList.remove('active');
     document.body.style.overflow = '';
 }
 
 if (hamburger) hamburger.addEventListener('click', openMobileMenu);
 if (menuClose) menuClose.addEventListener('click', closeMobileMenu);
+if (menuBackdrop) menuBackdrop.addEventListener('click', closeMobileMenu);
 
 // Close on escape key
 document.addEventListener('keydown', function(e) {
