@@ -104,6 +104,42 @@
     background: transparent;
 }
 
+#financialTabs {
+    flex-wrap: nowrap !important;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    width: 100%;
+}
+
+#financialTabs .nav-item {
+    flex: 1; /* Distribute space equally */
+    min-width: 0;
+}
+
+#financialTabs .nav-link {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    padding: 10px 5px;
+    font-size: 0.9rem;
+    text-align: center;
+    width: 100%;
+}
+
+@media (max-width: 480px) {
+    #financialTabs .nav-link {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+    
+    #financialTabs .nav-link i {
+        display: block; /* Stack icon on top of text to save horizontal space */
+        margin-bottom: 4px;
+        margin-right: 0 !important;
+        font-size: 1rem;
+    }
+}
+
 .list-group-item {
     background: transparent;
     border: 1px solid var(--border-color);

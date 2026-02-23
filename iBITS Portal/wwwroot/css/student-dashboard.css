@@ -406,6 +406,10 @@
 
 /* ---- Small Phone (max 480px) ---- */
 @media (max-width: 480px) {
+    .row.g-4 {
+        margin-bottom: 20px;
+    }
+    
     .page-header h2 {
         font-size: 0.95rem !important;
     }

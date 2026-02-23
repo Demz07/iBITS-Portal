@@ -512,6 +512,10 @@ input:disabled::-webkit-search-cancel-button {
 }
 
 @media (max-width: 480px) {
+    .row.g-4 {
+        margin-bottom: 30px;
+    }
+
     .glass-panel { padding: 12px; }
     .glass-header-title { font-size: 1rem; }
     

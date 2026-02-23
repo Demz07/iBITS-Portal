@@ -791,6 +791,7 @@ body {
 
     .scrollable-content {
         padding: 15px;
+        padding-bottom: 80px; /* Added extra space at bottom for mobile */
     }
 
     .academic-year-badge {
