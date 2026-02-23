@@ -56,20 +56,18 @@ body {
 }
 
 .floating-nav {
-    display: flex; /* Ensure it's not display: none */
-    opacity: 1; /* Ensure it's not opacity: 0 */
-    transform: translateY(0); /* Ensure it's not moved off-screen */
-    position: fixed; /* Keeps it at the top while scrolling */
+    display: flex;
+    position: fixed;
     top: 0;
     width: 100%;
     z-index: 1000;
-    display: flex background: rgba(3, 10, 22, 0.95);
+    background: rgba(3, 10, 22, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--glass-border);
-    z-index: 1000;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    height: 100px;
+    height: auto;
+    min-height: 70px;
 }
 
 
@@ -163,9 +161,6 @@ body {
 }
 
 .hero-header {
-    position: absolute;
-    top: 30px;
-    left: 40px;
     display: flex;
     align-items: center;
     gap: 15px;
@@ -200,6 +195,21 @@ body {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
+
+
+/* ============================================================
+   SECTION HEADER STYLES
+   ============================================================ */
+.header, .header2, .header3 {
+    padding-top: 70px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.header {
+    padding-top: 90px;
+}
 .about-mv {
     background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.02) 50%, transparent 100%);
     align-items: center;
@@ -220,7 +230,7 @@ body {
     font-size: 5rem;
     font-weight: 800;
     line-height: 1.3;
-    margin-top: 150px;
+    margin-top: 60px;
     color: #fff;
     text-align: center;
 }
@@ -236,7 +246,7 @@ body {
 .MV-grid {
     display: grid;
     /* Define 2 columns with a fixed width so they don't grow with text */
-    grid-template-columns: repeat(2, 700px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: center; /* Centers the entire 2-column grid in the section */
     align-items: start; /* Prevents cards from stretching vertically */
     gap: 3rem;
@@ -307,8 +317,8 @@ body {
 .hero-title {
     font-size: 5rem;
     font-weight: 800;
-    line-height: 1.3;
-    margin-top: 150px;
+    margin-top: 100px;
+    margin-top: 60px;
     color: #fff;
     text-align: center;
 }
@@ -582,7 +592,7 @@ body {
     font-size: 5rem;
     font-weight: 800;
     line-height: 1.3;
-    margin-top: 150px;
+    margin-top: 60px;
     color: #fff;
     text-align: center;
 }
@@ -887,5 +897,208 @@ body {
 
     50% {
         transform: scale(1.2);
+    }
+}
+
+
+/* ============================================================
+   RESPONSIVE - ALL DEVICES
+   ============================================================ */
+
+/* Large tablets */
+@media (max-width: 1024px) {
+    .hero-title { font-size: 3.5rem; margin-top: 100px; }
+    .Prof, .OFFICERS { font-size: 3.5rem; margin-top: 100px; }
+    .MV-grid { grid-template-columns: 1fr 1fr; gap: 2rem; padding: 0 2rem; }
+    .team-display-container { max-width: 90%; }
+    .team-OFFICERS-container { max-width: 95%; }
+    .nav-container { padding: 0 24px; }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+    .hero-title { font-size: 2.5rem; margin-top: 90px; }
+    .Prof, .OFFICERS { font-size: 2.5rem; margin-top: 80px; }
+    .MV-grid { grid-template-columns: 1fr; gap: 1.5rem; padding: 0 1rem; }
+    .section-spacing { padding: 3rem 1rem; }
+    .mv-card { padding: 2rem 1.5rem; }
+    .mv-card p { font-size: 1rem; }
+    .team-display-container, .team-OFFICERS-container { 
+        max-width: 100%; 
+        padding: 0 1rem; 
+        margin: 2rem auto;
+    }
+    .display-frame, .OFFICERS-frame { 
+        border-radius: 20px; 
+        padding: 10px;
+    }
+    .team-full-image, .OFFICERS-full-image { border-radius: 16px; }
+    .footer-container { flex-direction: column; gap: 20px; text-align: center; }
+    .footer-section.left, .footer-section.right { align-items: center; }
+    .header, .header2, .header3 { padding: 1rem; }
+    .hero-header { display: none; }
+    .uni-name { font-size: 0.75rem; }
+    .campus-name { font-size: 0.7rem; }
+    .pup-logo { width: 40px; height: 40px; }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+    .hero-title { font-size: 1.8rem; margin-top: 80px; }
+    .Prof, .OFFICERS { font-size: 1.8rem; margin-top: 60px; }
+    .mv-card { padding: 1.5rem 1rem; }
+    .mv-icon { width: 45px; height: 45px; font-size: 1.8rem; }
+    .nav-container { padding: 8px 14px; }
+    .section-spacing { padding: 2rem 0.75rem; }
+    .team-display-container, .team-OFFICERS-container { 
+        padding: 0 0.5rem; 
+        margin: 1.5rem auto;
+    }
+    .display-frame, .OFFICERS-frame { 
+        border-radius: 14px; 
+        padding: 8px;
+    }
+    .team-full-image, .OFFICERS-full-image { border-radius: 10px; }
+    .corner-accent, .OFFICERS-accent { width: 24px; height: 24px; }
+    .footer { padding: 1.5rem 1rem; }
+    .footer-brand { flex-direction: column; gap: 8px; text-align: center; }
+    .footer-logo-circle { width: 50px; height: 50px; }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+    .hero-title { font-size: 1.5rem; }
+    .Prof, .OFFICERS { font-size: 1.5rem; }
+    .mv-card p { font-size: 0.9rem; }
+}
+
+/* ===== HAMBURGER BUTTON ===== */
+.landing-hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 8px 10px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid #D4AF37;
+    border-radius: 8px;
+    z-index: 1100;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.landing-hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #D4AF37;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.landing-hamburger:hover {
+    background: rgba(212, 175, 55, 0.2);
+}
+
+.landing-hamburger.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+.landing-hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+.landing-hamburger.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ===== MOBILE MENU OVERLAY ===== */
+.landing-mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(3, 10, 22, 0.98);
+    z-index: 1090;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 80px 30px 60px;
+    overflow-y: auto;
+}
+
+.landing-mobile-menu.active {
+    display: flex;
+}
+
+.landing-mobile-menu a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 20px 0;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    transition: color 0.2s;
+}
+
+.landing-mobile-menu a:first-of-type {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.landing-mobile-menu a:hover {
+    color: #D4AF37;
+}
+
+.landing-mobile-menu .mobile-enter-btn {
+    margin-top: 30px;
+    padding: 16px 60px !important;
+    background: transparent;
+    border: 2px solid #D4AF37 !important;
+    border-radius: 50px !important;
+    color: #D4AF37 !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-bottom: 2px solid #D4AF37 !important;
+    width: auto !important;
+}
+
+.landing-mobile-menu .mobile-enter-btn:hover {
+    background: #D4AF37 !important;
+    color: #000 !important;
+}
+
+.mobile-menu-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 2.2rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.mobile-menu-close:hover {
+    color: #D4AF37;
+}
+
+/* ===== SHOW HAMBURGER ON TABLET/MOBILE ===== */
+@media (max-width: 1024px) {
+    .nav-links {
+        display: none !important;
+    }
+    .landing-hamburger {
+        display: flex !important;
     }
 }

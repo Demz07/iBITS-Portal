@@ -40,7 +40,8 @@
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-deep);
             color: #fff;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #matrixCanvas {
@@ -479,22 +480,52 @@
 
         /* --- RESPONSIVE --- */
         @@media (max-width: 900px) {
-            .split-layout { flex-direction: column; }
-            .left-brand { padding: 4rem 1rem 1rem 1rem; flex: 0.8; }
-            .right-controls { padding: 1rem; flex: 1.2; justify-content: center; }
-            .glass-panel { max-width: 100%; margin: 0; padding: 40px; }
-            .logo-img { width: 200px; height: 200px; }
-            .brand-text h1 { font-size: 3rem; }
-            .top-header { top: 20px; left: 20px; }
-            .header-logo { width: 45px; height: 45px; }
-            .header-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
+            .left-brand { padding: 5rem 1rem 1rem 1rem; flex: none; }
+            .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
+            .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 40px 30px; }
+            .logo-img { width: 180px; height: 180px; }
+            .logo-wrapper { margin-bottom: -20px; }
+            .brand-text h1 { font-size: 2.8rem; }
+            .top-header { top: 15px; left: 15px; }
+            .header-logo { width: 40px; height: 40px; }
+            .header-info { display: flex; flex-direction: column; justify-content: center; }
+            .uni-name { font-size: 0.78rem; }
+            .campus-name { font-size: 0.68rem; }
         }
 
-        .uni-name { font-size: 0.8rem; }
-            .campus-name { font-size: 0.7rem; }
+        @@media (max-width: 600px) {
+            .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
+            .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
+            .right-controls { padding: 0.75rem; flex: none; justify-content: center; width: 100%; }
+            .glass-panel { max-width: 100%; margin: 0 0 20px 0; padding: 30px 20px; border-radius: 20px; }
+            .logo-img { width: 120px; height: 120px; }
+            .logo-wrapper { margin-bottom: -15px; }
+            .brand-text h1 { font-size: 1.8rem; }
+            .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 2px; }
+            .panel-header { margin-bottom: 1.5rem; padding-left: 18px; }
+            .panel-header h3 { font-size: 1.6rem; }
+            .panel-header p { font-size: 0.75rem; letter-spacing: 2px; }
+            .form-control { height: 55px; font-size: 1rem; }
+            .btn-gold { padding: 16px; font-size: 1rem; }
+            .top-header { top: 12px; left: 12px; }
+            .header-logo { width: 35px; height: 35px; margin-right: 10px; }
+            .uni-name { font-size: 0.68rem; letter-spacing: 0.5px; }
+            .campus-name { font-size: 0.6rem; letter-spacing: 1px; }
+            .countdown-timer { font-size: 2.2rem; }
+            .lockout-icon { font-size: 3.5rem; }
+            .lockout-title { font-size: 1.4rem; }
+        }
+
+        @@media (max-width: 380px) {
+            .glass-panel { padding: 24px 14px; }
+            .brand-text h1 { font-size: 1.5rem; }
+            .logo-img { width: 90px; height: 90px; }
+            .panel-header h3 { font-size: 1.3rem; }
+            .top-header { top: 10px; left: 10px; }
+            .header-logo { width: 28px; height: 28px; margin-right: 8px; }
+            .uni-name { font-size: 0.6rem; }
+            .campus-name { font-size: 0.54rem; }
         }
     </style>
 </head>

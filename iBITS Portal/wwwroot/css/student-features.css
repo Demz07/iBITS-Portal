@@ -115,3 +115,26 @@
     .list-group-item h6 {
         color: var(--text-strong);
     }
+
+/* ============================================================
+   RESPONSIVE - STUDENT FEATURES
+   ============================================================ */
+@media (max-width: 768px) {
+    .glass-panel { padding: 16px; }
+    .glass-header-title { font-size: 1.2rem; }
+    .timeline-item { padding-left: 30px; }
+    .timeline-dot { width: 16px; height: 16px; }
+    .timeline-container::before { left: 7px; }
+    .list-group-item { padding: 12px; }
+    .list-group-item .d-flex { flex-direction: column; gap: 8px; }
+    .list-group-item .text-end { text-align: left !important; }
+}
+
+@media (max-width: 480px) {
+    .glass-panel { padding: 12px; border-radius: 12px; }
+    .glass-header-title { font-size: 1.1rem; }
+    .badge { font-size: 0.75rem; padding: 0.3em 0.6em; }
+    .timeline-content { padding: 14px; }
+    .timeline-content .event-title { font-size: 0.95rem; }
+    .timeline-content .event-date { font-size: 0.8rem; }
+}

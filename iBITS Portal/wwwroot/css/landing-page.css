@@ -1,4 +1,4 @@
-/* 
+﻿/* 
    FILE PATH: wwwroot/css/landing-page.css
    Professional Landing Page Styles for iBITS Portal
 */
@@ -68,20 +68,19 @@ body {
    ============================================================ */
 
 /*.floating-nav {
-    display: flex;*/ /* Ensure it's not display: none */
-/*opacity: 1;*/ /* Ensure it's not opacity: 0 */
-/*transform: translateY(0);*/ /* Ensure it's not moved off-screen */
-/*position: fixed;*/ /* Keeps it at the top while scrolling */
-/*top: 0;
+    display: flex;
+    position: fixed;
+    top: 0;
     width: 100%;
     z-index: 1000;
-    display: flex background: rgba(3, 10, 22, 0.95);
+    background: rgba(3, 10, 22, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--glass-border);
-    z-index: 1000;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    height: 100px;
+    height: auto;
+    min-height: 70px;
+    overflow: visible;
 }*/
 .floating-nav {
     display: flex;
@@ -96,7 +95,8 @@ body {
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--glass-border);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    height: 100px;
+    height: auto;
+    min-height: 70px;
 }
 
 
@@ -109,9 +109,9 @@ body {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0 50px;
     box-sizing: border-box;
+    gap: 16px;
 }
 
 .nav-links {
@@ -121,8 +121,9 @@ body {
     margin: 0;
     margin-top: 10px;
     padding: 0;
-    margin-left: auto;
     align-items: center;
+    flex: 1;
+    justify-content: flex-end;
 }
 
     .nav-links a {
@@ -136,7 +137,7 @@ body {
 
         .nav-links a::after {
             content: '';
-            position: absolute;
+            content: '';
             bottom: -5px;
             left: 0;
             width: 0;
@@ -194,13 +195,10 @@ body {
 }
 
 .hero-header {
-    position: absolute;
-    top: 30px;
-    left: 40px;
     display: flex;
     align-items: center;
     gap: 15px;
-    z-index: 10;
+    flex: 1;
 }
 
 .pup-logo {
@@ -1403,210 +1401,135 @@ body {
    RESPONSIVE DESIGN
    ============================================================ */
 
-/* Tablet */
-@media (max-width: 1024px) {
-    .nav-links {
-        display: none;
-    }
+/* Tablet & Mobile - Hide nav links, show hamburger */
 
-    .hero-title {
-        font-size: 3rem;
-    }
-
-    .hero-logo {
-        width: 320px;
-        height: 320px;
-    }
-
-    .section-title {
-        font-size: 2.5rem;
-    }
-
-    .pillars-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-
-    .role-members {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-
-    .about-grid {
-        grid-template-columns: 1fr;
-        gap: 3rem;
-    }
-
-    .features-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 2rem;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 2rem;
-    }
-
-    .footer-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-    }
+/* ===== HAMBURGER BUTTON ===== */
+.landing-hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 8px 10px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid #D4AF37;
+    border-radius: 8px;
+    z-index: 1100;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
-/* Mobile */
-@media (max-width: 768px) {
-    .section-spacing {
-        padding: 4rem 1rem;
+.landing-hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #D4AF37;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.landing-hamburger:hover {
+    background: rgba(212, 175, 55, 0.2);
+}
+
+.landing-hamburger.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+.landing-hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+.landing-hamburger.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ===== MOBILE MENU OVERLAY ===== */
+.landing-mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(3, 10, 22, 0.98);
+    z-index: 1090;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 80px 30px 60px;
+    overflow-y: auto;
+}
+
+.landing-mobile-menu.active {
+    display: flex;
+}
+
+.landing-mobile-menu a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 20px 0;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    transition: color 0.2s;
+}
+
+.landing-mobile-menu a:first-of-type {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.landing-mobile-menu a:hover {
+    color: #D4AF37;
+}
+
+.landing-mobile-menu .mobile-enter-btn {
+    margin-top: 30px;
+    padding: 16px 60px !important;
+    background: transparent;
+    border: 2px solid #D4AF37 !important;
+    border-radius: 50px !important;
+    color: #D4AF37 !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-bottom: 2px solid #D4AF37 !important;
+    width: auto !important;
+}
+
+.landing-mobile-menu .mobile-enter-btn:hover {
+    background: #D4AF37 !important;
+    color: #000 !important;
+}
+
+.mobile-menu-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 2.2rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.mobile-menu-close:hover {
+    color: #D4AF37;
+}
+
+/* ===== SHOW HAMBURGER ON TABLET/MOBILE ===== */
+@media (max-width: 1024px) {
+    .nav-links {
+        display: none !important;
     }
-
-    .hero-header {
-        top: 20px;
-        left: 20px;
-        right: 20px;
-    }
-
-    .pup-logo {
-        width: 45px;
-        height: 45px;
-    }
-
-    .uni-name {
-        font-size: 0.8rem;
-    }
-
-    .campus-name {
-        font-size: 0.7rem;
-    }
-
-    .hero-logo {
-        width: 150px;
-        height: 150px;
-    }
-
-    .hero-title {
-        font-size: 2rem;
-    }
-
-    .hero-subtitle {
-        font-size: 1rem;
-        letter-spacing: 2px;
-    }
-
-    .hero-description {
-        font-size: 0.95rem;
-    }
-
-    .hero-cta {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .btn-primary-cta,
-    .btn-secondary-cta {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .section-title {
-        font-size: 2rem;
-    }
-
-    .section-description {
-        font-size: 1rem;
-    }
-
-    .pillars-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    .pillar-card {
-        padding: 2rem 1.5rem;
-    }
-
-    .team-section {
-        padding: 2rem 1.5rem;
-    }
-
-    .team-title {
-        font-size: 1.8rem;
-    }
-
-    .role-group {
-        padding: 1.5rem;
-    }
-
-    .role-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-        .role-header i {
-            font-size: 1.5rem;
-        }
-
-        .role-header h4 {
-            font-size: 1.1rem;
-        }
-
-    .role-members {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-
-    .team-member-role {
-        padding: 0.875rem 1rem;
-    }
-
-        .team-member-role i {
-            font-size: 1.5rem;
-        }
-
-        .team-member-role span {
-            font-size: 0.85rem;
-        }
-
-    .tech-badge-large {
-        font-size: 0.8rem;
-        padding: 10px 18px;
-    }
-
-    .features-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .stat-number {
-        font-size: 2.5rem;
-    }
-
-    .cta-content h2 {
-        font-size: 2rem;
-    }
-
-    .cta-content > p {
-        font-size: 1rem;
-    }
-
-    .footer-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-
-    .nav-container {
-        padding: 1rem;
-    }
-
-    .nav-brand {
-        font-size: 1.1rem;
-    }
-
-    .btn-nav-cta {
-        padding: 8px 16px;
-        font-size: 0.85rem;
+    .landing-hamburger {
+        display: flex !important;
     }
 }

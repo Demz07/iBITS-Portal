@@ -200,7 +200,7 @@
             <!-- Fixed Navbar -->
             <div class="admin-navbar">
                 <div class="d-flex align-items-center gap-3">
-                    <button type="button" id="sidebarCollapse" class="btn-toggle"><i class="bi bi-list"></i></button>
+                    <button type="button" id="sidebarCollapse" class="btn-toggle" title="Toggle Menu"><i class="bi bi-list"></i></button>
                     <div class="d-flex align-items-center gap-3">
                         <img src="~/images/pup-logo.png" alt="PUP Logo" class="pup-nav-logo">
                         <div class="d-none d-sm-block">
@@ -348,5 +348,51 @@
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<script>
+// Mobile sidebar toggle - uses #sidebar and #sidebarCollapse
+const sidebarCollapseBtn = document.getElementById('sidebarCollapse');
+const mainSidebar = document.getElementById('sidebar');
+const sidebarOverlayEl = document.getElementById('sidebarOverlay');
+
+function openSidebar() {
+    if (mainSidebar) mainSidebar.classList.add('mobile-open');
+    if (sidebarOverlayEl) sidebarOverlayEl.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+    if (mainSidebar) mainSidebar.classList.remove('mobile-open');
+    if (sidebarOverlayEl) sidebarOverlayEl.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+if (sidebarCollapseBtn) {
+    sidebarCollapseBtn.addEventListener('click', function() {
+        if (window.innerWidth <= 1024) {
+            if (mainSidebar && mainSidebar.classList.contains('mobile-open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        } else {
+            if (mainSidebar) mainSidebar.classList.toggle('active');
+        }
+    });
+}
+
+if (sidebarOverlayEl) sidebarOverlayEl.addEventListener('click', closeSidebar);
+
+document.querySelectorAll('#sidebar ul li a').forEach(function(link) {
+    link.addEventListener('click', function() {
+        if (window.innerWidth <= 1024) closeSidebar();
+    });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSidebar();
+});
+</script>
 </body>
 </html>

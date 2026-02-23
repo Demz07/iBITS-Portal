@@ -1,4 +1,4 @@
-@* 
+﻿@* 
     FILE PATH: Views/Home/LandingPage.cshtml
     Professional Landing Page for iBITS Portal
 *@
@@ -57,9 +57,26 @@
                 </a>
             </ul>
 
+            <!-- Mobile Hamburger -->
+            <button class="landing-hamburger" id="landingHamburger" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
         </div>
 
     </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="landing-mobile-menu" id="landingMobileMenu">
+        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
+        <a href="#home" onclick="closeMobileMenu()">Home</a>
+        <a href="/Home/LandingPageAbout" onclick="closeMobileMenu()">Organization</a>
+        <a href="/Home/LandingPagePeople" onclick="closeMobileMenu()">System</a>
+        <a href="/Home/LandingDevelopers" onclick="closeMobileMenu()">Developers</a>
+        <a href="/Home/Gateway" class="mobile-enter-btn" onclick="closeMobileMenu()">Enter Portal</a>
+    </div>
 
     <!-- Hero Section -->
     <section id="home" class="hero-section">
@@ -208,6 +225,33 @@
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <!-- Custom JS -->
     <script src="~/js/landing-page.js" asp-append-version="true"></script>
+
+    <script>
+// Landing page mobile hamburger menu
+const hamburger = document.getElementById('landingHamburger');
+const mobileMenu = document.getElementById('landingMobileMenu');
+const menuClose = document.getElementById('mobileMenuClose');
+
+function openMobileMenu() {
+    hamburger.classList.add('active');
+    mobileMenu.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    hamburger.classList.remove('active');
+    mobileMenu.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+if (hamburger) hamburger.addEventListener('click', openMobileMenu);
+if (menuClose) menuClose.addEventListener('click', closeMobileMenu);
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMobileMenu();
+});
+    </script>
 
 </body>
 </html>

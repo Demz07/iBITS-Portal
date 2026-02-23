@@ -290,3 +290,162 @@
     color: #94a3b8;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* ============================================================
+   RESPONSIVE / MOBILE FIXES - student-dashboard.css
+   ============================================================ */
+
+/* ---- Tablet (max 1024px) ---- */
+@media (max-width: 1024px) {
+    .welcome-section {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .welcome-text h1 {
+        font-size: 1.4rem;
+    }
+
+    .profile-quick-card {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .stats-row .col-lg-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .dashboard-grid {
+        flex-direction: column;
+    }
+
+    .dashboard-main,
+    .dashboard-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+    }
+}
+
+/* ---- Phone (max 768px) ---- */
+@media (max-width: 768px) {
+    .student-dashboard {
+        padding: 12px;
+    }
+
+    .welcome-text h1 {
+        font-size: 1.2rem;
+    }
+
+    .welcome-text p {
+        font-size: 0.85rem;
+    }
+
+    .stats-row .col-lg-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .stat-card {
+        padding: 16px 12px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+
+    .section-card {
+        padding: 16px 12px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    /* Settings modal fix */
+    .settings-modal-body {
+        flex-direction: column !important;
+    }
+
+    .settings-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .settings-sidebar .nav-link {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+
+    .timeline-item {
+        padding-left: 40px;
+    }
+
+    .timeline-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+        left: 0;
+    }
+
+    .financial-table th,
+    .financial-table td {
+        font-size: 0.78rem;
+        padding: 8px 6px;
+    }
+}
+
+/* ---- Small Phone (max 480px) ---- */
+@media (max-width: 480px) {
+    .stats-row .col-lg-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .welcome-text h1 {
+        font-size: 1rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+    }
+
+    .modal-xl {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .modal-dialog {
+        margin: 8px;
+    }
+
+    .financial-table th,
+    .financial-table td {
+        font-size: 0.72rem;
+        padding: 6px 4px;
+    }
+
+    .badge {
+        font-size: 0.65rem;
+        padding: 3px 6px;
+    }
+}

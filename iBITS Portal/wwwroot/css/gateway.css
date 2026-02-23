@@ -396,3 +396,45 @@ body, html {
     z-index: 0;
     opacity: 0.2;
 }
+
+/* ============================================================
+   GATEWAY RESPONSIVE DESIGN
+   ============================================================ */
+@media (max-width: 900px) {
+    .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
+    .left-brand { padding: 5rem 1rem 1rem 1rem; flex: none; }
+    .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
+    .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 40px 30px; }
+    .logo-img { width: 180px; height: 180px; }
+    .brand-text h1 { font-size: 2.8rem; }
+    .top-header { top: 15px; left: 15px; }
+    .header-logo { width: 40px; height: 40px; }
+    .uni-name { font-size: 0.78rem; }
+    .campus-name { font-size: 0.68rem; }
+}
+
+@media (max-width: 600px) {
+    .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
+    .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
+    .right-controls { padding: 0.75rem; flex: none; justify-content: center; width: 100%; }
+    .glass-panel { max-width: 100%; margin: 0 0 20px 0; padding: 28px 18px; border-radius: 20px; }
+    .logo-img { width: 120px; height: 120px; }
+    .brand-text h1 { font-size: 1.8rem; }
+    .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 2px; }
+    .top-header { top: 12px; left: 12px; }
+    .header-logo { width: 32px; height: 32px; margin-right: 8px; }
+    .uni-name { font-size: 0.68rem; }
+    .campus-name { font-size: 0.6rem; }
+    .nav-btn { padding: 16px; }
+    .btn-icon-box { width: 44px; height: 44px; font-size: 1.2rem; }
+    .panel-header h3 { font-size: 1.6rem; }
+}
+
+@media (max-width: 380px) {
+    .glass-panel { padding: 22px 14px; }
+    .brand-text h1 { font-size: 1.5rem; }
+    .logo-img { width: 90px; height: 90px; }
+    .header-logo { width: 28px; height: 28px; }
+    .uni-name { font-size: 0.6rem; }
+    .campus-name { font-size: 0.54rem; }
+}
