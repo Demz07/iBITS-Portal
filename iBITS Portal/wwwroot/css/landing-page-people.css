@@ -806,166 +806,146 @@ body {
 }
 
 .landing-hamburger span {
-    display: block;
-    width: 22px;
-    height: 2px;
-    background: #D4AF37;
-    border-radius: 2px;
-    transition: all 0.3s ease;
+    display: block; width: 22px; height: 2px; background: #D4AF37; border-radius: 2px; transition: all 0.3s ease;
 }
 
-.landing-hamburger:hover {
-    background: rgba(212, 175, 55, 0.2);
-}
+.landing-hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.landing-hamburger.active span:nth-child(2) { opacity: 0; }
+.landing-hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-.landing-hamburger.active span:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
-}
-.landing-hamburger.active span:nth-child(2) {
-    opacity: 0;
-}
-.landing-hamburger.active span:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
-}
-
-/* ===== MOBILE MENU OVERLAY ===== */
+/* ===== MOBILE MENU SIDEBAR (Right Side Slide) ===== */
 .landing-mobile-menu {
-    display: none;
     position: fixed;
     top: 0;
-    left: 0;
-    width: 100%;
+    right: -300px;
+    width: 280px;
     height: 100vh;
     background: rgba(3, 10, 22, 0.98);
     z-index: 1090;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 0;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    padding: 80px 30px 60px;
+    padding: 80px 20px 60px;
     overflow-y: auto;
-}
-
-.landing-mobile-menu.active {
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
     display: flex;
 }
+
+.landing-mobile-menu.active { right: 0; }
+
+.menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1085;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.menu-backdrop.active { opacity: 1; visibility: visible; }
 
 .landing-mobile-menu a {
     color: #ffffff;
     text-decoration: none;
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    letter-spacing: 1px;
-    padding: 20px 0;
+    letter-spacing: 0.5px;
+    padding: 15px 10px;
     width: 100%;
-    max-width: 320px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: color 0.2s;
 }
 
-.landing-mobile-menu a:first-of-type {
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.landing-mobile-menu a:hover {
-    color: #D4AF37;
-}
+.landing-mobile-menu a:first-of-type { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.landing-mobile-menu a:hover { color: #D4AF37; background: rgba(212, 175, 55, 0.05); }
 
 .landing-mobile-menu .mobile-enter-btn {
     margin-top: 30px;
-    padding: 16px 60px !important;
+    padding: 12px 30px !important;
     background: transparent;
-    border: 2px solid #D4AF37 !important;
+    border: 1px solid #D4AF37 !important;
     border-radius: 50px !important;
     color: #D4AF37 !important;
-    font-size: 0.85rem !important;
+    font-size: 0.8rem !important;
     font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    border-bottom: 2px solid #D4AF37 !important;
+    letter-spacing: 1px;
     width: auto !important;
+    align-self: center;
 }
 
-.landing-mobile-menu .mobile-enter-btn:hover {
-    background: #D4AF37 !important;
-    color: #000 !important;
-}
+.landing-mobile-menu .mobile-enter-btn:hover { background: #D4AF37 !important; color: #000 !important; }
 
 .mobile-menu-close {
     position: absolute;
-    top: 20px;
-    right: 24px;
+    top: 15px;
+    right: 20px;
     background: none;
     border: none;
     color: #ffffff;
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     cursor: pointer;
     line-height: 1;
     transition: color 0.2s;
 }
 
-.mobile-menu-close:hover {
-    color: #D4AF37;
-}
-
+.mobile-menu-close:hover { color: #D4AF37; }
 
 /* ============================================================
-   RESPONSIVE - ALL DEVICES
+   RESPONSIVE DESIGN
    ============================================================ */
 
-/* Large tablets */
+/* Tablets (768px - 1024px) */
 @media (max-width: 1024px) {
     .nav-links { display: none !important; }
     .landing-hamburger { display: flex !important; }
-    .hero-title { font-size: 2.5rem; }
+    .nav-container { padding: 0 30px; }
+    .hero-title { font-size: 2.8rem; }
     .features-grid { grid-template-columns: repeat(2, 1fr); }
-    .info-grid { grid-template-columns: repeat(2, 1fr); column-gap: 30px; }
-    .nav-container { padding: 0 24px; }
-    .MV-grid { gap: 2rem; padding: 0 2rem; }
-    .header { padding-top: 90px; }
+    .info-grid { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
 }
 
-/* Tablets */
+/* Small Tablets & Large Phones (480px - 768px) */
 @media (max-width: 768px) {
-    .hero-title { font-size: 1.8rem; margin-top: 90px; }
-    .overview { font-size: 1rem; padding: 0 1rem; }
-    .MV-grid { grid-template-columns: 1fr; gap: 1.5rem; padding: 0 1rem; }
-    .features-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-    .info-grid { grid-template-columns: repeat(2, 1fr); column-gap: 20px; row-gap: 20px; }
-    .info-container { padding: 2rem 1.5rem; margin: 30px 1rem; }
-    .section-spacing { padding: 2rem 1rem; }
+    .nav-container { padding: 0 15px; gap: 10px; }
+    .hero-header { gap: 8px; }
+    .pup-logo { width: 35px; height: 35px; }
+    .uni-name { font-size: 0.75rem; letter-spacing: 0.5px; }
+    .campus-name { font-size: 0.65rem; letter-spacing: 1px; }
+    
+    .hero-title { font-size: 2rem; }
+    .overview { font-size: 1rem; padding: 0 10px; }
+    .info-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .section-spacing { padding: 3rem 1rem; }
     .section-title { font-size: 2rem; }
-    .footer-container { flex-direction: column; gap: 20px; text-align: center; }
-    .footer-section.left, .footer-section.right { align-items: center; }
+
+    /* Smaller Footer for Mobile */
     .footer { padding: 1.5rem 1rem; }
-    .user-role { font-size: 1.1rem; margin-top: 30px; }
-    .ur { padding: 0 1rem; }
-    .hero-header { display: none; }
+    .footer-container { flex-direction: column; gap: 1.5rem; text-align: center; }
+    .footer-section.left, .footer-section.right { align-items: center; }
+    .footer-brand { flex-direction: row; gap: 10px; }
+    .footer-logo-circle { width: 40px; height: 40px; }
+    .footer-brand h3 { font-size: 1rem; }
+    .footer-section.center p { font-size: 0.8rem; margin: 0; }
+    .footer-section h4 { font-size: 0.9rem; margin-bottom: 8px; }
+    .social-icons .icon { font-size: 20px; margin: 0 8px; }
 }
 
-/* Mobile phones */
+/* Small Mobile Phones (up to 480px) */
 @media (max-width: 480px) {
-    .hero-title { font-size: 1.4rem; margin-top: 80px; }
-    .overview { font-size: 0.95rem; padding: 0 0.75rem; }
-    .MV-grid { padding: 0 0.75rem; gap: 1rem; }
-    .mv-card { padding: 1.5rem 1rem; }
-    .info-grid { grid-template-columns: 1fr; column-gap: 0; }
-    .info-container { padding: 1.5rem 1rem; margin: 20px 0.75rem; }
-    .feature-card { padding: 2rem 1.5rem; }
-    .nav-container { padding: 8px 14px; }
+    .nav-container { padding: 0 15px; }
+    .hero-title { font-size: 1.6rem; }
     .section-title { font-size: 1.6rem; }
-    .section-header { margin-bottom: 2rem; }
-    .footer-brand { flex-direction: column; gap: 8px; text-align: center; }
-    .footer-logo-circle { width: 50px; height: 50px; }
-    .user-role { font-size: 1rem; padding: 6px 16px; }
-}
-
-/* Very small phones */
-@media (max-width: 360px) {
-    .hero-title { font-size: 1.2rem; }
-    .feature-card { padding: 1.5rem 1rem; }
-    .info-container { margin: 16px 0.5rem; padding: 1rem 0.75rem; }
+    .footer-brand h3 { font-size: 0.9rem; }
+    .info-container { padding: 1.5rem 1rem; }
 }
