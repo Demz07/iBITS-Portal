@@ -7,7 +7,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-t" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Security Setup - iBITS Portal</title>
 
@@ -31,7 +31,8 @@
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-deep);
             color: #fff;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #matrixCanvas { /* Copied */
@@ -296,6 +297,59 @@
                 opacity: 1;
                 transform: translateY(0) scale(1)
             }
+        }
+    
+        @@media (max-width: 900px) {
+            .split-layout { flex-direction: column; }
+            .left-brand { padding: 5rem 1rem 1rem 1rem; flex: none; }
+            .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
+            .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 40px 30px; }
+            .logo-img { width: 180px; height: 180px; }
+            .brand-text h1 { font-size: 2.8rem; }
+            .top-header { top: 15px; left: 15px; }
+            .header-logo { width: 40px; height: 40px; }
+            .uni-name { font-size: 0.78rem; }
+            .campus-name { font-size: 0.68rem; }
+        }
+
+        @@media (max-width: 600px) {
+            .split-layout { flex-direction: column; }
+            .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
+            .right-controls { padding: 0.75rem; justify-content: center; width: 100%; }
+            .glass-panel { max-width: 100%; margin: 0 0 20px 0; padding: 28px 18px; border-radius: 20px; }
+            .logo-img { width: 120px; height: 120px; }
+            .brand-text h1 { font-size: 1.8rem; }
+            .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 2px; }
+            .top-header { top: 12px; left: 12px; }
+            .header-logo { width: 32px; height: 32px; margin-right: 8px; }
+            .uni-name { font-size: 0.68rem; }
+            .campus-name { font-size: 0.6rem; }
+            .panel-header h3 { font-size: 1.6rem; }
+            .panel-header { margin-bottom: 1.5rem; padding-left: 18px; }
+            .form-control { height: 52px; font-size: 0.95rem; }
+            .btn-gold { padding: 14px; font-size: 0.95rem; }
+            .form-floating { margin-bottom: 16px; }
+        }
+
+        @@media (max-width: 480px) {
+            .left-brand { display: none; }
+            .right-controls { padding: 0.5rem; width: 100%; justify-content: center; align-items: flex-start; padding-top: 70px; }
+            .glass-panel { padding: 22px 16px; border-radius: 16px; margin: 0 0 15px 0; }
+            .panel-header h3 { font-size: 1.3rem; }
+            .panel-header p { font-size: 0.7rem; letter-spacing: 1px; }
+            .form-control { height: 48px; font-size: 0.9rem; }
+            .btn-gold { padding: 13px; font-size: 0.9rem; margin-top: 10px; }
+            .top-header { top: 10px; left: 10px; }
+            .header-logo { width: 26px; height: 26px; margin-right: 7px; }
+            .uni-name { font-size: 0.56rem; }
+            .campus-name { font-size: 0.5rem; }
+        }
+
+        @@media (max-width: 380px) {
+            .glass-panel { padding: 18px 12px; }
+            .panel-header h3 { font-size: 1.15rem; }
+            .form-control { height: 44px; }
+            .btn-gold { padding: 11px; font-size: 0.85rem; }
         }
     </style>
 </head>
