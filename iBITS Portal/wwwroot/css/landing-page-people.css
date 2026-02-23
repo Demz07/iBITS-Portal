@@ -901,7 +901,42 @@ body {
 .mobile-menu-close:hover { color: #D4AF37; }
 
 /* ============================================================
-   RESPONSIVE DESIGN
+   INFO GRID (Roles Section)
+   ============================================================ */
+.info-container {
+    max-width: 1400px;
+    margin: 4rem auto;
+    padding: 3rem 2rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    text-align: center;
+}
+
+.label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+}
+
+.value {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN (Fixed Layout, Fluid Content)
    ============================================================ */
 
 /* Tablets (768px - 1024px) */
@@ -910,8 +945,9 @@ body {
     .landing-hamburger { display: flex !important; }
     .nav-container { padding: 0 30px; }
     .hero-title { font-size: 2.8rem; }
-    .features-grid { grid-template-columns: repeat(2, 1fr); }
-    .info-grid { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+    
+    .features-grid { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .info-grid { grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
 }
 
 /* Small Tablets & Large Phones (480px - 768px) */
@@ -923,29 +959,52 @@ body {
     .campus-name { font-size: 0.65rem; letter-spacing: 1px; }
     
     .hero-title { font-size: 2rem; }
-    .overview { font-size: 1rem; padding: 0 10px; }
-    .info-grid { grid-template-columns: 1fr; gap: 1rem; }
-    .features-grid { grid-template-columns: 1fr; }
-    .section-spacing { padding: 3rem 1rem; }
-    .section-title { font-size: 2rem; }
+    .overview { font-size: 0.9rem; padding: 0 10px; }
+    
+    /* Fixed Grid Scaling */
+    .MV-grid { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; padding: 0 1rem; }
+    .mv-card { padding: 1.25rem; }
+    .mv-card h3 { font-size: 0.9rem; }
+    .mv-card p { font-size: 0.8rem; line-height: 1.4; }
 
-    /* Smaller Footer for Mobile */
+    .info-grid { grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .label { font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .value { font-size: 0.7rem; line-height: 1.3; }
+
+    .features-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    .section-spacing { padding: 3rem 1rem; }
+    .section-title { font-size: 1.8rem; }
+
+    /* Smaller Footer */
     .footer { padding: 1.5rem 1rem; }
     .footer-container { flex-direction: column; gap: 1.5rem; text-align: center; }
     .footer-section.left, .footer-section.right { align-items: center; }
     .footer-brand { flex-direction: row; gap: 10px; }
     .footer-logo-circle { width: 40px; height: 40px; }
-    .footer-brand h3 { font-size: 1rem; }
-    .footer-section.center p { font-size: 0.8rem; margin: 0; }
-    .footer-section h4 { font-size: 0.9rem; margin-bottom: 8px; }
-    .social-icons .icon { font-size: 20px; margin: 0 8px; }
 }
 
 /* Small Mobile Phones (up to 480px) */
 @media (max-width: 480px) {
     .nav-container { padding: 0 15px; }
-    .hero-title { font-size: 1.6rem; }
-    .section-title { font-size: 1.6rem; }
+    .hero-title { font-size: 1.5rem; }
+    
+    /* Extreme Shrinking for Fixed 4-Column Grid */
+    .info-container { padding: 1.5rem 0.75rem; margin: 2rem auto; }
+    .info-grid { gap: 0.5rem; }
+    .label { font-size: 0.65rem; letter-spacing: 0.5px; min-height: 2.5em; display: flex; align-items: center; justify-content: center; }
+    .value { font-size: 0.55rem; line-height: 1.2; }
+
+    /* Fixed 2-Column MV Grid */
+    .MV-grid { gap: 0.75rem; padding: 0 0.5rem; }
+    .mv-card { padding: 1rem 0.75rem; }
+    .mv-card h3 { font-size: 0.75rem; letter-spacing: 1px; }
+    .mv-card p { font-size: 0.65rem; }
+
+    .features-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .feature-card { padding: 1.25rem 1rem; }
+    .feature-card h3 { font-size: 0.85rem; }
+    .feature-card p { font-size: 0.7rem; }
+
+    .section-title { font-size: 1.4rem; }
     .footer-brand h3 { font-size: 0.9rem; }
-    .info-container { padding: 1.5rem 1rem; }
 }

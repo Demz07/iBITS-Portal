@@ -668,9 +668,18 @@
         }
 
         @@media (max-width: 420px) {
-            .left-brand { display: none; }
-            .split-layout { display: block; min-height: 100vh; }
-            .right-controls { padding: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: flex-start; padding-top: 70px; }
+            .left-brand { 
+                display: flex !important; 
+                padding: 5rem 1rem 0.5rem 1rem;
+                flex: none;
+            }
+            .split-layout { display: flex; flex-direction: column; min-height: 100vh; }
+            .right-controls { padding: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: flex-start; padding-top: 20px; }
+            
+            .logo-img { width: 80px; height: 80px; }
+            .brand-text h1 { font-size: 1.5rem; }
+            .brand-text .gold-accent { font-size: 0.7rem; letter-spacing: 1px; }
+
             .glass-panel { padding: 20px 14px; border-radius: 16px; margin: 0 0 15px 0; }
             .panel-header h3 { font-size: 1.2rem; }
             .panel-header p { font-size: 0.65rem; }
