@@ -50,6 +50,7 @@ namespace iBITS_Portal
                 options.AccessDeniedPath = "/Identity/Account/AccessDenied";
             });
 
+            builder.Services.AddMemoryCache();
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();

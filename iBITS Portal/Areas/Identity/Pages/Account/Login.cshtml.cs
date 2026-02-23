@@ -3,6 +3,8 @@
 // ============================================================
 // UPDATED: Added pending role change check after successful login.
 // If student has a pending role change, redirect to confirmation page.
+// UPDATED: Added login lockout after 5 failed attempts (15 min lock).
+// Uses IMemoryCache - no DB migration needed.
 // ============================================================
 
 #nullable disable
@@ -20,6 +22,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using iBITS_Portal.Models;
 
 namespace iBITS_Portal.Areas.Identity.Pages.Account
@@ -30,22 +33,28 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
         private readonly PortaliBitsContext _context;
+        private readonly IMemoryCache _cache;
+
+        // =========================================================
+        // LOCKOUT CONFIGURATION
+        // =========================================================
+        private const int MaxFailedAttempts = 5;
+        private const int LockoutMinutes = 3;
 
         public LoginModel(
             SignInManager<IdentityUser> signInManager,
             ILogger<LoginModel> logger,
             UserManager<IdentityUser> userManager,
-            PortaliBitsContext context)
+            PortaliBitsContext context,
+            IMemoryCache cache)
         {
             _signInManager = signInManager;
             _logger = logger;
             _userManager = userManager;
             _context = context;
+            _cache = cache;
         }
 
-        // =========================================================
-        // FIXED: Added this back so your View doesn't crash
-        // =========================================================
         [BindProperty(SupportsGet = true)]
         public string UserType { get; set; }
 
@@ -58,6 +67,13 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
 
         [TempData]
         public string ErrorMessage { get; set; }
+
+        // =========================================================
+        // LOCKOUT PROPERTIES (passed to View)
+        // =========================================================
+        public bool IsLockedOut { get; set; } = false;
+        public int LockoutSecondsRemaining { get; set; } = 0;
+        public int FailedAttempts { get; set; } = 0;
 
         public class InputModel
         {
@@ -73,6 +89,71 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
+        // =========================================================
+        // HELPER: Get cache keys for a username
+        // =========================================================
+        private string AttemptsKey(string username) => $"login_attempts_{username.ToLower().Trim()}";
+        private string LockoutKey(string username) => $"lockout_until_{username.ToLower().Trim()}";
+
+        // =========================================================
+        // HELPER: Check if username is currently locked out
+        // =========================================================
+        private (bool isLocked, int secondsRemaining) CheckLockout(string username)
+        {
+            if (_cache.TryGetValue(LockoutKey(username), out DateTime lockoutUntil))
+            {
+                var remaining = (int)(lockoutUntil - DateTime.UtcNow).TotalSeconds;
+                if (remaining > 0)
+                    return (true, remaining);
+
+                // Lockout expired - clean up
+                _cache.Remove(LockoutKey(username));
+                _cache.Remove(AttemptsKey(username));
+            }
+            return (false, 0);
+        }
+
+        // =========================================================
+        // HELPER: Get current failed attempt count
+        // =========================================================
+        private int GetFailedAttempts(string username)
+        {
+            return _cache.TryGetValue(AttemptsKey(username), out int attempts) ? attempts : 0;
+        }
+
+        // =========================================================
+        // HELPER: Increment failed attempt count, lock if needed
+        // Returns (newCount, isNowLocked)
+        // =========================================================
+        private (int newCount, bool isNowLocked) IncrementFailedAttempts(string username)
+        {
+            var key = AttemptsKey(username);
+            var current = GetFailedAttempts(username);
+            var newCount = current + 1;
+
+            // Store attempts for 20 minutes
+            _cache.Set(key, newCount, TimeSpan.FromMinutes(20));
+
+            if (newCount >= MaxFailedAttempts)
+            {
+                // Set lockout
+                var lockoutUntil = DateTime.UtcNow.AddMinutes(LockoutMinutes);
+                _cache.Set(LockoutKey(username), lockoutUntil, TimeSpan.FromMinutes(LockoutMinutes + 1));
+                return (newCount, true);
+            }
+
+            return (newCount, false);
+        }
+
+        // =========================================================
+        // HELPER: Reset failed attempts on successful login
+        // =========================================================
+        private void ResetFailedAttempts(string username)
+        {
+            _cache.Remove(AttemptsKey(username));
+            _cache.Remove(LockoutKey(username));
+        }
+
         public async Task OnGetAsync(string returnUrl = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
@@ -81,18 +162,14 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
             }
 
             returnUrl ??= Url.Content("~/");
-
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
             ReturnUrl = returnUrl;
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
-
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (ModelState.IsValid)
@@ -103,47 +180,50 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 {
                     var userObj = await _userManager.FindByEmailAsync(Input.Email);
                     if (userObj != null)
-                    {
                         userName = userObj.UserName;
-                    }
                 }
 
-                // 2. Attempt Login
+                // 2. Check if currently locked out
+                var (isLocked, secondsRemaining) = CheckLockout(userName);
+                if (isLocked)
+                {
+                    IsLockedOut = true;
+                    LockoutSecondsRemaining = secondsRemaining;
+                    FailedAttempts = MaxFailedAttempts;
+                    return Page();
+                }
+
+                // 3. Attempt Login
                 var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
 
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
 
-                    // 3. Role-based Access Control
+                    // Reset failed attempts on success
+                    ResetFailedAttempts(userName);
+
+                    // 4. Role-based Access Control
                     var currentUser = await _userManager.FindByNameAsync(userName);
                     bool isAdmin = currentUser != null && await _userManager.IsInRoleAsync(currentUser, "Admin");
-                    
-                    // Check if user type matches the login route
+
                     if (UserType == "Admin" && !isAdmin)
                     {
-                        // Non-admin trying to access Admin Console
                         await _signInManager.SignOutAsync();
                         ModelState.AddModelError(string.Empty, "Access Denied: This login is for Administrators only.");
                         return Page();
                     }
                     else if (UserType == "Member" && isAdmin)
                     {
-                        // Admin trying to access Member portal
                         await _signInManager.SignOutAsync();
                         ModelState.AddModelError(string.Empty, "Access Denied: Administrators must use the Admin Console login.");
                         return Page();
                     }
-                    
-                    // Redirect to appropriate dashboard
-                    if (isAdmin)
-                    {
-                        return RedirectToAction("Index", "Admin");
-                    }
 
-                    // =========================================================
-                    // NEW: Check for pending role change
-                    // =========================================================
+                    if (isAdmin)
+                        return RedirectToAction("Index", "Admin");
+
+                    // Check for pending role change
                     var pendingRoleChange = await _context.PendingRoleChanges
                         .Where(p => p.StudentNumber == userName && !p.IsConfirmed && !p.IsDeclined)
                         .OrderByDescending(p => p.AssignedDate)
@@ -151,13 +231,9 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
 
                     if (pendingRoleChange != null)
                     {
-                        // Redirect to role confirmation page
                         _logger.LogInformation($"User {userName} has a pending role change. Redirecting to confirmation page.");
                         return RedirectToPage("./ConfirmRoleChange", new { changeId = pendingRoleChange.Id });
                     }
-                    // =========================================================
-                    // END: Pending role change check
-                    // =========================================================
 
                     return LocalRedirect(returnUrl);
                 }
@@ -166,16 +242,37 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
                 }
+
                 if (result.IsLockedOut)
                 {
                     _logger.LogWarning("User account locked out.");
                     return RedirectToPage("./Lockout");
                 }
+
+                // 5. Failed login - increment counter
+                var (newCount, isNowLocked) = IncrementFailedAttempts(userName);
+                FailedAttempts = newCount;
+
+                if (isNowLocked)
+                {
+                    IsLockedOut = true;
+                    LockoutSecondsRemaining = LockoutMinutes * 60;
+                    _logger.LogWarning($"User {userName} locked out after {MaxFailedAttempts} failed attempts.");
+                    return Page();
+                }
+
+                var attemptsLeft = MaxFailedAttempts - newCount;
+                if (attemptsLeft <= 2)
+                {
+                    ModelState.AddModelError(string.Empty,
+                        $"Invalid credentials. {attemptsLeft} attempt{(attemptsLeft == 1 ? "" : "s")} remaining before lockout.");
+                }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return Page();
                 }
+
+                return Page();
             }
 
             return Page();

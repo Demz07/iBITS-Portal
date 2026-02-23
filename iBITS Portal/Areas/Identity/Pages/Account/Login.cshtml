@@ -4,9 +4,11 @@
     ViewData["Title"] = "Secure Login";
     Layout = null;
 
-    // FIXED: Null checks to silence warnings
     string userType = Model?.UserType ?? "Member";
     string loginType = (userType == "Admin") ? "ADMINISTRATOR" : "MEMBER";
+    bool isLockedOut = Model?.IsLockedOut ?? false;
+    int lockoutSeconds = Model?.LockoutSecondsRemaining ?? 0;
+    int failedAttempts = Model?.FailedAttempts ?? 0;
 }
 
 <!DOCTYPE html>
@@ -41,22 +43,17 @@
             overflow: hidden;
         }
 
-        /* --- 1. FULL SCREEN MATRIX BACKGROUND --- */
         #matrixCanvas {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 0;
             opacity: 0.3;
         }
 
-        /* --- 2. TOP HEADER (PUP LOGO) --- */
         .top-header {
             position: absolute;
-            top: 30px;
-            left: 40px;
+            top: 30px; left: 40px;
             display: flex;
             align-items: center;
             z-index: 100;
@@ -64,8 +61,7 @@
         }
 
         .header-logo {
-            width: 60px;
-            height: 60px;
+            width: 60px; height: 60px;
             object-fit: contain;
             margin-right: 15px;
             filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
@@ -95,7 +91,6 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
-        /* --- 3. SPLIT LAYOUT --- */
         .split-layout {
             position: relative;
             z-index: 1;
@@ -104,7 +99,6 @@
             width: 100%;
         }
 
-        /* --- LEFT SIDE: BRANDING --- */
         .left-brand {
             flex: 1;
             display: flex;
@@ -123,56 +117,48 @@
         }
 
         .logo-img {
-            width: 500px;
-            height: 500px;
+            width: 500px; height: 500px;
             object-fit: contain;
             filter: drop-shadow(0 25px 50px rgba(0,0,0,0.6));
-            position: relative;
-            z-index: 2;
+            position: relative; z-index: 2;
         }
 
         .brand-text {
             text-align: center;
             animation: fadeUp 1.2s ease-out forwards;
             max-width: 800px;
-            position: relative;
-            z-index: 5;
+            position: relative; z-index: 5;
         }
 
-            .brand-text h1 {
-                font-size: 4.5rem;
-                font-weight: 800;
-                line-height: 1;
-                margin: 0 0 15px 0;
-                background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                text-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            }
+        .brand-text h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            line-height: 1;
+            margin: 0 0 15px 0;
+            background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-            .brand-text .gold-accent {
-                font-size: 1.1rem;
-                color: var(--gold-primary);
-                text-transform: uppercase;
-                letter-spacing: 3px;
-                font-weight: 600;
-                display: block;
-                text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-                opacity: 0.9;
-            }
+        .brand-text .gold-accent {
+            font-size: 1.1rem;
+            color: var(--gold-primary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 600;
+            display: block;
+            opacity: 0.9;
+        }
 
-        /* --- RIGHT SIDE: LOGIN FORM --- */
         .right-controls {
             flex: 1;
             display: flex;
             justify-content: flex-start;
             padding-left: 0;
             align-items: center;
-            position: relative;
-            z-index: 2;
+            position: relative; z-index: 2;
         }
 
-        /* --- GLASS PANEL --- */
         .glass-panel {
             width: 100%;
             max-width: 650px;
@@ -191,34 +177,28 @@
 
         .panel-header {
             margin-bottom: 3rem;
-            position: relative;
             border-left: 5px solid var(--gold-primary);
             padding-left: 30px;
         }
 
-            .panel-header h3 {
-                font-weight: 800;
-                font-size: 2.2rem;
-                color: #fff;
-                margin: 0;
-                line-height: 1;
-                text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-            }
-
-            .panel-header p {
-                color: var(--gold-primary);
-                font-size: 0.85rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 3px;
-                margin-top: 10px;
-                opacity: 0.8;
-            }
-
-        /* --- FORM STYLES --- */
-        .form-floating {
-            margin-bottom: 25px;
+        .panel-header h3 {
+            font-weight: 800;
+            font-size: 2.2rem;
+            color: #fff;
+            margin: 0; line-height: 1;
         }
+
+        .panel-header p {
+            color: var(--gold-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .form-floating { margin-bottom: 25px; }
 
         .form-control {
             background: rgba(255, 255, 255, 0.05) !important;
@@ -231,19 +211,15 @@
             font-size: 1.1rem;
         }
 
-            .form-control:focus {
-                background: rgba(255, 255, 255, 0.1) !important;
-                border-color: var(--gold-primary);
-                box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-                color: var(--gold-primary) !important;
-            }
-
-        .form-floating label {
-            color: #888;
-            padding-top: 20px;
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            color: var(--gold-primary) !important;
         }
 
-        /* Autofill Fix */
+        .form-floating label { color: #888; padding-top: 20px; }
+
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -254,8 +230,7 @@
 
         .password-toggle {
             position: absolute;
-            right: 20px;
-            top: 20px;
+            right: 20px; top: 20px;
             color: #666;
             cursor: pointer;
             transition: 0.3s;
@@ -263,9 +238,7 @@
             font-size: 1.4rem;
         }
 
-            .password-toggle:hover {
-                color: var(--gold-primary);
-            }
+        .password-toggle:hover { color: var(--gold-primary); }
 
         /* --- BUTTON --- */
         .btn-gold {
@@ -282,13 +255,31 @@
             transition: all 0.3s ease;
             margin-top: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
         }
 
-            .btn-gold:hover {
-                background: #fff;
-                transform: translateY(-3px);
-                box-shadow: 0 0 25px var(--gold-glow);
-            }
+        .btn-gold:hover:not(:disabled) {
+            background: #fff;
+            transform: translateY(-3px);
+            box-shadow: 0 0 25px var(--gold-glow);
+        }
+
+        .btn-gold:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-gold .btn-spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 3px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
 
         .back-link {
             color: var(--text-muted);
@@ -300,9 +291,7 @@
             letter-spacing: 1px;
         }
 
-            .back-link:hover {
-                color: var(--gold-primary);
-            }
+        .back-link:hover { color: var(--gold-primary); }
 
         .form-check-input:checked {
             background-color: var(--gold-primary);
@@ -315,99 +304,204 @@
             font-family: monospace !important;
         }
 
-        /* --- ANIMATIONS --- */
-        @@keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
+        /* =========================================================
+           WARNING BANNERS
+        ========================================================= */
+        .attempt-warning {
+            border-radius: 12px;
+            padding: 12px 18px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .attempt-warning.warn-yellow {
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--gold-light);
+        }
+
+        .attempt-warning.warn-orange {
+            background: rgba(255, 120, 50, 0.15);
+            border: 1px solid rgba(255, 120, 50, 0.5);
+            color: #ffaa66;
+        }
+
+        /* =========================================================
+           LOCKOUT SCREEN
+        ========================================================= */
+        .lockout-screen {
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        .lockout-icon-wrap {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
+
+        .lockout-icon {
+            font-size: 5rem;
+            color: #e74c3c;
+            filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.6));
+            animation: lockPulse 2s ease-in-out infinite;
+        }
+
+        .lockout-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #e74c3c;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .lockout-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .countdown-box {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .countdown-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #e74c3c;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .countdown-timer {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #e74c3c;
+            font-family: monospace;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+            line-height: 1;
+        }
+
+        .countdown-unlocked {
+            color: #2ecc71 !important;
+            text-shadow: 0 0 20px rgba(46, 204, 113, 0.5) !important;
+        }
+
+        .btn-unlock {
+            background: #2ecc71;
+            color: #000;
+            font-weight: 800;
+            font-size: 1rem;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            display: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-unlock:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        /* =========================================================
+           ATTEMPTS PROGRESS DOTS
+        ========================================================= */
+        .attempts-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .attempt-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s;
+        }
+
+        .attempt-dot.used {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            box-shadow: 0 0 6px rgba(231,76,60,0.6);
+        }
+
+        /* =========================================================
+           ANIMATIONS
+        ========================================================= */
+        @@keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         @@keyframes cardEntrance {
-            from {
-                opacity: 0;
-                transform: translateY(40px) scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            from { opacity: 0; transform: translateY(40px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        @@keyframes pulseGlow {
-            0% {
-                opacity: 0.1;
-            }
+        @@keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-            100% {
-                opacity: 0.25;
-            }
+        @@keyframes lockPulse {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(231,76,60,0.4)); transform: scale(1); }
+            50%       { filter: drop-shadow(0 0 30px rgba(231,76,60,0.9)); transform: scale(1.05); }
+        }
+
+        @@keyframes lockShake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-6px); }
+            40%       { transform: translateX(6px); }
+            60%       { transform: translateX(-4px); }
+            80%       { transform: translateX(4px); }
         }
 
         /* --- RESPONSIVE --- */
         @@media (max-width: 900px) {
-            .split-layout {
-                flex-direction: column;
-            }
+            .split-layout { flex-direction: column; }
+            .left-brand { padding: 4rem 1rem 1rem 1rem; flex: 0.8; }
+            .right-controls { padding: 1rem; flex: 1.2; justify-content: center; }
+            .glass-panel { max-width: 100%; margin: 0; padding: 40px; }
+            .logo-img { width: 200px; height: 200px; }
+            .brand-text h1 { font-size: 3rem; }
+            .top-header { top: 20px; left: 20px; }
+            .header-logo { width: 45px; height: 45px; }
+            .header-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
 
-            .left-brand {
-                padding: 4rem 1rem 1rem 1rem;
-                flex: 0.8;
-            }
-
-            .right-controls {
-                padding: 1rem;
-                flex: 1.2;
-                justify-content: center;
-            }
-
-            .glass-panel {
-                max-width: 100%;
-                margin: 0;
-                padding: 40px;
-            }
-
-            .logo-img {
-                width: 200px;
-                height: 200px;
-            }
-
-            .brand-text h1 {
-                font-size: 3rem;
-            }
-
-            .top-header {
-                top: 20px;
-                left: 20px;
-            }
-
-            .header-logo {
-                width: 45px;
-                height: 45px;
-            }
-
-            .uni-name {
-                font-size: 0.8rem;
-            }
-
-            .campus-name {
-                font-size: 0.7rem;
-            }
+        .uni-name { font-size: 0.8rem; }
+            .campus-name { font-size: 0.7rem; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 1. Full Screen Matrix Background -->
     <canvas id="matrixCanvas"></canvas>
 
-    <!-- 2. Top Header -->
     <div class="top-header">
         <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
         <div class="header-info">
@@ -416,7 +510,6 @@
         </div>
     </div>
 
-    <!-- 3. Split Layout -->
     <div class="split-layout">
 
         <!-- LEFT SIDE: BRANDING -->
@@ -435,73 +528,130 @@
             <div class="glass-panel">
                 <div class="panel-header">
                     <h3>@loginType</h3>
-                    <p>Enter your credentials to proceed</p>
+                    <p>@(isLockedOut ? "Account Temporarily Locked" : "Enter your credentials to proceed")</p>
                 </div>
 
-                <form id="account" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                @if (isLockedOut)
+                {
+                    <!-- ===================== LOCKOUT SCREEN ===================== -->
+                    <div class="lockout-screen">
+                        <div class="lockout-icon-wrap">
+                            <i class="bi bi-shield-lock-fill lockout-icon" id="lockIcon"></i>
+                        </div>
 
-                    <div class="form-floating">
-                        <input asp-for="Input.Email" type="text" class="form-control" autocomplete="off" placeholder="ID" />
-                        <label asp-for="Input.Email">@(userType == "Admin" ? "Admin Username" : "Student ID / Username")</label>
-                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        <div class="lockout-title">ACCESS LOCKED</div>
+                        <div class="lockout-subtitle">
+                            Too many failed login attempts.<br>
+                            Your account has been temporarily locked for security.
+                        </div>
+
+                        <div class="countdown-box">
+                            <div class="countdown-label">Try again in</div>
+                            <div class="countdown-timer" id="countdownTimer">--:--</div>
+                        </div>
+
+                        <button class="btn-unlock" id="btnUnlock" onclick="window.location.reload()">
+                            <i class="bi bi-unlock-fill me-2"></i> Try Again
+                        </button>
+
+                        <div class="text-center">
+                            <a href="@Url.Action("Gateway", "Home")" class="back-link">
+                                <i class="bi bi-arrow-left me-1"></i> Return to Gateway
+                            </a>
+                        </div>
                     </div>
+                }
+                else
+                {
+                    <!-- ===================== LOGIN FORM ===================== -->
 
-                    <div class="form-floating position-relative">
-                        <input asp-for="Input.Password" type="password" class="form-control" id="passwordField" placeholder="Password" />
-                        <label asp-for="Input.Password">@(userType == "Admin" ? "Admin Password" : "Password")</label>
-                        <i class="bi bi-eye password-toggle" id="toggleBtn" onclick="matrixReveal()"></i>
-                        <span asp-validation-for="Input.Password" class="text-danger"></span>
-                    </div>
+                    @* Attempt warning banners *@
+                    @if (failedAttempts == 3)
+                    {
+                        <div class="attempt-warning warn-yellow">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>⚠️ Warning: <strong>2 attempts remaining</strong> before lockout.</span>
+                        </div>
+                    }
+                    else if (failedAttempts == 4)
+                    {
+                        <div class="attempt-warning warn-orange">
+                            <i class="bi bi-exclamation-octagon-fill"></i>
+                            <span>🚨 Final Warning: <strong>1 attempt remaining!</strong> Next failure locks your account.</span>
+                        </div>
+                    }
 
-                    <div class="mb-4">
-                        <label class="form-check-label text-secondary" style="font-size: 0.9rem;">
-                            <input class="form-check-input bg-dark border-secondary" asp-for="Input.RememberMe" />
-                            Keep Session Active
-                        </label>
-                    </div>
+                    @* Attempt progress dots (show after first failure) *@
+                    @if (failedAttempts > 0)
+                    {
+                        <div class="attempts-dots mb-3">
+                            @for (int i = 0; i < 5; i++)
+                            {
+                                <div class="attempt-dot @(i < failedAttempts ? "used" : "")"></div>
+                            }
+                        </div>
+                    }
 
-                    <button type="submit" class="btn-gold">Initialize Session</button>
+                    <form id="loginForm" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-                    <div class="text-center">
-                        <a href="@Url.Action("Gateway", "Home")" class="back-link">
-                            <i class="bi bi-arrow-left me-1"></i> Return to Gateway
-                        </a>
-                    </div>
-                </form>
+                        <div class="form-floating">
+                            <input asp-for="Input.Email" type="text" class="form-control" id="emailField"
+                                   autocomplete="off" placeholder="ID" />
+                            <label asp-for="Input.Email">@(userType == "Admin" ? "Admin Username" : "Student ID / Username")</label>
+                            <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-floating position-relative">
+                            <input asp-for="Input.Password" type="password" class="form-control"
+                                   id="passwordField" placeholder="Password" />
+                            <label asp-for="Input.Password">@(userType == "Admin" ? "Admin Password" : "Password")</label>
+                            <i class="bi bi-eye password-toggle" id="toggleBtn" onclick="matrixReveal()"></i>
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-check-label text-secondary" style="font-size: 0.9rem;">
+                                <input class="form-check-input bg-dark border-secondary" asp-for="Input.RememberMe" />
+                                Keep Session Active
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn-gold" id="submitBtn">
+                            Initialize Session
+                        </button>
+
+                        <div class="text-center">
+                            <a href="@Url.Action("Gateway", "Home")" class="back-link">
+                                <i class="bi bi-arrow-left me-1"></i> Return to Gateway
+                            </a>
+                        </div>
+                    </form>
+                }
+
             </div>
         </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
 
-    <!-- Matrix Rain Script -->
+    <!-- Matrix Rain -->
     <script>
         const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
-
-        const fontSize = 26; // Bigger Matrix Text
+        const fontSize = 26;
         const columns = canvas.width / fontSize;
         const drops = [];
-
         for (let x = 0; x < columns; x++) { drops[x] = 1; }
-
         const characters = "01";
-
         function draw() {
             ctx.fillStyle = 'rgba(3, 10, 22, 0.05)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#D4AF37';
             ctx.font = fontSize + 'px monospace';
-
             for (let i = 0; i < drops.length; i++) {
                 const text = characters.charAt(Math.floor(Math.random() * characters.length));
                 ctx.fillText(text, i * fontSize, drops[i] * fontSize);
@@ -512,44 +662,122 @@
         setInterval(draw, 33);
     </script>
 
-    <!-- Password Reveal Script -->
-    <script>
-        function matrixReveal() {
-            const input = document.getElementById("passwordField");
-            const btn = document.getElementById("toggleBtn");
-            const originalValue = input.value;
+    @if (isLockedOut)
+    {
+        <!-- Countdown Timer Script -->
+        <script>
+            let secondsLeft = @lockoutSeconds;
+            const timerEl = document.getElementById('countdownTimer');
+            const unlockBtn = document.getElementById('btnUnlock');
+            const lockIcon = document.getElementById('lockIcon');
 
-            if (!originalValue) return;
+            function updateTimer() {
+                if (secondsLeft <= 0) {
+                    timerEl.textContent = '00:00';
+                    timerEl.classList.add('countdown-unlocked');
+                    unlockBtn.style.display = 'block';
+                    lockIcon.style.animationName = 'none';
+                    lockIcon.style.color = '#2ecc71';
+                    lockIcon.style.filter = 'drop-shadow(0 0 20px rgba(46,204,113,0.6))';
+                    lockIcon.classList.remove('bi-shield-lock-fill');
+                    lockIcon.classList.add('bi-shield-check-fill');
+                    clearInterval(timerInterval);
+                    return;
+                }
+                const mins = Math.floor(secondsLeft / 60);
+                const secs = secondsLeft % 60;
+                timerEl.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+                secondsLeft--;
+            }
 
-            if (input.type === "password") {
-                input.type = "text";
-                btn.classList.remove("bi-eye");
-                btn.classList.add("bi-eye-slash");
-
-                let iterations = 0;
-                const scrambleChars = "0101010101XYZABC#$&";
-                input.classList.add("scrambling");
-
-                const interval = setInterval(() => {
-                    input.value = input.value.split("")
-                        .map((letter, index) => {
+            updateTimer();
+            const timerInterval = setInterval(updateTimer, 1000);
+        </script>
+    }
+    else
+    {
+        <!-- Password Reveal Script -->
+        <script>
+            function matrixReveal() {
+                const input = document.getElementById("passwordField");
+                const btn = document.getElementById("toggleBtn");
+                const originalValue = input.value;
+                if (!originalValue) return;
+                if (input.type === "password") {
+                    input.type = "text";
+                    btn.classList.remove("bi-eye");
+                    btn.classList.add("bi-eye-slash");
+                    let iterations = 0;
+                    const scrambleChars = "0101010101XYZABC#$&";
+                    input.classList.add("scrambling");
+                    const interval = setInterval(() => {
+                        input.value = input.value.split("").map((letter, index) => {
                             if (index < iterations) return originalValue[index];
                             return scrambleChars[Math.floor(Math.random() * 18)];
                         }).join("");
-
-                    if (iterations >= originalValue.length) {
-                        clearInterval(interval);
-                        input.value = originalValue;
-                        input.classList.remove("scrambling");
-                    }
-                    iterations += 1 / 2;
-                }, 30);
-            } else {
-                input.type = "password";
-                btn.classList.remove("bi-eye-slash");
-                btn.classList.add("bi-eye");
+                        if (iterations >= originalValue.length) {
+                            clearInterval(interval);
+                            input.value = originalValue;
+                            input.classList.remove("scrambling");
+                        }
+                        iterations += 1 / 2;
+                    }, 30);
+                } else {
+                    input.type = "password";
+                    btn.classList.remove("bi-eye-slash");
+                    btn.classList.add("bi-eye");
+                }
             }
-        }
-    </script>
+        </script>
+
+        <!-- =====================================================
+             ENTER KEY LISTENER + LOADING ANIMATION
+        ===================================================== -->
+        <script>
+            const loginForm = document.getElementById('loginForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const emailField = document.getElementById('emailField');
+            const passwordField = document.getElementById('passwordField');
+
+            // --- Enter Key Listener ---
+            // Both fields trigger form submit on Enter
+            [emailField, passwordField].forEach(function (field) {
+                field.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        triggerLogin();
+                    }
+                });
+            });
+
+            // --- Loading Animation on Submit ---
+            loginForm.addEventListener('submit', function (e) {
+                // Only show loading if form is valid (both fields filled)
+                const email = emailField.value.trim();
+                const password = passwordField.value;
+                if (email && password) {
+                    showLoading();
+                }
+            });
+
+            function triggerLogin() {
+                const email = emailField.value.trim();
+                const password = passwordField.value;
+                if (!email || !password) {
+                    // Focus on empty field
+                    if (!email) { emailField.focus(); return; }
+                    if (!password) { passwordField.focus(); return; }
+                }
+                showLoading();
+                loginForm.submit();
+            }
+
+            function showLoading() {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="btn-spinner"></span> Authenticating...';
+            }
+        </script>
+    }
+
 </body>
 </html>
