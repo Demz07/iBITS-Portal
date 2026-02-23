@@ -51,3 +51,31 @@ function draw() {
 
 // Run animation
 setInterval(draw, 33);
+
+// Mobile Menu Functionality
+const hamburger = document.getElementById('landingHamburger');
+const mobileMenu = document.getElementById('landingMobileMenu');
+const menuClose = document.getElementById('mobileMenuClose');
+const menuBackdrop = document.getElementById('menuBackdrop');
+
+function openMobileMenu() {
+    hamburger.classList.add('active');
+    mobileMenu.classList.add('active');
+    menuBackdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    hamburger.classList.remove('active');
+    mobileMenu.classList.remove('active');
+    menuBackdrop.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+if (hamburger) hamburger.addEventListener('click', openMobileMenu);
+if (menuClose) menuClose.addEventListener('click', closeMobileMenu);
+if (menuBackdrop) menuBackdrop.addEventListener('click', closeMobileMenu);
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMobileMenu();
+});

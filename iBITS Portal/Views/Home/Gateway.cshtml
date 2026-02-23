@@ -29,14 +29,42 @@
     <div class="ambient-bg"></div>
     <canvas id="matrixCanvas"></canvas>
 
-    <!-- TOP LEFT HEADER -->
-    <div class="top-header">
-        <!-- Ensure this path is correct in your project -->
-        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
-        <div class="header-info">
-            <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
-            <span class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</span>
+    <!-- Floating Navigation -->
+    <nav class="floating-nav visible" id="floatingNav">
+        <div class="nav-container">
+            <div class="hero-header">
+                <img src="~/images/pup-logo.png" alt="PUP Logo" class="pup-logo">
+                <div class="header-text">
+                    <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name">LOPEZ, QUEZON CAMPUS</span>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/Home/LandingPageAbout">Organization</a></li>
+                <li><a href="/Home/LandingPagePeople">System</a></li>
+                <li><a href="/Home/LandingDevelopers">Developers</a></li>
+                <a href="/" class="btn-return-home">
+                    <i class="bi bi-house-door-fill"></i>
+                    <span>Return to Home</span>
+                </a>
+            </ul>
+            <!-- Mobile Hamburger -->
+            <button class="landing-hamburger" id="landingHamburger" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
         </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay (Sidebar) -->
+    <div class="menu-backdrop" id="menuBackdrop"></div>
+    <div class="landing-mobile-menu" id="landingMobileMenu">
+        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
+        <a href="/" onclick="closeMobileMenu()">Home</a>
+        <a href="/Home/LandingPageAbout" onclick="closeMobileMenu()">Organization</a>
+        <a href="/Home/LandingPagePeople" onclick="closeMobileMenu()">System</a>
+        <a href="/Home/LandingDevelopers" onclick="closeMobileMenu()">Developers</a>
+        <a href="/" class="mobile-enter-btn" onclick="closeMobileMenu()">Return to Home</a>
     </div>
 
     <div class="split-layout">

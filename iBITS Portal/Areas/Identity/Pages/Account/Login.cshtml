@@ -52,44 +52,184 @@
             opacity: 0.3;
         }
 
-        .top-header {
-            position: absolute;
-            top: 30px; left: 40px;
+        /* --- FLOATING NAVIGATION --- */
+        .floating-nav {
+            display: flex;
+            background: rgba(3, 10, 22, 0.95);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            height: auto;
+            min-height: 70px;
+        }
+
+        .nav-container {
+            width: 100%;
             display: flex;
             align-items: center;
-            z-index: 100;
-            pointer-events: none;
+            padding: 0 50px;
+            box-sizing: border-box;
+            gap: 16px;
         }
 
-        .header-logo {
-            width: 60px; height: 60px;
+        .hero-header-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .pup-logo-nav {
+            width: 60px;
+            height: 60px;
             object-fit: contain;
-            margin-right: 15px;
-            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
         }
 
-        .header-info {
+        .header-text-nav {
             display: flex;
             flex-direction: column;
-            justify-content: center;
         }
 
-        .uni-name {
+        .uni-name-nav {
             font-weight: 700;
             font-size: 1.1rem;
             color: #fff;
             letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            line-height: 1.2;
         }
 
-        .campus-name {
+        .campus-name-nav {
             font-weight: 400;
             font-size: 0.9rem;
             color: var(--gold-primary);
             letter-spacing: 2px;
-            margin-top: 2px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2.5rem;
+            margin: 0;
+            align-items: center;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover { color: var(--gold-primary); }
+
+        .btn-return-home {
+            padding: 8px 20px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--gold-primary);
+            border-radius: 20px;
+            color: var(--gold-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+
+        .btn-return-home:hover {
+            background: var(--gold-primary);
+            color: #000;
+            box-shadow: 0 0 20px var(--gold-glow);
+        }
+
+        /* ===== HAMBURGER BUTTON ===== */
+        .landing-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid #D4AF37;
+            border-radius: 8px;
+            z-index: 1100;
+        }
+
+        .landing-hamburger span {
+            display: block; width: 22px; height: 2px; background: #D4AF37; border-radius: 2px;
+        }
+
+        /* ===== MOBILE MENU SIDEBAR ===== */
+        .landing-mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 280px;
+            height: 100vh;
+            background: rgba(3, 10, 22, 0.98);
+            z-index: 1090;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 80px 20px 60px;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            backdrop-filter: blur(20px);
+        }
+
+        .landing-mobile-menu.active { right: 0; }
+
+        .menu-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1085;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+
+        .menu-backdrop.active { opacity: 1; visibility: visible; }
+
+        .landing-mobile-menu a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 15px 10px;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mobile-menu-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        .mobile-enter-btn {
+            margin-top: 30px;
+            padding: 12px 30px !important;
+            border: 1px solid #D4AF37 !important;
+            border-radius: 50px !important;
+            color: #D4AF37 !important;
+            align-self: center;
+            text-decoration: none;
         }
 
         .split-layout {
@@ -479,9 +619,13 @@
         }
 
         /* --- RESPONSIVE --- */
-        /* --- RESPONSIVE --- */
+        @@media (max-width: 1024px) {
+            .nav-links { display: none !important; }
+            .landing-hamburger { display: flex !important; }
+        }
+
         @@media (max-width: 900px) {
-            .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
+            .split-layout { flex-direction: column; min-height: 100vh; height: auto; padding-top: 70px; }
             .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
             .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
             .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 35px 25px; }
@@ -489,10 +633,11 @@
             .logo-wrapper { margin-bottom: -15px; }
             .brand-text h1 { font-size: 1.9rem; }
             .brand-text .gold-accent { font-size: 0.9rem; letter-spacing: 2px; }
-            .top-header { top: 15px; left: 15px; }
-            .header-logo { width: 38px; height: 38px; }
-            .uni-name { font-size: 0.75rem; }
-            .campus-name { font-size: 0.65rem; }
+            
+            .nav-container { padding: 0 15px; gap: 10px; }
+            .pup-logo-nav { width: 35px; height: 35px; }
+            .uni-name-nav { font-size: 0.75rem; letter-spacing: 0.5px; }
+            .campus-name-nav { font-size: 0.65rem; letter-spacing: 1px; }
         }
 
         @@media (max-width: 600px) {
@@ -512,10 +657,6 @@
             .form-floating label { font-size: 0.85rem; padding-top: 14px; }
             .btn-gold { padding: 13px; font-size: 0.9rem; border-radius: 10px; margin-top: 8px; letter-spacing: 1px; }
             .back-link { margin-top: 18px; font-size: 0.8rem; }
-            .top-header { top: 10px; left: 10px; }
-            .header-logo { width: 30px; height: 30px; margin-right: 8px; }
-            .uni-name { font-size: 0.62rem; letter-spacing: 0.3px; }
-            .campus-name { font-size: 0.55rem; letter-spacing: 0.8px; }
             .countdown-timer { font-size: 2rem; }
             .lockout-icon { font-size: 3rem; }
             .lockout-title { font-size: 1.2rem; }
@@ -527,7 +668,6 @@
         }
 
         @@media (max-width: 420px) {
-            /* Hide left brand entirely on very small phones - show only login panel */
             .left-brand { display: none; }
             .split-layout { display: block; min-height: 100vh; }
             .right-controls { padding: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: flex-start; padding-top: 70px; }
@@ -536,10 +676,6 @@
             .panel-header p { font-size: 0.65rem; }
             .form-control { height: 46px; font-size: 0.85rem; }
             .btn-gold { padding: 11px; font-size: 0.85rem; }
-            .top-header { top: 10px; left: 10px; }
-            .header-logo { width: 28px; height: 28px; margin-right: 7px; }
-            .uni-name { font-size: 0.58rem; }
-            .campus-name { font-size: 0.52rem; }
         }
     </style>
 </head>
@@ -547,12 +683,42 @@
 
     <canvas id="matrixCanvas"></canvas>
 
-    <div class="top-header">
-        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
-        <div class="header-info">
-            <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
-            <span class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</span>
+    <!-- Floating Navigation -->
+    <nav class="floating-nav visible" id="floatingNav">
+        <div class="nav-container">
+            <div class="hero-header-nav">
+                <img src="/images/pup-logo.png" alt="PUP Logo" class="pup-logo-nav">
+                <div class="header-text-nav">
+                    <span class="uni-name-nav">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name-nav">LOPEZ, QUEZON CAMPUS</span>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/Home/LandingPageAbout">Organization</a></li>
+                <li><a href="/Home/LandingPagePeople">System</a></li>
+                <li><a href="/Home/LandingDevelopers">Developers</a></li>
+                <a href="/" class="btn-return-home">
+                    <i class="bi bi-house-door-fill"></i>
+                    <span>Return to Home</span>
+                </a>
+            </ul>
+            <!-- Mobile Hamburger -->
+            <button class="landing-hamburger" id="landingHamburger" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
         </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay (Sidebar) -->
+    <div class="menu-backdrop" id="menuBackdrop"></div>
+    <div class="landing-mobile-menu" id="landingMobileMenu">
+        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
+        <a href="/" onclick="closeMobileMenu()">Home</a>
+        <a href="/Home/LandingPageAbout" onclick="closeMobileMenu()">Organization</a>
+        <a href="/Home/LandingPagePeople" onclick="closeMobileMenu()">System</a>
+        <a href="/Home/LandingDevelopers" onclick="closeMobileMenu()">Developers</a>
+        <a href="/" class="mobile-enter-btn" onclick="closeMobileMenu()">Return to Home</a>
     </div>
 
     <div class="split-layout">
@@ -679,6 +845,35 @@
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <script>
+        const hamburger = document.getElementById('landingHamburger');
+        const mobileMenu = document.getElementById('landingMobileMenu');
+        const menuClose = document.getElementById('mobileMenuClose');
+        const menuBackdrop = document.getElementById('menuBackdrop');
+
+        function openMobileMenu() {
+            hamburger.classList.add('active');
+            mobileMenu.classList.add('active');
+            menuBackdrop.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            hamburger.classList.remove('active');
+            mobileMenu.classList.remove('active');
+            menuBackdrop.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (hamburger) hamburger.addEventListener('click', openMobileMenu);
+        if (menuClose) menuClose.addEventListener('click', closeMobileMenu);
+        if (menuBackdrop) menuBackdrop.addEventListener('click', closeMobileMenu);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeMobileMenu();
+        });
+    </script>
 
     <!-- Matrix Rain -->
     <script>
