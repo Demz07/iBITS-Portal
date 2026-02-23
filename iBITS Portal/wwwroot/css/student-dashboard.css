@@ -330,122 +330,113 @@
 
 /* ---- Phone (max 768px) ---- */
 @media (max-width: 768px) {
-    .student-dashboard {
-        padding: 12px;
-    }
-
-    .welcome-text h1 {
-        font-size: 1.2rem;
-    }
-
-    .welcome-text p {
-        font-size: 0.85rem;
-    }
-
-    .stats-row .col-lg-3 {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-
-    .stat-card {
-        padding: 16px 12px;
-    }
-
-    .stat-card .stat-value {
-        font-size: 1.3rem;
-    }
-
-    .stat-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1.1rem;
-    }
-
-    .section-card {
-        padding: 16px 12px;
-    }
-
-    .section-title {
-        font-size: 1rem;
-    }
-
-    /* Settings modal fix */
-    .settings-modal-body {
-        flex-direction: column !important;
-    }
-
-    .settings-sidebar {
-        width: 100% !important;
-        max-width: 100% !important;
-        border-right: none !important;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding-bottom: 12px;
-        margin-bottom: 12px;
+    .page-header {
+        display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap;
-        gap: 6px;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 0.5rem !important;
+        gap: 10px;
     }
 
-    .settings-sidebar .nav-link {
-        padding: 6px 10px;
-        font-size: 0.8rem;
+    .welcome-message {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        flex: 1;
     }
 
-    .timeline-item {
-        padding-left: 40px;
+    .page-header h2 {
+        font-size: 1.1rem !important;
+        white-space: nowrap;
+        margin-bottom: 0 !important;
     }
 
-    .timeline-icon {
-        width: 30px;
-        height: 30px;
-        font-size: 0.8rem;
-        left: 0;
+    .role-badge {
+        font-size: 0.65rem !important;
+        padding: 3px 8px !important;
     }
 
-    .financial-table th,
-    .financial-table td {
-        font-size: 0.78rem;
-        padding: 8px 6px;
+    .text-muted.mb-4 {
+        font-size: 0.8rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .btn-my-profile {
+        margin-top: 0 !important;
+    }
+
+    .btn-my-profile span {
+        font-size: 0.65rem !important;
+    }
+
+    .btn-my-profile .profile-icon-img {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .glass-card .card-header {
+        font-size: 0.9rem !important;
+        padding: 10px 12px !important;
+    }
+
+    .glass-card .card-body {
+        padding: 12px !important;
+    }
+
+    .current-activity-scroll h4 {
+        font-size: 1rem !important;
+    }
+
+    .ue-title {
+        font-size: 0.8rem !important;
+    }
+
+    .ue-date-badge {
+        width: 44px !important;
+        padding: 4px 2px !important;
+    }
+
+    .ue-date-badge .day {
+        font-size: 1rem !important;
     }
 }
 
 /* ---- Small Phone (max 480px) ---- */
 @media (max-width: 480px) {
-    .stats-row .col-lg-3 {
-        flex: 0 0 100%;
-        max-width: 100%;
+    .page-header h2 {
+        font-size: 0.95rem !important;
     }
 
-    .welcome-text h1 {
-        font-size: 1rem;
+    .role-badge {
+        font-size: 0.55rem !important;
+        padding: 2px 6px !important;
     }
 
-    .stat-card .stat-value {
-        font-size: 1.1rem;
+    .text-muted.mb-4 {
+        font-size: 0.75rem !important;
     }
 
-    .profile-avatar {
-        width: 60px;
-        height: 60px;
+    .btn-my-profile .profile-icon-img {
+        width: 28px !important;
+        height: 28px !important;
     }
 
-    .modal-xl {
-        max-width: 100% !important;
-        margin: 0 !important;
+    .glass-card .card-header {
+        font-size: 0.8rem !important;
     }
 
-    .modal-dialog {
-        margin: 8px;
+    .current-activity-scroll h4 {
+        font-size: 0.85rem !important;
     }
 
-    .financial-table th,
-    .financial-table td {
-        font-size: 0.72rem;
-        padding: 6px 4px;
+    .ue-title {
+        font-size: 0.75rem !important;
     }
 
-    .badge {
-        font-size: 0.65rem;
-        padding: 3px 6px;
+    .ue-meta span, .ue-sub {
+        font-size: 0.6rem !important;
     }
 }

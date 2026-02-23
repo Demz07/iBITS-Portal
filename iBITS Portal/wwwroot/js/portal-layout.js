@@ -2,9 +2,6 @@
 
 $(function () { // Modern document ready syntax - START
 
-    // Sidebar Toggle
-    $('#sidebarCollapse').on('click', () => $('#sidebar').toggleClass('active'));
-
     // Theme Management
     const themeBtn = $('#themeToggle');
     const themeIcon = $('#themeIcon');

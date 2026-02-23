@@ -369,15 +369,20 @@ function closeSidebar() {
 }
 
 if (sidebarCollapseBtn) {
-    sidebarCollapseBtn.addEventListener('click', function() {
+    sidebarCollapseBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         if (window.innerWidth <= 1024) {
-            if (mainSidebar && mainSidebar.classList.contains('mobile-open')) {
+            // Mobile logic
+            if (mainSidebar.classList.contains('mobile-open')) {
                 closeSidebar();
             } else {
                 openSidebar();
             }
         } else {
-            if (mainSidebar) mainSidebar.classList.toggle('active');
+            // Desktop logic
+            mainSidebar.classList.toggle('active');
         }
     });
 }
