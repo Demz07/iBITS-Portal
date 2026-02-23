@@ -668,6 +668,60 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+/* --- Profile Modal Expansion --- */
+.border-gold {
+    border: 1px solid var(--gold-primary) !important;
+}
+
+.shadow-gold-lg {
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.3) !important;
+}
+
+.large-modal-img {
+    width: 240px !important;
+    height: 240px !important;
+    border: 4px solid var(--gold-primary);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+}
+
+.modal-badge {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.3rem;
+    bottom: 5px !important;
+}
+
+.table-profile-img {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.table-profile-img:hover {
+    transform: scale(1.15);
+    border-color: #fff;
+    z-index: 10;
+}
+
+/* Modal Info Badges */
+#profileDetailModal .info-badges {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    gap: 15px;
+}
+
+#profileDetailModal .info-badge {
+    justify-content: center;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#profileDetailModal .badge-text {
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+}
+
 /* ============================================================= */
 /*                    ANIMATIONS                                  */
 /* ============================================================= */

@@ -385,6 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
                      alt="Profile" 
                      class="table-profile-img" 
                      style="width: 30px; height: 30px; border-radius: 50%;"
+                     onclick="window.expandProfile('${normalizeImagePath(data.profileImage)}', '${data.studentName}', '${data.studentId}', '${data.section}')"
                      onerror="this.src='/images/default-avatar.png'">
                 <div>
                     <div>${data.studentName}</div>
@@ -517,6 +518,16 @@ function exportToPdf() {
 }
 
 // AT THE VERY BOTTOM OF YOUR JS FILE (Outside the DOMContentLoaded)
+window.expandProfile = function (imgSrc, name, id, section) {
+    document.getElementById('expanded-profile-img').src = imgSrc;
+    document.getElementById('expanded-student-name').innerText = name;
+    document.getElementById('expanded-student-id').innerText = id;
+    document.getElementById('expanded-student-section').innerText = section;
+
+    const modal = new bootstrap.Modal(document.getElementById('profileDetailModal'));
+    modal.show();
+};
+
 window.removeAttendee = function (recordId, button) {
     // If ID is 0 or undefined, the backend didn't send it correctly
     if (!recordId || recordId === "0" || recordId === "undefined") {
