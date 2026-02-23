@@ -113,7 +113,7 @@
                 <div class="mb-4">
                     <label for="amount" class="form-label">Fine Amount <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text">â‚±</span>
+                        <span class="input-group-text">₱</span>
                         <input type="number" class="form-control" id="amount" name="amount" required 
                                step="0.01" min="0.01" placeholder="0.00">
                     </div>
@@ -132,7 +132,7 @@
                     <h6 class="mb-2"><i class="bi bi-exclamation-triangle me-2"></i> Fine Preview</h6>
                     <p class="mb-1"><strong>Student:</strong> <span id="previewStudent">Not selected</span></p>
                     <p class="mb-1"><strong>Reason:</strong> <span id="previewReason">-</span></p>
-                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">â‚±0.00</span></p>
+                    <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">₱0.00</span></p>
                     <p class="mb-0"><strong>Due Date:</strong> <span id="previewDueDate">-</span></p>
                 </div>
 
@@ -179,7 +179,7 @@
             resultsDiv.innerHTML = matches.map(s => `
                 <div class="student-search-result" onclick="selectStudent('${s.studentNum}', '${s.name}', '${s.section}')">
                     <strong>${s.name}</strong>
-                    <br><small class="text-muted">${s.studentNum} â€¢ ${s.section || 'N/A'}</small>
+                    <br><small class="text-muted">${s.studentNum} • ${s.section || 'N/A'}</small>
                 </div>
             `).join('');
             resultsDiv.style.display = 'block';
@@ -228,7 +228,7 @@
         
         document.getElementById('previewStudent').textContent = studentName;
         document.getElementById('previewReason').textContent = reason;
-        document.getElementById('previewAmount').textContent = 'â‚±' + parseFloat(amount).toFixed(2);
+        document.getElementById('previewAmount').textContent = '₱' + parseFloat(amount).toFixed(2);
         document.getElementById('previewDueDate').textContent = dueDate;
     }
 

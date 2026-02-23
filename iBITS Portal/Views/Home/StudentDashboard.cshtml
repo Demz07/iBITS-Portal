@@ -376,7 +376,7 @@
 
         }
 
-        /* âœ… Make Current Activity scroll inside the card body */
+        /* ✅ Make Current Activity scroll inside the card body */
         .current-activity-scroll {
             max-height: 360px;
             overflow-y: auto;
@@ -396,7 +396,7 @@
 
 <div class="page-header">
     <div class="welcome-message">
-        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! ðŸ‘‹</h2>
+        <h2 class="fw-bold text-white mb-0">Hello, @(student?.StudentFn)! 👋</h2>
         <span class="role-badge @badgeClass"><i class="bi @badgeIcon"></i> @displayRole</span>
     </div>
     <a href="#profileOffcanvas" data-bs-toggle="offcanvas" class="btn-my-profile">
@@ -429,7 +429,7 @@
                          onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
 
                         @* Added '?' after NotificationDate below *@
-                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") â€¢ Official Notice</small>
+                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
 
                         <p class="mb-0 mt-1 text-white">
                             <strong>@n.Title</strong> @* This displays the SUBJECT *@
@@ -452,7 +452,7 @@
                          style="cursor: pointer;"
                          data-bs-toggle="modal"
                          data-bs-target="#modal@(reminder.Id)">
-                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") â€¢ @(reminder.AnnouncementType ?? "Payment Reminder")</small>
+                        <small class="@colorClass">@reminder.Timestamp.ToString("MMM dd") • @(reminder.AnnouncementType ?? "Payment Reminder")</small>
                         <p class="mb-0 mt-1 text-white">
                             <strong>@((reminder.Title ?? string.Empty).Replace("Payment Reminder: ", ""))</strong>
                         </p>
@@ -465,7 +465,7 @@
                     <div class="announcement-item" id="announcement-@announcement.Id">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") Â· Posted by @announcement.PostedBy</small>
+                                <small class="text-gold">@announcement.Timestamp.ToString("MMM dd") · Posted by @announcement.PostedBy</small>
                                 <p class="mb-0 mt-1 text-white">@announcement.Content</p>
                             </div>
                             <button class="btn btn-sm btn-link text-muted p-0 ms-2"
@@ -583,7 +583,7 @@
                                         <span>@(string.IsNullOrWhiteSpace(evt.EventLocation) ? "TBA" : evt.EventLocation)</span>
                                     </div>
                                     <div class="ue-sub">
-                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd â€¢ MMM dd, yyyy") : "Date: TBA")
+                                        @(evt.EventDate.HasValue? evt.EventDate.Value.ToString("dddd • MMM dd, yyyy") : "Date: TBA")
                                     </div>
                                 </div>
                             </div>
@@ -888,7 +888,7 @@
                     <i class="bi bi-bell-slash-fill text-warning mb-2" style="font-size:2.5rem;"></i>
                     <p class="mb-2 fw-bold">Are you sure?</p>
                     <p class="small text-muted mb-0">
-                        You wonâ€™t see this announcement again after dismissing it.
+                        You won’t see this announcement again after dismissing it.
                     </p>
                 </div>
             </div>
@@ -902,7 +902,7 @@
     </div>
 </div>
 
-@* âœ… NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
+@* ✅ NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
 <div class="modal fade" id="adminDismissConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="background: rgba(20, 20, 20, 0.98); border: 1px solid rgba(220,53,69,0.65); backdrop-filter: blur(18px);">
@@ -952,7 +952,7 @@
     <script>
         function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
 
-        // âœ… FIXED: Fetch events correctly instead of checking profile images
+        // ✅ FIXED: Fetch events correctly instead of checking profile images
         function loadUpcomingEvents() {
             const container = document.getElementById('upcomingEventsContent');
             if(!container) return;
@@ -984,7 +984,7 @@
                 });
         }
 
-        // âœ… FIXED: Fetch history correctly
+        // ✅ FIXED: Fetch history correctly
         function loadEventHistory() {
             const container = document.getElementById('eventHistoryContent');
             if(!container) return;
@@ -1015,7 +1015,7 @@
                 });
         }
 
-        // âœ… Helper to render the cards (uses your design)
+        // ✅ Helper to render the cards (uses your design)
         function renderEventCard(item, isPastEvent) {
             // Parse the date safely
             const eventDate = new Date(item.eventDate);
@@ -1194,7 +1194,7 @@
                                 navImg.src = data.imagePath + timestamp;
                             }
 
-                            // D. âœ… NEW: Update Right Sidebar (Offcanvas) Avatar
+                            // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
                             const sidebarImg = document.getElementById('offcanvasProfileImg');
                             if (sidebarImg && data.imagePath) {
                                 sidebarImg.src = data.imagePath + timestamp;
@@ -1228,13 +1228,13 @@
             new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
         }
 
-        // âœ… NEW: Open the nice confirm modal for Admin Notice
+        // ✅ NEW: Open the nice confirm modal for Admin Notice
         function openAdminDismissConfirm() {
             const modal = new bootstrap.Modal(document.getElementById('adminDismissConfirmModal'));
             modal.show();
         }
 
-        // âœ… NEW: Handle Admin Notice Dismiss (with toast after)
+        // ✅ NEW: Handle Admin Notice Dismiss (with toast after)
         document.addEventListener('DOMContentLoaded', function () {
             const adminConfirmBtn = document.getElementById('confirmAdminDismissBtn');
             if (!adminConfirmBtn) return;

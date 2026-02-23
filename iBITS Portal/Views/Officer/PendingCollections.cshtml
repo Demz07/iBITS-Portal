@@ -311,7 +311,7 @@
             <p class="text-muted mb-0">These payments have been collected from students but are not yet visible to the Org Treasurer.</p>
         </div>
         <div class="col-md-4 text-end">
-            <div class="fs-2 fw-bold" style="color: var(--gold-primary);">â‚±@totalAmount.ToString("N2")</div>
+            <div class="fs-2 fw-bold" style="color: var(--gold-primary);">₱@totalAmount.ToString("N2")</div>
             <small class="text-muted">@totalFeesCount fees + @totalFinesCount fines = @totalCount total</small>
         </div>
     </div>
@@ -358,7 +358,7 @@
                             <input type="text" 
                                    id="fees-search" 
                                    class="search-input" 
-                                   placeholder="ðŸ” Search by student name or student number...">
+                                   placeholder="🔍 Search by student name or student number...">
                             <button type="button" id="fees-clear-search" class="clear-search" style="display: none;">
                                 <i class="bi bi-x-lg"></i> Clear
                             </button>
@@ -382,8 +382,8 @@
                             <select id="fees-sort" class="sort-select form-select">
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
-                                <option value="amount-asc">Amount (â†‘)</option>
-                                <option value="amount-desc">Amount (â†“)</option>
+                                <option value="amount-asc">Amount (↑)</option>
+                                <option value="amount-desc">Amount (↓)</option>
                                 <option value="date-desc" selected>Date (New)</option>
                                 <option value="date-asc">Date (Old)</option>
                             </select>
@@ -435,7 +435,7 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
-                    <div class="stat-value" id="fees-total-amount">â‚±@totalFeesAmount.ToString("N2")</div>
+                    <div class="stat-value" id="fees-total-amount">₱@totalFeesAmount.ToString("N2")</div>
                     <div class="stat-label">Total Amount</div>
                 </div>
                 <div class="stat-card">
@@ -445,7 +445,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-calculator"></i></div>
-                    <div class="stat-value" id="fees-avg-amount">â‚±@((totalFeesCount > 0 ? totalFeesAmount / totalFeesCount : 0).ToString("N2"))</div>
+                    <div class="stat-value" id="fees-avg-amount">₱@((totalFeesCount > 0 ? totalFeesAmount / totalFeesCount : 0).ToString("N2"))</div>
                     <div class="stat-label">Average Payment</div>
                 </div>
                 <div class="stat-card">
@@ -476,7 +476,7 @@
                                         </button>
                                         <div>
                                             <h5 class="text-white mb-1">@feeName</h5>
-                                            <small class="text-muted">@groupCount payments â€¢ â‚±@groupTotal.ToString("N2") total</small>
+                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
                                     <a asp-action="InitiateRemittance" asp-route-feeName="@feeName" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
@@ -520,7 +520,7 @@
                                                     data-fee-id="@fee.FeeId">
                                                     <td>@fee.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fee.StudentNum</code></td>
-                                                    <td>â‚±@((fee.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>₱@((fee.Amount ?? 0).ToString("N2"))</td>
                                                     <td>
                                                         <span class="date-badge @badgeClass">
                                                             <i class="bi @badgeIcon"></i>
@@ -563,7 +563,7 @@
                             <input type="text" 
                                    id="fines-search" 
                                    class="search-input" 
-                                   placeholder="ðŸ” Search by student name or student number...">
+                                   placeholder="🔍 Search by student name or student number...">
                             <button type="button" id="fines-clear-search" class="clear-search" style="display: none;">
                                 <i class="bi bi-x-lg"></i> Clear
                             </button>
@@ -587,8 +587,8 @@
                             <select id="fines-sort" class="sort-select form-select">
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
-                                <option value="amount-asc">Amount (â†‘)</option>
-                                <option value="amount-desc">Amount (â†“)</option>
+                                <option value="amount-asc">Amount (↑)</option>
+                                <option value="amount-desc">Amount (↓)</option>
                                 <option value="date-desc" selected>Date (New)</option>
                                 <option value="date-asc">Date (Old)</option>
                             </select>
@@ -640,7 +640,7 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                    <div class="stat-value" id="fines-total-amount">â‚±@totalFinesAmount.ToString("N2")</div>
+                    <div class="stat-value" id="fines-total-amount">₱@totalFinesAmount.ToString("N2")</div>
                     <div class="stat-label">Total Amount</div>
                 </div>
                 <div class="stat-card">
@@ -650,7 +650,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="bi bi-calculator"></i></div>
-                    <div class="stat-value" id="fines-avg-amount">â‚±@((totalFinesCount > 0 ? totalFinesAmount / totalFinesCount : 0).ToString("N2"))</div>
+                    <div class="stat-value" id="fines-avg-amount">₱@((totalFinesCount > 0 ? totalFinesAmount / totalFinesCount : 0).ToString("N2"))</div>
                     <div class="stat-label">Average Payment</div>
                 </div>
                 <div class="stat-card">
@@ -689,7 +689,7 @@
                                         </button>
                                         <div>
                                             <h5 class="text-white mb-1">@categoryName</h5>
-                                            <small class="text-muted">@groupCount payments â€¢ â‚±@groupTotal.ToString("N2") total</small>
+                                            <small class="text-muted">@groupCount payments • ₱@groupTotal.ToString("N2") total</small>
                                         </div>
                                     </div>
                                     <a asp-action="InitiateRemittance" asp-route-feeName="@categoryName" asp-route-type="fine" class="btn btn-remit" onclick="event.stopPropagation(); return true;">
@@ -733,7 +733,7 @@
                                                     data-fine-id="@fine.FineId">
                                                     <td>@fine.StudentNumNavigation?.FullName</td>
                                                     <td><code>@fine.StudentNum</code></td>
-                                                    <td>â‚±@((fine.Amount ?? 0).ToString("N2"))</td>
+                                                    <td>₱@((fine.Amount ?? 0).ToString("N2"))</td>
                                                     <td>
                                                         <span class="date-badge @badgeClass">
                                                             <i class="bi @badgeIcon"></i>

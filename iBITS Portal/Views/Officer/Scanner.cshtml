@@ -91,37 +91,37 @@
 
                                     if (isActive)
                                     {
-                                        statusText = "ðŸŸ¢ ACTIVE NOW";
+                                        statusText = "🟢 ACTIVE NOW";
                                         statusClass = "text-success fw-bold";
                                     }
                                     else if (eventStart > now)
                                     {
-                                        statusText = "â° UPCOMING";
+                                        statusText = "⏰ UPCOMING";
                                         statusClass = "text-info";
                                     }
                                     else if (endTime.HasValue && endTime.Value <= now)
                                     {
-                                        statusText = "âŒ ENDED";
+                                        statusText = "❌ ENDED";
                                         statusClass = "text-danger";
                                     }
                                     else
                                     {
-                                        statusText = "ðŸ“… SCHEDULED";
+                                        statusText = "📅 SCHEDULED";
                                         statusClass = "text-warning";
                                     }
                                 }
                                 else
                                 {
-                                    statusText = "ðŸ“… SCHEDULED";
+                                    statusText = "📅 SCHEDULED";
                                     statusClass = "text-warning";
                                 }
 
                                 <option value="@ev.EventId" data-active="@(isActive ? "true" : "false")">
                                     @ev.EventName (@ev.EventDate?.ToString("MMM dd"))
-                                    <span class="@statusClass">â€¢ @statusText</span>
+                                    <span class="@statusClass">• @statusText</span>
                                     @if (ev.StartTime.HasValue)
                                     {
-                                        <text>â€¢ @ev.StartTime.Value.ToString(@"h\:mm tt")</text>
+                                        <text>• @ev.StartTime.Value.ToString(@"h\:mm tt")</text>
                                     }
                                 </option>
                             }

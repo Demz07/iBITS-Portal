@@ -61,7 +61,7 @@
                             @(item.EventDate.HasValue? item.EventDate.Value.ToString("MMM dd, yyyy") : "TBA")
                             @if (item.StartTime.HasValue)
                             {
-                                <span class="text-muted ms-1">â€¢ @item.StartTime.Value.ToString(@"h\:mm tt")</span>
+                                <span class="text-muted ms-1">• @item.StartTime.Value.ToString(@"h\:mm tt")</span>
                                 if (item.EndTime.HasValue)
                                 {
                                     <span class="text-muted"> - @item.EndTime.Value.ToString(@"h\:mm tt")</span>
@@ -69,7 +69,7 @@
                             }
                             @if (!string.IsNullOrEmpty(item.EventDuration))
                             {
-                                <span class="text-muted ms-1">â€¢ @item.EventDuration</span>
+                                <span class="text-muted ms-1">• @item.EventDuration</span>
                             }
                         </div>
                         <div class="event-title">@item.EventName</div>

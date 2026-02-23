@@ -254,7 +254,7 @@
             <i class="bi bi-piggy-bank me-2 text-purple"></i>
             <strong class="text-white">@pendingRemittanceCount fine payment(s)</strong>
             <span class="text-muted">ready for remittance</span>
-            <span class="text-white fw-bold ms-2">(â‚±@pendingRemittanceAmount.ToString("N2"))</span>
+            <span class="text-white fw-bold ms-2">(₱@pendingRemittanceAmount.ToString("N2"))</span>
         </div>
         <a asp-action="PendingCollections" asp-route-type="fines" class="btn btn-remit btn-sm">
             <i class="bi bi-send me-1"></i> Review & Remit to Org Treasurer
@@ -301,7 +301,7 @@
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalExpected">@totalExp.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Total Expected</div>
                     </div>
                 </div>
@@ -316,7 +316,7 @@
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalCollected">@totalCol.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
@@ -331,7 +331,7 @@
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalPending">@totalPending.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
@@ -471,18 +471,18 @@
                             }
                         </h6>
                         <small class="text-muted">
-                            @categoryFines.Count students â€¢ â‚±@((categoryFines.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
+                            @categoryFines.Count students • ₱@((categoryFines.FirstOrDefault()?.Amount ?? 0).ToString("N2")) each
                             <span class="mx-2">|</span>
-                            <span class="text-success">@categoryPaid Paid</span> â€¢
+                            <span class="text-success">@categoryPaid Paid</span> •
                             <span class="text-warning">@categoryUnpaid Unpaid</span>
                             @if (categoryExcused > 0)
                             {
-                                <span class="mx-1">â€¢</span>
+                                <span class="mx-1">•</span>
                                 <span class="text-info">@categoryExcused Excused</span>
                             }
                             @if (categoryRemitted > 0)
                             {
-                                <span class="mx-1">â€¢</span>
+                                <span class="mx-1">•</span>
                                 <span style="color: #a78bfa;">@categoryRemitted Remitted</span>
                             }
                         </small>
@@ -592,7 +592,7 @@
                                         <td>
                                             <span class="text-white">@(student?.YearLevelSection ?? "N/A")</span>
                                         </td>
-                                        <td class="fw-bold" style="color: var(--gold-primary);">â‚±@((fine.Amount ?? 0).ToString("N2"))</td>
+                                        <td class="fw-bold" style="color: var(--gold-primary);">₱@((fine.Amount ?? 0).ToString("N2"))</td>
                                         <td>
                                             @if (isPaid)
                                             {
@@ -698,7 +698,7 @@
                     </div>
                     <div class="detail-row d-flex justify-content-between">
                         <span class="detail-label text-muted">Amount</span>
-                        <span class="detail-value text-gold fw-bold" style="font-size: 1.2rem;">â‚±<span id="markPaidAmount"></span></span>
+                        <span class="detail-value text-gold fw-bold" style="font-size: 1.2rem;">₱<span id="markPaidAmount"></span></span>
                     </div>
                 </div>
                 <p class="text-muted small mt-3 mb-0">This will record the full payment and send a receipt notification to the student.</p>
@@ -737,7 +737,7 @@
                     </div>
                     <div class="detail-row d-flex justify-content-between">
                         <span class="detail-label text-muted">Amount</span>
-                        <span class="detail-value text-gold fw-bold" style="font-size: 1.2rem;">â‚±<span id="revokeAmount"></span></span>
+                        <span class="detail-value text-gold fw-bold" style="font-size: 1.2rem;">₱<span id="revokeAmount"></span></span>
                     </div>
                 </div>
                 <p class="text-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle me-1"></i> This will mark the fine as UNPAID and notify the student. Use this if payment was recorded by mistake.</p>
@@ -1363,7 +1363,7 @@
                 const cells = row.querySelectorAll('td');
                 const program = cells[3]?.textContent?.trim() || '';
                 const yearSection = cells[4]?.textContent?.trim() || '';
-                // Extract amount and format with PHP instead of â‚± for PDF compatibility
+                // Extract amount and format with PHP instead of ₱ for PDF compatibility
                 const amountText = cells[5]?.textContent?.trim() || '';
                 const amount = 'PHP ' + amountText.replace(/[^\d.,]/g, '');
                 const status = cells[6]?.textContent?.trim() || '';

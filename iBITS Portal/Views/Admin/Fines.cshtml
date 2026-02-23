@@ -96,7 +96,7 @@
                         <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalExpected">@totalExp.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalExpected">@totalExp.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Total Expected</div>
                     </div>
                 </div>
@@ -111,7 +111,7 @@
                         <i class="bi bi-check-circle-fill fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalCollected">@totalCol.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalCollected">@totalCol.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Paid</div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                         <i class="bi bi-clock-history fs-3"></i>
                     </div>
                     <div>
-                        <div class="card-value fs-3 fw-bold text-white">â‚±<span id="totalPending">@totalPending.ToString("N2")</span></div>
+                        <div class="card-value fs-3 fw-bold text-white">₱<span id="totalPending">@totalPending.ToString("N2")</span></div>
                         <div class="card-label text-muted small text-uppercase fw-bold">Unpaid</div>
                     </div>
                 </div>
@@ -354,7 +354,7 @@
                                 <span>@description</span>
                             }
                         </td>
-                        <td style="color: var(--gold-primary); font-weight: bold;">â‚±@fine.Amount?.ToString("N2")</td>
+                        <td style="color: var(--gold-primary); font-weight: bold;">₱@fine.Amount?.ToString("N2")</td>
 
                         <!-- Status Badge (No Partial - Full Payment Only) -->
                         <td>
@@ -405,7 +405,7 @@
                                 <input type="text" name="FineReason" class="form-control" placeholder="e.g., Uniform Violation, Late Attendance" required />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Amount (â‚±) <span class="text-danger">*</span></label>
+                                <label class="form-label">Amount (₱) <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0.01" name="Amount" class="form-control" placeholder="0.00" required />
                             </div>
                         </div>
@@ -572,7 +572,7 @@
                     <p>You are about to delete the fine for:</p>
                     <div class="fee-section p-3 d-inline-block text-start" style="min-width: 250px;">
                         <div><strong>Student:</strong> <span id="deleteStudentName"></span></div>
-                        <div><strong>Amount:</strong> â‚±<span id="deleteFineAmount"></span></div>
+                        <div><strong>Amount:</strong> ₱<span id="deleteFineAmount"></span></div>
                     </div>
                 </div>
                 <div class="modal-footer justify-content-center">
