@@ -15,26 +15,46 @@ namespace iBITS_Portal.Utilities
         public static async Task InitializeAsync(IServiceProvider serviceProvider)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-            // Define the complete list of roles your application needs
-            // UPDATED: Role names now have spaces for better readability
+            // 1. Define and Create Roles
             string[] roleNames = {
-                "Admin",           // System administrator (not assignable to students via UI)
-                "Officer",         // Generic officer role
-                "Member",          // Default role for regular students
-                "Org Secretary",   // Organization-level secretary
-                "Class Secretary", // Class-level secretary (unique per section)
-                "Org Treasurer",   // Organization-level treasurer
-                "Class Treasurer"  // Class-level treasurer (unique per section)
+                "Admin",
+                "Officer",
+                "Member",
+                "Org Secretary",
+                "Class Secretary",
+                "Org Treasurer",
+                "Class Treasurer"
             };
 
-            // Loop through the names and create the role only if it doesn't already exist
             foreach (var roleName in roleNames)
             {
                 var roleExist = await roleManager.RoleExistsAsync(roleName);
                 if (!roleExist)
                 {
                     await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
+            }
+
+            // 2. Create Default Admin if none exists
+            var adminUser = await userManager.FindByNameAsync("admin");
+            if (adminUser == null)
+            {
+                var user = new IdentityUser
+                {
+                    UserName = "admin",
+                    Email = "admin@ibits.edu.ph",
+                    EmailConfirmed = true
+                };
+
+                // Default password for first-time login
+                string adminPassword = "Admin@123";
+                var createPowerUser = await userManager.CreateAsync(user, adminPassword);
+
+                if (createPowerUser.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(user, "Admin");
                 }
             }
         }

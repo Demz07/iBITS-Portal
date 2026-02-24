@@ -74,32 +74,32 @@
             gap: 16px;
         }
 
-        .hero-header-nav {
+        .hero-header {
             display: flex;
             align-items: center;
             gap: 15px;
             flex: 1;
         }
 
-        .pup-logo-nav {
+        .pup-logo {
             width: 55px;
             height: 55px;
             object-fit: contain;
         }
 
-        .header-text-nav {
+        .header-text {
             display: flex;
             flex-direction: column;
         }
 
-        .uni-name-nav {
+        .uni-name {
             font-weight: 700;
             font-size: 1.1rem;
             color: #fff;
             letter-spacing: 1px;
         }
 
-        .campus-name-nav {
+        .campus-name {
             font-weight: 400;
             font-size: 0.9rem;
             color: var(--gold-primary);
@@ -112,8 +112,6 @@
             gap: 2.5rem;
             margin: 0;
             align-items: center;
-            flex: 1;
-            justify-content: flex-end;
         }
 
         .nav-links a {
@@ -132,7 +130,7 @@
             border: 1px solid var(--gold-primary);
             border-radius: 20px;
             color: var(--gold-primary);
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 600;
             text-decoration: none;
             display: flex;
@@ -491,7 +489,7 @@
                 justify-content: center; 
                 padding: 1.5rem; 
                 align-items: flex-start;
-                padding-bottom: 150px; /* Increased space for mobile scrolling */
+                padding-bottom: 150px; /* Consistently large space for mobile scrolling */
             }
             .logo-img { width: 220px; height: 220px; }
             .brand-text h1 { font-size: 2.8rem; }
@@ -506,8 +504,8 @@
             .brand-text h1 { font-size: 2.2rem; }
             .brand-text .gold-accent { font-size: 0.9rem; letter-spacing: 2px; }
             .glass-panel { padding: 30px 20px; }
-            .uni-name-nav { font-size: 0.8rem; }
-            .campus-name-nav { font-size: 0.7rem; }
+            .uni-name { font-size: 0.8rem; }
+            .campus-name { font-size: 0.7rem; }
         }
 
         @@media (max-width: 480px) {
@@ -529,15 +527,14 @@
     <!-- Floating Navigation -->
     <nav class="floating-nav visible" id="floatingNav">
         <div class="nav-container">
-            <div class="hero-header-nav">
-                <img src="/images/pup-logo.png" alt="PUP Logo" class="pup-logo-nav">
-                <div class="header-text-nav">
-                    <span class="uni-name-nav">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
-                    <span class="campus-name-nav">LOPEZ, QUEZON CAMPUS</span>
+            <div class="hero-header">
+                <img src="/images/pup-logo.png" alt="PUP Logo" class="pup-logo">
+                <div class="header-text">
+                    <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name">LOPEZ, QUEZON CAMPUS</span>
                 </div>
             </div>
             <ul class="nav-links">
-                <li><a href="/">Home</a></li>
                 <li><a href="/Home/LandingPageAbout">Organization</a></li>
                 <li><a href="/Home/LandingPagePeople">System</a></li>
                 <li><a href="/Home/LandingDevelopers">Developers</a></li>
@@ -557,7 +554,6 @@
     <div class="menu-backdrop" id="menuBackdrop"></div>
     <div class="landing-mobile-menu" id="landingMobileMenu">
         <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
-        <a href="/" onclick="closeMobileMenu()">Home</a>
         <a href="/Home/LandingPageAbout" onclick="closeMobileMenu()">Organization</a>
         <a href="/Home/LandingPagePeople" onclick="closeMobileMenu()">System</a>
         <a href="/Home/LandingDevelopers" onclick="closeMobileMenu()">Developers</a>

@@ -20,22 +20,22 @@ namespace iBITS_Portal.Models
 
     public class PasswordChangeModel
     {
-        [Required(ErrorMessage = "Current password is required")]
         [DataType(DataType.Password)]
-        public string CurrentPassword { get; set; } = null!;
+        [Display(Name = "Current Password")]
+        public string? CurrentPassword { get; set; }
 
-        [Required(ErrorMessage = "New password is required")]
         [DataType(DataType.Password)]
         [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long")]
-        public string NewPassword { get; set; } = null!;
+        [Display(Name = "New Password")]
+        public string? NewPassword { get; set; }
 
-        [Required(ErrorMessage = "Confirm password is required")]
         [DataType(DataType.Password)]
         [Compare("NewPassword", ErrorMessage = "New password and confirmation do not match")]
-        public string ConfirmPassword { get; set; } = null!;
+        [Display(Name = "Confirm New Password")]
+        public string? ConfirmPassword { get; set; }
 
-        [Required(ErrorMessage = "Email is required")]
         [EmailAddress]
-        public string Email { get; set; } = null!;
+        [Display(Name = "Admin Email")]
+        public string? Email { get; set; }
     }
 }

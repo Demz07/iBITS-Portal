@@ -49,22 +49,27 @@ namespace iBITS_Portal.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(PasswordChangeModel model)
         {
+            // Manual validation for password tab
+            if (string.IsNullOrEmpty(model.CurrentPassword))
+                ModelState.AddModelError("CurrentPassword", "Current password is required.");
+            if (string.IsNullOrEmpty(model.NewPassword))
+                ModelState.AddModelError("NewPassword", "New password is required.");
+            if (model.NewPassword != model.ConfirmPassword)
+                ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
+
             if (!ModelState.IsValid)
             {
                 return View("Index", model);
             }
 
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
             // Verify current password
-            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, model.CurrentPassword, false);
-            if (!passwordCheck.Succeeded)
+            var passwordCheck = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
+            if (!passwordCheck)
             {
-                ModelState.AddModelError("", "Current password is incorrect.");
+                ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
                 return View("Index", model);
             }
 
@@ -73,17 +78,13 @@ namespace iBITS_Portal.Controllers
             if (!changePasswordResult.Succeeded)
             {
                 foreach (var error in changePasswordResult.Errors)
-                {
                     ModelState.AddModelError("", error.Description);
-                }
                 return View("Index", model);
             }
 
-            // Re-sign in user with new password
-            await _signInManager.SignOutAsync();
-            await _signInManager.PasswordSignInAsync(user, model.NewPassword, false, false);
+            await _signInManager.RefreshSignInAsync(user);
 
-            TempData["Message"] = "Password changed successfully. You have been re-signed in with your new password.";
+            TempData["Message"] = "Password changed successfully.";
             return RedirectToAction("Index");
         }
 
@@ -92,40 +93,43 @@ namespace iBITS_Portal.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateEmail(PasswordChangeModel model)
         {
+            // Manual validation for email tab
+            if (string.IsNullOrEmpty(model.Email))
+                ModelState.AddModelError("Email", "New email address is required.");
+            if (string.IsNullOrEmpty(model.CurrentPassword))
+                ModelState.AddModelError("CurrentPassword", "Current password is required to verify identity.");
+
             if (!ModelState.IsValid)
             {
                 return View("Index", model);
             }
 
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
-            // Verify password
-            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, model.CurrentPassword, false);
-            if (!passwordCheck.Succeeded)
+            // Verify current password
+            var passwordCheck = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
+            if (!passwordCheck)
             {
-                ModelState.AddModelError("", "Password is required to update email.");
+                ModelState.AddModelError("CurrentPassword", "Incorrect password. Email was not updated.");
                 return View("Index", model);
             }
 
             // Update email
             user.Email = model.Email;
-            user.UserName = model.Email; // Update username to match email
+            user.UserName = model.Email; // Keep ID and Email synced for admin
             var result = await _userManager.UpdateAsync(user);
 
             if (!result.Succeeded)
             {
                 foreach (var error in result.Errors)
-                {
                     ModelState.AddModelError("", error.Description);
-                }
                 return View("Index", model);
             }
 
-            TempData["Message"] = "Email updated successfully. Your username has been updated to match your new email.";
+            await _signInManager.RefreshSignInAsync(user);
+
+            TempData["Message"] = "Admin account email updated successfully.";
             return RedirectToAction("Index");
         }
     }

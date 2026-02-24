@@ -1,165 +1,204 @@
 @model iBITS_Portal.Models.PasswordChangeModel
 @{
-    ViewData["Title"] = "Admin Settings";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Account Settings";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
-<div class="container-fluid mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-cog"></i> Admin Personal Settings
-                    </h5>
+@section Styles {
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .nav-settings {
+            border: none;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .nav-settings .nav-link {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-settings .nav-link:hover {
+            background: rgba(212, 175, 55, 0.05);
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+
+        .nav-settings .nav-link.active {
+            background: var(--gold-primary) !important;
+            color: #000 !important;
+            border-color: var(--gold-primary);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .security-info-box {
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .security-info-box h6 {
+            color: var(--gold-primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .security-info-box ul {
+            padding-left: 20px;
+            margin-top: 10px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .security-info-box li {
+            margin-bottom: 5px;
+        }
+
+        .form-floating label {
+            color: var(--text-main);
+        }
+
+        .form-control:focus ~ label {
+            color: var(--gold-primary);
+        }
+    </style>
+}
+
+<div class="settings-container">
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h3 class="fw-800 text-strong mb-1">Admin Settings</h3>
+        <p class="text-main">Manage your account credentials and system preferences</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-settings" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="password-tab" data-bs-toggle="tab" data-bs-target="#password-pane" type="button" role="tab">
+                <i class="bi bi-shield-lock me-2"></i>Security
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email-pane" type="button" role="tab">
+                <i class="bi bi-envelope-at me-2"></i>Email Config
+            </button>
+        </li>
+    </ul>
+
+    <!-- Main Content Panel -->
+    <div class="glass-panel">
+        <div class="tab-content" id="settingsTabContent">
+            
+            <!-- PASSWORD CHANGE -->
+            <div class="tab-pane fade show active" id="password-pane" role="tabpanel">
+                <div class="mb-4">
+                    <h5 class="text-strong fw-bold mb-2">Update Password</h5>
+                    <p class="small text-main">Ensure your account is protected with a strong password.</p>
                 </div>
-                <div class="card-body">
-                    @if (TempData["Message"] != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <i class="fas fa-check-circle"></i> @TempData["Message"]
+
+                <form asp-action="ChangePassword" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="CurrentPassword" type="password" class="form-control" placeholder="Current Password" required autocomplete="current-password" />
+                        <label asp-for="CurrentPassword">Current Password</label>
+                        <span asp-validation-for="CurrentPassword" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input asp-for="NewPassword" type="password" class="form-control" placeholder="New Password" required autocomplete="new-password" />
+                                <label asp-for="NewPassword">New Password</label>
+                                <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                            </div>
                         </div>
-                    }
-
-                    @if (TempData["Error"] != null)
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <i class="fas fa-exclamation-triangle"></i> @TempData["Error"]
-                        </div>
-                    }
-
-                    <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="password-tab" data-bs-toggle="tab" data-bs-target="#password-tab-pane" type="button" role="tab" aria-controls="password-tab-pane" aria-selected="true">
-                                <i class="fas fa-key"></i> Change Password
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email-tab-pane" type="button" role="tab" aria-controls="email-tab-pane" aria-selected="false">
-                                <i class="fas fa-envelope"></i> Update Email
-                            </button>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content" id="settingsTabContent">
-                        <!-- Password Change Tab -->
-                        <div class="tab-pane fade show active" id="password-tab-pane" role="tabpanel" aria-labelledby="password-tab">
-                            <form asp-action="ChangePassword" method="post">
-                                <div asp-validation-summary="All" class="text-danger"></div>
-
-                                <div class="mb-3">
-                                    <label asp-for="CurrentPassword" class="form-label"></label>
-                                    <input asp-for="CurrentPassword" class="form-control" />
-                                    <span asp-validation-for="CurrentPassword" class="text-danger"></span>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label asp-for="NewPassword" class="form-label"></label>
-                                    <input asp-for="NewPassword" class="form-control" />
-                                    <span asp-validation-for="NewPassword" class="text-danger"></span>
-                                    <small class="form-text text-muted">Password must be at least 6 characters long.</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label asp-for="ConfirmPassword" class="form-label"></label>
-                                    <input asp-for="ConfirmPassword" class="form-control" />
-                                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> Change Password
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Email Update Tab -->
-                        <div class="tab-pane fade" id="email-tab-pane" role="tabpanel" aria-labelledby="email-tab">
-                            <form asp-action="UpdateEmail" method="post">
-                                <div asp-validation-summary="All" class="text-danger"></div>
-
-                                <div class="mb-3">
-                                    <label asp-for="Email" class="form-label"></label>
-                                    <input asp-for="Email" class="form-control" />
-                                    <span asp-validation-for="Email" class="text-danger"></span>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="emailCurrentPassword" class="form-label">Current Password</label>
-                                    <input type="password" id="emailCurrentPassword" name="CurrentPassword" class="form-control" required />
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-save"></i> Update Email
-                                    </button>
-                                </div>
-                            </form>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm Password" required autocomplete="new-password" />
+                                <label asp-for="ConfirmPassword">Confirm New Password</label>
+                                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small"><i class="bi bi-info-circle me-1"></i> Minimum 6 characters required</span>
+                        <button type="submit" class="btn btn-gold px-4 fw-bold">
+                            <i class="bi bi-check2-circle me-2"></i>Apply New Password
+                        </button>
+                    </div>
+                </form>
             </div>
+
+            <!-- EMAIL UPDATE -->
+            <div class="tab-pane fade" id="email-pane" role="tabpanel">
+                <div class="mb-4">
+                    <h5 class="text-strong fw-bold mb-2">Primary Email Address</h5>
+                    <p class="small text-main">This email is used for system notifications and as your primary login ID.</p>
+                </div>
+
+                <form asp-action="UpdateEmail" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="Email" type="email" class="form-control" placeholder="newemail@ibits.edu.ph" required />
+                        <label asp-for="Email">New Email Address</label>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-floating mb-4">
+                        <input name="CurrentPassword" type="password" class="form-control" placeholder="Password" required />
+                        <label>Current Password (Security Check)</label>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-gold px-4 fw-bold">
+                            <i class="bi bi-save me-2"></i>Update Account Email
+                        </button>
+                    </div>
+                </form>
+            </div>
+
         </div>
+    </div>
+
+    <!-- Security Advisory Box -->
+    <div class="security-info-box mt-4">
+        <h6><i class="bi bi-shield-fill-check"></i> Security Guidelines</h6>
+        <ul class="mb-0">
+            <li>Changing your password will immediately end all other active sessions for your protection.</li>
+            <li>Your <strong>Email Address</strong> serves as your primary Administrator Username.</li>
+            <li>Multi-Factor Authentication (2FA) is recommended for all administrative accounts.</li>
+            <li>Never share your credentials; use the System Activity Logs to monitor all administrative actions.</li>
+        </ul>
     </div>
 </div>
 
-<!-- Security Notice -->
-<div class="container-fluid mt-3">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0">
-                        <i class="fas fa-shield-alt"></i> Security Notice
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning mb-0">
-                        <h6><i class="fas fa-exclamation-triangle"></i> Important Security Information:</h6>
-                        <ul class="mb-0">
-                            <li>Changing your password will sign you out from all devices</li>
-                            <li>Updating your email changes your username to match</li>
-                            <li>Both actions require your current password for verification</li>
-                            <li>Ensure you use a strong, unique password</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Scripts -->
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    
     <script>
-        // Tab management
+        // Ensure the correct tab is shown if redirected with hash
         document.addEventListener('DOMContentLoaded', function() {
-            const hash = window.location.hash;
-            if (hash === '#email') {
-                document.getElementById('email-tab').click();
-            }
-        });
-
-        // Password strength indicator (optional enhancement)
-        document.querySelector('#NewPassword')?.addEventListener('input', function(e) {
-            const password = e.target.value;
-            const strength = checkPasswordStrength(password);
-            
-            // You can add a visual indicator here if needed
-            function checkPasswordStrength(password) {
-                let strength = 0;
-                if (password.length >= 8) strength++;
-                if (password.match(/[a-z]/)) strength++;
-                if (password.match(/[A-Z]/)) strength++;
-                if (password.match(/[0-9]/)) strength++;
-                if (password.match(/[^a-zA-Z0-9]/)) strength++;
-                
-                return strength;
+            if (window.location.hash) {
+                const tabId = window.location.hash.substring(1) + '-tab';
+                const tabEl = document.getElementById(tabId);
+                if (tabEl) {
+                    const bsTab = new bootstrap.Tab(tabEl);
+                    bsTab.show();
+                }
             }
         });
     </script>
