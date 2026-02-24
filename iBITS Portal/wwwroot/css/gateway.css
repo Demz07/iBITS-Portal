@@ -1,4 +1,4 @@
-﻿/* gateway.css */
+/* gateway.css */
 
 :root {
     --bg-deep: #030a16;
@@ -46,8 +46,8 @@ body, html {
 }
 
 .logo-img {
-    width: 380px;
-    height: 380px;
+    width: 420px;
+    height: 420px;
     object-fit: contain;
     filter: drop-shadow(0 25px 50px rgba(0,0,0,0.6));
     position: relative;
@@ -78,46 +78,44 @@ body, html {
     z-index: 5;
 }
 
-    .brand-text h1 {
-        font-size: 4.5rem;
-        font-weight: 800;
-        line-height: 1;
-        margin: 0 0 15px 0;
-        background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
+.brand-text h1 {
+    font-size: 4.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0 0 15px 0;
+    background: linear-gradient(180deg, #fff 20%, #b0b0b0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
 
-    .brand-text .gold-accent {
-        font-size: 1.1rem;
-        color: var(--gold-primary);
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        font-weight: 600;
-        display: block;
-        text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-        opacity: 0.9;
-    }
+.brand-text .gold-accent {
+    font-size: 1.1rem;
+    color: var(--gold-primary);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 600;
+    display: block;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    opacity: 0.9;
+}
 
 /* --- RIGHT PANE (CONTROLS) --- */
 .right-controls {
     flex: 1;
     display: flex;
-    justify-content: flex-start;
-    padding-left: 0px;
+    justify-content: center;
     align-items: center;
-    border-left: none;
     position: relative;
     z-index: 2;
+    padding: 2rem;
 }
 
 /* --- GLASS PANEL --- */
 .glass-panel {
     width: 100%;
-    max-width: 750px;
+    max-width: 650px;
     padding: 40px;
-    margin: 30px 0 30px 40px;
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -130,96 +128,61 @@ body, html {
 }
 
 .panel-header {
-    margin-bottom: 3rem;
-    position: relative;
+    margin-bottom: 2.5rem;
     border-left: 5px solid var(--gold-primary);
-    padding-left: 30px;
+    padding-left: 25px;
 }
 
-    .panel-header h3 {
-        font-weight: 800;
-        font-size: 2.2rem;
-        color: #fff;
-        margin: 0;
-        line-height: 1;
-        letter-spacing: -1px;
-        text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-    }
+.panel-header h3 {
+    font-weight: 800;
+    font-size: 2rem;
+    color: #fff;
+    margin: 0;
+    line-height: 1;
+}
 
-    .panel-header p {
-        color: var(--gold-primary);
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        margin-top: 10px;
-        opacity: 0.8;
-    }
+.panel-header p {
+    color: var(--gold-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 10px;
+    opacity: 0.8;
+}
 
 /* --- BUTTONS --- */
 .nav-btn {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 28px 30px;
-    margin-bottom: 20px;
+    padding: 24px 25px;
+    margin-bottom: 18px;
     text-decoration: none;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     border-radius: 20px;
-    overflow-x: hidden;
-    overflow-y: auto;
     transition: all 0.3s ease;
 }
 
-    /* Gradient Border on Hover */
-    .nav-btn::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 16px;
-        padding: 1px;
-        background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
+.nav-btn:hover {
+    transform: translateY(-4px);
+    background: rgba(0,0,0,0.3);
+    box-shadow: 0 15px 30px -5px rgba(0,0,0,0.4);
+    border-color: var(--gold-primary);
+}
 
-    .nav-btn:hover {
-        transform: translateY(-4px);
-        background: rgba(0,0,0,0.3);
-        box-shadow: 0 15px 30px -5px rgba(0,0,0,0.4);
-    }
-
-        .nav-btn:hover::before {
-            opacity: 1;
-        }
-
-/* Icon Styling */
 .btn-icon-box {
-    width: 55px;
-    height: 55px;
+    width: 50px;
+    height: 50px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 18px;
-    font-size: 1.4rem;
-    color: var(--text-muted);
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: 0.3s;
-}
-
-.nav-btn:hover .btn-icon-box {
-    background: var(--gold-primary);
-    color: #000;
-    border-color: var(--gold-primary);
-    box-shadow: 0 0 15px var(--gold-glow);
+    font-size: 1.3rem;
+    color: var(--gold-primary);
 }
 
 .btn-content h4 {
@@ -232,103 +195,12 @@ body, html {
 .btn-content span {
     font-size: 0.8rem;
     color: var(--text-muted);
-    display: block;
-}
-
-.nav-btn:hover .btn-content span {
-    color: var(--gold-light);
 }
 
 .arrow-icon {
     margin-left: auto;
     color: var(--gold-primary);
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: 0.3s;
-}
-
-.nav-btn:hover .arrow-icon {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-/* --- ANIMATIONS --- */
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes cardEntrance {
-    from {
-        opacity: 0;
-        transform: translateY(40px) scale(0.95);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes pulseGlow {
-    0% {
-        opacity: 0.1;
-    }
-
-    100% {
-        opacity: 0.25;
-    }
-}
-
-/* --- TOP HEADER STYLES --- */
-.top-header {
-    position: absolute;
-    top: 30px;
-    left: 40px;
-    display: flex;
-    align-items: center;
-    z-index: 100;
-    pointer-events: none;
-}
-
-.header-logo {
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
-    margin-right: 15px;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
-}
-
-.header-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    font-family: 'Outfit', sans-serif;
-}
-
-.uni-name {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #fff;
-    letter-spacing: 1px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-    line-height: 1.2;
-}
-
-.campus-name {
-    font-weight: 400;
-    font-size: 0.9rem;
-    color: var(--gold-primary);
-    letter-spacing: 2px;
-    margin-top: 2px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    opacity: 0.5;
 }
 
 /* --- FLOATING NAVIGATION --- */
@@ -340,10 +212,7 @@ body, html {
     width: 100%;
     z-index: 1000;
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    height: auto;
     min-height: 70px;
 }
 
@@ -364,9 +233,8 @@ body, html {
 }
 
 .pup-logo {
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
+    width: 55px;
+    height: 55px;
 }
 
 .header-text {
@@ -374,164 +242,43 @@ body, html {
     flex-direction: column;
 }
 
+.uni-name { font-weight: 700; font-size: 1.1rem; letter-spacing: 1px; }
+.campus-name { font-weight: 400; font-size: 0.9rem; color: var(--gold-primary); letter-spacing: 2px; }
+
 .nav-links {
     display: flex;
     list-style: none;
     gap: 2.5rem;
     margin: 0;
     align-items: center;
-    flex: 1;
-    justify-content: flex-end;
 }
 
 .nav-links a {
     color: #fff;
     text-decoration: none;
     font-weight: 700;
-    font-size: 1.1rem;
     transition: 0.3s;
 }
 
 .nav-links a:hover { color: var(--gold-primary); }
 
-.btn-enter, .btn-return-home {
+.btn-return-home {
     padding: 8px 20px;
     background: rgba(212, 175, 55, 0.1);
     border: 1px solid var(--gold-primary);
     border-radius: 20px;
     color: var(--gold-primary);
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     text-decoration: none;
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: 0.3s;
-}
-
-.btn-enter:hover, .btn-return-home:hover {
-    background: var(--gold-primary);
-    color: #000;
-    box-shadow: 0 0 20px var(--gold-glow);
-}
-
-/* ===== HAMBURGER BUTTON ===== */
-.landing-hamburger {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    cursor: pointer;
-    padding: 8px 10px;
-    background: rgba(212, 175, 55, 0.1);
-    border: 1px solid #D4AF37;
-    border-radius: 8px;
-    z-index: 1100;
-}
-
-.landing-hamburger span {
-    display: block; width: 22px; height: 2px; background: #D4AF37; border-radius: 2px;
-}
-
-/* ===== MOBILE MENU SIDEBAR ===== */
-.landing-mobile-menu {
-    position: fixed;
-    top: 0;
-    right: -300px;
-    width: 280px;
-    height: 100vh;
-    background: rgba(3, 10, 22, 0.98);
-    z-index: 1090;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 80px 20px 60px;
-    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    backdrop-filter: blur(20px);
-}
-
-.landing-mobile-menu.active { right: 0; }
-
-.menu-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1085;
-    opacity: 0;
-    visibility: hidden;
-    transition: 0.3s;
-}
-
-.menu-backdrop.active { opacity: 1; visibility: visible; }
-
-.landing-mobile-menu a {
-    color: #ffffff;
-    text-decoration: none;
-    font-size: 1.1rem;
-    font-weight: 600;
-    padding: 15px 10px;
-    width: 100%;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.mobile-menu-close {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.8rem;
-    cursor: pointer;
-}
-
-.mobile-enter-btn {
-    margin-top: 30px;
-    padding: 12px 30px !important;
-    border: 1px solid #D4AF37 !important;
-    border-radius: 50px !important;
-    color: #D4AF37 !important;
-    align-self: center;
-    text-decoration: none;
-}
-
-/* --- RESPONSIVE --- */
-@media (max-width: 1024px) {
-    .nav-links { display: none !important; }
-    .landing-hamburger { display: flex !important; }
-}
-
-@media (max-width: 768px) {
-    .nav-container { padding: 0 15px; gap: 10px; }
-    .hero-header { gap: 8px; flex: 1; }
-    .header-text { display: flex; flex-direction: column; }
-    .pup-logo { width: 35px; height: 35px; }
-    .uni-name { font-size: 0.75rem; letter-spacing: 0.5px; text-shadow: none; line-height: 1.1; }
-    .campus-name { font-size: 0.65rem; letter-spacing: 1px; text-shadow: none; }
-    
-    .split-layout { flex-direction: column; min-height: 100vh; height: auto; padding-top: 70px; }
-    .left-brand { padding: 2rem 1rem 1rem 1rem; flex: none; display: flex !important; }
-    .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; border: none; align-items: flex-start; }
-    .logo-img { width: 150px; height: 150px; }
-    .brand-text h1 { font-size: 2.2rem; }
-    .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 1px; }
-    .glass-panel { width: 100%; padding: 25px; margin: 0; }
-}
-
-@media (max-width: 480px) {
-    .left-brand { display: flex !important; }
-    .logo-img { width: 100px; height: 100px; }
-    .brand-text h1 { font-size: 1.8rem; }
-    .glass-panel { padding: 20px 15px; }
-    .uni-name { font-size: 0.65rem; }
-    .campus-name { font-size: 0.55rem; }
 }
 
 /* Matrix Background */
 #matrixCanvas {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -540,60 +287,47 @@ body, html {
     opacity: 0.2;
 }
 
-/* ============================================================
-   GATEWAY RESPONSIVE DESIGN
-   ============================================================ */
-@media (max-width: 900px) {
-    .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
-    .left-brand { padding: 5rem 1rem 1rem 1rem; flex: none; }
-    .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
-    .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 40px 30px; }
-    .logo-img { width: 180px; height: 180px; }
-    .brand-text h1 { font-size: 2.8rem; }
-    .top-header { top: 15px; left: 15px; }
-    .header-logo { width: 40px; height: 40px; }
-    .uni-name { font-size: 0.78rem; }
-    .campus-name { font-size: 0.68rem; }
+/* Animations */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cardEntrance { from { opacity: 0; transform: translateY(40px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pulseGlow { 0% { opacity: 0.1; } 100% { opacity: 0.25; } }
+
+/* --- RESPONSIVE BREAKPOINTS --- */
+@media (max-width: 1200px) {
+    .logo-img { width: 320px; height: 320px; }
+    .brand-text h1 { font-size: 3.5rem; }
+    .nav-container { padding: 0 30px; }
 }
 
-@media (max-width: 600px) {
-    .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
-    .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
-    .right-controls { padding: 0.75rem; flex: none; justify-content: center; width: 100%; }
-    .glass-panel { max-width: 100%; margin: 0 0 20px 0; padding: 28px 18px; border-radius: 20px; }
+@media (max-width: 992px) {
+    .split-layout { flex-direction: column; height: auto; min-height: 100vh; padding-top: 80px; }
+    .left-brand { flex: none; padding: 3rem 1rem 1rem; }
+    .right-controls { flex: none; width: 100%; justify-content: center; padding: 1.5rem; align-items: flex-start; }
+    .logo-img { width: 220px; height: 220px; }
+    .brand-text h1 { font-size: 2.8rem; }
+    .glass-panel { margin: 0 auto; max-width: 600px; }
+    
+    .nav-links { display: none !important; }
+    .landing-hamburger { display: flex !important; }
+}
+
+@media (max-width: 768px) {
+    .logo-img { width: 160px; height: 160px; }
+    .brand-text h1 { font-size: 2.2rem; }
+    .brand-text .gold-accent { font-size: 0.9rem; letter-spacing: 2px; }
+    .glass-panel { padding: 30px 20px; }
+    .uni-name { font-size: 0.8rem; }
+    .campus-name { font-size: 0.7rem; }
+}
+
+@media (max-width: 480px) {
     .logo-img { width: 120px; height: 120px; }
     .brand-text h1 { font-size: 1.8rem; }
-    .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 2px; }
-    .top-header { top: 12px; left: 12px; }
-    .header-logo { width: 32px; height: 32px; margin-right: 8px; }
-    .uni-name { font-size: 0.68rem; }
-    .campus-name { font-size: 0.6rem; }
-    .nav-btn { padding: 16px; }
-    .btn-icon-box { width: 44px; height: 44px; font-size: 1.2rem; }
-    .panel-header h3 { font-size: 1.6rem; }
-}
-
-@media (max-width: 380px) {
-    .glass-panel { padding: 22px 14px; }
-    .brand-text h1 { font-size: 1.5rem; }
-    .logo-img { width: 90px; height: 90px; }
-    .header-logo { width: 28px; height: 28px; }
-    .uni-name { font-size: 0.6rem; }
-    .campus-name { font-size: 0.54rem; }
-}
-@media (max-width: 480px) {
-    .split-layout { flex-direction: column; min-height: 100vh; height: auto; }
-    .left-brand { display: none; }
-    .right-controls { padding: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: flex-start; padding-top: 70px; }
-    .glass-panel { padding: 20px 14px; border-radius: 16px; margin: 0 0 15px 0; max-width: 100%; }
-    .panel-header h3 { font-size: 1.3rem; }
-    .panel-header p { font-size: 0.7rem; letter-spacing: 1px; }
-    .nav-btn { padding: 16px 14px; margin-bottom: 16px; }
-    .btn-icon-box { width: 38px; height: 38px; font-size: 1rem; margin-right: 12px; }
-    .btn-content h4 { font-size: 0.95rem; }
-    .btn-content span { font-size: 0.75rem; }
-    .top-header { top: 10px; left: 10px; }
-    .header-logo { width: 26px; height: 26px; margin-right: 7px; }
-    .uni-name { font-size: 0.56rem; }
-    .campus-name { font-size: 0.5rem; }
+    .brand-text .gold-accent { font-size: 0.75rem; letter-spacing: 1.5px; }
+    .glass-panel { padding: 22px 16px; border-radius: 20px; margin: 0 auto; }
+    .panel-header { padding-left: 15px; margin-bottom: 1.5rem; }
+    .panel-header h3 { font-size: 1.5rem; }
+    .nav-btn { padding: 18px 15px; }
+    .btn-icon-box { width: 40px; height: 40px; font-size: 1.1rem; margin-right: 12px; }
+    .btn-content h4 { font-size: 1rem; }
 }

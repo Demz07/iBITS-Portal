@@ -373,18 +373,18 @@
         flex-direction: row !important;
         align-items: center !important;
         gap: 10px !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important; /* Allow badge to wrap to next line */
         flex: 1;
         min-width: 0;
     }
 
     .page-header h2 {
-        font-size: 1.3rem !important; /* Slightly reduced from 1.4 to ensure one-line fit */
-        white-space: nowrap !important; /* Force one line */
-        overflow: visible !important; /* No more cutting */
-        text-overflow: clip !important; /* Remove ellipsis dots */
+        font-size: 1.4rem !important; /* Restored size since badge can now wrap */
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
         margin-bottom: 0 !important;
-        line-height: 1;
+        line-height: 1.2;
     }
 
     .role-badge {
