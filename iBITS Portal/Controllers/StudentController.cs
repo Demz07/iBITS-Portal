@@ -241,6 +241,100 @@ namespace iBITS_Portal.Controllers
                 course = student != null ? $"{student.Course} | {student.YearLevelSection}" : ""
             });
         }
+
+        // ==============================================================
+        // UPDATE ACTIONS (for Profile, Email, Password)
+        // ==============================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateProfilePicture(IFormFile ProfilePicture)
+        {
+            if (ProfilePicture == null || ProfilePicture.Length == 0)
+                return Json(new { success = false, message = "No file selected." });
+
+            var userId = _userManager.GetUserName(User);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentNum == userId);
+            if (student == null) return Json(new { success = false, message = "Student not found." });
+
+            try
+            {
+                // Ensure directory exists
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/profiles");
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                // Generate unique filename
+                string fileName = $"{userId}_{DateTime.Now.Ticks}{Path.GetExtension(ProfilePicture.FileName)}";
+                string filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await ProfilePicture.CopyToAsync(fileStream);
+                }
+
+                // Update DB path
+                student.StudentImage = $"/uploads/profiles/{fileName}";
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Profile picture updated.", newImageUrl = student.StudentImage });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Internal error: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateEmail(string NewEmail)
+        {
+            if (string.IsNullOrWhiteSpace(NewEmail))
+                return Json(new { success = false, message = "Email is required." });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { success = false, message = "User not found." });
+
+            var token = await _userManager.GenerateChangeEmailTokenAsync(user, NewEmail);
+            var result = await _userManager.ChangeEmailAsync(user, NewEmail, token);
+
+            if (result.Succeeded)
+            {
+                // Update username as well to keep them synced
+                await _userManager.SetUserNameAsync(user, NewEmail);
+
+                // Update the student record if needed
+                var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentNum == user.UserName);
+                if (student != null)
+                {
+                    student.StudentEmail = NewEmail;
+                    await _context.SaveChangesAsync();
+                }
+
+                return Json(new { success = true, message = "Email updated successfully." });
+            }
+
+            return Json(new { success = false, message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdatePassword(string OldPassword, string NewPassword, string ConfirmPassword)
+        {
+            if (NewPassword != ConfirmPassword)
+                return Json(new { success = false, message = "Passwords do not match." });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { success = false, message = "User not found." });
+
+            var result = await _userManager.ChangePasswordAsync(user, OldPassword, NewPassword);
+
+            if (result.Succeeded)
+            {
+                return Json(new { success = true, message = "Password updated successfully." });
+            }
+
+            return Json(new { success = false, message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+        }
     }
 }
 

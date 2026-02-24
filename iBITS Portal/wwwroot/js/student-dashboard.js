@@ -105,17 +105,121 @@
     });
 
     // 5. PROFILE PICTURE PREVIEW
-    $('#profileImageInput').on('change', function (event) {
+    $('#profilePictureInput').on('change', function (event) {
         if (event.target.files && event.target.files[0]) {
             const reader = new FileReader();
             reader.onload = function (e) {
-                $('#imagePreview').attr('src', e.target.result);
+                $('#profilePicturePreview').attr('src', e.target.result);
             }
             reader.readAsDataURL(event.target.files[0]);
         }
     });
 
-    // 6. INITIALIZE ACTIVITY COUNTDOWNS
+    // 6. AJAX PROFILE UPDATE
+    $('#ajaxProfileForm').on('submit', function (e) {
+        e.preventDefault();
+        const btn = $('#btnUpdateProfile');
+        const alert = $('#profileAlert');
+        const formData = new FormData(this);
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+        alert.addClass('d-none').removeClass('alert-success alert-danger');
+
+        $.ajax({
+            url: '/Student/UpdateProfilePicture',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                if (res.success) {
+                    $('#settingsModal').modal('hide');
+                    $('#successModalMsg').text(res.message);
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                    
+                    // Update header and offcanvas images
+                    if (res.newImageUrl) {
+                        $('#headerMyProfileImg').attr('src', res.newImageUrl);
+                        $('#offcanvasProfileImg').attr('src', res.newImageUrl);
+                        $('#profilePicturePreview').attr('src', res.newImageUrl);
+                    }
+                } else {
+                    alert.addClass('alert-danger').removeClass('d-none').text(res.message);
+                }
+            },
+            error: function () {
+                alert.addClass('alert-danger').removeClass('d-none').text("An error occurred during upload.");
+            },
+            complete: function () {
+                btn.prop('disabled', false).text('Save');
+            }
+        });
+    });
+
+    // 7. AJAX EMAIL UPDATE
+    $('#ajaxEmailForm').on('submit', function (e) {
+        e.preventDefault();
+        const btn = $('#btnUpdateEmail');
+        const alert = $('#emailAlert');
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+        alert.addClass('d-none').removeClass('alert-success alert-danger');
+
+        $.ajax({
+            url: '/Student/UpdateEmail',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (res) {
+                if (res.success) {
+                    $('#settingsModal').modal('hide');
+                    $('#successModalMsg').text(res.message);
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                } else {
+                    alert.addClass('alert-danger').removeClass('d-none').text(res.message);
+                }
+            },
+            error: function () {
+                alert.addClass('alert-danger').removeClass('d-none').text("An error occurred.");
+            },
+            complete: function () {
+                btn.prop('disabled', false).text('Save');
+            }
+        });
+    });
+
+    // 8. AJAX PASSWORD UPDATE
+    $('#ajaxPasswordForm').on('submit', function (e) {
+        e.preventDefault();
+        const btn = $('#btnUpdatePass');
+        const alert = $('#passwordAlert');
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Updating...');
+        alert.addClass('d-none').removeClass('alert-success alert-danger');
+
+        $.ajax({
+            url: '/Student/UpdatePassword',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (res) {
+                if (res.success) {
+                    $('#settingsModal').modal('hide');
+                    $('#successModalMsg').text(res.message);
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                    $('#ajaxPasswordForm')[0].reset();
+                } else {
+                    alert.addClass('alert-danger').removeClass('d-none').text(res.message);
+                }
+            },
+            error: function () {
+                alert.addClass('alert-danger').removeClass('d-none').text("An error occurred.");
+            },
+            complete: function () {
+                btn.prop('disabled', false).text('Update');
+            }
+        });
+    });
+
+    // 9. INITIALIZE ACTIVITY COUNTDOWNS
     initActivityCountdowns();
 });
 

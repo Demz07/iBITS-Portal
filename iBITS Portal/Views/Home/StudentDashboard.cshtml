@@ -232,7 +232,15 @@
                 height: 44px;
                 border-radius: 50%;
                 object-fit: cover;
-                border: 1px solid var(--border-color);
+                border: 2px solid var(--gold-primary);
+                transition: all 0.3s ease;
+                box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+            }
+
+            .btn-my-profile:hover .profile-icon-img {
+                border-color: #fff;
+                box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+                transform: scale(1.05);
             }
 
         .announcement-scroll-container {
@@ -500,6 +508,8 @@
 </div>
 
 <p class="text-muted mb-4" style="margin-top:-1rem;">Welcome to your iBITS Account.</p>
+
+<input type="hidden" id="hiddenStudentId" value="@student?.StudentNum" />
 
 <div class="row g-4">
     <!-- ANNOUNCEMENTS -->
@@ -773,9 +783,15 @@
         <h6 class="text-uppercase small fw-bold text-main mb-3">iBITS Digital ID</h6>
         <div id="qrcode" class="my-3 d-flex justify-content-center"></div>
         <div class="d-grid gap-2 mt-4">
-            <button class="btn-action-outline" id="btnExpandQr">Expand ID</button>
-            <button class="btn-action-outline" id="btnDownloadQr">Download ID</button>
-            <button type="button" class="btn-action-dark mt-2" data-bs-toggle="modal" data-bs-target="#settingsModal">Account Settings</button>
+            <button class="btn-action-outline" id="btnExpandQr">
+                <i class="bi bi-arrows-angle-expand me-2"></i>Expand ID
+            </button>
+            <button class="btn-action-outline" id="btnDownloadQr">
+                <i class="bi bi-download me-2"></i>Download ID
+            </button>
+            <button type="button" class="btn-action-dark mt-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="bi bi-gear-fill me-2"></i>Account Settings
+            </button>
         </div>
     </div>
 </div>
@@ -881,6 +897,22 @@
             <div class="modal-header border-0 pb-0"><h5 class="modal-title text-danger">Dismiss</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body text-strong text-center"><p>Are you sure?</p></div>
             <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">No</button><button type="button" class="btn btn-danger flex-fill" id="confirmAdminDismissBtn">Yes</button></div>
+        </div>
+    </div>
+</div>
+
+@* SUCCESS MODAL *@
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary); border-radius: 20px;">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem; filter: drop-shadow(0 0 10px rgba(40, 167, 69, 0.3));"></i>
+                </div>
+                <h4 class="text-strong fw-bold mb-2">Success!</h4>
+                <p id="successModalMsg" class="text-main mb-4 small"></p>
+                <button type="button" class="btn btn-gold w-100 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius: 12px;">Excellent</button>
+            </div>
         </div>
     </div>
 </div>
