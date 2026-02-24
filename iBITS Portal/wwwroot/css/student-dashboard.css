@@ -364,72 +364,100 @@
         flex-direction: row !important;
         justify-content: space-between !important;
         align-items: center !important;
-        margin-bottom: 0.5rem !important;
-        gap: 10px;
+        margin-bottom: 0.8rem !important;
+        gap: 15px;
     }
 
     .welcome-message {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 8px !important;
+        gap: 10px !important;
         flex-wrap: nowrap !important;
         flex: 1;
+        min-width: 0;
     }
 
     .page-header h2 {
-        font-size: 1.1rem !important;
-        white-space: nowrap;
+        font-size: 1.3rem !important; /* Slightly reduced from 1.4 to ensure one-line fit */
+        white-space: nowrap !important; /* Force one line */
+        overflow: visible !important; /* No more cutting */
+        text-overflow: clip !important; /* Remove ellipsis dots */
         margin-bottom: 0 !important;
+        line-height: 1;
     }
 
     .role-badge {
-        font-size: 0.65rem !important;
-        padding: 3px 8px !important;
+        font-size: 0.75rem !important;
+        padding: 4px 12px !important;
+        white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .text-muted.mb-4 {
-        font-size: 0.8rem !important;
+        font-size: 0.9rem !important;
         margin-bottom: 1rem !important;
     }
 
     .btn-my-profile {
         margin-top: 0 !important;
+        flex-shrink: 0;
     }
 
     .btn-my-profile span {
-        font-size: 0.65rem !important;
+        font-size: 0.7rem !important;
     }
 
     .btn-my-profile .profile-icon-img {
-        width: 32px !important;
-        height: 32px !important;
+        width: 50px !important; /* Bigger profile */
+        height: 50px !important;
+        border-width: 2px !important;
+    }
+
+    /* Prevent Time Details from wrapping */
+    .event-time-details {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .event-time-details > div {
+        white-space: nowrap !important;
     }
 
     .glass-card .card-header {
-        font-size: 0.9rem !important;
-        padding: 10px 12px !important;
+        font-size: 1rem !important;
+        padding: 12px 15px !important;
     }
 
     .glass-card .card-body {
-        padding: 12px !important;
+        padding: 15px !important;
     }
 
     .current-activity-scroll h4 {
-        font-size: 1rem !important;
+        font-size: 1.2rem !important;
+        max-width: 65%; /* Give room for the badge */
+    }
+
+    .state-badge {
+        font-size: 0.7rem !important;
+        padding: 5px 10px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0;
     }
 
     .ue-title {
-        font-size: 0.8rem !important;
+        font-size: 0.9rem !important;
     }
 
     .ue-date-badge {
-        width: 44px !important;
-        padding: 4px 2px !important;
+        width: 52px !important;
+        padding: 6px 4px !important;
     }
 
     .ue-date-badge .day {
-        font-size: 1rem !important;
+        font-size: 1.2rem !important;
     }
 }
 
@@ -439,13 +467,20 @@
         margin-bottom: 20px;
     }
     
+    .page-header {
+        gap: 8px;
+    }
+
     .page-header h2 {
-        font-size: 0.95rem !important;
+        font-size: 1.1rem !important; /* Scaled down for tiny screens */
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
     }
 
     .role-badge {
-        font-size: 0.55rem !important;
-        padding: 2px 6px !important;
+        font-size: 0.65rem !important;
+        padding: 3px 10px !important;
     }
 
     .text-muted.mb-4 {
@@ -453,20 +488,33 @@
     }
 
     .btn-my-profile .profile-icon-img {
-        width: 28px !important;
-        height: 28px !important;
+        width: 44px !important; /* Bigger profile */
+        height: 44px !important;
+    }
+
+    .event-time-details {
+        gap: 6px !important;
+        font-size: 0.68rem !important; /* Shrink font to keep on one line */
     }
 
     .glass-card .card-header {
-        font-size: 0.8rem !important;
+        font-size: 0.9rem !important;
     }
 
     .current-activity-scroll h4 {
-        font-size: 0.85rem !important;
+        font-size: 1rem !important;
+        max-width: 60%; /* More room for badge */
+    }
+
+    .state-badge {
+        font-size: 0.6rem !important;
+        padding: 3px 8px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0;
     }
 
     .ue-title {
-        font-size: 0.75rem !important;
+        font-size: 0.8rem !important;
     }
 
     .ue-meta span, .ue-sub {

@@ -123,19 +123,19 @@ function initActivityCountdowns() {
     const activityCards = document.querySelectorAll('.current-event-card');
     
     activityCards.forEach(card => {
-        const startTimeStr = card.dataset.startTime; // HH:mm:ss
-        const endTimeStr = card.dataset.endTime;     // yyyy-MM-ddTHH:mm:ss
-        const eventDateStr = card.dataset.eventDate; // yyyy-MM-dd
+        const startTimeStr = card.dataset.startTime;
+        const endTimeStr = card.dataset.endTime;
+        const eventDateStr = card.dataset.eventDate;
         
         const timerDisplay = card.querySelector('.event-countdown-timer');
         const countdownWrap = card.querySelector('.live-countdown-wrap');
         const countdownLabel = card.querySelector('.countdown-label');
         const badge = card.querySelector('.state-badge');
         const timeDetails = card.querySelector('.event-time-details');
+        const dismissBtn = card.querySelector('.dismiss-event-btn');
         
         if (!endTimeStr || !timerDisplay || !badge) return;
 
-        // Construct Start and End Date Objects (Force PHT UTC+8)
         const startDate = new Date(`${eventDateStr}T${startTimeStr}+08:00`).getTime();
         const endDate = new Date(endTimeStr + '+08:00').getTime();
 
@@ -147,21 +147,37 @@ function initActivityCountdowns() {
             // 1. STATE: ENDED
             if (diffToEnd <= 0) {
                 clearInterval(updateInterval);
-                timerDisplay.innerText = "SESSION ENDED";
+                timerDisplay.innerText = "EVENT ENDED";
                 timerDisplay.classList.add('text-danger');
                 countdownWrap.style.display = 'flex';
                 countdownLabel.innerText = "Status: ";
                 if (timeDetails) timeDetails.style.display = 'none';
                 
-                badge.innerText = "ENDED";
+                badge.innerText = "EVENT ENDED";
                 badge.className = "badge bg-danger state-badge";
+                
+                // Show manual dismiss button
+                if (dismissBtn) dismissBtn.style.display = 'block';
 
-                setTimeout(() => {
-                    card.style.transition = 'opacity 1s ease, transform 1s ease';
-                    card.style.opacity = '0';
-                    card.style.transform = 'translateY(20px)';
-                    setTimeout(() => card.remove(), 1000);
-                }, 180000); // 3 mins
+                // AUTO-CLEANUP PRIORITY LOGIC:
+                // If there's another active or upcoming event card, remove this one immediately
+                const otherCards = document.querySelectorAll('.current-event-card');
+                let anotherActive = false;
+                otherCards.forEach(oc => {
+                    if (oc !== card) {
+                        const ocBadge = oc.querySelector('.state-badge');
+                        if (ocBadge && (ocBadge.innerText.includes('HAPPENING') || ocBadge.innerText.includes('START LATER'))) {
+                            anotherActive = true;
+                        }
+                    }
+                });
+
+                if (anotherActive) {
+                    removeWithAnimation(card);
+                } else {
+                    // Standard 3-minute grace period if it's the only event
+                    setTimeout(() => removeWithAnimation(card), 180000);
+                }
                 return;
             }
 
@@ -216,6 +232,23 @@ function initActivityCountdowns() {
 
 // Global helper for format since it was used inside initActivityCountdowns
 function format(t) { return t < 10 ? `0${t}` : t; }
+
+window.dismissEventCard = function(btn) {
+    const card = btn.closest('.current-event-card');
+    if (card) removeWithAnimation(card);
+};
+
+function removeWithAnimation(card) {
+    if (!card) return;
+    card.style.transition = 'opacity 0.8s ease, transform 0.8s ease, margin 0.8s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(30px)';
+    card.style.marginBottom = '0';
+    setTimeout(() => {
+        card.remove();
+        // Check if all cards are gone, if so you could show an 'All Clear' message here
+    }, 800);
+}
 
 function updateTimerDisplay(d, h, m, s) {
     const format = (t) => t < 10 ? `0${t}` : t;
