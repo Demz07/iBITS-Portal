@@ -1,4 +1,4 @@
-﻿@* ============================================================ *@
+@* ============================================================ *@
 @* FILE PATH: Views/Admin/StudentRecords.cshtml                 *@
 @* ============================================================ *@
 @* UPDATED: Auto-apply filters on dropdown change               *@
@@ -340,7 +340,26 @@
                                     </div>
                                     <div>
                                         <div class="student-name">@student.StudentLn, @student.StudentFn @(string.IsNullOrEmpty(student.StudentMn) ? "" : student.StudentMn.Substring(0, 1) + ".")</div>
-                                        <div class="student-email">@student.StudentEmail</div>
+                                        <div class="student-email-wrapper" 
+                                             onclick="revealEmail(this, '@student.StudentEmail')" 
+                                             title="Click to reveal email"
+                                             style="cursor: pointer;">
+                                            <span class="masked-email">
+                                                @{
+                                                    var email = student.StudentEmail ?? "";
+                                                    if (email.Contains("@"))
+                                                    {
+                                                        var parts = email.Split('@');
+                                                        var masked = parts[0].Length > 2 
+                                                            ? parts[0].Substring(0, 1) + new string('*', parts[0].Length - 2) + parts[0].Substring(parts[0].Length - 1)
+                                                            : new string('*', parts[0].Length);
+                                                        @($"{masked}@{parts[1]}")
+                                                    }
+                                                    else { @email }
+                                                }
+                                            </span>
+                                            <i class="bi bi-eye-fill ms-1 small opacity-50"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -565,7 +584,7 @@
                     <p class="text-muted">This student still has an outstanding balance:</p>
 
                     <div class="p-3 mb-3 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
-                        <h3 class="text-warning fw-bold mb-0" id="debtAmountDisplay">₱0.00</h3>
+                        <h3 class="text-warning fw-bold mb-0" id="debtAmountDisplay">?0.00</h3>
                         <small class="text-muted" id="debtBreakdownDisplay"></small>
                     </div>
 
@@ -662,6 +681,29 @@
 
 @section Scripts {
     <script>
+        // Function to reveal masked email
+        function revealEmail(element, email) {
+            const span = element.querySelector('.masked-email');
+            const icon = element.querySelector('i');
+            
+            if (span.innerText.includes('***')) {
+                span.innerText = email;
+                icon.classList.remove('bi-eye-fill');
+                icon.classList.add('bi-eye-slash-fill');
+                element.style.color = 'var(--gold-primary)';
+            } else {
+                // Re-mask logic
+                const parts = email.split('@@');
+                const masked = parts[0].length > 2 
+                    ? parts[0].substring(0, 1) + '*'.repeat(parts[0].length - 2) + parts[0].substring(parts[0].length - 1)
+                    : '*'.repeat(parts[0].length);
+                span.innerText = masked + '@@' + parts[1];
+                icon.classList.remove('bi-eye-slash-fill');
+                icon.classList.add('bi-eye-fill');
+                element.style.color = '';
+            }
+        }
+
         // Define Razor URLs for external JS
         window.getStudentDetailsUrl = '@Url.Action("GetStudentDetails", "Admin")';
         window.analyzeCsvUrl = '@Url.Action("AnalyzeCsv", "Admin")';
@@ -756,7 +798,7 @@
                         // SCENARIO A: Student owes money -> Show the Warning Modal
                         $('#debtStudentId').val(studentId);
                         $('#debtStudentName').text(studentName);
-                $('#debtAmountDisplay').text('₱' + response.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }));
+                $('#debtAmountDisplay').text('?' + response.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 }));
                         $('#debtBreakdownDisplay').text(response.details);
 
                         $('#studentArchiveWarningModal').modal('show');

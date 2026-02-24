@@ -1,4 +1,4 @@
-﻿@* ============================================================ *@
+@* ============================================================ *@
 @* FILE PATH: Views/Home/StudentDashboard.cshtml                *@
 @* ============================================================ *@
 @using iBITS_Portal.Models
@@ -512,18 +512,17 @@
                     <p class="text-muted text-center py-3">No announcements yet.</p>
                 }
 
-                @* --- START: ADMIN NOTICES (New Section) --- *@
+                @* --- START: ADMIN NOTICES --- *@
                 @foreach (var n in adminNotices.Where(x => !x.IsRead))
                 {
                     <div class="announcement-item border-start-warning mb-3"
                          style="cursor: pointer; background: var(--gold-dim);"
-                         onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@n.NotificationDate?.ToString("MMM dd, yyyy")', '@n.SentBy')">
+                         onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@(n.NotificationDate?.ToString("MMM dd, yyyy") ?? "")', '@n.SentBy')">
 
-                        @* Added '?' after NotificationDate below *@
-                        <small class="text-gold">@n.NotificationDate?.ToString("MMM dd") • Official Notice</small>
+                        <small class="text-gold">@(n.NotificationDate?.ToString("MMM dd") ?? "") • Official Notice</small>
 
                         <p class="mb-0 mt-1 text-strong">
-                            <strong>@n.Title</strong> @* This displays the SUBJECT *@
+                            <strong>@n.Title</strong>
                         </p>
                         <small class="text-muted" style="font-size: 0.7rem;">Click to read full message</small>
                     </div>
@@ -571,7 +570,7 @@
         </div>
     </div>
 
-    <!-- CURRENT ACTIVITY (All of today's open events, scrollable) -->
+    <!-- CURRENT ACTIVITY -->
     <div class="col-lg-7">
         <div class="glass-card h-100">
             <h5 class="card-header">
@@ -595,7 +594,6 @@
                                  data-event-date="@eventDateIso"
                                  style="background: var(--card-bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-color);">
                                 
-                                <!-- Dismiss Button (Hidden by default, shown when ended) -->
                                 <button type="button" class="btn-close btn-close-white dismiss-event-btn" 
                                         onclick="dismissEventCard(this)"
                                         style="display: none; position: absolute; top: 10px; right: 10px; z-index: 10; width: 0.5em; height: 0.5em;" 
@@ -635,7 +633,6 @@
                                     <span class="badge state-badge">CHECKING STATUS...</span>
                                 </div>
 
-                                <!-- EVENT DESCRIPTION -->
                                 <div class="mt-3 p-3 rounded"
                                      style="background: var(--gold-dim); border: 1px solid var(--border-color);">
                                     <h6 class="fw-bold text-strong mb-2" style="opacity:0.9;">Event Description:</h6>
@@ -713,7 +710,7 @@
 
     <div class="modal fade" id="modal@(reminder.Id)" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-modal">
+            <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary);">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title @titleColor">@reminder.AnnouncementType</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -724,15 +721,8 @@
                     <div class="mt-3 opacity-50 small text-end text-main">Posted by: @reminder.PostedBy</div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i> Close
-                    </button>
-                    <button type="button"
-                            class="btn btn-outline-warning"
-                            onclick="dismissAnnouncement(@reminder.Id, this)"
-                            data-reminder-id="@reminder.Id">
-                        <i class="bi bi-eye-slash me-1"></i> Dismiss This Reminder
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="dismissAnnouncement(@reminder.Id, this)">Dismiss Reminder</button>
                 </div>
             </div>
         </div>
@@ -742,7 +732,7 @@
 <!-- ADMIN NOTICE DETAIL MODAL -->
 <div class="modal fade" id="adminNoticeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
+        <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary);">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title text-gold"><i class="bi bi-megaphone-fill me-2"></i> Admin Notice</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -757,9 +747,7 @@
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-outline-danger" onclick="openAdminDismissConfirm()">
-                    <i class="bi bi-trash me-1"></i> Dismiss this reminder
-                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="openAdminDismissConfirm()">Dismiss Reminder</button>
             </div>
         </div>
     </div>
@@ -785,11 +773,9 @@
         <h6 class="text-uppercase small fw-bold text-main mb-3">iBITS Digital ID</h6>
         <div id="qrcode" class="my-3 d-flex justify-content-center"></div>
         <div class="d-grid gap-2 mt-4">
-            <button class="btn-action-outline" id="btnExpandQr"><i class="bi bi-arrows-fullscreen me-2"></i>Expand ID</button>
-            <button class="btn-action-outline" id="btnDownloadQr"><i class="bi bi-download me-2"></i>Download ID</button>
-            <button type="button" class="btn-action-dark mt-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
-                <i class="bi bi-gear-fill me-2"></i>Account Settings
-            </button>
+            <button class="btn-action-outline" id="btnExpandQr">Expand ID</button>
+            <button class="btn-action-outline" id="btnDownloadQr">Download ID</button>
+            <button type="button" class="btn-action-dark mt-2" data-bs-toggle="modal" data-bs-target="#settingsModal">Account Settings</button>
         </div>
     </div>
 </div>
@@ -804,20 +790,12 @@
             </div>
             <div class="modal-body p-4">
                 <ul class="nav nav-tabs mb-4" id="eventTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button">Upcoming Events</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">Event History</button>
-                    </li>
+                    <li class="nav-item"><button class="nav-link active" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button">Upcoming</button></li>
+                    <li class="nav-item"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">History</button></li>
                 </ul>
                 <div class="tab-content">
-                    <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
-                        <div id="upcomingEventsContent" class="row g-4"></div>
-                    </div>
-                    <div class="tab-pane fade" id="history" role="tabpanel">
-                        <div id="eventHistoryContent" class="row g-4"></div>
-                    </div>
+                    <div class="tab-pane fade show active" id="upcoming" role="tabpanel"><div id="upcomingEventsContent" class="row g-4"></div></div>
+                    <div class="tab-pane fade" id="history" role="tabpanel"><div id="eventHistoryContent" class="row g-4"></div></div>
                 </div>
             </div>
         </div>
@@ -827,656 +805,155 @@
 @* 4. ACCOUNT SETTINGS MODAL *@
 <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
-        <!-- Main Modal Content -->
         <div class="modal-content glass-modal p-0" style="border: 1px solid var(--gold-primary);">
-
             <div class="d-flex flex-column flex-lg-row" style="min-height: 500px;">
-
-                <!-- LEFT SIDEBAR -->
                 <div class="p-4 flex-shrink-0 settings-sidebar-wrap" style="background: var(--gold-dim); border-right: 1px solid var(--border-color);">
-                    <div class="mb-5">
-                        <h4 class="fw-bold text-strong mb-1">Manage your account</h4>
-                        <p class="text-main small">Change your account settings</p>
-                    </div>
-
-                    <!-- TAB NAVIGATION -->
+                    <div class="mb-5"><h4 class="fw-bold text-strong mb-1">Account</h4><p class="text-main small">Manage settings</p></div>
                     <ul class="nav nav-pills flex-column" id="accountSettingsTabs" role="tablist">
-                        <li class="nav-item mb-2" role="presentation">
-                            <button class="nav-link active w-100 text-start" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile-pane" type="button" role="tab" aria-controls="profile-pane" aria-selected="true">
-                                <i class="bi bi-person-fill me-3"></i> Profile
-                            </button>
-                        </li>
-                        <li class="nav-item mb-2" role="presentation">
-                            <button class="nav-link w-100 text-start" id="email-tab" data-bs-toggle="pill" data-bs-target="#email-pane" type="button" role="tab" aria-controls="email-pane" aria-selected="false">
-                                <i class="bi bi-envelope-fill me-3"></i> Email
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link w-100 text-start" id="password-tab" data-bs-toggle="pill" data-bs-target="#password-pane" type="button" role="tab" aria-controls="password-pane" aria-selected="false">
-                                <i class="bi bi-lock-fill me-3"></i> Password
-                            </button>
-                        </li>
+                        <li class="nav-item mb-2"><button class="nav-link active w-100 text-start" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile-pane" type="button" role="tab">Profile</button></li>
+                        <li class="nav-item mb-2"><button class="nav-link w-100 text-start" id="email-tab" data-bs-toggle="pill" data-bs-target="#email-pane" type="button" role="tab">Email</button></li>
+                        <li class="nav-item"><button class="nav-link w-100 text-start" id="password-tab" data-bs-toggle="pill" data-bs-target="#password-pane" type="button" role="tab">Password</button></li>
                     </ul>
-
-                    <div class="small text-main mt-5 opacity-50">
-                        &copy; @PhTime.Now.Year - iBITS Portal - <a href="#" class="text-main">Privacy</a>
-                    </div>
                 </div>
-
-                <!-- RIGHT CONTENT AREA -->
                 <div class="p-5 flex-grow-1 text-strong position-relative">
-                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal" style="z-index:10;"></button>
-
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="modal"></button>
                     <div class="tab-content" id="accountSettingsTabContent">
-
-                        <!-- Profile Pane -->
-                        <div class="tab-pane fade show active" id="profile-pane" role="tabpanel" aria-labelledby="profile-tab">
-                            <h4 class="fw-bold mb-4">Manage Profile</h4>
+                        <div class="tab-pane fade show active" id="profile-pane" role="tabpanel">
+                            <h4 class="fw-bold mb-4">Profile</h4>
                             <form id="ajaxProfileForm" class="row" enctype="multipart/form-data">
                                 @Html.AntiForgeryToken()
                                 <div id="profileAlert" class="alert d-none small col-12"></div>
                                 <div class="col-md-5 text-center mb-4">
                                     <label for="profilePictureInput" style="cursor: pointer;">
-                                        <img id="profilePicturePreview"
-                                             src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)"
-                                             class="rounded-circle border border-warning p-1 mb-2"
-                                             style="width: 150px; height: 150px; object-fit: cover;">
-                                        <p class="small text-main">Click image to change</p>
+                                        <img id="profilePicturePreview" src="@(string.IsNullOrEmpty(student?.StudentImage) ? "/images/default-avatar.png" : student.StudentImage)" class="rounded-circle border border-warning p-1 mb-2" style="width: 150px; height: 150px; object-fit: cover;">
+                                        <p class="small text-main">Change Photo</p>
                                     </label>
                                     <input type="file" id="profilePictureInput" name="ProfilePicture" class="d-none" accept=".jpg,.jpeg,.png">
                                 </div>
                                 <div class="col-md-7">
-                                    <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);">
-                                        <label class="modal-label text-gold">Username</label>
-                                        <p class="fw-bold mb-0">@student?.StudentNum</p>
-                                    </div>
-                                    <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);">
-                                        <label class="modal-label text-gold">Full Name</label>
-                                        <p class="fw-bold mb-0">@student?.StudentFn @student?.StudentLn</p>
-                                    </div>
-                                    <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);">
-                                        <label class="modal-label text-gold">Course</label>
-                                        <p class="fw-bold mb-0">@student?.Course | @student?.YearLevelSection</p>
-                                    </div>
-                                    <button type="submit" class="btn btn-gold w-100 mt-2" id="btnUpdateProfile">Save Profile Changes</button>
+                                    <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);"><label class="modal-label text-gold">ID</label><p class="fw-bold mb-0">@student?.StudentNum</p></div>
+                                    <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);"><label class="modal-label text-gold">Name</label><p class="fw-bold mb-0">@student?.StudentFn @student?.StudentLn</p></div>
+                                    <button type="submit" class="btn btn-gold w-100 mt-2" id="btnUpdateProfile">Save</button>
                                 </div>
                             </form>
                         </div>
-
-                        <!-- Email Pane -->
-                        <div class="tab-pane fade" id="email-pane" role="tabpanel" aria-labelledby="email-tab">
-                            <h4 class="fw-bold mb-4">Manage Email</h4>
+                        <div class="tab-pane fade" id="email-pane" role="tabpanel">
+                            <h4 class="fw-bold mb-4">Email</h4>
                             <form id="ajaxEmailForm">
                                 @Html.AntiForgeryToken()
                                 <div id="emailAlert" class="alert d-none small"></div>
-                                <div class="mb-3">
-                                    <label class="modal-label text-gold">Current Email</label>
-                                    <input type="email" id="currentStudentEmail" value="@(student?.StudentEmail)" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" readonly />
-                                </div>
-                                <div class="mb-3">
-                                    <label class="modal-label text-gold">New Email</label>
-                                    <input type="email" name="NewEmail" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required />
-                                </div>
-                                <button type="submit" class="btn btn-gold mt-3" id="btnUpdateEmail">Save Changes</button>
+                                <div class="mb-3"><label class="modal-label text-gold">New Email</label><input type="email" name="NewEmail" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required /></div>
+                                <button type="submit" class="btn btn-gold mt-3" id="btnUpdateEmail">Save</button>
                             </form>
                         </div>
-
-                        <!-- Password Pane -->
-                        <div class="tab-pane fade" id="password-pane" role="tabpanel" aria-labelledby="password-tab">
-                            <h4 class="fw-bold mb-4">Manage Password</h4>
+                        <div class="tab-pane fade" id="password-pane" role="tabpanel">
+                            <h4 class="fw-bold mb-4">Password</h4>
                             <form id="ajaxPasswordForm">
                                 @Html.AntiForgeryToken()
                                 <div id="passwordAlert" class="alert d-none small"></div>
-                                <div class="mb-3">
-                                    <label class="modal-label text-gold">Current Password</label>
-                                    <input type="password" name="OldPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" placeholder="Enter current password" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="modal-label text-gold">New Password</label>
-                                    <input type="password" name="NewPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" placeholder="Minimum 6 characters" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="modal-label text-gold">Confirm New Password</label>
-                                    <input type="password" name="ConfirmPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" placeholder="Repeat new password" required>
-                                </div>
-                                <button type="submit" class="btn btn-gold mt-3" id="btnUpdatePass">Update Password</button>
+                                <div class="mb-3"><label class="modal-label text-gold">Current</label><input type="password" name="OldPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required></div>
+                                <div class="mb-3"><label class="modal-label text-gold">New</label><input type="password" name="NewPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required></div>
+                                <div class="mb-3"><label class="modal-label text-gold">Confirm</label><input type="password" name="ConfirmPassword" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required></div>
+                                <button type="submit" class="btn btn-gold mt-3" id="btnUpdatePass">Update</button>
                             </form>
                         </div>
-
-                    </div> <!-- End Tab Content -->
-                </div> <!-- End Right Content -->
-
-            </div> <!-- End d-flex -->
-        </div>
-    </div>
-</div>
-
-@* Existing confirm modal used by settings *@
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i> Confirm Changes</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-strong text-center">
-                <p class="mb-3">Are you sure you want to proceed with these changes?</p>
-                <p class="small text-main">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning flex-fill" id="confirmActionButton">Yes, Save Changes</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-@* Dismiss confirm modal (Announcements) *@
+@* MODALS: CONFIRMATIONS *@
 <div class="modal fade" id="dismissConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-warning">
-                    <i class="bi bi-eye-slash-fill me-2"></i> Dismiss Announcement
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-strong">
-                <div class="text-center">
-                    <i class="bi bi-bell-slash-fill text-warning mb-2" style="font-size:2.5rem;"></i>
-                    <p class="mb-2 fw-bold">Are you sure?</p>
-                    <p class="small text-main mb-0">
-                        You won’t see this announcement again after dismissing it.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning flex-fill" id="confirmDismissBtn">
-                    <i class="bi bi-check2-circle me-1"></i> Yes, Dismiss
-                </button>
-            </div>
+            <div class="modal-header border-0 pb-0"><h5 class="modal-title text-warning">Dismiss</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-strong text-center"><p>Are you sure?</p></div>
+            <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">No</button><button type="button" class="btn btn-warning flex-fill" id="confirmDismissBtn">Yes</button></div>
         </div>
     </div>
 </div>
 
-@* ✅ NEW: Dismiss confirm modal for Admin Notices (visual, no native alert) *@
 <div class="modal fade" id="adminDismissConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content glass-modal" style="border: 1px solid var(--gold-primary);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-trash3-fill me-2"></i> Dismiss Admin Notice
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-strong">
-                <div class="text-center">
-                    <i class="bi bi-exclamation-octagon-fill text-danger mb-2" style="font-size:2.5rem;"></i>
-                    <p class="mb-2 fw-bold">Are you sure?</p>
-                    <p class="small text-main mb-0">
-                        This notice will be removed from your dashboard.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger flex-fill" id="confirmAdminDismissBtn">
-                    <i class="bi bi-check2-circle me-1"></i> Yes, Dismiss
-                </button>
-            </div>
+            <div class="modal-header border-0 pb-0"><h5 class="modal-title text-danger">Dismiss</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-strong text-center"><p>Are you sure?</p></div>
+            <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal">No</button><button type="button" class="btn btn-danger flex-fill" id="confirmAdminDismissBtn">Yes</button></div>
         </div>
     </div>
 </div>
 
 <div id="portalToastContainer"></div>
 
-<input type="hidden" id="hiddenStudentId" value="@student?.StudentNum" />
-@if (showCurrentActivity)
-{
-    var firstEvent = currentEvents.First();
-    if (firstEvent.EventDate.HasValue)
-    {
-        <input type="hidden" id="eventDate" value="@firstEvent.EventDate.Value.ToString("yyyy-MM-dd")" />
-    }
-}
-
 @section Scripts {
-
-
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
-
     <script>
         function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
-
-        // ✅ FIXED: Fetch events correctly instead of checking profile images
         function loadUpcomingEvents() {
             const container = document.getElementById('upcomingEventsContent');
             if(!container) return;
-
-            // Show loading spinner
-            container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-warning" role="status"></div></div>';
-
-            fetch('/Home/GetAllEventsJson')
-                .then(r => r.json())
-                .then(data => {
-                    container.innerHTML = '';
-                    // Check 'upcoming' property
-                    const events = data.upcoming || [];
-
-                    if (events.length > 0) {
-                        let html = '';
-                        events.forEach(item => {
-                            // false = Render as upcoming style
-                            html += renderEventCard(item, false);
-                        });
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No upcoming events found.</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading events:', error);
-                    container.innerHTML = '<div class="col-12 text-center text-danger py-4">Unable to load events.</div>';
-                });
+            container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning"></div></div>';
+            fetch('/Home/GetAllEventsJson').then(r=>r.json()).then(data=>{
+                container.innerHTML = '';
+                const events = data.upcoming || [];
+                if(events.length > 0) events.forEach(item => container.innerHTML += renderEventCard(item, false));
+                else container.innerHTML = '<div class="text-center text-muted py-4">No events.</div>';
+            });
         }
-
-        // ✅ FIXED: Fetch history correctly
         function loadEventHistory() {
             const container = document.getElementById('eventHistoryContent');
             if(!container) return;
-
-            container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-warning" role="status"></div></div>';
-
-            fetch('/Home/GetAllEventsJson')
-                .then(r => r.json())
-                .then(data => {
-                    container.innerHTML = '';
-                    // Check 'history' property
-                    const events = data.history || [];
-
-                    if (events.length > 0) {
-                        let html = '';
-                        events.forEach(item => {
-                            // true = Render as history/completed style
-                            html += renderEventCard(item, true);
-                        });
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No event history found.</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading history:', error);
-                    container.innerHTML = '<div class="col-12 text-center text-danger py-4">Unable to load history.</div>';
-                });
+            container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning"></div></div>';
+            fetch('/Home/GetAllEventsJson').then(r=>r.json()).then(data=>{
+                container.innerHTML = '';
+                const events = data.history || [];
+                if(events.length > 0) events.forEach(item => container.innerHTML += renderEventCard(item, true));
+                else container.innerHTML = '<div class="text-center text-muted py-4">No history.</div>';
+            });
         }
-
-        // ✅ Helper to render the cards (uses your design)
         function renderEventCard(item, isPastEvent) {
-            // Parse the date safely
             const eventDate = new Date(item.eventDate);
-
             let statusClass = isPastEvent ? (item.isClosed ? "bg-dark" : "bg-secondary") : "badge-upcoming";
             let statusText = isPastEvent ? (item.isClosed ? "Closed" : "Completed") : "Upcoming";
-
-            return `
-            <div class="col-md-6 col-lg-4">
-                <div class="glass-card h-100" style="background: var(--card-bg-subtle, rgba(255,255,255,0.05)); border: 1px solid var(--border-color); border-radius:12px; overflow:hidden;">
-                    <div class="event-img-placeholder text-center py-4 position-relative" style="background: var(--gold-dim);">
-                        <span class="status-badge ${statusClass}" style="position:absolute; top:10px; right:10px; padding: 4px 10px; border-radius:4px; color:white; font-size:0.75rem; font-weight:bold;">${statusText}</span>
-                        <i class="bi bi-calendar-week" style="font-size: 3rem; color: #D4AF37;"></i>
-                    </div>
-                    <div class="event-body p-4">
-                        <div class="event-date text-gold small fw-bold mb-1 text-uppercase">
-                            ${eventDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month:'short', day:'numeric', year:'numeric' })}
-                        </div>
-                        <div class="event-title fw-bold text-strong mb-2" style="font-size: 1.1rem;">${item.eventName}</div>
-                        <div class="d-flex align-items-center gap-2 text-main small">
-                            <i class="bi bi-geo-alt-fill text-warning"></i> ${item.eventLocation || 'TBA'}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
+            return `<div class="col-md-6 col-lg-4"><div class="glass-card h-100" style="background: var(--card-bg-subtle); border: 1px solid var(--border-color); border-radius:12px; overflow:hidden;"><div class="event-img-placeholder text-center py-4 position-relative" style="background: var(--gold-dim);"><span class="status-badge ${statusClass}" style="position:absolute; top:10px; right:10px; padding: 4px 10px; border-radius:4px; color:white; font-size:0.75rem; font-weight:bold;">${statusText}</span><i class="bi bi-calendar-week" style="font-size: 3rem; color: #D4AF37;"></i></div><div class="event-body p-4"><div class="event-date text-gold small fw-bold mb-1 text-uppercase">${eventDate.toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' })}</div><div class="event-title fw-bold text-strong mb-2" style="font-size: 1.1rem;">${item.eventName}</div><div class="d-flex align-items-center gap-2 text-main small"><i class="bi bi-geo-alt-fill text-warning"></i> ${item.eventLocation || 'TBA'}</div></div></div></div>`;
         }
-
-        // TOAST
-        function showPortalToast(type, title, message, timeout = 2800) {
+        function showPortalToast(type, title, msg) {
             const container = document.getElementById('portalToastContainer');
-            if (!container) return;
-
             const toast = document.createElement('div');
             toast.className = `portal-toast ${type}`;
-            const icon = type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill';
-
-            toast.innerHTML = `
-                <div class="icon"><i class="bi ${icon}"></i></div>
-                <div><p class="title">${title}</p><p class="msg">${message}</p></div>
-                <button class="close-btn" aria-label="Close">&times;</button>
-            `;
-
+            toast.innerHTML = `<div><p class="title">${title}</p><p class="msg">${msg}</p></div><button class="close-btn">&times;</button>`;
             toast.querySelector('.close-btn').onclick = () => toast.remove();
             container.appendChild(toast);
-            setTimeout(() => { if (toast && toast.parentNode) toast.remove(); }, timeout);
+            setTimeout(() => { if(toast.parentNode) toast.remove(); }, 3000);
         }
+        // Simplified flash check to avoid Razor syntax errors
+        const flashMsg = '@(TempData["Message"]?.ToString() ?? "")';
+        if(flashMsg !== '') showPortalToast('success', 'Success', flashMsg);
 
-        // TEMP DATA FLASH MESSAGE
-        (function () {
-            const flashMsg = @System.Text.Json.JsonSerializer.Serialize(TempData["Message"] as string);
-            if (flashMsg) { showPortalToast('success', 'Success', flashMsg, 3500); }
-        })();
-
-        // DISMISS ANNOUNCEMENT
         let pendingDismiss = { id: null, button: null };
-        function dismissAnnouncement(announcementId, button) {
-            pendingDismiss.id = announcementId;
-            pendingDismiss.button = button;
-            const modal = new bootstrap.Modal(document.getElementById('dismissConfirmModal'));
-            modal.show();
+        function dismissAnnouncement(id, btn) {
+            pendingDismiss = { id, button: btn };
+            new bootstrap.Modal(document.getElementById('dismissConfirmModal')).show();
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const confirmDismissBtn = document.getElementById('confirmDismissBtn');
-            if (!confirmDismissBtn) return;
-
-            confirmDismissBtn.addEventListener('click', function () {
-                const announcementId = pendingDismiss.id;
-                const button = pendingDismiss.button;
-                const dismissModalInstance = bootstrap.Modal.getInstance(document.getElementById('dismissConfirmModal'));
-                if (dismissModalInstance) dismissModalInstance.hide();
-
-                if (!announcementId || !button) return;
-                const originalBtnHtml = button.innerHTML;
-                button.disabled = true;
-                button.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
-
-                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-                const token = tokenInput ? tokenInput.value : '';
-
-                fetch('/Home/DismissAnnouncement', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
-                    body: `id=${announcementId}&__RequestVerificationToken=${encodeURIComponent(token)}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const openedModalEl = document.getElementById('modal' + announcementId);
-                        const openedModal = openedModalEl ? bootstrap.Modal.getInstance(openedModalEl) : null;
-                        if (openedModal) openedModal.hide();
-
-                        const announcementElement = document.getElementById('announcement-' + announcementId);
-                        if (announcementElement) {
-                            announcementElement.style.opacity = '0';
-                            setTimeout(() => {
-                                announcementElement.remove();
-                            }, 260);
-                        }
-                        showPortalToast('success', 'Dismissed', 'Announcement dismissed successfully.');
-                    } else {
-                        showPortalToast('danger', 'Error', (data.message || 'Error dismissing announcement.'));
-                        button.disabled = false;
-                        button.innerHTML = originalBtnHtml;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showPortalToast('danger', 'Network Error', 'An error occurred.');
-                    button.disabled = false;
-                    button.innerHTML = originalBtnHtml;
-                })
-                .finally(() => { pendingDismiss.id = null; pendingDismiss.button = null; });
+        document.getElementById('confirmDismissBtn').onclick = function() {
+            const id = pendingDismiss.id;
+            const btn = pendingDismiss.button;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('dismissConfirmModal'));
+            modal.hide();
+            fetch('/Home/DismissAnnouncement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+                body: `id=${id}`
+            }).then(r=>r.json()).then(data=>{
+                if(data.success) {
+                    const row = document.getElementById('announcement-'+id);
+                    if(row) row.remove();
+                    showPortalToast('success', 'Dismissed', 'Announcement removed.');
+                }
             });
-        });
-
-        // ===========================
-        // PROFILE PICTURE: Preview + AJAX Upload
-        // ===========================
-        (function () {
-            const fileInput = document.getElementById('profilePictureInput');
-            const previewImg = document.getElementById('profilePicturePreview');
-            const form = document.getElementById('ajaxProfileForm');
-            const btn = document.getElementById('btnUpdateProfile');
-
-            // 1. Handle File Selection Preview
-            if (fileInput && previewImg) {
-                fileInput.addEventListener('change', function () {
-                    const file = this.files && this.files[0];
-                    if (!file) return;
-                    const allowed = ['image/jpeg', 'image/png'];
-                    if (!allowed.includes(file.type)) { showPortalToast('danger', 'Invalid file', 'Only JPG and PNG are allowed.'); this.value = ''; return; }
-                    if (file.size > 5 * 1024 * 1024) { showPortalToast('danger', 'Too large', 'File must be less than 5MB.'); this.value = ''; return; }
-                    const reader = new FileReader();
-                    reader.onload = (e) => { previewImg.src = e.target.result; };
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            // 2. Handle Form Submission (AJAX)
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(form);
-                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
-                    const token = tokenInput ? tokenInput.value : '';
-
-                    const oldBtnHtml = btn ? btn.innerHTML : '';
-                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Saving...'; }
-
-                    fetch('@Url.Action("UpdateProfileAjax", "Account")', {
-                        method: 'POST',
-                        headers: { 'RequestVerificationToken': token },
-                        body: formData
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Cache buster string to force browser to reload image
-                            const timestamp = '?t=' + Date.now();
-
-                            // A. Update Modal Preview
-                            if (data.imagePath && previewImg) {
-                                previewImg.src = data.imagePath + timestamp;
-                            }
-
-                            // B. Update Header Avatar (Next to "Hello, Name")
-                            const headerMyProfileImg = document.getElementById('headerMyProfileImg');
-                            if (headerMyProfileImg && data.imagePath) {
-                                headerMyProfileImg.src = data.imagePath + timestamp;
-                            }
-
-                            // C. Update Top Navbar Avatar (if present in Layout)
-                            const navImg = document.getElementById('navProfileImg');
-                            if (navImg && data.imagePath) {
-                                navImg.src = data.imagePath + timestamp;
-                            }
-
-                            // D. ✅ NEW: Update Right Sidebar (Offcanvas) Avatar
-                            const sidebarImg = document.getElementById('offcanvasProfileImg');
-                            if (sidebarImg && data.imagePath) {
-                                sidebarImg.src = data.imagePath + timestamp;
-                            }
-
-                            showPortalToast('success', 'Profile Updated', data.message || 'Profile photo updated successfully!');
-                        } else {
-                            showPortalToast('danger', 'Upload Failed', data.message || 'Please try again.');
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
-                    })
-                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
-                });
-            }
-        })();
-
-        // ===========================
-        // EMAIL UPDATE: AJAX
-        // ===========================
-        (function () {
-            const form = document.getElementById('ajaxEmailForm');
-            const btn = document.getElementById('btnUpdateEmail');
-            const currentEmailInput = document.getElementById('currentStudentEmail');
-
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData(form);
-                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
-                    const token = tokenInput ? tokenInput.value : '';
-
-                    const oldBtnHtml = btn ? btn.innerHTML : '';
-                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Updating...'; }
-
-                    fetch('@Url.Action("UpdateEmailAjax", "Account")', {
-                        method: 'POST',
-                        headers: { 'RequestVerificationToken': token },
-                        body: new URLSearchParams(formData)
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            showPortalToast('success', 'Success', data.message || 'Email updated successfully!');
-                            if (currentEmailInput && formData.get('NewEmail')) {
-                                currentEmailInput.value = formData.get('NewEmail');
-                            }
-                            form.reset();
-                        } else {
-                            showPortalToast('danger', 'Update Failed', data.message || 'Unable to update email.');
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
-                    })
-                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
-                });
-            }
-        })();
-
-        // ===========================
-        // PASSWORD UPDATE: AJAX
-        // ===========================
-        (function () {
-            const form = document.getElementById('ajaxPasswordForm');
-            const btn = document.getElementById('btnUpdatePass');
-            const alertDiv = document.getElementById('passwordAlert');
-
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData(form);
-                    const newPass = formData.get('NewPassword');
-                    const confirmPass = formData.get('ConfirmPassword');
-
-                    if (newPass !== confirmPass) {
-                        showPortalToast('danger', 'Mismatch', 'New passwords do not match.');
-                        return;
-                    }
-
-                    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
-                    const token = tokenInput ? tokenInput.value : '';
-
-                    const oldBtnHtml = btn ? btn.innerHTML : '';
-                    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Updating...'; }
-
-                    fetch('@Url.Action("ChangePasswordAjax", "Account")', {
-                        method: 'POST',
-                        headers: { 'RequestVerificationToken': token },
-                        body: new URLSearchParams(formData)
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            showPortalToast('success', 'Success', data.message || 'Password updated successfully!');
-                            form.reset();
-                        } else {
-                            showPortalToast('danger', 'Update Failed', data.message || 'Please check your current password.');
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        showPortalToast('danger', 'Network Error', 'Something went wrong.');
-                    })
-                    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = oldBtnHtml; } });
-                });
-            }
-        })();
-
-
-        // sender notice
-        let activeNoticeId = null;
-
-        function openAdminNoticeModal(id, title, msg, date, sender) {
-            activeNoticeId = id;
-            document.getElementById('viewNoticeSubject').innerText = title;
-            document.getElementById('viewNoticeMessage').innerText = msg;
-            document.getElementById('viewNoticeDate').innerText = date;
-            document.getElementById('viewNoticeSender').innerText = "Sent by: " + sender;
-
-            new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
-        }
-
-        // ✅ NEW: Open the nice confirm modal for Admin Notice
-        function openAdminDismissConfirm() {
-            const modal = new bootstrap.Modal(document.getElementById('adminDismissConfirmModal'));
-            modal.show();
-        }
-
-        // ✅ NEW: Handle Admin Notice Dismiss (with toast after)
-        document.addEventListener('DOMContentLoaded', function () {
-            const adminConfirmBtn = document.getElementById('confirmAdminDismissBtn');
-            if (!adminConfirmBtn) return;
-
-            adminConfirmBtn.addEventListener('click', function () {
-                if (!activeNoticeId) return;
-
-                // Hide confirm modal
-                const confirmInst = bootstrap.Modal.getInstance(document.getElementById('adminDismissConfirmModal'));
-                if (confirmInst) confirmInst.hide();
-
-                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-                $.ajax({
-                    url: '/Home/DismissNotification',
-                    type: 'POST',
-                    data: {
-                        id: activeNoticeId,
-                        __RequestVerificationToken: token
-                    },
-                    success: function (res) {
-                        if (res.success) {
-                            // Hide the view modal if open
-                            const viewInst = bootstrap.Modal.getInstance(document.getElementById('adminNoticeModal'));
-                            if (viewInst) viewInst.hide();
-
-                            // Remove the matching card from the list (if present)
-                            const listItems = document.querySelectorAll('.announcement-item.border-start-warning');
-                            listItems.forEach(el => {
-                                // Find the one that opened this modal by subject text match (safe fallback)
-                                const titleEl = el.querySelector('p.mb-0.mt-1.text-white strong');
-                                if (titleEl && titleEl.innerText.trim() === document.getElementById('viewNoticeSubject').innerText.trim()) {
-                                    el.style.opacity = '0';
-                                    setTimeout(() => el.remove(), 260);
-                                }
-                            });
-
-                            // Show the pretty toast (like your 2nd screenshot)
-                            showPortalToast('success', 'Dismissed', 'Admin notice dismissed successfully.');
-                            activeNoticeId = null;
-                        } else {
-                            showPortalToast('danger', 'Error', 'Could not dismiss notice.');
-                        }
-                    },
-                    error: function() {
-                        showPortalToast('danger', 'Error', 'Server connection failed.');
-                    }
-                });
-            });
-        });
+        };
     </script>
 }

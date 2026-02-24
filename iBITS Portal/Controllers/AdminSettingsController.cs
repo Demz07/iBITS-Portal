@@ -89,6 +89,102 @@ namespace iBITS_Portal.Controllers
         }
 
         // POST: /AdminSettings/UpdateEmail
+        [HttpGet]
+        public async Task<IActionResult> GetTwoFactorStatus()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            return Json(new
+            {
+                isEnabled = await _userManager.GetTwoFactorEnabledAsync(user),
+                hasAuthenticator = await _userManager.GetAuthenticatorKeyAsync(user) != null
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadAuthenticatorKey()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            var unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user);
+            if (string.IsNullOrEmpty(unformattedKey))
+            {
+                await _userManager.ResetAuthenticatorKeyAsync(user);
+                unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user);
+            }
+
+            return Json(new { 
+                sharedKey = unformattedKey,
+                authenticatorUri = $"otpauth://totp/iBITS%20Portal:{user.Email}?secret={unformattedKey}&issuer=iBITS%20Portal"
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyAndEnable2FA(string code)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            var verificationCode = code.Replace(" ", string.Empty).Replace("-", "");
+            var is2faTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
+                user, _userManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
+
+            if (!is2faTokenValid)
+            {
+                return Json(new { success = false, message = "Verification code is invalid." });
+            }
+
+            await _userManager.SetTwoFactorEnabledAsync(user, true);
+            
+            // Generate recovery codes (usually 10)
+            var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+            
+            await _signInManager.RefreshSignInAsync(user);
+
+            return Json(new { 
+                success = true, 
+                recoveryCodes = recoveryCodes 
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleTwoFactor(bool enable)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            await _userManager.SetTwoFactorEnabledAsync(user, enable);
+            if (!enable)
+            {
+                await _userManager.ResetAuthenticatorKeyAsync(user);
+            }
+            await _signInManager.RefreshSignInAsync(user);
+
+            return Json(new { success = true, isEnabled = enable });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateRecoveryCodes()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+            if (!isTwoFactorEnabled)
+            {
+                return Json(new { success = false, message = "2FA must be enabled to generate recovery codes." });
+            }
+
+            var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+            return Json(new { success = true, recoveryCodes = recoveryCodes });
+        }
+
+        // POST: /AdminSettings/UpdateEmail
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateEmail(PasswordChangeModel model)
