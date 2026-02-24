@@ -88,6 +88,10 @@
     border-bottom: 1px solid var(--border-color);
 }
 
+[data-theme="light"] .event-header-gradient {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(212, 175, 55, 0.1) 100%);
+}
+
 /* Date Sticker */
 .event-date-sticker {
     position: absolute;
@@ -105,6 +109,11 @@
     justify-content: center;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     z-index: 2;
+}
+
+[data-theme="light"] .event-date-sticker {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.05);
 }
 
 .date-month {
@@ -180,6 +189,10 @@
     overflow: hidden;
 }
 
+[data-theme="light"] .event-desc {
+    color: var(--text-main);
+}
+
 /* Footer Actions */
 .event-footer {
     display: flex;
@@ -198,6 +211,10 @@
     padding: 4px 10px;
     border-radius: 20px;
     border: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .attendees-tag {
+    background: rgba(0, 0, 0, 0.03);
 }
 
     .attendees-tag i {
@@ -477,6 +494,17 @@ input:disabled::-webkit-search-cancel-button {
     font-weight: 600;
     transition: all 0.3s ease;
     backdrop-filter: blur(4px);
+}
+
+[data-theme="light"] .btn-view-details {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="light"] .btn-view-details:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-strong) !important;
 }
 
     .btn-view-details:hover {

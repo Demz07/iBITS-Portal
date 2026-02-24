@@ -17,6 +17,10 @@
     padding: 20px;
 }
 
+[data-theme="light"] .glass-card-flat {
+    background: rgba(0, 0, 0, 0.02);
+}
+
 .glass-header-title {
     color: var(--text-strong);
     margin: 0;

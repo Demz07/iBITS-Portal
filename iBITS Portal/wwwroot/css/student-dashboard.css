@@ -40,7 +40,7 @@
 }
 
     .glass-card .card-header {
-        background: rgba(0,0,0,0.2);
+        background: rgba(0,0,0,0.1);
         color: var(--gold-text);
         font-weight: 700;
         border-bottom: 1px solid var(--border-color);
@@ -50,6 +50,11 @@
         padding: 25px;
     }
 
+/* Light mode specific card header */
+[data-theme="light"] .glass-card .card-header {
+    background: rgba(0,0,0,0.03);
+}
+
 /* Countdown */
 .countdown-container {
     display: flex;
@@ -57,12 +62,16 @@
 }
 
 .time-box {
-    background: rgba(0,0,0,0.3);
+    background: rgba(0,0,0,0.2);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 10px;
     min-width: 80px;
     text-align: center;
+}
+
+[data-theme="light"] .time-box {
+    background: rgba(0,0,0,0.05);
 }
 
     .time-box span {
@@ -190,10 +199,20 @@
     border: 1px solid var(--border-color);
 }
 
-    .btn-action-dark:hover {
-        background: rgba(0,0,0,0.6);
-        color: #fff;
-    }
+.btn-action-dark:hover {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+}
+
+[data-theme="light"] .btn-action-dark {
+    background: rgba(0,0,0,0.05);
+    color: var(--text-main);
+}
+
+[data-theme="light"] .btn-action-dark:hover {
+    background: rgba(0,0,0,0.1);
+    color: var(--text-strong);
+}
 
 /* Modal Styles */
 .glass-modal {
@@ -312,6 +331,10 @@
     padding: 2px 10px;
     border-radius: 6px;
     border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+[data-theme="light"] .live-countdown-wrap {
+    background: rgba(212, 175, 55, 0.05);
 }
 
 .event-countdown-timer {

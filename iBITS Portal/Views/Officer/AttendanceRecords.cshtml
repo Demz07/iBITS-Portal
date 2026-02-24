@@ -375,8 +375,29 @@
         }
 
         function exportToExcel() {
-            const table = document.getElementById('attendanceTable');
-            const wb = XLSX.utils.table_to_book(table, {sheet: "Attendance Records"});
+            // Clone table to modify it for export
+            const originalTable = document.getElementById('attendanceTable');
+            const cloneTable = originalTable.cloneNode(true);
+            
+            // Remove the 'Check' column and 'Action' column from the clone
+            const rows = cloneTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                // Remove first child (Checkbox column)
+                if (row.querySelector('.col-check') || row.cells[0].classList.contains('col-check')) {
+                    row.deleteCell(0);
+                }
+                
+                // Remove last child if it's the 'Action' column
+                const lastCell = row.cells[row.cells.length - 1];
+                if (lastCell.classList.contains('col-action')) {
+                    row.deleteCell(row.cells.length - 1);
+                }
+            });
+
+            const wb = XLSX.utils.table_to_book(cloneTable, {
+                sheet: "Attendance Records",
+                raw: true // This forces all cells to be treated as text, preventing '3-1' from becoming a date
+            });
             XLSX.writeFile(wb, 'Attendance_Records_' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) + '.xlsx');
         }
 

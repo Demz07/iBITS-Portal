@@ -16,6 +16,7 @@
     --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
     --input-bg: rgba(255, 255, 255, 0.05);
     --input-border: rgba(255, 255, 255, 0.1);
+    --card-bg-subtle: rgba(255, 255, 255, 0.03);
 }
 
 /* LIGHT THEME OVERRIDES */
@@ -33,6 +34,7 @@
     --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
+    --card-bg-subtle: rgba(0, 0, 0, 0.02);
 }
 
 /* --- FIXED VIEWPORT SETTINGS --- */
@@ -762,7 +764,7 @@ body {
         margin: 8px 8px 0 8px;
         padding: 8px 12px;
         border-radius: 10px;
-        gap: 8px;
+        gap: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -773,20 +775,23 @@ body {
     }
 
     .pup-nav-title {
-        font-size: 0.6rem;
-        line-height: 1.1;
-        letter-spacing: 0.1px;
-        max-width: 150px;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        letter-spacing: 0.5px;
+        max-width: 165px; /* Tuned to split text naturally */
+        white-space: normal !important;
+        overflow: visible !important;
+        display: block !important;
     }
 
     .pup-nav-sub {
-        font-size: 0.5rem;
-        letter-spacing: 0.3px;
+        font-size: 0.65rem;
+        letter-spacing: 0.5px;
     }
 
     .pup-nav-logo {
-        width: 30px;
-        height: 30px;
+        width: 45px;
+        height: 45px;
     }
 
     .scrollable-content {
@@ -806,22 +811,26 @@ body {
 @media (max-width: 480px) {
     .admin-navbar {
         margin: 6px 6px 0 6px;
-        padding: 6px 8px;
-        gap: 4px;
+        padding: 6px 10px;
+        gap: 6px;
     }
 
     .pup-nav-logo {
-        width: 25px;
-        height: 25px;
+        width: 38px;
+        height: 38px;
     }
     
     .pup-nav-title {
-        font-size: 0.5rem;
-        max-width: 120px;
+        font-size: 0.75rem;
+        max-width: 150px;
+        white-space: normal !important;
+        overflow: visible !important;
+        display: block !important;
+        line-height: 1.2;
     }
     
     .pup-nav-sub {
-        font-size: 0.45rem;
+        font-size: 0.6rem;
     }
     
     .academic-year-badge {
