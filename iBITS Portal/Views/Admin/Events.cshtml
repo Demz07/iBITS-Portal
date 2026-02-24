@@ -122,7 +122,7 @@
                     </div>
 
                     <!-- Closure Status Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
                             <i class="bi bi-lock me-1"></i>Closure
                         </label>
@@ -132,6 +132,23 @@
                             <option value="">All Events</option>
                             <option value="false" selected="@(ViewBag.CurrentIsClosed == "false")">Open Only</option>
                             <option value="true" selected="@(ViewBag.CurrentIsClosed == "true")">Closed Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label" style="color: var(--text-main); font-weight: 500; font-size: 0.85rem;">
+                            <i class="bi bi-sort-down me-1"></i>Sort By
+                        </label>
+                        <select name="sort" 
+                                id="sortFilter" 
+                                class="form-select glass-dropdown filter-trigger">
+                            <option value="newest" selected="@(ViewBag.CurrentSort == "newest")">Newest First</option>
+                            <option value="oldest" selected="@(ViewBag.CurrentSort == "oldest")">Oldest First</option>
+                            <option value="date_desc" selected="@(ViewBag.CurrentSort == "date_desc")">Event Date (Recent)</option>
+                            <option value="date_asc" selected="@(ViewBag.CurrentSort == "date_asc")">Event Date (Upcoming)</option>
+                            <option value="name_asc" selected="@(ViewBag.CurrentSort == "name_asc")">Name (A-Z)</option>
+                            <option value="name_desc" selected="@(ViewBag.CurrentSort == "name_desc")">Name (Z-A)</option>
                         </select>
                     </div>
                 </div>
@@ -395,16 +412,46 @@
         <nav>
             <ul class="pagination mb-0">
                 <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
-                    <a class="page-link" href="@Url.Action("Events", new { pageNumber = Model.PageNumber - 1 })"><i class="bi bi-chevron-left"></i></a>
+                    <a class="page-link" href="@Url.Action("Events", new { 
+                        pageNumber = Model.PageNumber - 1,
+                        search = ViewBag.CurrentSearch,
+                        acadYear = ViewBag.CurrentAcadYear,
+                        eventType = ViewBag.CurrentEventType,
+                        status = ViewBag.CurrentStatus,
+                        dateFrom = ViewBag.CurrentDateFrom,
+                        dateTo = ViewBag.CurrentDateTo,
+                        isClosed = ViewBag.CurrentIsClosed,
+                        sort = ViewBag.CurrentSort
+                    })"><i class="bi bi-chevron-left"></i></a>
                 </li>
                 @for (int i = 1; i <= Model.TotalPages; i++)
                 {
                     <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                        <a class="page-link" href="@Url.Action("Events", new { pageNumber = i })">@i</a>
+                        <a class="page-link" href="@Url.Action("Events", new { 
+                            pageNumber = i,
+                            search = ViewBag.CurrentSearch,
+                            acadYear = ViewBag.CurrentAcadYear,
+                            eventType = ViewBag.CurrentEventType,
+                            status = ViewBag.CurrentStatus,
+                            dateFrom = ViewBag.CurrentDateFrom,
+                            dateTo = ViewBag.CurrentDateTo,
+                            isClosed = ViewBag.CurrentIsClosed,
+                            sort = ViewBag.CurrentSort
+                        })">@i</a>
                     </li>
                 }
                 <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
-                    <a class="page-link" href="@Url.Action("Events", new { pageNumber = Model.PageNumber + 1 })"><i class="bi bi-chevron-right"></i></a>
+                    <a class="page-link" href="@Url.Action("Events", new { 
+                        pageNumber = Model.PageNumber + 1,
+                        search = ViewBag.CurrentSearch,
+                        acadYear = ViewBag.CurrentAcadYear,
+                        eventType = ViewBag.CurrentEventType,
+                        status = ViewBag.CurrentStatus,
+                        dateFrom = ViewBag.CurrentDateFrom,
+                        dateTo = ViewBag.CurrentDateTo,
+                        isClosed = ViewBag.CurrentIsClosed,
+                        sort = ViewBag.CurrentSort
+                    })"><i class="bi bi-chevron-right"></i></a>
                 </li>
             </ul>
         </nav>
@@ -815,6 +862,19 @@
                 if (isClosed === 'true') badges.push({ label: 'Closed', icon: 'lock' });
                 if (isClosed === 'false') badges.push({ label: 'Open', icon: 'unlock' });
                 
+                // Check sort
+                const sort = document.getElementById('sortFilter').value;
+                if (sort && sort !== 'newest') {
+                    const sortMap = {
+                        'oldest': 'Oldest First',
+                        'date_desc': 'Event Date (Recent)',
+                        'date_asc': 'Event Date (Upcoming)',
+                        'name_asc': 'Name (A-Z)',
+                        'name_desc': 'Name (Z-A)'
+                    };
+                    badges.push({ label: 'Sort: ' + sortMap[sort], icon: 'sort-down' });
+                }
+
                 // Check dates
                 const dateFrom = document.getElementById('dateFromFilter').value;
                 const dateTo = document.getElementById('dateToFilter').value;

@@ -2312,7 +2312,8 @@ namespace iBITS_Portal.Controllers
             string? status = null,
             string? dateFrom = null,
             string? dateTo = null,
-            string? isClosed = null)
+            string? isClosed = null,
+            string? sort = "newest")
         {
             // --- ADDITION: Run the Auto-Close Logic ---
             // This checks for expired events and assigns fines immediately when the page loads.
@@ -2395,10 +2396,30 @@ namespace iBITS_Portal.Controllers
                 filterApplied = true;
             }
 
-            // Order by EventDate descending
-            eventsQuery = eventsQuery.OrderByDescending(e => e.EventDate);
+            // Apply Sorting
+            switch (sort?.ToLower())
+            {
+                case "oldest":
+                    eventsQuery = eventsQuery.OrderBy(e => e.EventId);
+                    break;
+                case "date_asc":
+                    eventsQuery = eventsQuery.OrderBy(e => e.EventDate).ThenBy(e => e.StartTime);
+                    break;
+                case "date_desc":
+                    eventsQuery = eventsQuery.OrderByDescending(e => e.EventDate).ThenByDescending(e => e.StartTime);
+                    break;
+                case "name_asc":
+                    eventsQuery = eventsQuery.OrderBy(e => e.EventName);
+                    break;
+                case "name_desc":
+                    eventsQuery = eventsQuery.OrderByDescending(e => e.EventName);
+                    break;
+                default: // newest
+                    eventsQuery = eventsQuery.OrderByDescending(e => e.EventId);
+                    break;
+            }
 
-            // Pass current filter values to ViewBag for maintaining state
+            // Pass current values to ViewBag for maintaining state
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentAcadYear = acadYear;
             ViewBag.CurrentEventType = eventType;
@@ -2406,6 +2427,7 @@ namespace iBITS_Portal.Controllers
             ViewBag.CurrentDateFrom = dateFrom;
             ViewBag.CurrentDateTo = dateTo;
             ViewBag.CurrentIsClosed = isClosed;
+            ViewBag.CurrentSort = sort;
             ViewBag.FilterApplied = filterApplied;
 
             // Get distinct academic years for dropdown
