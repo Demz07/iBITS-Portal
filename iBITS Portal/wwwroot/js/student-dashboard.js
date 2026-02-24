@@ -123,51 +123,99 @@ function initActivityCountdowns() {
     const activityCards = document.querySelectorAll('.current-event-card');
     
     activityCards.forEach(card => {
-        const endTimeStr = card.dataset.endTime;
-        const timerDisplay = card.querySelector('.event-countdown-timer');
-        const badge = card.querySelector('.pulse-happening');
+        const startTimeStr = card.dataset.startTime; // HH:mm:ss
+        const endTimeStr = card.dataset.endTime;     // yyyy-MM-ddTHH:mm:ss
+        const eventDateStr = card.dataset.eventDate; // yyyy-MM-dd
         
-        if (!endTimeStr || !timerDisplay) return;
+        const timerDisplay = card.querySelector('.event-countdown-timer');
+        const countdownWrap = card.querySelector('.live-countdown-wrap');
+        const countdownLabel = card.querySelector('.countdown-label');
+        const badge = card.querySelector('.state-badge');
+        const timeDetails = card.querySelector('.event-time-details');
+        
+        if (!endTimeStr || !timerDisplay || !badge) return;
 
-        // Force PHT (UTC+8) interpretation
-        const targetDate = new Date(endTimeStr + '+08:00').getTime();
+        // Construct Start and End Date Objects (Force PHT UTC+8)
+        const startDate = new Date(`${eventDateStr}T${startTimeStr}+08:00`).getTime();
+        const endDate = new Date(endTimeStr + '+08:00').getTime();
 
         const updateInterval = setInterval(() => {
             const now = new Date().getTime();
-            const distance = targetDate - now;
+            const diffToStart = startDate - now;
+            const diffToEnd = endDate - now;
 
-            if (distance <= 0) {
+            // 1. STATE: ENDED
+            if (diffToEnd <= 0) {
                 clearInterval(updateInterval);
                 timerDisplay.innerText = "SESSION ENDED";
-                timerDisplay.classList.remove('text-white');
                 timerDisplay.classList.add('text-danger');
+                countdownWrap.style.display = 'flex';
+                countdownLabel.innerText = "Status: ";
+                if (timeDetails) timeDetails.style.display = 'none';
                 
-                if (badge) {
-                    badge.innerText = "ENDED";
-                    badge.classList.remove('bg-success', 'pulse-happening');
-                    badge.classList.add('bg-danger');
-                }
+                badge.innerText = "ENDED";
+                badge.className = "badge bg-danger state-badge";
 
-                // Start 3-minute removal timer
                 setTimeout(() => {
                     card.style.transition = 'opacity 1s ease, transform 1s ease';
                     card.style.opacity = '0';
                     card.style.transform = 'translateY(20px)';
                     setTimeout(() => card.remove(), 1000);
-                }, 180000); // 3 minutes = 180,000ms
-                
+                }, 180000); // 3 mins
                 return;
             }
 
-            const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((distance % (1000 * 60)) / 1000);
+            // 2. STATE: HAPPENING RIGHT NOW (Ongoing)
+            if (now >= startDate) {
+                badge.innerText = "HAPPENING RIGHT NOW";
+                badge.className = "badge bg-success state-badge pulse-happening";
+                
+                countdownWrap.style.display = 'flex';
+                countdownLabel.innerText = "Ends in: ";
+                timerDisplay.innerText = formatTime(diffToEnd);
+                
+                // Hide static times once ongoing to focus on the countdown
+                if (timeDetails) timeDetails.style.display = 'none';
+            } 
+            // 3. STATE: EVENT WILL START LATER (Within 1 hour)
+            else if (diffToStart <= 3600000) {
+                badge.innerText = "EVENT WILL START LATER";
+                badge.className = "badge bg-warning text-dark state-badge";
+                
+                countdownWrap.style.display = 'flex';
+                countdownLabel.innerText = "Starts in: ";
+                timerDisplay.innerText = formatTime(diffToStart);
+                if (timeDetails) timeDetails.style.display = 'flex';
+            }
+            // 4. STATE: SCHEDULED TODAY (More than 1 hour away)
+            else {
+                badge.innerText = "SCHEDULED TODAY";
+                badge.className = "badge bg-info state-badge";
+                
+                // Show countdown even when far away if requested
+                countdownWrap.style.display = 'flex';
+                countdownLabel.innerText = "Starts in: ";
+                timerDisplay.innerText = formatTime(diffToStart);
+                
+                if (timeDetails) timeDetails.style.display = 'flex';
+            }
 
-            const format = (t) => t < 10 ? `0${t}` : t;
-            timerDisplay.innerText = `${format(h)}:${format(m)}:${format(s)}`;
         }, 1000);
     });
+
+    function formatTime(ms) {
+        const total_seconds = Math.floor(ms / 1000);
+        const hours = Math.floor(total_seconds / 3600);
+        const minutes = Math.floor((total_seconds % 3600) / 60);
+        const seconds = total_seconds % 60;
+        
+        const f = (t) => t < 10 ? `0${t}` : t;
+        return `${f(hours)}:${f(minutes)}:${f(seconds)}`;
+    }
 }
+
+// Global helper for format since it was used inside initActivityCountdowns
+function format(t) { return t < 10 ? `0${t}` : t; }
 
 function updateTimerDisplay(d, h, m, s) {
     const format = (t) => t < 10 ? `0${t}` : t;
