@@ -1846,7 +1846,12 @@ namespace iBITS_Portal.Controllers
 
             var allEventsCount = await _context.Events.CountAsync();
             var attendedCount = student.Attendances.Count(a => a.AttendanceStatus == "Present");
-            var allFines = student.Attendances.SelectMany(a => a.Fines).ToList();
+            // Get both event-based fines (from Attendances) and manual fines (by StudentNum)
+            var eventFines = student.Attendances.SelectMany(a => a.Fines).ToList();
+            var manualFines = await _context.Fines
+                .Where(f => f.StudentNum == id && f.AttendanceId == null)
+                .ToListAsync();
+            var allFines = eventFines.Concat(manualFines).ToList();
 
             var totalFeesAmount = student.Fees.Sum(f => f.Amount ?? 0);
             var totalFinesAmount = allFines.Sum(f => f.Amount ?? 0);
@@ -1876,7 +1881,7 @@ namespace iBITS_Portal.Controllers
                 }).OrderByDescending(a => a.Date).ToList(),
                 Fines = allFines.Select(f => new FineDisplay
                 {
-                    EventName = f.Attendance?.Event?.EventName ?? "N/A",
+                    EventName = f.Attendance?.Event?.EventName ?? f.Description ?? "Manual Fine",
                     Amount = f.Amount ?? 0,
                     Status = f.FinesStatus ?? "N/A",
                     DueDate = f.FinesDueDate
