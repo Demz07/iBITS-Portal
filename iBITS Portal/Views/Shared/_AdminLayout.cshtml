@@ -1,4 +1,4 @@
-﻿@* Views/Shared/_AdminLayout.cshtml *@
+@* Views/Shared/_AdminLayout.cshtml *@
 
 @{
     Layout = null;
@@ -364,6 +364,48 @@
             });
         });
     </script>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<script>
+// Mobile sidebar toggle - uses #sidebar and #sidebarCollapse
+const sidebarCollapseBtn = document.getElementById('sidebarCollapse');
+const mainSidebar = document.getElementById('sidebar');
+const sidebarOverlayEl = document.getElementById('sidebarOverlay');
+
+function openSidebar() {
+    if (mainSidebar) mainSidebar.classList.add('mobile-open');
+    if (sidebarOverlayEl) sidebarOverlayEl.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+    if (mainSidebar) mainSidebar.classList.remove('mobile-open');
+    if (sidebarOverlayEl) sidebarOverlayEl.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+if (sidebarCollapseBtn) {
+    sidebarCollapseBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (window.innerWidth <= 1024) {
+            // Mobile logic
+            if (mainSidebar.classList.contains('mobile-open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        } else {
+            // Desktop logic
+            mainSidebar.classList.toggle('active');
+        }
+    });
+}
+
+if (sidebarOverlayEl) sidebarOverlayEl.addEventListener('click', closeSidebar);
+</script>
+
+
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

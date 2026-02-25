@@ -1,4 +1,4 @@
-﻿// wwwroot/js/portal-layout.js
+// wwwroot/js/portal-layout.js
 
 $(function () { // Modern document ready syntax - START
 
