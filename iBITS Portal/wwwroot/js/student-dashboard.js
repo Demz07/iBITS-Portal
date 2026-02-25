@@ -1,9 +1,10 @@
-﻿$(document).ready(function () {
+$(document).ready(function () {
     const studentId = $('#hiddenStudentId').val();
 
     // 1. SMALL QR CODE (In the Profile Card)
     const qrContainer = document.getElementById("qrcode");
     if (qrContainer && studentId) {
+        qrContainer.innerHTML = ""; // Clear any existing QR before rendering (Prevents doubling)
         new QRCode(qrContainer, {
             text: `iBITS:${studentId}`,
             width: 140, height: 140, // Fits nicely in the side card
@@ -52,30 +53,71 @@
 
     // 3. EXPAND QR (Create Modal dynamically or use existing)
     $('#btnExpandQr').on('click', function () {
+        // NUCLEAR OPTION: Completely remove any existing modals first
+        $('#qrExpandModal').remove();
+        $('.modal-backdrop').remove(); // Remove any leftover backdrops
+        $('body').removeClass('modal-open'); // Reset body state
+        
         // We create a temporary modal specifically for the expanded QR
         let modalHtml = `
             <div class="modal fade" id="qrExpandModal" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
-                        <div class="modal-body text-center p-5">
-                            <h4 class="text-white mb-4">Scan My Digital ID</h4>
-                            <div id="qrcode-large" class="d-inline-block p-3 bg-white rounded"></div>
-                            <h5 class="mt-4 text-warning" style="font-family: monospace; letter-spacing: 2px;">${studentId}</h5>
-                            <button type="button" class="btn btn-sm btn-outline-light mt-4" data-bs-dismiss="modal">Close</button>
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 400px; margin: 1.75rem auto;">
+                    <div class="modal-content" style="background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(20px); border: 1px solid var(--gold-primary); border-radius: 24px;">
+                        <div class="modal-body text-center p-4 p-md-5">
+                            <h4 class="text-white fw-bold mb-4" style="font-size: 1.25rem;">Scan My Digital ID</h4>
+                            <div id="qrcode-large" class="d-inline-block p-2 bg-white rounded shadow-sm" style="max-width: 100%;"></div>
+                            <h5 class="mt-4 text-gold" style="font-family: monospace; letter-spacing: 2px; font-weight: 700;">${studentId}</h5>
+                            <p class="text-muted small mb-0 mt-2">iBITS Unified Portal</p>
+                            <button type="button" class="btn btn-sm btn-outline-light mt-4 px-4" data-bs-dismiss="modal" style="border-radius: 10px; opacity: 0.7;">Close</button>
                         </div>
                     </div>
                 </div>
+                <style>
+                    #qrcode-large img, #qrcode-large canvas {
+                        max-width: 100% !important;
+                        height: auto !important;
+                        display: block !important;
+                        margin: 0 auto;
+                    }
+                    /* Force only ONE QR code to display */
+                    #qrcode-large > *:not(:first-child) {
+                        display: none !important;
+                    }
+                </style>
             </div>`;
 
-        // Remove old one if exists
-        $('#qrExpandModal').remove();
+        // Append fresh modal
         $('body').append(modalHtml);
 
-        const largeContainer = document.getElementById("qrcode-large");
-        new QRCode(largeContainer, { text: `iBITS:${studentId}`, width: 280, height: 280 });
-
-        new bootstrap.Modal(document.getElementById('qrExpandModal')).show();
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const largeContainer = document.getElementById("qrcode-large");
+            if (largeContainer) {
+                // AGGRESSIVE CLEANUP
+                while (largeContainer.firstChild) {
+                    largeContainer.removeChild(largeContainer.firstChild);
+                }
+                
+                // Create QR code - library may create multiple elements
+                new QRCode(largeContainer, { 
+                    text: `iBITS:${studentId}`, 
+                    width: 320, 
+                    height: 320,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                // FORCE: Hide all but the first child (canvas or img)
+                const children = largeContainer.children;
+                for (let i = 1; i < children.length; i++) {
+                    children[i].style.display = 'none';
+                }
+                
+                // Show modal
+                new bootstrap.Modal(document.getElementById('qrExpandModal')).show();
+            }
+        }, 100);
     });
+
 
     // 4. DOWNLOAD QR
     $('#btnDownloadQr').on('click', function () {

@@ -527,7 +527,7 @@
                 {
                     <div class="announcement-item border-start-warning mb-3"
                          style="cursor: pointer; background: var(--gold-dim);"
-                         onclick="openAdminNoticeModal('@n.NotificationId', '@n.Title', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@(n.NotificationDate?.ToString("MMM dd, yyyy") ?? "")', '@n.SentBy')">
+                         onclick="openAdminNoticeModal('@n.NotificationId', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Title))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.Message))', '@(n.NotificationDate?.ToString("MMM dd, yyyy") ?? "")', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(n.SentBy))')">
 
                         <small class="text-gold">@(n.NotificationDate?.ToString("MMM dd") ?? "") • Official Notice</small>
 
@@ -964,6 +964,40 @@
         // Simplified flash check to avoid Razor syntax errors
         const flashMsg = '@(TempData["Message"]?.ToString() ?? "")';
         if(flashMsg !== '') showPortalToast('success', 'Success', flashMsg);
+
+        // Admin Notice Handlers
+        let pendingAdminDismiss = { id: null };
+        function openAdminNoticeModal(id, subject, message, date, sender) {
+            document.getElementById('viewNoticeSubject').innerText = subject;
+            document.getElementById('viewNoticeMessage').innerText = message;
+            document.getElementById('viewNoticeDate').innerText = date;
+            document.getElementById('viewNoticeSender').innerText = 'Sent by: ' + sender;
+            pendingAdminDismiss.id = id;
+            new bootstrap.Modal(document.getElementById('adminNoticeModal')).show();
+        }
+
+        function openAdminDismissConfirm() {
+            // Hide the notice modal first
+            const noticeModal = bootstrap.Modal.getInstance(document.getElementById('adminNoticeModal'));
+            if(noticeModal) noticeModal.hide();
+            new bootstrap.Modal(document.getElementById('adminDismissConfirmModal')).show();
+        }
+
+        document.getElementById('confirmAdminDismissBtn').onclick = function() {
+            const id = pendingAdminDismiss.id;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('adminDismissConfirmModal'));
+            modal.hide();
+            
+            fetch('/Home/DismissNotification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+                body: `id=${id}`
+            }).then(r=>r.json()).then(data=>{
+                if(data.success) {
+                    location.reload(); // Reload to clear the notice from the list
+                }
+            });
+        };
 
         let pendingDismiss = { id: null, button: null };
         function dismissAnnouncement(id, btn) {
