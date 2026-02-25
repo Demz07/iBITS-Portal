@@ -4,6 +4,11 @@
 -- Description: Safely deletes all event data and resets IDs.
 -- ============================================================
 
+use master;
+
+
+
+
 BEGIN TRANSACTION;
 BEGIN TRY
     PRINT 'Starting Events Reset...';
