@@ -1024,13 +1024,13 @@ namespace iBITS_Portal.Controllers
                 // Filter for PAID status only (same as dashboard "Fees Collected" and "Fines Collected")
                 // Includes both validated remittances AND direct Org Treasurer payments
                 var paidFees = allFees
-                    .Where(f => f.FeeStatus != null 
+                    .Where(f => f.FeeStatus != null
                         && f.FeeStatus.ToUpper() == "PAID"
                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
                     .ToList();
 
                 var paidFines = allFines
-                    .Where(f => f.FinesStatus != null 
+                    .Where(f => f.FinesStatus != null
                         && f.FinesStatus.ToUpper() == "PAID"
                         && f.RemittanceStatus == FeeRemittanceStatus.Remitted)
                     .ToList();
@@ -5851,21 +5851,21 @@ namespace iBITS_Portal.Controllers
                     .ToListAsync();
 
                 var feesWithDates = await _context.Fees
-                    .Where(f => f.CollectionDate.HasValue 
-                        && f.FeeStatus != null 
+                    .Where(f => f.CollectionDate.HasValue
+                        && f.FeeStatus != null
                         && f.FeeStatus.ToUpper() == "PAID"
                         && f.RemittanceStatus == "Remitted"
-                        && f.RemittanceId.HasValue 
+                        && f.RemittanceId.HasValue
                         && validatedRemittanceIds.Contains(f.RemittanceId.Value))
                     .Select(f => f.CollectionDate.Value)
                     .ToListAsync();
 
                 var finesWithDates = await _context.Fines
-                    .Where(f => f.CollectionDate.HasValue 
-                        && f.FinesStatus != null 
+                    .Where(f => f.CollectionDate.HasValue
+                        && f.FinesStatus != null
                         && f.FinesStatus.ToUpper() == "PAID"
                         && f.RemittanceStatus == "Remitted"
-                        && f.RemittanceId.HasValue 
+                        && f.RemittanceId.HasValue
                         && validatedRemittanceIds.Contains(f.RemittanceId.Value))
                     .Select(f => f.CollectionDate.Value)
                     .ToListAsync();
@@ -5909,7 +5909,7 @@ namespace iBITS_Portal.Controllers
                     lastMonth = allDates.Any(d => d >= now.AddMonths(-1)),
                     last3Months = allDates.Any(d => d >= now.AddMonths(-3)),
                     last6Months = allDates.Any(d => d >= now.AddMonths(-6)),
-                    currentSemester = allDates.Any(d => 
+                    currentSemester = allDates.Any(d =>
                         (now.Month >= 8 && d >= new DateTime(now.Year, 8, 1) && d <= new DateTime(now.Year, 12, 31)) ||
                         (now.Month < 8 && d >= new DateTime(now.Year, 1, 1) && d <= new DateTime(now.Year, 7, 31))
                     ),
@@ -5934,7 +5934,7 @@ namespace iBITS_Portal.Controllers
         }
 
         // Collection Trends method removed
-}
+    }
 
     // ============================================================
     // REQUEST MODELS FOR BULK ACTIONS
@@ -5965,5 +5965,3 @@ namespace iBITS_Portal.Controllers
 
 
 }
-
-

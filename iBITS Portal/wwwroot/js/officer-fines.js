@@ -511,3 +511,102 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('[Officer Fines] JavaScript initialized successfully');
 });
+
+
+// ============================================================
+// MARK FINE AS PAID & REVOKE PAYMENT FUNCTIONS
+// ============================================================
+
+let selectedFineId = null;
+
+// Show Mark as Paid Modal
+function showMarkFinePaidModal(fineId, studentName, description, amount) {
+    selectedFineId = fineId;
+    document.getElementById('markPaidStudentName').textContent = studentName;
+    document.getElementById('markPaidDescription').textContent = description;
+    document.getElementById('markPaidAmount').textContent = parseFloat(amount).toFixed(2);
+    
+    const modal = new bootstrap.Modal(document.getElementById('markFinePaidModal'));
+    modal.show();
+}
+
+// Confirm Mark Fine as Paid
+async function confirmMarkFinePaid() {
+    if (!selectedFineId) return;
+    
+    const btn = document.getElementById('confirmMarkPaidBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    
+    try {
+        const response = await fetch(`/Officer/MarkFineAsPaid/${selectedFineId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('markFinePaidModal')).hide();
+            showToast('success', result.message || 'Fine marked as paid successfully');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast('error', result.message || 'Failed to mark fine as paid');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('error', 'An error occurred while processing the payment');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm Payment';
+    }
+}
+
+// Show Revoke Payment Modal
+function showRevokeFinePaymentModal(fineId, studentName, description, amount) {
+    selectedFineId = fineId;
+    document.getElementById('revokeStudentName').textContent = studentName;
+    document.getElementById('revokeDescription').textContent = description;
+    document.getElementById('revokeAmount').textContent = parseFloat(amount).toFixed(2);
+    
+    const modal = new bootstrap.Modal(document.getElementById('revokeFinePaymentModal'));
+    modal.show();
+}
+
+// Confirm Revoke Fine Payment
+async function confirmRevokePayment() {
+    if (!selectedFineId) return;
+    
+    const btn = document.getElementById('confirmRevokeBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    
+    try {
+        const response = await fetch(`/Officer/RevokeFinePayment/${selectedFineId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('revokeFinePaymentModal')).hide();
+            showToast('success', result.message || 'Fine payment revoked successfully');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast('error', result.message || 'Failed to revoke fine payment');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('error', 'An error occurred while revoking the payment');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-x-circle me-1"></i> Revoke Payment';
+    }
+}
