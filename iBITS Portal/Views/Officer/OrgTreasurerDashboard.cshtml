@@ -93,18 +93,7 @@
             font-size: 14px;
             margin: 5px 0;
         }
-
-        /* Collection Trends Styles */
-        .period-btn {
-            min-width: 110px;
-        }
-
-        .period-btn.active {
-            background-color: #FFD700;
-            color: #000;
-            border-color: #FFD700;
-        }
-
+        
         /* Compact Summary Cards */
         .summary-card-compact {
             background: rgba(255, 255, 255, 0.05);
@@ -248,6 +237,84 @@
                 opacity: 1;
             }
         }
+
+        /* --- Light Mode Specific Overrides for this page --- */
+        [data-theme="light"] .top-days-list li {
+            background: rgba(0, 0, 0, 0.04) !important; /* Light gray background so you can see the box */
+            border-left: 3px solid #D4AF37 !important;
+        }
+
+        [data-theme="light"] .top-days-list .amount {
+            color: #000000 !important; /* FORCES THE ₱1,320.00 TO BLACK */
+            font-weight: 800;
+        }
+
+        [data-theme="light"] .top-days-list .date {
+            color: #b45309 !important; /* Darker Gold for Date readability */
+        }
+
+        [data-theme="light"] .top-days-list .breakdown {
+            color: #334155 !important; /* Dark slate for the Fees/Fines text */
+        }
+
+        [data-theme="light"] .badge-gold,
+        [data-theme="light"] .top-days-list .badge.badge-gold {
+            color: #000000 !important; /* FORCES THE #1 RANK TO BLACK */
+            background-color: #D4AF37 !important;
+        }
+
+        /* Fix for the Table Summary at the top right */
+        [data-theme="light"] .table.text-white {
+            color: #000000 !important;
+        }
+
+            [data-theme="light"] .table.text-white td {
+                color: #334155 !important;
+            }
+        /* ======================================================= */
+        /*    ULTRA-SPECIFIC LIGHT MODE FIX FOR FILTER BUTTONS     */
+        /* ======================================================= */
+
+        /* 1. Fix Inactive Button Letters and Icons */
+        [data-theme="light"] .period-btn,
+        [data-theme="light"] .period-btn i {
+            color: #0f172a !important; /* Forces Dark Slate/Black letters */
+        }
+
+        [data-theme="light"] .period-btn {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important; /* Makes the border visible */
+        }
+
+            /* 2. Fix Active Button Letters and Icons (Black on Gold) */
+            [data-theme="light"] .period-btn.active,
+            [data-theme="light"] .period-btn.active i {
+                color: #000000 !important; /* Forces Black text on the yellow button */
+                background-color: #FFD700 !important;
+                border-color: #FFD700 !important;
+            }
+
+        /* 3. Fix the Labels (Quick Periods: / Custom Range:) */
+        [data-theme="light"] label.text-muted.small {
+            color: #0f172a !important; /* Forces labels to be Dark Slate */
+            font-weight: 700 !important;
+        }
+
+        /* 4. Fix the Date Input backgrounds */
+        [data-theme="light"] input[type="date"].form-control-sm {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        /* 5. Hover effect to make it feel responsive */
+        [data-theme="light"] .period-btn:hover:not(.active) {
+            background-color: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
+        }
+
+
+
     </style>
 }
 
@@ -782,29 +849,31 @@
         // ============================================================
         // UPDATE TOP DAYS LIST
         // ============================================================
-        function updateTopDaysList(topDays) {
-            const listContainer = document.getElementById('topDaysList');
-            
-            if (!topDays || topDays.length === 0) {
-                listContainer.innerHTML = '<li style="text-align: center; color: #999;">No collection data available</li>';
-                return;
-            }
-            
-            listContainer.innerHTML = topDays.map((day, index) => `
-                <li>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge badge-gold me-2">#${index + 1}</span>
-                            <span class="date">${day.date}</span>
-                        </div>
-                        <div class="text-end">
-                            <div class="amount">${day.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}}</div>
-                            <div class="breakdown">Fees: ${day.fees.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })} | Fines: ${day.fines.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}}</div>
-                        </div>
-                    </div>
-                </li>
-            `).join('');
-        }
+                       function updateTopDaysList(topDays) {
+                    const listContainer = document.getElementById('topDaysList');
+
+                    if (!topDays || topDays.length === 0) {
+                        listContainer.innerHTML = '<li style="text-align: center; color: #999;">No collection data available</li>';
+                        return;
+                    }
+
+                    // CORRECTED: Removed the extra '}' after each toLocaleString() call
+                    listContainer.innerHTML = topDays.map((day, index) => `
+                        <li>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge badge-gold me-2">#${index + 1}</span>
+                                    <span class="date">${day.date}</span>
+                                </div>
+                                <div class="text-end">
+                                    <div class="amount">₱${day.amount.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}</div>
+                                    <div class="breakdown">Fees: ₱${day.fees.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })} | Fines: ₱${day.fines.toLocaleString('en-PH', { timeZone: 'Asia/Manila', minimumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                        </li>
+                    `).join('');
+                }
+
 
         // ============================================================
         // UPDATE COLLECTION TRENDS CHART

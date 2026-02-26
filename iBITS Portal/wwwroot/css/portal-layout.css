@@ -722,6 +722,7 @@ body {
     }
 }
 
+
 /* ============================================================
    MOBILE SIDEBAR - #sidebar mobile-open support
    ============================================================ */
@@ -846,3 +847,271 @@ body {
         font-size: 0.75rem;
     }
 }
+
+
+#clearFiltersBtn {
+    background-color: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.5) !important; /* Red border */
+    color: #f87171 !important; /* Lighter red text */
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+    #clearFiltersBtn:hover {
+        background-color: #dc2626 !important; /* Solid red background on hover */
+        border-color: #dc2626 !important;
+        color: #ffffff !important; /* White text on hover */
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+
+/* ======================================================= */
+/*             COLLECTION TRENDS BUTTONS FIX               */
+/* ======================================================= */
+
+/* Inactive buttons in Dark Mode: White text and icons */
+.period-btn {
+    color: #ffffff !important;
+    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+    .period-btn i {
+        color: #ffffff !important;
+    }
+
+    /* Hover state in Dark Mode */
+    .period-btn:hover {
+        background: rgba(212, 175, 55, 0.1) !important;
+        color: var(--gold-primary) !important;
+    }
+
+    /* Active button: Gold background with Black text (Already good, but reinforcing) */
+    .period-btn.active {
+        background-color: var(--gold-primary) !important;
+        color: #000000 !important;
+        border-color: var(--gold-primary) !important;
+        font-weight: 700;
+    }
+
+        .period-btn.active i {
+            color: #000000 !important;
+        }
+
+/* The "Quick Periods:" label text */
+.text-muted.small.me-2 {
+    color: #94a3b8 !important; /* Lighter gray for dark mode */
+}
+
+/* ======================================================= */
+/*           LIGHT THEME COMPATIBILITY FIXES               */
+/* ======================================================= */
+
+[data-theme="light"] {
+    /* --- Base Colors & Text --- */
+    --text-strong: #0f172a !important; /* Dark Slate */
+    --text-main: #334155 !important; /* Medium Slate */
+    --text-muted: #64748b !important; /* Light Slate */
+    /* --- Glass Panels become White Cards --- */
+    .glass-panel, .chart-panel, .quick-stats
+
+{
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important; /* Light Gray Border */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* --- Typography Overrides (Inverting White Text) --- */
+/* This forces elements with "text-white" to be dark in light mode */
+.text-white {
+    color: #0f172a !important;
+}
+
+.text-muted {
+    color: #64748b !important;
+}
+
+/* --- Table Fixes --- */
+/* Neutralize Bootstrap's table-dark */
+.table-dark {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: #0f172a !important;
+    background-color: transparent !important;
+    color: #0f172a !important;
+}
+
+    .table-dark th,
+    .table-dark td,
+    .table-dark thead th {
+        border-color: #e2e8f0 !important;
+        color: #0f172a !important;
+        background-color: transparent !important;
+    }
+
+/* Keep Gold Headers legible */
+.table thead th,
+th[style*="color: var(--gold-primary)"] {
+    color: #b45309 !important; /* Darker Gold/Bronze for contrast on white */
+}
+
+/* --- Form Inputs & Selects --- */
+.form-control,
+.form-select,
+.select2-container--default .select2-selection--single {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--gold-primary) !important;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+    }
+
+/* Select2 Dropdown Body */
+.select2-dropdown {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.select2-container--default .select2-results__option {
+    color: #334155 !important;
+}
+
+/* --- Fee/Fine Category Cards --- */
+.fee-category-card,
+.fine-category-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* The header needs a distinct light color, not dark */
+.fee-category-header,
+.fine-category-header {
+    background: #f8fafc !important; /* Very light gray */
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Row hover effect */
+.table-hover > tbody > tr:hover > * {
+    background-color: #f1f5f9 !important; /* Light highlight */
+    color: #0f172a !important;
+}
+
+/* --- Dashboard Specifics --- */
+/* Stats cards need to be white with shadow */
+.stats-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+}
+
+/* Summary Cards in Fees/Fines Views */
+.summary-card .card-value {
+    color: #0f172a !important;
+}
+
+/* Fix icons in summary cards being too washed out */
+.summary-card .card-icon {
+    background-color: rgba(0,0,0,0.05) !important; /* Darken the icon bg slightly */
+}
+
+/* --- Modals --- */
+.glass-modal {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.modal-title, .modal-body p, .modal-body h5 {
+    color: #0f172a !important;
+}
+
+/* Button Outlines */
+.btn-outline-light {
+    color: #475569 !important;
+    border-color: #cbd5e1 !important;
+}
+
+    .btn-outline-light:hover {
+        background-color: #475569 !important;
+        color: #fff !important;
+    }
+
+/* Scrollbar */
+.scrollable-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+}
+
+.glass-panel.d-flex.justify-content-between.align-items-center {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* FIX 2: Override Bootstrap's .bg-dark for Remittance cards */
+.card.bg-dark {
+    background-color: #ffffff !important; /* Make card background white */
+}
+
+    /* FIX 3: Ensure card body text is readable */
+    .card.bg-dark > .card-body {
+        /* This inherits the color from our main text variables, but we can be explicit */
+        color: var(--text-main) !important;
+    }
+
+/* FIX 4: Ensure the card headers (blue/red) have dark text for accessibility */
+.card .card-header.bg-primary,
+.card .card-header.bg-danger {
+    color: #ffffff !important; /* Keep brand colors on headers */
+}
+
+/* FIX 5: Make sure the borders on the remittance cards are visible */
+.card.border-primary {
+    border-color: #3b82f6 !important;
+}
+
+.card.border-danger {
+    border-color: #ef4444 !important;
+}
+
+/* FIX 6: Adjust border colors inside the remittance cards */
+.card.bg-dark .border-bottom {
+    border-bottom-color: #e2e8f0 !important; /* Light gray border */
+}
+
+.academic-year-badge {
+    /* Change the dark glass background to a light glass background */
+    background: rgba(255, 255, 255, 0.65) !important;
+    /* Adjust border to be more visible on a light background */
+    border-color: rgba(148, 163, 184, 0.3) !important;
+    /* Soften the shadow for the light theme */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+}
+/* Optional: Tweak the hover effect for light mode */
+[data-theme="light"] .academic-year-badge:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: var(--gold-primary) !important;
+}
+
+[data-theme="light"] #clearFiltersBtn {
+    background-color: rgba(220, 53, 69, 0.08) !important; /* Very light red tint */
+    border-color: rgba(220, 53, 69, 0.4) !important; /* Muted red border */
+    color: #b91c1c !important; /* Strong, dark red text */
+}
+
+    [data-theme="light"] #clearFiltersBtn:hover {
+        background-color: #dc2626 !important; /* Solid red background */
+        border-color: #dc2626 !important;
+        color: #ffffff !important; /* White text */
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+

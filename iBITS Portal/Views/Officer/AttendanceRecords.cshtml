@@ -28,6 +28,34 @@
             width: 100%;
         }
 
+        /* ======================================================= */
+        /*      UNIVERSAL INPUT & DROPDOWN CLEANUP (DARK & LIGHT)  */
+        /* ======================================================= */
+
+        /* 1. Remove triangles from ALL text inputs (Search box) */
+        input[type="text"].glass-select {
+            background-image: none !important;
+            background-repeat: no-repeat !important;
+            padding-left: 15px !important;
+        }
+
+        /* 2. Fix Dropdowns: Show only ONE gold arrow on the right */
+        select.glass-select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 14px !important;
+            padding-right: 40px !important;
+            /* Custom Gold Arrow SVG */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23D4AF37' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
+        }
+
+        /* ======================================================= */
+        /*              EXISTING TABLE & FILTER STYLES             */
+        /* ======================================================= */
+
         .col-check {
             width: 50px;
         }
@@ -71,6 +99,29 @@
             background: rgba(212, 175, 55, 0.05) !important;
             color: var(--gold-text) !important;
             font-weight: 600;
+        }
+
+        /* --- Light Mode Specific Overrides --- */
+        [data-theme="light"] .glass-select {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        [data-theme="light"] .filter-label {
+            color: #0f172a !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        [data-theme="light"] .static-filter {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            border-color: #cbd5e1 !important;
         }
     </style>
 }
@@ -149,7 +200,7 @@
             <!-- Search -->
             <div class="col-md-3">
                 <label class="filter-label">Search Name/ID</label>
-                <input type="text" name="searchQuery" id="searchQuery" value="@ViewBag.SearchQuery" class="glass-select" placeholder="Search..." onkeypress="if(event.keyCode == 13){ this.form.submit(); }">
+                <input type="text" name="searchQuery" id="searchQuery" class="glass-select" placeholder="Search...">
             </div>
 
             <!-- Event -->
@@ -373,6 +424,27 @@
                         }
                         </text>
         }
+
+         document.addEventListener('DOMContentLoaded', function() {
+            // 1. ADD THIS PART: Handle Enter Key for Search
+            const searchInput = document.getElementById('searchQuery');
+            if (searchInput) {
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.form.submit();
+                    }
+                });
+            }
+
+            // 2. KEEP THIS PART: Existing URL parameter logic
+            const urlParams = new URLSearchParams(window.location.search);
+            ['eventId', 'program', 'yearLevel', 'status', 'searchQuery'].forEach(id => {
+                const val = urlParams.get(id);
+                const el = document.getElementById(id === 'status' ? 'statusFilter' : id);
+                if (val && el) el.value = val;
+            });
+        });
 
         function exportToExcel() {
             // Clone table to modify it for export
