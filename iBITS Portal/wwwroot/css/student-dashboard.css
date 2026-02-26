@@ -1,4 +1,4 @@
-﻿/* -- student-dashboard.css -- */
+/* -- student-dashboard.css -- */
 .mono-font {
     font-family: 'Courier New', Courier, monospace;
 }
@@ -382,6 +382,21 @@
 
 /* ---- Phone (max 768px) ---- */
 @media (max-width: 768px) {
+    /* Keep Current Event badge in top right corner - mobile */
+    .current-event-card .d-flex.justify-content-between {
+        position: relative;
+        padding-right: 120px; /* Space for badge on mobile */
+    }
+
+    .current-event-card .state-badge {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        font-size: 8px !important;
+        padding: 3px 6px !important;
+        white-space: nowrap !important;
+    }
+
     .page-header {
         display: flex !important;
         flex-direction: row !important;
