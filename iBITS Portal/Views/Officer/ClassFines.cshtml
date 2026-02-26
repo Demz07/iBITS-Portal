@@ -1117,142 +1117,141 @@
         }
 
         // ============================================================
-        // BULK SELECTION FUNCTIONALITY
-        // ============================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle Select All checkbox for each category
-            document.querySelectorAll('.select-all-category').forEach(selectAll => {
-                selectAll.addEventListener('change', function() {
-                    const category = this.dataset.category;
-                    const table = document.querySelector(`table[data-category-table="${category}"]`);
-                    const checkboxes = table.querySelectorAll('.fine-checkbox:not(:disabled)');
-                    
-                    checkboxes.forEach(cb => {
-                        cb.checked = this.checked;
-                    });
-                    
-                    updateBulkToolbar(category);
-                });
-            });
+         // BULK SELECTION FUNCTIONALITY (UPDATED: DOM Traversal)
+         // ============================================================
+         document.addEventListener('DOMContentLoaded', function() {
+             // Handle Select All checkbox for each category
+             document.querySelectorAll('.select-all-category').forEach(selectAll => {
+                 selectAll.addEventListener('change', function() {
+                     const table = this.closest('table');
+                     const checkboxes = table.querySelectorAll('.fine-checkbox:not(:disabled)');
 
-            // Handle individual checkbox changes
-            document.querySelectorAll('.fine-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const category = this.dataset.category;
-                    updateBulkToolbar(category);
-                    updateSelectAllState(category);
-                });
-            });
+                     checkboxes.forEach(cb => {
+                         cb.checked = this.checked;
+                     });
 
-            // Bulk Mark as Paid
-            document.querySelectorAll('.bulk-mark-paid').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const category = this.dataset.category;
-                    const selectedIds = getSelectedFineIds(category);
-                    
-                    if (selectedIds.length === 0) {
-                        showToast('warning', 'Please select fines to mark as paid');
-                        return;
-                    }
+                     updateBulkToolbar(this.closest('.fine-category-card'));
+                 });
+             });
 
-                    if (!confirm(`Mark ${selectedIds.length} fine(s) as paid?`)) return;
+             // Handle individual checkbox changes
+             document.querySelectorAll('.fine-checkbox').forEach(checkbox => {
+                 checkbox.addEventListener('change', function() {
+                     const card = this.closest('.fine-category-card');
+                     updateBulkToolbar(card);
+                     updateSelectAllState(card);
+                 });
+             });
 
-                    await bulkAction('BulkMarkFinesAsPaid', selectedIds, category);
-                });
-            });
+             // Bulk Mark as Paid
+             document.querySelectorAll('.bulk-mark-paid').forEach(btn => {
+                 btn.addEventListener('click', async function() {
+                     const card = this.closest('.fine-category-card');
+                     const category = this.dataset.category;
+                     const selectedIds = getSelectedFineIds(card);
 
-            // Bulk Revoke
-            document.querySelectorAll('.bulk-revoke').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const category = this.dataset.category;
-                    const selectedIds = getSelectedFineIds(category);
-                    
-                    if (selectedIds.length === 0) {
-                        showToast('warning', 'Please select fines to revoke');
-                        return;
-                    }
+                     if (selectedIds.length === 0) {
+                         showToast('warning', 'Please select fines to mark as paid');
+                         return;
+                     }
 
-                    if (!confirm(`Revoke payment for ${selectedIds.length} fine(s)?`)) return;
+                     if (!confirm(`Mark ${selectedIds.length} fine(s) as paid?`)) return;
 
-                    await bulkAction('BulkRevokeFines', selectedIds, category);
-                });
-            });
-        });
+                     await bulkAction('BulkMarkFinesAsPaid', selectedIds, category);
+                 });
+             });
 
-        function getSelectedFineIds(category) {
-            const table = document.querySelector(`table[data-category-table="${category}"]`);
-            const selected = [];
-            table.querySelectorAll('.fine-checkbox:checked').forEach(cb => {
-                selected.push(parseInt(cb.dataset.fineId));
-            });
-            return selected;
-        }
+             // Bulk Revoke
+             document.querySelectorAll('.bulk-revoke').forEach(btn => {
+                 btn.addEventListener('click', async function() {
+                     const card = this.closest('.fine-category-card');
+                     const category = this.dataset.category;
+                     const selectedIds = getSelectedFineIds(card);
 
-        function updateBulkToolbar(category) {
-            const selectedIds = getSelectedFineIds(category);
-            const toolbar = document.querySelector(`.bulk-actions-toolbar`);
-            const countSpan = document.getElementById(`selectedCount-${category.replace(/ /g, '-')}`);
-            
-            if (countSpan) {
-                countSpan.textContent = selectedIds.length;
-            }
+                     if (selectedIds.length === 0) {
+                         showToast('warning', 'Please select fines to revoke');
+                         return;
+                     }
 
-            // Show/hide toolbar based on selection
-            const categoryCard = document.querySelector(`table[data-category-table="${category}"]`).closest('.fine-category-card');
-            const categoryToolbar = categoryCard.querySelector('.bulk-actions-toolbar');
-            
-            if (selectedIds.length > 0) {
-                categoryToolbar.style.display = 'block';
-            } else {
-                categoryToolbar.style.display = 'none';
-            }
-        }
+                     if (!confirm(`Revoke payment for ${selectedIds.length} fine(s)?`)) return;
 
-        function updateSelectAllState(category) {
-            const table = document.querySelector(`table[data-category-table="${category}"]`);
-            const selectAllCheckbox = table.querySelector('.select-all-category');
-            const checkboxes = table.querySelectorAll('.fine-checkbox');
-            const checkedBoxes = table.querySelectorAll('.fine-checkbox:checked');
-            
-            if (checkboxes.length === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checkedBoxes.length === checkboxes.length) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checkedBoxes.length > 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-            } else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            }
-        }
+                     await bulkAction('BulkRevokeFines', selectedIds, category);
+                 });
+             });
+         });
 
-        async function bulkAction(action, fineIds, category) {
-            try {
-                const response = await fetch(`/Officer/${action}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                    },
-                    body: JSON.stringify({ fineIds, category })
-                });
+         function getSelectedFineIds(cardNode) {
+             const selected =[];
+             cardNode.querySelectorAll('.fine-checkbox:checked').forEach(cb => {
+                 selected.push(parseInt(cb.dataset.fineId));
+             });
+             return selected;
+         }
 
-                const result = await response.json();
+         function updateBulkToolbar(cardNode) {
+             const selectedIds = getSelectedFineIds(cardNode);
+             const categoryToolbar = cardNode.querySelector('.bulk-actions-toolbar');
 
-                if (result.success) {
-                    showToast('success', result.message);
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showToast('error', result.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('error', 'An error occurred. Please try again.');
-            }
-        }
+             if (!categoryToolbar) return;
+
+             const countSpan = categoryToolbar.querySelector('.selected-count');
+             if (countSpan) {
+                 countSpan.textContent = selectedIds.length;
+             }
+
+             if (selectedIds.length > 0) {
+                 categoryToolbar.style.display = 'block';
+             } else {
+                 categoryToolbar.style.display = 'none';
+             }
+         }
+
+         function updateSelectAllState(cardNode) {
+             const selectAllCheckbox = cardNode.querySelector('.select-all-category');
+             if (!selectAllCheckbox) return;
+
+             const checkboxes = cardNode.querySelectorAll('.fine-checkbox');
+             const checkedBoxes = cardNode.querySelectorAll('.fine-checkbox:checked');
+
+             if (checkboxes.length === 0) {
+                 selectAllCheckbox.checked = false;
+                 selectAllCheckbox.indeterminate = false;
+             } else if (checkedBoxes.length === checkboxes.length) {
+                 selectAllCheckbox.checked = true;
+                 selectAllCheckbox.indeterminate = false;
+             } else if (checkedBoxes.length > 0) {
+                 selectAllCheckbox.checked = false;
+                 selectAllCheckbox.indeterminate = true;
+             } else {
+                 selectAllCheckbox.checked = false;
+                 selectAllCheckbox.indeterminate = false;
+             }
+         }
+
+         async function bulkAction(action, fineIds, category) {
+             try {
+                 const response = await fetch(`/Officer/${action}`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                     },
+                     body: JSON.stringify({ fineIds, category })
+                 });
+
+                 const result = await response.json();
+
+                 if (result.success) {
+                     showToast('success', result.message);
+                     setTimeout(() => location.reload(), 1500);
+                 } else {
+                     showToast('error', result.message);
+                 }
+             } catch (error) {
+                 console.error('Error:', error);
+                 showToast('error', 'An error occurred. Please try again.');
+             }
+         }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
