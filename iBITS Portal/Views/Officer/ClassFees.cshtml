@@ -853,84 +853,80 @@
         }
 
         // ============================================================
-        // BULK SELECTION FUNCTIONALITY
+        // BULK SELECTION FUNCTIONALITY (UPDATED: Precise Counts, Filter Awareness & Disabling)
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle collapse icon switching between chevron-right and chevron-down
-            // Small timeout to ensure Bootstrap is fully initialized
-            setTimeout(() => {
-                document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
-                    const targetId = header.getAttribute('data-bs-target');
-                    const collapseElement = document.querySelector(targetId);
-                    const icon = header.querySelector('.collapse-icon');
-                    
-                    if (collapseElement && icon) {
-                        // Function to update icon
-                        const updateIcon = (isExpanded) => {
-                            if (isExpanded) {
-                                // Expanded: show chevron-down
-                                icon.classList.remove('bi-chevron-up');
-                                icon.classList.add('bi-chevron-down');
-                                header.setAttribute('aria-expanded', 'true');
-                            } else {
-                                // Collapsed: show chevron-up
-                                icon.classList.remove('bi-chevron-down');
-                                icon.classList.add('bi-chevron-up');
-                                header.setAttribute('aria-expanded', 'false');
-                            }
-                        };
-                        
-                        // Set initial state based on whether collapse is shown
-                        updateIcon(collapseElement.classList.contains('show'));
-                        
-                        // Add event listeners for collapse state changes
-                        collapseElement.addEventListener('show.bs.collapse', function() {
-                            updateIcon(true);
-                        });
-                        
-                        collapseElement.addEventListener('hide.bs.collapse', function() {
-                            updateIcon(false);
-                        });
-                    }
-                });
-            }, 100);
-
             // Handle Select All checkbox for each category
             document.querySelectorAll('.select-all-category').forEach(selectAll => {
                 selectAll.addEventListener('change', function() {
-                    const category = this.dataset.category;
-                    const table = document.querySelector(`table[data-category-table="${category}"]`);
-                    const checkboxes = table.querySelectorAll('.fee-checkbox:not(:disabled)');
-                    
-                    checkboxes.forEach(cb => {
+                    const table = this.closest('table');
+
+                    // ONLY select checkboxes in VISIBLE rows
+                    const visibleCheckboxes = Array.from(table.querySelectorAll('.fee-checkbox:not(:disabled)')).filter(cb => {
+                        const row = cb.closest('.fee-row');
+                        return row && row.style.display !== 'none';
+                    });
+
+                    visibleCheckboxes.forEach(cb => {
                         cb.checked = this.checked;
                     });
-                    
-                    updateBulkToolbar(category);
+
+                    const card = this.closest('.fee-category-card');
+                    updateBulkToolbar(card);
+                    updateSelectAllState(card);
+                    updateRowActionButtons(card);
                 });
             });
 
             // Handle individual checkbox changes
             document.querySelectorAll('.fee-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
-                    const category = this.dataset.category;
-                    updateBulkToolbar(category);
-                    updateSelectAllState(category);
+                    const card = this.closest('.fee-category-card');
+                    updateBulkToolbar(card);
+                    updateSelectAllState(card);
+                    updateRowActionButtons(card);
                 });
+            });
+
+            // Listen to Filter changes to update selections dynamically
+            const filterElements = document.querySelectorAll('#filterSearch, #filterFeeName, #filterStatus, #clearFiltersBtn');
+            filterElements.forEach(el => {
+                const updateOnFilter = () => {
+                    // Small delay to let the main filter logic hide/show the rows first
+                    setTimeout(() => {
+                        document.querySelectorAll('.fee-category-card').forEach(card => {
+                            // Automatically uncheck rows that were hidden by the filter
+                            card.querySelectorAll('.fee-checkbox:checked').forEach(cb => {
+                                const row = cb.closest('.fee-row');
+                                if (row && row.style.display === 'none') {
+                                    cb.checked = false;
+                                }
+                            });
+                            updateBulkToolbar(card);
+                            updateSelectAllState(card);
+                            updateRowActionButtons(card);
+                        });
+                    }, 50);
+                };
+
+                el.addEventListener('change', updateOnFilter);
+                if (el.id === 'filterSearch') el.addEventListener('input', updateOnFilter);
+                if (el.id === 'clearFiltersBtn') el.addEventListener('click', updateOnFilter);
             });
 
             // Bulk Mark as Paid
             document.querySelectorAll('.bulk-mark-paid').forEach(btn => {
                 btn.addEventListener('click', async function() {
+                    const card = this.closest('.fee-category-card');
                     const category = this.dataset.category;
-                    const selectedIds = getSelectedFeeIds(category);
-                    
+                    const selectedIds = getSelectedFeeIds(card, 'unpaid');
+
                     if (selectedIds.length === 0) {
-                        showToast('warning', 'Please select fees to mark as paid');
+                        showToast('warning', 'No unpaid fees selected.');
                         return;
                     }
 
-                    if (!confirm(`Mark ${selectedIds.length} fee(s) as paid?`)) return;
+                    if (!confirm(`Are you sure you want to mark ${selectedIds.length} unpaid fee(s) as PAID?`)) return;
 
                     await bulkAction('BulkMarkFeesAsPaid', selectedIds, category);
                 });
@@ -939,62 +935,151 @@
             // Bulk Revoke
             document.querySelectorAll('.bulk-revoke').forEach(btn => {
                 btn.addEventListener('click', async function() {
+                    const card = this.closest('.fee-category-card');
                     const category = this.dataset.category;
-                    const selectedIds = getSelectedFeeIds(category);
-                    
+                    const selectedIds = getSelectedFeeIds(card, 'paid');
+
                     if (selectedIds.length === 0) {
-                        showToast('warning', 'Please select fees to revoke');
+                        showToast('warning', 'No paid fees selected.');
                         return;
                     }
 
-                    if (!confirm(`Revoke payment for ${selectedIds.length} fee(s)?`)) return;
+                    if (!confirm(`Are you sure you want to REVOKE payment for ${selectedIds.length} paid fee(s)?`)) return;
 
                     await bulkAction('BulkRevokeFees', selectedIds, category);
                 });
             });
+
+            // Reinitialize collapse icons
+            setTimeout(() => {
+                document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
+                    const targetId = header.getAttribute('data-bs-target');
+                    const collapseElement = document.querySelector(targetId);
+                    const icon = header.querySelector('.collapse-icon');
+
+                    if (collapseElement && icon) {
+                        const updateIcon = (isExpanded) => {
+                            if (isExpanded) {
+                                icon.classList.remove('bi-chevron-up');
+                                icon.classList.add('bi-chevron-down');
+                                header.setAttribute('aria-expanded', 'true');
+                            } else {
+                                icon.classList.remove('bi-chevron-down');
+                                icon.classList.add('bi-chevron-up');
+                                header.setAttribute('aria-expanded', 'false');
+                            }
+                        };
+                        updateIcon(collapseElement.classList.contains('show'));
+                        collapseElement.addEventListener('show.bs.collapse', () => updateIcon(true));
+                        collapseElement.addEventListener('hide.bs.collapse', () => updateIcon(false));
+                    }
+                });
+            }, 100);
         });
 
-        function getSelectedFeeIds(category) {
-            const table = document.querySelector(`table[data-category-table="${category}"]`);
-            const selected = [];
-            table.querySelectorAll('.fee-checkbox:checked').forEach(cb => {
-                selected.push(parseInt(cb.dataset.feeId));
+        // Function to disable/enable individual action buttons based on checkbox state
+        function updateRowActionButtons(cardNode) {
+            if (!cardNode) return;
+
+            const checkboxes = cardNode.querySelectorAll('.fee-checkbox:not(:disabled)');
+
+            checkboxes.forEach(cb => {
+                const row = cb.closest('.fee-row');
+                if (row) {
+                    const btnMarkPaid = row.querySelector('.btn-mark-paid');
+                    const btnRevoke = row.querySelector('.btn-revoke');
+
+                    // If the checkbox is ticked, disable the individual buttons for that row
+                    if (btnMarkPaid) btnMarkPaid.disabled = cb.checked;
+                    if (btnRevoke) btnRevoke.disabled = cb.checked;
+                }
+            });
+        }
+
+        function getSelectedFeeIds(cardNode, filterStatus) {
+            const selected =[];
+            cardNode.querySelectorAll('.fee-checkbox:checked').forEach(cb => {
+                const row = cb.closest('.fee-row');
+                // Ensure the row is visible and matches the requested status
+                if (row && row.style.display !== 'none' && row.getAttribute('data-status') === filterStatus) {
+                    selected.push(parseInt(cb.dataset.feeId));
+                }
             });
             return selected;
         }
 
-        function updateBulkToolbar(category) {
-            const selectedIds = getSelectedFeeIds(category);
-            const countSpan = document.getElementById(`selectedCount-${category.replace(/ /g, '-')}`);
-            
+        function updateBulkToolbar(cardNode) {
+            if (!cardNode) return;
+            const categoryToolbar = cardNode.querySelector('.bulk-actions-toolbar');
+            if (!categoryToolbar) return;
+
+            // Only count checked items that are VISIBLE
+            const visibleChecked = Array.from(cardNode.querySelectorAll('.fee-checkbox:checked')).filter(cb => {
+                const row = cb.closest('.fee-row');
+                return row && row.style.display !== 'none';
+            });
+
+            let unpaidCount = 0;
+            let paidCount = 0;
+
+            visibleChecked.forEach(cb => {
+                const row = cb.closest('.fee-row');
+                if (row) {
+                    const status = row.getAttribute('data-status');
+                    if (status === 'unpaid') unpaidCount++;
+                    if (status === 'paid') paidCount++;
+                }
+            });
+
+            // Find the count span using ID prefix
+            const countSpan = categoryToolbar.querySelector('span[id^="selectedCount-"]');
             if (countSpan) {
-                countSpan.textContent = selectedIds.length;
+                countSpan.textContent = visibleChecked.length;
             }
 
-            // Show/hide toolbar based on selection
-            const categoryCard = document.querySelector(`table[data-category-table="${category}"]`).closest('.fee-category-card');
-            const categoryToolbar = categoryCard.querySelector('.bulk-actions-toolbar');
-            
-            if (selectedIds.length > 0) {
+            // Target buttons
+            const btnMarkPaid = categoryToolbar.querySelector('.bulk-mark-paid');
+            const btnRevoke = categoryToolbar.querySelector('.bulk-revoke');
+
+            // Enable/disable and update accurate counts on buttons
+            if (btnMarkPaid) {
+                btnMarkPaid.disabled = (unpaidCount === 0);
+                btnMarkPaid.innerHTML = `<i class="bi bi-check-circle me-1"></i> Mark as Paid (${unpaidCount})`;
+            }
+
+            if (btnRevoke) {
+                btnRevoke.disabled = (paidCount === 0);
+                btnRevoke.innerHTML = `<i class="bi bi-x-circle me-1"></i> Revoke (${paidCount})`;
+            }
+
+            // Show or hide toolbar
+            if (visibleChecked.length > 0) {
                 categoryToolbar.style.display = 'block';
             } else {
                 categoryToolbar.style.display = 'none';
             }
         }
 
-        function updateSelectAllState(category) {
-            const table = document.querySelector(`table[data-category-table="${category}"]`);
-            const selectAllCheckbox = table.querySelector('.select-all-category');
-            const checkboxes = table.querySelectorAll('.fee-checkbox');
-            const checkedBoxes = table.querySelectorAll('.fee-checkbox:checked');
-            
-            if (checkboxes.length === 0) {
+        function updateSelectAllState(cardNode) {
+            if (!cardNode) return;
+            const selectAllCheckbox = cardNode.querySelector('.select-all-category');
+            if (!selectAllCheckbox) return;
+
+            // Only evaluate VISIBLE checkboxes for the "Select All" state
+            const visibleCheckboxes = Array.from(cardNode.querySelectorAll('.fee-checkbox:not(:disabled)')).filter(cb => {
+                const row = cb.closest('.fee-row');
+                return row && row.style.display !== 'none';
+            });
+
+            const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+
+            if (visibleCheckboxes.length === 0) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = false;
-            } else if (checkedBoxes.length === checkboxes.length) {
+            } else if (checkedVisible.length === visibleCheckboxes.length) {
                 selectAllCheckbox.checked = true;
                 selectAllCheckbox.indeterminate = false;
-            } else if (checkedBoxes.length > 0) {
+            } else if (checkedVisible.length > 0) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = true;
             } else {
