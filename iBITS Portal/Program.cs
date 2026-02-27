@@ -51,6 +51,8 @@ namespace iBITS_Portal
             });
 
             builder.Services.AddMemoryCache();
+            // EPPlus license configuration (NonCommercial)
+            OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();

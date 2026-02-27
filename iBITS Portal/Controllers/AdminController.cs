@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Controllers/AdminController.cs
 // ============================================================
 // UPDATED: Added working ExportStudentsToExcel functionality
@@ -2102,28 +2102,63 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // CSV IMPORT METHODS
+        // IMPORT METHODS (CSV + XLSX with Special Character Support)
         // =========================================================
         [HttpPost]
         public async Task<IActionResult> AnalyzeCsv(IFormFile file)
         {
-            if (file == null || file.Length == 0) return Json(new { success = false, message = "No file selected." });
+            if (file == null || file.Length == 0)
+                return Json(new { success = false, message = "No file selected." });
+
+            var ext = Path.GetExtension(file.FileName).ToLower();
+            if (ext != ".csv" && ext != ".xlsx")
+                return Json(new { success = false, message = "Only CSV and XLSX files are supported." });
+
             try
             {
-                var fileName = Guid.NewGuid().ToString() + ".csv";
+                var fileName = Guid.NewGuid().ToString() + ext;
                 var filePath = Path.Combine(Path.GetTempPath(), fileName);
-                using (var stream = new FileStream(filePath, FileMode.Create)) { await file.CopyToAsync(stream); }
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
 
                 string[] headers;
-                using (var reader = new StreamReader(filePath))
+
+                if (ext == ".xlsx")
                 {
-                    var headerLine = await reader.ReadLineAsync();
-                    if (string.IsNullOrEmpty(headerLine)) return Json(new { success = false, message = "CSV file is empty." });
-                    headers = headerLine.Split(',');
+                    OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+                    using var package = new OfficeOpenXml.ExcelPackage(new FileInfo(filePath));
+                    var worksheet = package.Workbook.Worksheets[0];
+                    if (worksheet == null || worksheet.Dimension == null)
+                        return Json(new { success = false, message = "XLSX file is empty or has no data." });
+
+                    int colCount = worksheet.Dimension.Columns;
+                    headers = new string[colCount];
+                    for (int c = 1; c <= colCount; c++)
+                    {
+                        headers[c - 1] = worksheet.Cells[1, c].Text?.Trim() ?? $"Column{c}";
+                    }
                 }
-                return Json(new { success = true, fileName = fileName, headers = headers });
+                else
+                {
+                    // CSV with UTF-8 BOM support for special characters (ñ, é, etc.)
+                    // Auto-detect encoding (handles UTF-8, UTF-8 BOM, Windows-1252 for ñ, é, etc.)
+                    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                    var csvEncoding = DetectCsvEncoding(filePath);
+                    using var reader = new StreamReader(filePath, csvEncoding);
+                    var headerLine = await reader.ReadLineAsync();
+                    if (string.IsNullOrEmpty(headerLine))
+                        return Json(new { success = false, message = "CSV file is empty." });
+                    headers = ParseCsvLine(headerLine);
+                }
+
+                return Json(new { success = true, fileName = fileName, headers = headers, fileType = ext.TrimStart('.') });
             }
-            catch (Exception ex) { return Json(new { success = false, message = "Error analyzing file: " + ex.Message }); }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error analyzing file: " + ex.Message });
+            }
         }
 
         [HttpPost]
@@ -2133,27 +2168,78 @@ namespace iBITS_Portal.Controllers
             if (!System.IO.File.Exists(filePath)) return NotFound("File session expired.");
 
             var viewModel = new ImportPreviewViewModel();
+            var ext = Path.GetExtension(fileName).ToLower();
 
             try
             {
                 viewModel.Headers = map.Keys.ToList();
-
                 if (viewModel.Headers.Contains("Year") || viewModel.Headers.Contains("Section"))
                 {
                     viewModel.Headers.Remove("Year");
                     viewModel.Headers.Remove("Section");
                     if (!viewModel.Headers.Contains("YearLevelSection"))
-                    {
                         viewModel.Headers.Add("YearLevelSection");
+                }
+
+                List<string[]> dataRows = new();
+
+                if (ext == ".xlsx")
+                {
+                    OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+                    using var package = new OfficeOpenXml.ExcelPackage(new FileInfo(filePath));
+                    var ws = package.Workbook.Worksheets[0];
+                    int totalRows = ws.Dimension?.Rows ?? 0;
+                    int totalCols = ws.Dimension?.Columns ?? 0;
+
+                    for (int r = 2; r <= Math.Min(6, totalRows); r++)
+                    {
+                        var row = new string[totalCols];
+                        for (int c = 1; c <= totalCols; c++)
+                        {
+                            var cell = ws.Cells[r, c];
+                            if (cell.Value is DateTime dtVal)
+                                row[c - 1] = dtVal.ToString("MM/dd/yyyy");
+                            else if (cell.Value is double dblVal)
+                            {
+                                if (dblVal >= 1 && dblVal <= 73050)
+                                {
+                                    try
+                                    {
+                                        var testDate = DateTime.FromOADate(dblVal);
+                                        if (testDate.Year >= 1900 && testDate.Year <= 2100)
+                                            row[c - 1] = testDate.ToString("MM/dd/yyyy");
+                                        else
+                                            row[c - 1] = cell.Text?.Trim() ?? "";
+                                    }
+                                    catch { row[c - 1] = cell.Text?.Trim() ?? ""; }
+                                }
+                                else
+                                    row[c - 1] = cell.Text?.Trim() ?? "";
+                            }
+                            else
+                                row[c - 1] = cell.Text?.Trim() ?? "";
+                        }
+                        dataRows.Add(row);
+                    }
+                }
+                else
+                {
+                    // Auto-detect encoding (handles UTF-8, UTF-8 BOM, Windows-1252 for ñ, é, etc.)
+                    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                    var csvEncoding = DetectCsvEncoding(filePath);
+                    using var reader = new StreamReader(filePath, csvEncoding);
+                    string? line;
+                    int lineNum = 0;
+                    while ((line = await reader.ReadLineAsync()) != null && dataRows.Count < 5)
+                    {
+                        lineNum++;
+                        if (lineNum == 1) continue; // skip header
+                        dataRows.Add(ParseCsvLine(line));
                     }
                 }
 
-                var lines = await System.IO.File.ReadAllLinesAsync(filePath);
-                var previewLines = lines.Skip(1).Take(5);
-
-                foreach (var line in previewLines)
+                foreach (var cols in dataRows)
                 {
-                    var cols = line.Split(',');
                     var rowData = new List<string>();
                     var combinedYearSection = "";
 
@@ -2167,13 +2253,9 @@ namespace iBITS_Portal.Controllers
                     foreach (var header in viewModel.Headers)
                     {
                         if (header == "YearLevelSection")
-                        {
                             rowData.Add(string.IsNullOrEmpty(combinedYearSection) ? (GetValue(cols, map, "YearLevelSection") ?? "-") : combinedYearSection);
-                        }
                         else
-                        {
                             rowData.Add(GetValue(cols, map, header) ?? "-");
-                        }
                     }
                     viewModel.PreviewRows.Add(rowData);
                 }
@@ -2181,7 +2263,7 @@ namespace iBITS_Portal.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating import preview for file {FileName}", fileName);
-                return StatusCode(500, "Error reading preview. Please check file format and mapping.");
+                return StatusCode(500, "Error reading preview: " + ex.Message);
             }
 
             return PartialView("_ImportPreviewPartial", viewModel);
@@ -2191,40 +2273,117 @@ namespace iBITS_Portal.Controllers
         public async Task<IActionResult> ExecuteImport(string fileName, Dictionary<string, int> map)
         {
             var filePath = Path.Combine(Path.GetTempPath(), fileName);
-            if (!System.IO.File.Exists(filePath)) return Json(new { success = false, message = "Session expired." });
+            if (!System.IO.File.Exists(filePath))
+                return Json(new { success = false, message = "Session expired. Please re-upload the file." });
 
+            var ext = Path.GetExtension(fileName).ToLower();
             int successCount = 0;
             int errorCount = 0;
-            List<string> errorMessages = new List<string>();
+            int skippedCount = 0;
+            var errorMessages = new List<string>();
+            var processedRows = new List<object>();
 
             try
             {
-                var lines = await System.IO.File.ReadAllLinesAsync(filePath);
+                List<string[]> dataRows = new();
 
-                for (int i = 1; i < lines.Length; i++)
+                if (ext == ".xlsx")
                 {
-                    string currentRowData = "";
+                    OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+                    using var package = new OfficeOpenXml.ExcelPackage(new FileInfo(filePath));
+                    var ws = package.Workbook.Worksheets[0];
+                    int totalRows = ws.Dimension?.Rows ?? 0;
+                    int totalCols = ws.Dimension?.Columns ?? 0;
+
+                    for (int r = 2; r <= totalRows; r++)
+                    {
+                        var row = new string[totalCols];
+                        for (int c = 1; c <= totalCols; c++)
+                        {
+                            var cell = ws.Cells[r, c];
+                            if (cell.Value is DateTime dtVal)
+                                row[c - 1] = dtVal.ToString("MM/dd/yyyy");
+                            else if (cell.Value is double dblVal)
+                            {
+                                // Check if it looks like an OLE date (Excel stores dates as doubles)
+                                // Valid OLE dates for years 1900-2100 are roughly 1-73050
+                                if (dblVal >= 1 && dblVal <= 73050)
+                                {
+                                    try
+                                    {
+                                        var testDate = DateTime.FromOADate(dblVal);
+                                        if (testDate.Year >= 1900 && testDate.Year <= 2100)
+                                            row[c - 1] = testDate.ToString("MM/dd/yyyy");
+                                        else
+                                            row[c - 1] = cell.Text?.Trim() ?? "";
+                                    }
+                                    catch { row[c - 1] = cell.Text?.Trim() ?? ""; }
+                                }
+                                else
+                                    row[c - 1] = cell.Text?.Trim() ?? "";
+                            }
+                            else
+                                row[c - 1] = cell.Text?.Trim() ?? "";
+                        }
+                        dataRows.Add(row);
+                    }
+                }
+                else
+                {
+                    // Auto-detect encoding (handles UTF-8, UTF-8 BOM, Windows-1252 for ñ, é, etc.)
+                    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                    var csvEncoding = DetectCsvEncoding(filePath);
+                    using var reader = new StreamReader(filePath, csvEncoding);
+                    string? line;
+                    bool first = true;
+                    while ((line = await reader.ReadLineAsync()) != null)
+                    {
+                        if (first) { first = false; continue; }
+                        if (!string.IsNullOrWhiteSpace(line))
+                            dataRows.Add(ParseCsvLine(line));
+                    }
+                }
+
+                int totalRows2 = dataRows.Count;
+
+                for (int i = 0; i < dataRows.Count; i++)
+                {
+                    int rowNum = i + 2; // +2 because row 1 is header
                     try
                     {
-                        currentRowData = lines[i];
-                        var cols = currentRowData.Split(',');
-                        string studentNum = GetValue(cols, map, "StudentNum");
+                        var cols = dataRows[i];
+                        string studentNum = GetValue(cols, map, "StudentNum")?.Trim() ?? "";
 
                         if (string.IsNullOrWhiteSpace(studentNum))
                         {
                             errorCount++;
-                            errorMessages.Add($"Row {i + 1}: Missing Student Number.");
+                            skippedCount++;
+                            errorMessages.Add($"Row {rowNum}: Missing Student Number — skipped.");
                             continue;
                         }
 
                         if (await _context.Students.AnyAsync(s => s.StudentNum == studentNum))
                         {
+                            skippedCount++;
+                            errorMessages.Add($"Row {rowNum}: Student ID '{studentNum}' already exists — skipped.");
                             errorCount++;
-                            errorMessages.Add($"Row {i + 1}: Student ID {studentNum} already exists.");
                             continue;
                         }
 
-                        var user = new IdentityUser { UserName = studentNum, Email = GetValue(cols, map, "StudentEmail") };
+                        string studentLn = GetValue(cols, map, "StudentLn")?.Trim() ?? "Unknown";
+                        string studentFn = GetValue(cols, map, "StudentFn")?.Trim() ?? "Unknown";
+                        string? studentEmail = GetValue(cols, map, "StudentEmail")?.Trim();
+
+                        // Normalize special characters (ñ, é, etc.) — already preserved via UTF-8 encoding
+                        studentLn = studentLn.Normalize(System.Text.NormalizationForm.FormC);
+                        studentFn = studentFn.Normalize(System.Text.NormalizationForm.FormC);
+
+                        var user = new IdentityUser
+                        {
+                            UserName = studentNum,
+                            Email = string.IsNullOrWhiteSpace(studentEmail) ? null : studentEmail
+                        };
+
                         var result = await _userManager.CreateAsync(user, studentNum);
 
                         if (result.Succeeded)
@@ -2240,54 +2399,78 @@ namespace iBITS_Portal.Controllers
                             }
                             else
                             {
-                                yearLevelSection = GetValue(cols, map, "YearLevelSection");
+                                yearLevelSection = GetValue(cols, map, "YearLevelSection") ?? "";
                             }
 
                             var student = new Student
                             {
                                 StudentNum = studentNum,
-                                StudentLn = GetValue(cols, map, "StudentLn") ?? "Unknown",
-                                StudentFn = GetValue(cols, map, "StudentFn") ?? "Unknown",
-                                StudentMn = GetValue(cols, map, "StudentMn"),
+                                StudentLn = studentLn,
+                                StudentFn = studentFn,
+                                StudentMn = GetValue(cols, map, "StudentMn")?.Trim(),
                                 YearLevelSection = yearLevelSection,
-                                Course = GetValue(cols, map, "Course"),
+                                Course = GetValue(cols, map, "Course")?.Trim(),
                                 StudentEmail = user.Email,
-                                StudentType = GetValue(cols, map, "StudentType") ?? "Regular",
+                                StudentType = GetValue(cols, map, "StudentType")?.Trim() ?? "Regular",
                                 Classification = "Active",
                                 IsArchived = false,
                                 Qrcode = studentNum
                             };
 
                             if (map.ContainsKey("Birthday"))
+                            if (map.ContainsKey("Birthday"))
                             {
-                                string bdayStr = GetValue(cols, map, "Birthday");
-                                if (DateOnly.TryParse(bdayStr, out DateOnly bday)) student.Birthday = bday;
+                                string? bdayStr = GetValue(cols, map, "Birthday");
+                                if (!string.IsNullOrWhiteSpace(bdayStr))
+                                {
+                                    DateOnly bday;
+                                    var formats = new[] { "M/d/yyyy", "MM/dd/yyyy", "d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM-dd-yyyy", "M-d-yyyy" };
+                                    if (DateOnly.TryParseExact(bdayStr.Trim(), formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out bday))
+                                        student.Birthday = bday;
+                                    else if (DateOnly.TryParse(bdayStr, out bday))
+                                        student.Birthday = bday;
+                                }
                             }
 
                             _context.Students.Add(student);
+
+                            // Save every 50 records to avoid memory buildup
+                            if (successCount > 0 && successCount % 50 == 0)
+                                await _context.SaveChangesAsync();
+
                             successCount++;
                         }
                         else
                         {
                             errorCount++;
+                            skippedCount++;
                             string identityErrors = string.Join(", ", result.Errors.Select(e => e.Description));
-                            errorMessages.Add($"Row {i + 1}: System Account Error ({identityErrors})");
+                            errorMessages.Add($"Row {rowNum}: Account error for '{studentNum}' ({identityErrors}) — skipped.");
                         }
                     }
                     catch (Exception ex)
                     {
                         errorCount++;
-                        errorMessages.Add($"Row {i + 1}: Data Format Error.");
-                        _logger.LogError(ex, "Error processing row {RowNumber} during import.", i + 1);
+                        skippedCount++;
+                        errorMessages.Add($"Row {rowNum}: Data format error — skipped. ({ex.Message})");
+                        _logger.LogError(ex, "Error processing row {RowNumber} during import.", rowNum);
                     }
                 }
 
                 await _context.SaveChangesAsync();
-                await LogAction("Batch Import", $"Imported {successCount} students. Failed: {errorCount}.");
+                await LogAction("Batch Import", $"Imported {successCount} students via {ext.ToUpper()}. Failed/Skipped: {errorCount}.");
 
-                System.IO.File.Delete(filePath);
+                try { System.IO.File.Delete(filePath); } catch { }
 
-                return Json(new { success = true, imported = successCount, failed = errorCount, errors = errorMessages });
+                return Json(new
+                {
+                    success = true,
+                    imported = successCount,
+                    failed = errorCount,
+                    skipped = skippedCount,
+                    total = dataRows.Count,
+                    errors = errorMessages
+                });
             }
             catch (Exception ex)
             {
@@ -2296,12 +2479,278 @@ namespace iBITS_Portal.Controllers
             }
         }
 
-        private string GetValue(string[] cols, Dictionary<string, int> map, string key)
+        // =========================================================
+        // HELPER: Parse CSV line with proper quote/special char handling
+        // =========================================================
+        // =========================================================
+        // GET IMPORT ROWS - Returns all rows for client-side row-by-row processing
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> GetImportRows(string fileName, Dictionary<string, int> map)
+        {
+            var filePath = Path.Combine(Path.GetTempPath(), fileName);
+            if (!System.IO.File.Exists(filePath))
+                return Json(new { success = false, message = "Session expired. Please re-upload the file." });
+
+            var ext = Path.GetExtension(fileName).ToLower();
+            var rows = new List<Dictionary<string, string>>();
+
+            try
+            {
+                List<string[]> dataRows = new();
+
+                if (ext == ".xlsx")
+                {
+                    OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+                    using var package = new OfficeOpenXml.ExcelPackage(new FileInfo(filePath));
+                    var ws = package.Workbook.Worksheets[0];
+                    int totalRows = ws.Dimension?.Rows ?? 0;
+                    int totalCols = ws.Dimension?.Columns ?? 0;
+                    for (int r = 2; r <= totalRows; r++)
+                    {
+                        var row = new string[totalCols];
+                        for (int c = 1; c <= totalCols; c++)
+                        {
+                            var cell = ws.Cells[r, c];
+                            if (cell.Value is DateTime dtVal)
+                                row[c - 1] = dtVal.ToString("MM/dd/yyyy");
+                            else if (cell.Value is double dblVal)
+                            {
+                                if (dblVal >= 1 && dblVal <= 73050)
+                                {
+                                    try
+                                    {
+                                        var testDate = DateTime.FromOADate(dblVal);
+                                        if (testDate.Year >= 1900 && testDate.Year <= 2100)
+                                            row[c - 1] = testDate.ToString("MM/dd/yyyy");
+                                        else
+                                            row[c - 1] = cell.Text?.Trim() ?? "";
+                                    }
+                                    catch { row[c - 1] = cell.Text?.Trim() ?? ""; }
+                                }
+                                else
+                                    row[c - 1] = cell.Text?.Trim() ?? "";
+                            }
+                            else
+                                row[c - 1] = cell.Text?.Trim() ?? "";
+                        }
+                    }
+                }
+                else
+                {
+                    // Auto-detect encoding (handles UTF-8, UTF-8 BOM, Windows-1252 for ñ, é, etc.)
+                    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                    var csvEncoding = DetectCsvEncoding(filePath);
+                    using var reader = new StreamReader(filePath, csvEncoding);
+                    string? line;
+                    bool first = true;
+                    while ((line = await reader.ReadLineAsync()) != null)
+                    {
+                        if (first) { first = false; continue; }
+                        if (!string.IsNullOrWhiteSpace(line))
+                            dataRows.Add(ParseCsvLine(line));
+                    }
+                }
+
+                // Convert each row to a dictionary using the map keys
+                var mapKeys = new[] { "StudentNum", "StudentLn", "StudentFn", "StudentMn", "YearLevelSection", "Year", "Section", "Course", "StudentEmail", "StudentType", "Birthday" };
+
+                for (int i = 0; i < dataRows.Count; i++)
+                {
+                    var cols = dataRows[i];
+                    var rowDict = new Dictionary<string, string>();
+                    rowDict["_rowNum"] = (i + 2).ToString();
+
+                    foreach (var key in mapKeys)
+                    {
+                        rowDict[key] = GetValue(cols, map, key) ?? "";
+                    }
+                    rows.Add(rowDict);
+                }
+
+                return Json(new { success = true, rows = rows, total = rows.Count });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error reading file: " + ex.Message });
+            }
+        }
+
+        // =========================================================
+        // IMPORT SINGLE ROW - Processes one student row at a time
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> ImportSingleRow([FromBody] ImportSingleRowRequest request)
+        {
+            if (request == null)
+                return Json(new { success = false, error = "Invalid request." });
+
+            try
+            {
+                string studentNum = request.StudentNum?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(studentNum))
+                    return Json(new { success = false, skipped = true, error = $"Row {request.RowNum}: Missing Student Number." });
+
+                if (await _context.Students.AnyAsync(s => s.StudentNum == studentNum))
+                    return Json(new { success = false, skipped = true, error = $"Row {request.RowNum}: Student ID '{studentNum}' already exists." });
+
+                if (string.IsNullOrWhiteSpace(request.StudentLn) || string.IsNullOrWhiteSpace(request.StudentFn))
+                    return Json(new { success = false, skipped = true, error = $"Row {request.RowNum}: Missing first or last name." });
+
+                string studentLn = request.StudentLn.Trim().Normalize(System.Text.NormalizationForm.FormC);
+                string studentFn = request.StudentFn.Trim().Normalize(System.Text.NormalizationForm.FormC);
+                string? studentEmail = string.IsNullOrWhiteSpace(request.StudentEmail) ? null : request.StudentEmail.Trim();
+
+                var user = new IdentityUser
+                {
+                    UserName = studentNum,
+                    Email = studentEmail
+                };
+
+                var result = await _userManager.CreateAsync(user, studentNum);
+
+                if (!result.Succeeded)
+                {
+                    string identityErrors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    return Json(new { success = false, skipped = true, error = $"Row {request.RowNum}: Account error — {identityErrors}" });
+                }
+
+                await _userManager.AddToRoleAsync(user, "Member");
+
+                // Build YearLevelSection
+                string yearLevelSection = request.YearLevelSection?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(yearLevelSection))
+                {
+                    var year = request.Year?.Trim() ?? "";
+                    var section = request.Section?.Trim() ?? "";
+                    yearLevelSection = $"{year}-{section}".Trim('-');
+                }
+
+                var student = new Student
+                {
+                    StudentNum = studentNum,
+                    StudentLn = studentLn,
+                    StudentFn = studentFn,
+                    StudentMn = request.StudentMn?.Trim(),
+                    YearLevelSection = yearLevelSection,
+                    Course = request.Course?.Trim(),
+                    StudentEmail = studentEmail,
+                    StudentType = string.IsNullOrWhiteSpace(request.StudentType) ? "Regular" : request.StudentType.Trim(),
+                    Classification = "Active",
+                    IsArchived = false,
+                    Qrcode = studentNum
+                };
+
+                if (!string.IsNullOrWhiteSpace(request.Birthday))
+                {
+                    DateOnly bday;
+                    var bdayStr = request.Birthday.Trim();
+                    var formats = new[] { "M/d/yyyy", "MM/dd/yyyy", "d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM-dd-yyyy", "MMMM d yyyy", "M-d-yyyy" };
+                    if (DateOnly.TryParseExact(bdayStr, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out bday))
+                        student.Birthday = bday;
+                    else if (DateOnly.TryParse(bdayStr, out bday))
+                        student.Birthday = bday;
+                }
+
+                _context.Students.Add(student);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, studentNum = studentNum, name = $"{studentFn} {studentLn}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing single row {RowNum}", request?.RowNum);
+                return Json(new { success = false, skipped = true, error = $"Row {request?.RowNum}: Server error — {ex.Message}" });
+            }
+        }
+
+        // =========================================================
+        // HELPER: Auto-detect CSV encoding (UTF-8 BOM, UTF-8, Windows-1252)
+        // Handles special characters like ñ, é, à, etc.
+        // =========================================================
+        private System.Text.Encoding DetectCsvEncoding(string filePath)
+        {
+            // Read first 3 bytes to check for BOM
+            byte[] bom = new byte[4];
+            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                fs.Read(bom, 0, 4);
+            }
+
+            // UTF-8 BOM: EF BB BF
+            if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
+                return new System.Text.UTF8Encoding(true);
+
+            // UTF-16 LE BOM: FF FE
+            if (bom[0] == 0xFF && bom[1] == 0xFE)
+                return System.Text.Encoding.Unicode;
+
+            // UTF-16 BE BOM: FE FF
+            if (bom[0] == 0xFE && bom[1] == 0xFF)
+                return System.Text.Encoding.BigEndianUnicode;
+
+            // Try reading as UTF-8 first and check if it's valid
+            try
+            {
+                var utf8 = new System.Text.UTF8Encoding(false, true);
+                var content = System.IO.File.ReadAllText(filePath, utf8);
+                // If no exception thrown, it's valid UTF-8
+                return utf8;
+            }
+            catch
+            {
+                // Not valid UTF-8 - likely Windows-1252 (common for Excel CSV exports with ñ, é, etc.)
+                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                return System.Text.Encoding.GetEncoding(1252);
+            }
+        }
+
+        private string[] ParseCsvLine(string line)
+        {
+            var result = new List<string>();
+            bool inQuotes = false;
+            var current = new System.Text.StringBuilder();
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        current.Append('"');
+                        i++; // skip next quote
+                    }
+                    else
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    result.Add(current.ToString().Trim());
+                    current.Clear();
+                }
+                else
+                {
+                    current.Append(c);
+                }
+            }
+            result.Add(current.ToString().Trim());
+            return result.ToArray();
+        }
+
+        private string? GetValue(string[] cols, Dictionary<string, int> map, string key)
         {
             if (map.ContainsKey(key) && map[key] < cols.Length)
-                return cols[map[key]].Trim().Replace("\"", "");
+            {
+                var val = cols[map[key]]?.Trim().Trim('"');
+                return string.IsNullOrEmpty(val) ? null : val;
+            }
             return null;
         }
+
 
 
         // =========================================================

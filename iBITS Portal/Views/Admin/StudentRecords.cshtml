@@ -1,4 +1,4 @@
-@* ============================================================ *@
+﻿@* ============================================================ *@
 @* FILE PATH: Views/Admin/StudentRecords.cshtml                 *@
 @* ============================================================ *@
 @* UPDATED: Auto-apply filters on dropdown change               *@
@@ -85,10 +85,10 @@
     <div id="importCollapse" class="collapse">
         <div class="glass-body">
             <div class="row g-3 align-items-center">
-                <div class="col-md-9"><input type="file" id="csvFileUpload" class="form-control" accept=".csv" /></div>
+                <div class="col-md-9"><input type="file" id="csvFileUpload" class="form-control" accept=".csv,.xlsx" /></div>
                 <div class="col-md-3"><button type="button" class="btn-gold w-100" onclick="uploadAndAnalyze()"><i class="bi bi-upload"></i> Upload</button></div>
             </div>
-            <div class="mt-2 text-muted small"><i class="bi bi-info-circle me-1"></i> Upload any CSV file. You will map the columns in the next step.</div>
+            <div class="mt-2 text-muted small"><i class="bi bi-info-circle me-1"></i> Upload CSV or XLSX files. Special characters (ñ, é, etc.) are fully supported. You will map the columns in the next step.</div>
         </div>
     </div>
 </div>
@@ -707,8 +707,11 @@
         // Define Razor URLs for external JS
         window.getStudentDetailsUrl = '@Url.Action("GetStudentDetails", "Admin")';
         window.analyzeCsvUrl = '@Url.Action("AnalyzeCsv", "Admin")';
+        window.analyzeFileUrl = '@Url.Action("AnalyzeCsv", "Admin")';
         window.previewImportUrl = '@Url.Action("PreviewImport", "Admin")';
         window.executeImportUrl = '@Url.Action("ExecuteImport", "Admin")';
+    window.getImportRowsUrl = '@Url.Action("GetImportRows", "Admin")';
+    window.importSingleRowUrl = '@Url.Action("ImportSingleRow", "Admin")';
         window.studentRecordsUrl = '@Url.Action("StudentRecords", "Admin")';
         window.exportToExcelUrl = '@Url.Action("ExportStudentsToExcel", "Admin")';
         // Bulk action URLs

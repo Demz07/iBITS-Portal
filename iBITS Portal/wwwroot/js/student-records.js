@@ -711,7 +711,7 @@ let columnMap = {};
 window.uploadAndAnalyze = function () {
     const fileInput = document.getElementById('csvFileUpload');
     if (!fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a CSV file first.');
+        alert('Please select a CSV or XLSX file first.');
         return;
     }
     currentFile = fileInput.files[0];
@@ -728,6 +728,7 @@ window.uploadAndAnalyze = function () {
         success: function (response) {
             if (response.success) {
                 window.currentFileName = response.fileName;
+                window.currentFileType = response.fileType;
                 showMappingModal(response.headers);
             } else {
                 alert('Error: ' + response.message);
@@ -792,74 +793,254 @@ window.generatePreview = function () {
         }
     });
 };
-
 window.confirmUpload = function () {
-    bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
-    $('#importProcessingOverlay').css('display', 'flex');
+    // Hide preview modal
+    const previewModalEl = document.getElementById('previewModal');
+    if (previewModalEl) {
+        const inst = bootstrap.Modal.getInstance(previewModalEl);
+        if (inst) inst.hide();
+    }
 
+    // Show progress modal
+    const progressModal = new bootstrap.Modal(document.getElementById('importProgressModal'), { backdrop: 'static', keyboard: false });
+    progressModal.show();
+
+    // State
+    let importedCount = 0;
+    let skippedCount = 0;
+    let allErrors = [];
+    let aborted = false;
+    let allRows = [];
+    let currentIndex = 0;
+    let totalRows = 0;
+
+    // UI Elements
+    const progressBar = document.getElementById('importProgressBar');
+    const progressCounter = document.getElementById('progressCounter');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressSuccess = document.getElementById('progressSuccess');
+    const progressSkipped = document.getElementById('progressSkipped');
+    const progressTotal = document.getElementById('progressTotal');
+    const liveErrorContainer = document.getElementById('liveErrorContainer');
+    const liveErrorList = document.getElementById('liveErrorList');
+    const errorBadge = document.getElementById('errorBadge');
+    const currentRowInfo = document.getElementById('currentRowInfo');
+    const currentRowText = document.getElementById('currentRowText');
+
+    function updateUI() {
+        const pct = totalRows > 0 ? Math.round((currentIndex / totalRows) * 100) : 0;
+        progressBar.style.width = pct + '%';
+        progressCounter.textContent = currentIndex + ' / ' + totalRows;
+        progressPercent.textContent = '(' + pct + '%)';
+        progressSuccess.textContent = importedCount;
+        progressSkipped.textContent = skippedCount;
+        progressTotal.textContent = totalRows;
+    }
+
+    function addLiveError(msg) {
+        allErrors.push(msg);
+        liveErrorContainer.style.display = 'block';
+        const li = document.createElement('li');
+        li.textContent = msg;
+        liveErrorList.appendChild(li);
+        errorBadge.textContent = allErrors.length;
+        // Auto-scroll to bottom
+        liveErrorList.parentElement.scrollTop = liveErrorList.parentElement.scrollHeight;
+    }
+
+    function showPauseDialog(rowNum, errorMsg, rowData, onSkip, onAbort) {
+        document.getElementById('pauseErrorRowNum').textContent = 'Row #' + rowNum;
+        document.getElementById('pauseErrorMessage').textContent = errorMsg;
+        document.getElementById('pauseRowData').textContent = JSON.stringify(rowData, null, 2);
+
+        const pauseModal = new bootstrap.Modal(document.getElementById('importErrorPauseModal'), { backdrop: 'static', keyboard: false });
+        pauseModal.show();
+
+        document.getElementById('skipRowBtn').onclick = function () {
+            pauseModal.hide();
+            setTimeout(onSkip, 300);
+        };
+        document.getElementById('abortImportBtn').onclick = function () {
+            pauseModal.hide();
+            setTimeout(onAbort, 300);
+        };
+    }
+
+    function finishImport() {
+        // Complete progress bar
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-success');
+        progressCounter.textContent = totalRows + ' / ' + totalRows;
+        progressPercent.textContent = '(100%)';
+        progressLabel.textContent = aborted ? 'Import aborted!' : 'Import complete!';
+
+        setTimeout(function () {
+            progressModal.hide();
+            setTimeout(function () { showResultModal(importedCount, skippedCount, totalRows, allErrors, aborted); }, 400);
+        }, 1200);
+    }
+
+    function processNextRow() {
+        if (aborted || currentIndex >= totalRows) {
+            finishImport();
+            return;
+        }
+
+        const row = allRows[currentIndex];
+        const rowNum = row._rowNum || (currentIndex + 2);
+
+        // Update current row display
+        currentRowInfo.style.display = 'block';
+        currentRowText.textContent = 'Row ' + rowNum + ': ' + (row.StudentFn || '') + ' ' + (row.StudentLn || '') + ' (' + (row.StudentNum || 'No ID') + ')';
+        progressLabel.textContent = 'Processing row ' + rowNum + '...';
+        updateUI();
+
+        $.ajax({
+            url: window.importSingleRowUrl,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                rowNum: parseInt(rowNum),
+                studentNum: row.StudentNum || '',
+                studentLn: row.StudentLn || '',
+                studentFn: row.StudentFn || '',
+                studentMn: row.StudentMn || '',
+                yearLevelSection: row.YearLevelSection || '',
+                year: row.Year || '',
+                section: row.Section || '',
+                course: row.Course || '',
+                studentEmail: row.StudentEmail || '',
+                studentType: row.StudentType || '',
+                birthday: row.Birthday || ''
+            }),
+            success: function (response) {
+                if (response.success) {
+                    importedCount++;
+                    currentIndex++;
+                    updateUI();
+                    // Small delay for UI visibility
+                    setTimeout(processNextRow, 50);
+                } else {
+                    // Error found - pause and show dialog
+                    addLiveError(response.error || 'Row ' + rowNum + ': Unknown error.');
+                    skippedCount++;
+                    currentIndex++;
+                    updateUI();
+
+                    showPauseDialog(
+                        rowNum,
+                        response.error || 'Unknown error',
+                        row,
+                        function () { // Skip
+                            setTimeout(processNextRow, 100);
+                        },
+                        function () { // Abort
+                            aborted = true;
+                            finishImport();
+                        }
+                    );
+                }
+            },
+            error: function (xhr) {
+                addLiveError('Row ' + rowNum + ': Server error — ' + (xhr.responseText || 'Unknown'));
+                skippedCount++;
+                currentIndex++;
+                updateUI();
+
+                showPauseDialog(
+                    rowNum,
+                    'Server error: ' + (xhr.responseText || 'Unknown'),
+                    row,
+                    function () { setTimeout(processNextRow, 100); },
+                    function () { aborted = true; finishImport(); }
+                );
+            }
+        });
+    }
+
+    // Step 1: Get all rows first
+    progressLabel.textContent = 'Loading file data...';
     $.ajax({
-        url: window.executeImportUrl,
+        url: window.getImportRowsUrl,
         type: 'POST',
         data: { fileName: window.currentFileName, map: columnMap },
         success: function (response) {
-            $('#importProcessingOverlay').hide();
-            showResultModal(response);
+            if (!response.success) {
+                progressModal.hide();
+                alert('Error loading file: ' + response.message);
+                return;
+            }
+            allRows = response.rows;
+            totalRows = response.total;
+            progressTotal.textContent = totalRows;
+            progressCounter.textContent = '0 / ' + totalRows;
+            progressLabel.textContent = 'Starting import...';
+
+            // Start processing row by row
+            setTimeout(processNextRow, 500);
         },
-        error: function (xhr) {
-            $('#importProcessingOverlay').hide();
-            const errorResponse = {
-                success: false,
-                imported: 0,
-                failed: 'All',
-                errors: [xhr.responseText || 'A critical server error occurred.']
-            };
-            showResultModal(errorResponse);
+        error: function () {
+            progressModal.hide();
+            alert('Failed to load import data. Please try again.');
         }
     });
 };
 
-function showResultModal(response) {
-    const icon = $('#importResultIcon');
-    const summary = $('#importResultSummary');
-    const detail = $('#importResultDetail');
-    const errorContainer = $('#importErrorContainer');
-    const errorList = $('#importErrorList');
+// Store errors globally for download
+window.lastImportErrors = [];
 
-    icon.removeClass('bi-check-circle-fill text-success bi-exclamation-triangle-fill text-danger bi-info-circle-fill text-warning');
-    errorContainer.hide();
-    errorList.empty();
+function showResultModal(imported, skipped, total, errors, aborted) {
+    const icon = document.getElementById('importResultIcon');
+    const summary = document.getElementById('importResultSummary');
+    const detail = document.getElementById('importResultDetail');
+    const errorContainer = document.getElementById('importErrorContainer');
+    const errorList = document.getElementById('importErrorList');
 
-    if (response.success) {
-        if (response.failed > 0) {
-            icon.addClass('bi-info-circle-fill text-warning');
-            summary.text('Import Partially Complete');
-            detail.text(`${response.imported} records were imported, but ${response.failed} failed.`);
-        } else {
-            icon.addClass('bi-check-circle-fill text-success');
-            summary.text('Import Successful');
-            detail.text(`All ${response.imported} student records were imported successfully.`);
-        }
+    icon.className = 'bi';
+    errorContainer.style.display = 'none';
+    errorList.innerHTML = '';
+    window.lastImportErrors = errors || [];
 
-        if (response.errors && response.errors.length > 0) {
-            response.errors.forEach(err => {
-                errorList.append(`<li>${err}</li>`);
-            });
-            errorContainer.show();
-        }
+    if (aborted) {
+        icon.className = 'bi bi-x-circle-fill text-danger';
+        summary.textContent = 'Import Aborted';
+        detail.textContent = imported + ' students imported before abort. ' + skipped + ' rows were skipped.';
+    } else if (skipped > 0) {
+        icon.className = 'bi bi-info-circle-fill text-warning';
+        summary.textContent = 'Import Partially Complete';
+        detail.textContent = imported + ' imported successfully, ' + skipped + ' rows skipped out of ' + total + ' total.';
     } else {
-        icon.addClass('bi-exclamation-triangle-fill text-danger');
-        summary.text('Import Failed');
-        detail.text(response.message || 'The import could not be completed due to errors.');
+        icon.className = 'bi bi-check-circle-fill text-success';
+        summary.textContent = 'Import Successful! 🎉';
+        detail.textContent = 'All ' + imported + ' student records were imported successfully.';
+    }
 
-        if (response.errors && response.errors.length > 0) {
-            response.errors.forEach(err => {
-                errorList.append(`<li>${err}</li>`);
-            });
-            errorContainer.show();
-        }
+    if (errors && errors.length > 0) {
+        errors.forEach(function (err) {
+            const li = document.createElement('li');
+            li.textContent = err;
+            errorList.appendChild(li);
+        });
+        errorContainer.style.display = 'block';
     }
 
     new bootstrap.Modal(document.getElementById('importResultModal')).show();
+}
+
+function downloadErrorLog() {
+    if (!window.lastImportErrors || window.lastImportErrors.length === 0) return;
+    const content = window.lastImportErrors.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'import_error_log_' + new Date().toISOString().slice(0, 10) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // ==========================================
