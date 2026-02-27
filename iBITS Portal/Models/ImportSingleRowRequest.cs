@@ -14,5 +14,6 @@ namespace iBITS_Portal.Models
         public string? StudentEmail { get; set; }
         public string? StudentType { get; set; }
         public string? Birthday { get; set; }
+        public string? DateFormat { get; set; }
     }
 }

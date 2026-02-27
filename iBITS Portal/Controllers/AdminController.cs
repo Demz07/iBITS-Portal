@@ -2486,7 +2486,7 @@ namespace iBITS_Portal.Controllers
         // GET IMPORT ROWS - Returns all rows for client-side row-by-row processing
         // =========================================================
         [HttpPost]
-        public async Task<IActionResult> GetImportRows(string fileName, Dictionary<string, int> map)
+        public async Task<IActionResult> GetImportRows(string fileName, Dictionary<string, int> map, string dateFormat = "auto")
         {
             var filePath = Path.Combine(Path.GetTempPath(), fileName);
             if (!System.IO.File.Exists(filePath))
@@ -2646,11 +2646,23 @@ namespace iBITS_Portal.Controllers
                 {
                     DateOnly bday;
                     var bdayStr = request.Birthday.Trim();
-                    var formats = new[] { "M/d/yyyy", "MM/dd/yyyy", "d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM-dd-yyyy", "MMMM d yyyy", "M-d-yyyy" };
-                    if (DateOnly.TryParseExact(bdayStr, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out bday))
-                        student.Birthday = bday;
-                    else if (DateOnly.TryParse(bdayStr, out bday))
-                        student.Birthday = bday;
+                    var selectedFormat = string.IsNullOrWhiteSpace(request.DateFormat) || request.DateFormat == "auto" ? null : request.DateFormat;
+                    if (selectedFormat != null)
+                    {
+                        // Strict: use ONLY the user-selected format
+                        var strictFormats = new[] { selectedFormat };
+                        if (DateOnly.TryParseExact(bdayStr, strictFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out bday))
+                            student.Birthday = bday;
+                    }
+                    else
+                    {
+                        // Auto-detect: try all common formats
+                        var autoFormats = new[] { "M/d/yyyy", "MM/dd/yyyy", "d/M/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM-dd-yyyy", "dd-MM-yyyy", "M-d-yyyy" };
+                        if (DateOnly.TryParseExact(bdayStr, autoFormats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out bday))
+                            student.Birthday = bday;
+                        else if (DateOnly.TryParse(bdayStr, out bday))
+                            student.Birthday = bday;
+                    }
                 }
 
                 _context.Students.Add(student);

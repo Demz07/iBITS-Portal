@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml.Spreadsheet;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
 using iBITS_Portal.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -334,6 +334,24 @@ namespace iBITS_Portal.Controllers
             }
 
             return Json(new { success = false, message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateBirthdate(string birthday)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { success = false, message = "User not found." });
+
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentNum == user.UserName);
+            if (student == null) return Json(new { success = false, message = "Student record not found." });
+
+            if (!DateOnly.TryParse(birthday, out DateOnly bday))
+                return Json(new { success = false, message = "Invalid date format." });
+
+            student.Birthday = bday;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
     }
 }

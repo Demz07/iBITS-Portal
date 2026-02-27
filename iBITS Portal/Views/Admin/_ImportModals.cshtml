@@ -1,4 +1,4 @@
-@* Views/Admin/_ImportModals.cshtml *@
+﻿@* Views/Admin/_ImportModals.cshtml *@
 
 <!-- 1. MAPPING MODAL -->
 <div class="modal fade" id="mappingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -27,6 +27,21 @@
                         </table>
                     </div>
                 </form>
+                <!-- Date Format Selector -->
+                <div class="mt-3 p-3 rounded" style="background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.3);">
+                    <label class="form-label small fw-bold text-uppercase mb-1" style="color: var(--gold-primary);">
+                        <i class="bi bi-calendar-date me-1"></i> Birthdate Format in your File
+                    </label>
+                    <select id="birthdateFormatSelect" class="form-select" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);">
+                        <option value="M/d/yyyy">MM/DD/YYYY &amp;nbsp; e.g. 12/02/2004</option>
+                        <option value="d/M/yyyy">DD/MM/YYYY &amp;nbsp; e.g. 02/12/2004</option>
+                        <option value="yyyy-MM-dd">YYYY-MM-DD &amp;nbsp; e.g. 2004-12-02</option>
+                        <option value="MM-dd-yyyy">MM-DD-YYYY &amp;nbsp; e.g. 12-02-2004</option>
+                        <option value="dd-MM-yyyy">DD-MM-YYYY &amp;nbsp; e.g. 02-12-2004</option>
+                        <option value="auto">Auto-Detect (use if unsure)</option>
+                    </select>
+                    <small class="text-muted mt-1 d-block">Select the exact date format used in your Birthdate column.</small>
+                </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>

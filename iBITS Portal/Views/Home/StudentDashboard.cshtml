@@ -1,4 +1,4 @@
-@* ============================================================ *@
+﻿@* ============================================================ *@
 @* FILE PATH: Views/Home/StudentDashboard.cshtml                *@
 @* ============================================================ *@
 @using iBITS_Portal.Models
@@ -849,6 +849,14 @@
                                 <div class="col-md-7">
                                     <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);"><label class="modal-label text-gold">ID</label><p class="fw-bold mb-0">@student?.StudentNum</p></div>
                                     <div class="mb-3 p-3 rounded" style="background: var(--gold-dim); border: 1px solid var(--border-color);"><label class="modal-label text-gold">Name</label><p class="fw-bold mb-0">@student?.StudentFn @student?.StudentLn</p></div>
+                                    <div class="mb-3">
+                                        <label class="modal-label text-gold">Birthdate</label>
+                                        <input type="date" id="studentBirthdateInput" class="form-control mt-1" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" value="@(student?.Birthday.HasValue == true ? student.Birthday.Value.ToString(@"yyyy-MM-dd") : "")" />
+                                        <div id="birthdateAlert" class="alert d-none small mt-2"></div>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-warning w-100 mt-2" onclick="saveBirthdate()">
+                                        <i class="bi bi-calendar-check me-1"></i> Save Birthdate
+                                    </button>
                                     <button type="submit" class="btn btn-gold w-100 mt-2" id="btnUpdateProfile">Save</button>
                                 </div>
                             </form>
@@ -923,6 +931,17 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="~/js/student-dashboard.js" asp-append-version="true"></script>
     <script>
+        function saveBirthdate() {
+            const input = document.getElementById('studentBirthdateInput');
+            const alert = document.getElementById('birthdateAlert');
+            const val = input?.value;
+            if (!val) { alert.className = 'alert alert-warning small mt-2'; alert.textContent = 'Please select a valid date.'; return; }
+            alert.className = 'alert alert-info small mt-2'; alert.textContent = 'Saving...';
+            $.post('@Url.Action("UpdateBirthdate", "Student")', { birthday: val }, function(res) {
+                if (res.success) { alert.className = 'alert alert-success small mt-2'; alert.textContent = 'Birthdate saved successfully!'; }
+                else { alert.className = 'alert alert-danger small mt-2'; alert.textContent = res.message || 'Failed to save.'; }
+            }).fail(function() { alert.className = 'alert alert-danger small mt-2'; alert.textContent = 'Server error. Try again.'; });
+        }
         function loadAllEvents() { loadUpcomingEvents(); loadEventHistory(); }
         function loadUpcomingEvents() {
             const container = document.getElementById('upcomingEventsContent');

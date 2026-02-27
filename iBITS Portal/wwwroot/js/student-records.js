@@ -806,6 +806,8 @@ window.confirmUpload = function () {
     progressModal.show();
 
     // State
+    // Get selected date format from mapping modal dropdown
+    const dateFormat = document.getElementById('birthdateFormatSelect')?.value || 'auto';
     let importedCount = 0;
     let skippedCount = 0;
     let allErrors = [];
@@ -913,7 +915,8 @@ window.confirmUpload = function () {
                 course: row.Course || '',
                 studentEmail: row.StudentEmail || '',
                 studentType: row.StudentType || '',
-                birthday: row.Birthday || ''
+                birthday: row.Birthday || '',
+                dateFormat: dateFormat
             }),
             success: function (response) {
                 if (response.success) {
@@ -965,7 +968,7 @@ window.confirmUpload = function () {
     $.ajax({
         url: window.getImportRowsUrl,
         type: 'POST',
-        data: { fileName: window.currentFileName, map: columnMap },
+        data: { fileName: window.currentFileName, map: columnMap, dateFormat: dateFormat },
         success: function (response) {
             if (!response.success) {
                 progressModal.hide();
