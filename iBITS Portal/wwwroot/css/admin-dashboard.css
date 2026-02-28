@@ -1535,8 +1535,13 @@
     }
 
     .recipient-options .form-check-input {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.2);
+        background-color: var(--gold-dim);
+        border-color: var(--gold-primary);
+    }
+
+    [data-theme="light"] .recipient-options .form-check-input {
+        background-color: #ffffff;
+        border-color: var(--gold-primary);
     }
 
         .recipient-options .form-check-input:checked {
@@ -1722,7 +1727,7 @@
     letter-spacing: 0.5px;
 }
 
-.glass-select {
+.glass-select {  
     width: 100%;
     background: rgba(11, 26, 51, 0.6);
     border: 1px solid rgba(212, 175, 55, 0.3);
@@ -1754,7 +1759,7 @@
     }
 
 /* Light Theme overrides */
-[data-theme="light"] .glass-select {
+[data-theme="light"] .glass-select {  
     background-color: rgba(255, 255, 255, 0.8);
     color: var(--text-strong);
     border-color: rgba(212, 175, 55, 0.4);
@@ -1893,6 +1898,15 @@
     margin-top: 5px !important;
 }
 
+[data-theme="light"] .quick-action-card .dropdown-menu {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .quick-action-card .dropdown-item {
+    color: #000000 !important;
+}
+
 /* --- FIX 4: Make the entire card area clickable --- */
 .quick-action-card.dropdown {
     padding: 0 !important; /* Remove padding from parent */
@@ -1959,7 +1973,7 @@
 }
 
 /* Filter container sizing */
-.filter-container .glass-select {
+.filter-container .glass-select {  
     padding: 0.25rem;
     font-size: 0.8rem;
 }
@@ -2002,7 +2016,7 @@
 .notification-tab {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-main);
     padding: 0.75rem 1.5rem;
     font-weight: 600;
     cursor: pointer;
@@ -2010,12 +2024,16 @@
     position: relative;
 }
 
+[data-theme="light"] .notification-tab {
+    color: var(--text-strong);
+}
+
 .notification-tab:hover {
-    color: rgba(212, 175, 55, 0.8);
+    color: var(--gold-primary);
 }
 
 .notification-tab.active {
-    color: var(--gold);
+    color: var(--gold-primary);
 }
 
 .notification-tab.active::after {
@@ -2025,7 +2043,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--gold);
+    background: var(--gold-primary);
 }
 
 .tab-content-pane {
@@ -2037,12 +2055,12 @@
 }
 
 /* Glass Morphism Select for Modals */
-.glass-select-modal {
-    background: rgba(255, 255, 255, 0.05);
+.glass-select-modal {  
+    background: var(--input-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    color: var(--text-strong);
     padding: 0.5rem 0.75rem;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -2050,15 +2068,20 @@
     transition: all 0.3s ease;
 }
 
+[data-theme="light"] .glass-select-modal {  
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
 .glass-select-modal:focus {
     outline: none;
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 0 3px var(--gold-dim);
 }
 
 .glass-select-modal option {
-    background: #1a1a2e;
-    color: var(--gold);
+    background: var(--bg-body);
+    color: var(--text-strong);
 }
 
 /* Active Notifications List */
@@ -2214,3 +2237,6 @@
 .counter-card {
     position: relative !important;
 }
+
+
+

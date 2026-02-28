@@ -1,4 +1,4 @@
-ï»¿/* wwwroot/css/portal-layout.css */
+/* wwwroot/css/portal-layout.css */
 
 /* --- THEME VARIABLES --- */
 :root {
@@ -508,7 +508,7 @@ body {
 }
 
 /* ======================================================= */
-/*      LIGHT MODE FIX â€“ SIDEBAR & FINANCIALS TAB          */
+/*      LIGHT MODE FIX – SIDEBAR & FINANCIALS TAB          */
 /* ======================================================= */
 
 [data-theme="light"] #sidebar {
@@ -550,7 +550,7 @@ body {
         }
 
     /* ======================================================= */
-    /*          FINANCIALS SUBMENU â€“ LIGHT MODE FIX             */
+    /*          FINANCIALS SUBMENU – LIGHT MODE FIX             */
     /* ======================================================= */
 
     [data-theme="light"] #sidebar ul ul a {
@@ -1115,3 +1115,44 @@ th[style*="color: var(--gold-primary)"] {
         box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
     }
 
+
+
+
+[data-theme="light"] select.glass-select, 
+[data-theme="light"] select.glass-dropdown,
+[data-theme="light"] select.glass-select-modal,
+[data-theme="light"] select.form-select.glass-input,
+[data-theme="light"] select.form-select.glass-dropdown {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23b45309' stroke='none' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e") !important;
+}
+
+
+
+/* --- REINFORCED GLOBAL SINGLE ARROW ENFORCEMENT --- */
+select.glass-select, 
+select.glass-dropdown, 
+select.academic-year-dropdown,
+select.glass-select-modal,
+select.form-select.glass-input,
+select.form-select.glass-dropdown,
+.filter-container select,
+.filter-row select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23D4AF37' stroke='none' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 12px 10px !important;
+    padding-right: 35px !important;
+}
+
+[data-theme="light"] select.glass-select, 
+[data-theme="light"] select.glass-dropdown,
+[data-theme="light"] select.glass-select-modal,
+[data-theme="light"] select.form-select.glass-input,
+[data-theme="light"] select.form-select.glass-dropdown,
+[data-theme="light"] .filter-container select,
+[data-theme="light"] .filter-row select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23b45309' stroke='none' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e") !important;
+}

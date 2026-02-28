@@ -1,4 +1,4 @@
-﻿/* ============================================================ */
+/* ============================================================ */
 /* FILE PATH: wwwroot/css/attendance.css                        */
 /* ============================================================ */
 /* GLASSMORPHISM ATTENDANCE FILTER STYLES                       */
@@ -158,7 +158,7 @@
 }
 
 /* Glassmorphism Select Element */
-.glass-select {
+.glass-select {  
     width: 100%;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
@@ -172,12 +172,12 @@
     transition: all 0.3s ease;
     outline: none;
     cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23D4AF37' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    
+    background-repeat: no-repeat !important;
+    background-position: right 16px center !important;
     padding-right: 40px;
 }
 
@@ -220,10 +220,9 @@
 
 /* Light Theme Select Styles */
 [data-theme="light"] .glass-select {
-    background: #ffffff;
-    border-color: #cbd5e1;
-    color: var(--text-strong);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23b08d26' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: var(--text-strong) !important;
 }
 
     [data-theme="light"] .glass-select:hover {
@@ -538,7 +537,7 @@
         padding: 20px;
     }
 
-    .glass-select {
+    .glass-select {  
         font-size: 0.85rem;
         padding: 10px 14px;
         padding-right: 36px;
@@ -577,7 +576,7 @@
         padding: 22px;
     }
 
-    .glass-select {
+    .glass-select {  
         font-size: 0.88rem;
     }
 }
@@ -648,3 +647,6 @@
 /* ======================================================= */
 /*              END OF ATTENDANCE CSS                      */
 /* ======================================================= */
+
+
+
