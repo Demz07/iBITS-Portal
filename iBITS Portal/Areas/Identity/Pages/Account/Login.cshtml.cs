@@ -193,7 +193,20 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                     return Page();
                 }
 
-                // 3. Attempt Login
+                // 3. Check if user exists in the system (Existence check)
+                var userCheck = await _userManager.FindByNameAsync(userName);
+                if (userCheck == null)
+                {
+                    _logger.LogWarning($"Login attempt for non-existent user: {userName}");
+                    ModelState.AddModelError(string.Empty, "User ID not found in the system.");
+                    return Page();
+                }
+
+                // 4. Security Setup Check: If user exists but hasn't completed setup (no profile photo)
+                var student = await _context.Students.AsNoTracking().FirstOrDefaultAsync(s => s.StudentNum == userName);
+                bool needsSecuritySetup = (student != null && string.IsNullOrEmpty(student.StudentImage));
+
+                // 5. Attempt Login
                 var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
 
                 if (result.Succeeded)
@@ -203,7 +216,13 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                     // Reset failed attempts on success
                     ResetFailedAttempts(userName);
 
-                    // 4. Role-based Access Control
+                    // Redirect to Security Setup if profile photo is missing (initial setup)
+                    if (needsSecuritySetup)
+                    {
+                        return RedirectToAction("SecuritySetup", "Account");
+                    }
+
+                    // 6. Role-based Access Control
                     var currentUser = await _userManager.FindByNameAsync(userName);
                     bool isAdmin = currentUser != null && await _userManager.IsInRoleAsync(currentUser, "Admin");
 
@@ -249,7 +268,15 @@ namespace iBITS_Portal.Areas.Identity.Pages.Account
                     return RedirectToPage("./Lockout");
                 }
 
-                // 5. Failed login - increment counter
+                // 7. Failed login - with "Needs Setup" override
+                if (needsSecuritySetup)
+                {
+                    _logger.LogInformation($"User {userName} needs setup but entered wrong password.");
+                    ModelState.AddModelError(string.Empty, "Account requires initial security setup. Please use your default credentials.");
+                    return Page();
+                }
+
+                // 8. Standard Failed login - increment counter
                 var (newCount, isNowLocked) = IncrementFailedAttempts(userName);
                 FailedAttempts = newCount;
 
