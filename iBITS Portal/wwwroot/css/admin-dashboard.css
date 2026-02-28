@@ -1729,7 +1729,7 @@
 
 .glass-select {  
     width: 100%;
-    background: rgba(11, 26, 51, 0.6);
+    background-color: rgba(11, 26, 51, 0.6);
     border: 1px solid rgba(212, 175, 55, 0.3);
     color: var(--text-strong);
     padding: 8px 12px;
@@ -1899,7 +1899,7 @@
 }
 
 [data-theme="light"] .quick-action-card .dropdown-menu {
-    background: #ffffff !important;
+    background-color: #ffffff !important;
     border-color: #cbd5e1 !important;
 }
 
@@ -2056,7 +2056,7 @@
 
 /* Glass Morphism Select for Modals */
 .glass-select-modal {  
-    background: var(--input-bg);
+    background-color: var(--input-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--gold-dim);
@@ -2069,7 +2069,7 @@
 }
 
 [data-theme="light"] .glass-select-modal {  
-    background: #ffffff;
+    background-color: #ffffff;
     border-color: #cbd5e1;
 }
 
@@ -2237,6 +2237,8 @@
 .counter-card {
     position: relative !important;
 }
+
+
 
 
 
