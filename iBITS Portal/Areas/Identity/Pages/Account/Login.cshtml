@@ -253,6 +253,22 @@
             z-index: 1;
         }
 
+        /* Glowing Halo behind Logo */
+        .logo-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            background: var(--gold-primary);
+            filter: blur(100px);
+            opacity: 0.15;
+            border-radius: 50%;
+            animation: pulseGlow 5s infinite alternate;
+        }
+
         .logo-img {
             width: 420px;
             height: 420px;
@@ -473,6 +489,7 @@
         @@keyframes cardEntrance { from { opacity: 0; transform: translateY(40px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @@keyframes spin { to { transform: rotate(360deg); } }
         @@keyframes lockPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @@keyframes pulseGlow { 0% { opacity: 0.1; } 100% { opacity: 0.25; } }
 
         /* --- RESPONSIVE BREAKPOINTS --- */
         @@media (max-width: 1200px) {

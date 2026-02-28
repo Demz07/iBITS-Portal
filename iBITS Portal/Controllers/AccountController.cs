@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FILE PATH: Controllers/AccountController.cs (FINAL COMPLETE)
 // ============================================================
 
@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication;
 using iBITS_Portal.Helpers;
 
 namespace iBITS_Portal.Controllers
@@ -19,15 +21,19 @@ namespace iBITS_Portal.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly PortaliBitsContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly SignInManager<IdentityUser> _signInManager;
 
         public AccountController(
             UserManager<IdentityUser> userManager,
             PortaliBitsContext context,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            SignInManager<IdentityUser> signInManager)
         {
             _userManager = userManager;
             _context = context;
+            _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _signInManager = signInManager;
         }
 
         // ============================================================
@@ -362,6 +368,14 @@ namespace iBITS_Portal.Controllers
             {
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AbortSetup()
+        {
+            // Sign out only — do not reset password
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Gateway", "Home");
         }
     }
 }

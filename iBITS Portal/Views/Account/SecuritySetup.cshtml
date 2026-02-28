@@ -107,14 +107,30 @@
 
         .logo-wrapper {
             position: relative;
-            margin-bottom: -50px;
+            margin-bottom: 20px;
             animation: fadeUp 1s ease-out forwards;
             z-index: 1;
         }
 
+        /* Glowing Halo behind Logo */
+        .logo-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            background: var(--gold-primary);
+            filter: blur(100px);
+            opacity: 0.15;
+            border-radius: 50%;
+            animation: pulseGlow 5s infinite alternate;
+        }
+
         .logo-img {
-            width: 500px;
-            height: 500px;
+            width: 420px;
+            height: 420px;
             object-fit: contain;
             filter: drop-shadow(0 25px 50px rgba(0,0,0,0.6));
             position: relative;
@@ -154,18 +170,17 @@
         .right-controls {
             flex: 1;
             display: flex;
-            justify-content: flex-start;
-            padding-left: 0;
+            justify-content: center;
             align-items: center;
             position: relative;
             z-index: 2;
+            padding: 2rem;
         }
 
         .glass-panel {
             width: 100%;
             max-width: 650px;
-            padding: 80px;
-            margin: 50px 0 50px 50px;
+            padding: 40px;
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -178,19 +193,17 @@
         }
 
         .panel-header {
-            margin-bottom: 3rem;
-            position: relative;
+            margin-bottom: 2.5rem;
             border-left: 5px solid var(--gold-primary);
-            padding-left: 30px;
+            padding-left: 25px;
         }
 
             .panel-header h3 {
                 font-weight: 800;
-                font-size: 2.2rem;
+                font-size: 2rem;
                 color: #fff;
                 margin: 0;
                 line-height: 1;
-                text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
             }
 
             .panel-header p {
@@ -205,7 +218,7 @@
 
         /* EXACT FORM STYLES FROM YOUR LOGIN PAGE */
         .form-floating {
-            margin-bottom: 25px;
+            margin-bottom: 12px;
         }
 
         .form-control {
@@ -213,7 +226,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff !important;
             border-radius: 15px;
-            height: 65px;
+            height: 56px;
             font-family: 'Outfit', sans-serif;
             letter-spacing: 1px;
             font-size: 1.1rem;
@@ -228,8 +241,9 @@
 
         .form-floating label {
             color: #888;
-            padding-top: 1.25rem;
+            padding-top: 20px;
         }
+
         /* Adjusted padding slightly for better alignment */
         .password-toggle {
             position: absolute;
@@ -252,14 +266,15 @@
             font-weight: 800;
             font-size: 1.1rem;
             width: 100%;
-            padding: 20px;
+            padding: 13px;
             border: none;
             border-radius: 15px;
             text-transform: uppercase;
             letter-spacing: 2px;
             transition: all 0.3s ease;
             margin-top: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
         }
 
             .btn-gold:hover {
@@ -273,6 +288,118 @@
             color: var(--gold-primary) !important;
             text-shadow: 0 0 8px var(--gold-primary);
             font-family: monospace !important;
+        }
+
+        /* --- FLOATING NAVIGATION (From Login) --- */
+        .floating-nav {
+            display: flex;
+            background: rgba(3, 10, 22, 0.95);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 70px;
+        }
+
+        .nav-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 50px;
+            box-sizing: border-box;
+            gap: 16px;
+        }
+
+        .hero-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .pup-logo {
+            width: 55px;
+            height: 55px;
+            object-fit: contain;
+        }
+
+        .header-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== HAMBURGER BUTTON ===== */
+        .landing-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid #D4AF37;
+            border-radius: 8px;
+            z-index: 1100;
+        }
+
+        .landing-hamburger span {
+            display: block; width: 22px; height: 2px; background: #D4AF37; border-radius: 2px;
+        }
+
+        /* ===== MOBILE MENU SIDEBAR ===== */
+        .landing-mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 280px;
+            height: 100vh;
+            background: rgba(3, 10, 22, 0.98);
+            z-index: 1090;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 80px 20px 60px;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            backdrop-filter: blur(20px);
+        }
+
+        .landing-mobile-menu.active { right: 0; }
+
+        .menu-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1085;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+
+        .menu-backdrop.active { opacity: 1; visibility: visible; }
+
+        .landing-mobile-menu a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 15px 10px;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mobile-menu-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.8rem;
+            cursor: pointer;
         }
 
         @@keyframes fadeUp {
@@ -298,58 +425,79 @@
                 transform: translateY(0) scale(1)
             }
         }
-    
-        @@media (max-width: 900px) {
-            .split-layout { flex-direction: column; }
-            .left-brand { padding: 5rem 1rem 1rem 1rem; flex: none; }
-            .right-controls { padding: 1rem; flex: none; justify-content: center; width: 100%; }
-            .glass-panel { max-width: 100%; margin: 0 0 30px 0; padding: 40px 30px; }
-            .logo-img { width: 180px; height: 180px; }
-            .brand-text h1 { font-size: 2.8rem; }
-            .top-header { top: 15px; left: 15px; }
-            .header-logo { width: 40px; height: 40px; }
-            .uni-name { font-size: 0.78rem; }
-            .campus-name { font-size: 0.68rem; }
+
+        @@keyframes pulseGlow { 0% { opacity: 0.1; } 100% { opacity: 0.25; } }
+
+        /* --- RESPONSIVE BREAKPOINTS --- */
+        @@media (max-width: 1200px) {
+            .logo-img { width: 320px; height: 320px; }
+            .brand-text h1 { font-size: 3.5rem; }
+            .nav-container { padding: 0 30px; }
         }
 
-        @@media (max-width: 600px) {
-            .split-layout { flex-direction: column; }
-            .left-brand { padding: 4.5rem 1rem 0.5rem 1rem; flex: none; }
-            .right-controls { padding: 0.75rem; justify-content: center; width: 100%; }
-            .glass-panel { max-width: 100%; margin: 0 0 20px 0; padding: 28px 18px; border-radius: 20px; }
-            .logo-img { width: 120px; height: 120px; }
-            .brand-text h1 { font-size: 1.8rem; }
-            .brand-text .gold-accent { font-size: 0.85rem; letter-spacing: 2px; }
-            .top-header { top: 12px; left: 12px; }
-            .header-logo { width: 32px; height: 32px; margin-right: 8px; }
-            .uni-name { font-size: 0.68rem; }
-            .campus-name { font-size: 0.6rem; }
-            .panel-header h3 { font-size: 1.6rem; }
-            .panel-header { margin-bottom: 1.5rem; padding-left: 18px; }
-            .form-control { height: 52px; font-size: 0.95rem; }
-            .btn-gold { padding: 14px; font-size: 0.95rem; }
-            .form-floating { margin-bottom: 16px; }
+        @@media (max-width: 992px) {
+            .split-layout { flex-direction: column; height: auto; min-height: 100vh; padding-top: 80px; }
+            .left-brand { flex: none; padding: 3rem 1rem 1rem; }
+            .right-controls {
+                flex: none;
+                width: 100%;
+                justify-content: center;
+                padding: 1.5rem;
+                align-items: flex-start;
+                padding-bottom: 150px;
+            }
+            .logo-img { width: 220px; height: 220px; }
+            .brand-text h1 { font-size: 2.8rem; }
+            .glass-panel { margin: 0 auto; max-width: 600px; }
+        }
+
+        @@media (max-width: 768px) {
+            .logo-img { width: 160px; height: 160px; }
+            .brand-text h1 { font-size: 2.2rem; }
+            .brand-text .gold-accent { font-size: 0.9rem; letter-spacing: 2px; }
+            .glass-panel { padding: 30px 20px; }
+            .uni-name { font-size: 0.8rem; }
+            .campus-name { font-size: 0.7rem; }
         }
 
         @@media (max-width: 480px) {
-            .left-brand { display: none; }
-            .right-controls { padding: 0.5rem; width: 100%; justify-content: center; align-items: flex-start; padding-top: 70px; }
-            .glass-panel { padding: 22px 16px; border-radius: 16px; margin: 0 0 15px 0; }
-            .panel-header h3 { font-size: 1.3rem; }
-            .panel-header p { font-size: 0.7rem; letter-spacing: 1px; }
-            .form-control { height: 48px; font-size: 0.9rem; }
-            .btn-gold { padding: 13px; font-size: 0.9rem; margin-top: 10px; }
-            .top-header { top: 10px; left: 10px; }
-            .header-logo { width: 26px; height: 26px; margin-right: 7px; }
-            .uni-name { font-size: 0.56rem; }
-            .campus-name { font-size: 0.5rem; }
+            .logo-img { width: 120px; height: 120px; }
+            .brand-text h1 { font-size: 1.8rem; }
+            .brand-text .gold-accent { font-size: 0.75rem; letter-spacing: 1.5px; }
+            .glass-panel { padding: 22px 16px; border-radius: 20px; margin: 0 auto; }
+            .panel-header { padding-left: 15px; margin-bottom: 1.5rem; }
+            .panel-header h3 { font-size: 1.5rem; }
+            .form-control { height: 50px; font-size: 0.9rem; border-radius: 10px; }
+            .btn-gold { padding: 11px; font-size: 0.9rem; }
         }
 
-        @@media (max-width: 380px) {
-            .glass-panel { padding: 18px 12px; }
-            .panel-header h3 { font-size: 1.15rem; }
-            .form-control { height: 44px; }
-            .btn-gold { padding: 11px; font-size: 0.85rem; }
+        .btn-abort {
+            position: relative;
+            z-index: 99;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 13px;
+            margin-top: 15px;
+            background: rgba(220, 53, 69, 0.05);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 15px;
+            color: #ff6b6b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer !important;
+        }
+
+        .btn-abort:hover {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: #ff6b6b;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+            transform: translateY(-2px);
         }
     </style>
 </head>
@@ -357,18 +505,28 @@
 
     <canvas id="matrixCanvas"></canvas>
 
-    <div class="top-header">
-        <img src="~/images/pup-logo.png" alt="PUP Logo" class="header-logo">
-        <div class="header-info">
-            <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
-            <span class="campus-name">&mdash; LOPEZ, QUEZON CAMPUS</span>
+    <!-- Floating Navigation (Cloned from Login) -->
+    <nav class="floating-nav visible" id="floatingNav">
+        <div class="nav-container">
+            <div class="hero-header">
+                <img src="/images/pup-logo.png" alt="PUP Logo" class="pup-logo">
+                <div class="header-text">
+                    <span class="uni-name">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</span>
+                    <span class="campus-name">LOPEZ, QUEZON CAMPUS</span>
+                </div>
+            </div>
         </div>
-    </div>
+    </nav>
 
     <div class="split-layout">
         <div class="left-brand">
-            <div class="logo-wrapper"><img src="~/images/logo.png" alt="iBITS Logo" class="logo-img"></div>
-            <div class="brand-text"><h1>iBITS PORTAL</h1><span class="gold-accent">Unified Attendance & Payment System</span></div>
+            <div class="logo-wrapper">
+                <img src="~/images/logo.png" alt="iBITS Logo" class="logo-img">
+            </div>
+            <div class="brand-text">
+                <h1>iBITS PORTAL</h1>
+                <span class="gold-accent">Unified Attendance & Payment System</span>
+            </div>
         </div>
 
         <div class="right-controls">
@@ -399,11 +557,20 @@
 
                     <button type="submit" class="btn-gold">Set New Password & Access Portal</button>
                 </form>
+
+                <form method="post" action="@Url.Action("AbortSetup", "Account")" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-abort">
+                        <i class="bi bi-x-circle me-2"></i> Abort &amp; Exit
+                    </button>
+                </form>
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Matrix Rain Script (Copied from your Login page) -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script>
         const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
