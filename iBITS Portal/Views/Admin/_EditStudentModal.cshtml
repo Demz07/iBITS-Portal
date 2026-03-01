@@ -22,7 +22,8 @@
                         <!-- Student ID (Read-only) -->
                         <div class="col-md-4">
                             <label class="form-label small text-uppercase fw-bold">Student ID</label>
-                            <input type="text" asp-for="StudentNum" class="form-control" readonly style="background: rgba(0,0,0,0.2) !important;" />
+                            <input type="text" asp-for="StudentNum" id="editStudentNum" class="form-control" />
+                            <input type="hidden" id="originalStudentNum" name="OriginalStudentNum" />
                         </div>
 
                         <div class="col-md-8">
@@ -73,8 +74,8 @@
 
                         <!-- NEW: School Year Enrolled Field -->
                         <div class="col-md-4">
-                            <label class="form-label small text-uppercase fw-bold">School Year Enrolled <span class="text-danger">*</span></label>
-                            <select asp-for="SchoolYearEnrolled" id="editSchoolYearEnrolled" class="form-select select2-modal" style="width: 100%;" required>
+                            <label class="form-label small text-uppercase fw-bold">School Year Enrolled <span class="text-muted">(Optional)</span></label>
+                            <select asp-for="SchoolYearEnrolled" id="editSchoolYearEnrolled" class="form-select select2-modal" style="width: 100%;">
                                 <option value="">-- Select Year --</option>
                                 @{
                                     int currentYear = PhTime.Now.Year;
@@ -92,7 +93,34 @@
                     <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-gold"><i class="bi bi-save me-2"></i> Save Changes</button>
                 </div>
+
             </form>
+<!-- Admin Password Confirmation Modal for StudentNum Change -->
+<div class="modal fade" id="confirmStudentNumModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-gold"><i class="fas fa-lock me-2"></i>Admin Verification Required</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">You are about to change the <strong class="text-gold">Student Number</strong>. This will also update the student&apos;s login credentials. Please enter your admin password to confirm.</p>
+                <div class="mb-3">
+                    <label class="modal-label text-gold">Admin Password</label>
+                    <input type="password" id="adminConfirmPassword" class="form-control" placeholder="Enter your password" autocomplete="off" />
+                    <div id="adminPasswordError" class="text-danger small mt-1 d-none">Incorrect password. Please try again.</div>
+                </div>
+                <p class="text-warning small"><i class="fas fa-exclamation-triangle me-1"></i>This action cannot be undone without another edit.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnConfirmStudentNumChange" class="btn btn-gold">
+                    <i class="fas fa-check me-1"></i>Confirm &amp; Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 </div>

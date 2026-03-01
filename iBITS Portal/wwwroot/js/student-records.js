@@ -554,6 +554,7 @@ function setRoleModal(event, studentId, studentName, currentRole) {
 function openEditModal(event, id, fn, mn, ln, email, course, section, type, birthday, schoolYearEnrolled) {
     if (event) event.stopPropagation();
     const form = $('#editStudentForm');
+    form.find('#originalStudentNum').val(id);
     form.find('[name="StudentNum"]').val(id);
     form.find('[name="StudentFn"]').val(fn);
     form.find('[name="StudentMn"]').val(mn);
@@ -1308,6 +1309,55 @@ $(document).ready(function () {
             $checkbox.prop('checked', !$checkbox.is(':checked'));
             updateSelectionCount();
         }
+    });
+
+
+    // StudentNum Change: Intercept Submit & Require Admin Password
+    $('#editStudentForm').on('submit', function (e) {
+        var originalNum = $('#originalStudentNum').val();
+        var newNum = $('#editStudentNum').val().trim();
+
+        if (newNum !== originalNum) {
+            e.preventDefault();
+            $('#adminConfirmPassword').val('');
+            $('#adminPasswordError').addClass('d-none');
+            var pwModal = new bootstrap.Modal(document.getElementById('confirmStudentNumModal'));
+            pwModal.show();
+        }
+    });
+
+    $('#btnConfirmStudentNumChange').on('click', function () {
+        var password = $('#adminConfirmPassword').val();
+        if (!password) {
+            $('#adminPasswordError').text('Please enter your password.').removeClass('d-none');
+            return;
+        }
+
+        $('#adminPasswordError').addClass('d-none');
+        $('#btnConfirmStudentNumChange').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Verifying...');
+
+        $.ajax({
+            url: '/Admin/VerifyAdminPassword',
+            type: 'POST',
+            data: {
+                password: password,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
+            },
+            success: function (res) {
+                if (res.success) {
+                    $('<input>').attr({ type: 'hidden', name: 'AdminPassword', value: password }).appendTo('#editStudentForm');
+                    bootstrap.Modal.getInstance(document.getElementById('confirmStudentNumModal')).hide();
+                    $('#editStudentForm')[0].submit();
+                } else {
+                    $('#adminPasswordError').text('Incorrect password. Please try again.').removeClass('d-none');
+                    $('#btnConfirmStudentNumChange').prop('disabled', false).html('<i class="fas fa-check me-1"></i>Confirm & Save');
+                }
+            },
+            error: function () {
+                $('#adminPasswordError').text('Verification failed. Please try again.').removeClass('d-none');
+                $('#btnConfirmStudentNumChange').prop('disabled', false).html('<i class="fas fa-check me-1"></i>Confirm & Save');
+            }
+        });
     });
 });
 

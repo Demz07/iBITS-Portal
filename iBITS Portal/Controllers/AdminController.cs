@@ -1893,15 +1893,17 @@ namespace iBITS_Portal.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStudent(Student student)
+        public async Task<IActionResult> UpdateStudent(Student student, string OriginalStudentNum, string AdminPassword)
         {
-            if (!ModelState.IsValid)
+            // Validate required fields manually
+            if (string.IsNullOrWhiteSpace(student.StudentFn) || string.IsNullOrWhiteSpace(student.StudentLn))
             {
-                TempData["Error"] = "Invalid data submitted.";
+                TempData["Error"] = "First Name and Last Name are required.";
                 return RedirectToAction(nameof(StudentRecords));
             }
 
-            var studentToUpdate = await _context.Students.FindAsync(student.StudentNum);
+
+            var studentToUpdate = await _context.Students.FindAsync(OriginalStudentNum);
             if (studentToUpdate == null)
             {
                 TempData["Error"] = "Student not found.";
@@ -1916,17 +1918,82 @@ namespace iBITS_Portal.Controllers
             studentToUpdate.YearLevelSection = student.YearLevelSection;
             studentToUpdate.StudentType = student.StudentType;
             studentToUpdate.Birthday = student.Birthday;
-
+            studentToUpdate.SchoolYearEnrolled = student.SchoolYearEnrolled;
             try
             {
-                _context.Students.Update(studentToUpdate);
-                await _context.SaveChangesAsync();
-                // Sync Identity email only - UserName/NormalizedUserName stays as StudentNum
-                var identityUser = await _userManager.FindByNameAsync(student.StudentNum);
-                if (identityUser != null && !string.IsNullOrWhiteSpace(student.StudentEmail))
+                bool studentNumChanged = !string.IsNullOrWhiteSpace(student.StudentNum) && student.StudentNum != OriginalStudentNum;
+
+                if (studentNumChanged)
                 {
-                    identityUser.Email = student.StudentEmail;
-                    identityUser.NormalizedEmail = student.StudentEmail.ToUpperInvariant();
+                    // Safe PK change: use transaction to delete-insert
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+
+                    // 1. Create new student record with new StudentNum
+                    var newStudent = new Student
+                    {
+                        StudentNum        = student.StudentNum,
+                        StudentImage      = studentToUpdate.StudentImage,
+                        Qrcode            = studentToUpdate.Qrcode,
+                        StudentFn         = student.StudentFn,
+                        StudentMn         = student.StudentMn,
+                        StudentLn         = student.StudentLn,
+                        Birthday          = student.Birthday,
+                        StudentEmail      = student.StudentEmail,
+                        Course            = student.Course,
+                        YearLevelSection  = student.YearLevelSection,
+                        StudentType       = student.StudentType,
+                        Classification    = studentToUpdate.Classification,
+                        OfficerId         = studentToUpdate.OfficerId,
+                        IsArchived        = studentToUpdate.IsArchived,
+                        ArchiveStatus     = studentToUpdate.ArchiveStatus,
+                        ArchiveDate       = studentToUpdate.ArchiveDate,
+                        SchoolYearEnrolled = student.SchoolYearEnrolled
+                    };
+                    _context.Students.Add(newStudent);
+                    await _context.SaveChangesAsync();
+
+                    // 2. Re-link NoAction FK tables to new StudentNum
+                    var fines = _context.Fines.Where(f => f.StudentNum == OriginalStudentNum).ToList();
+                    foreach (var f in fines) f.StudentNum = student.StudentNum;
+
+                    var payments = _context.PaymentTransactions.Where(p => p.StudentNum == OriginalStudentNum).ToList();
+                    foreach (var p in payments) p.StudentNum = student.StudentNum;
+
+                    var finePayments = _context.FinePaymentTransactions.Where(fp => fp.StudentNum == OriginalStudentNum).ToList();
+                    foreach (var fp in finePayments) fp.StudentNum = student.StudentNum;
+
+                    var remittanceItems = _context.RemittanceItems.Where(r => r.StudentNum == OriginalStudentNum).ToList();
+                    foreach (var r in remittanceItems) r.StudentNum = student.StudentNum;
+
+                    await _context.SaveChangesAsync();
+
+                    // 3. Delete old student (CASCADE handles Attendance, Fee, Notification, UserAnnouncementDismissal)
+                    _context.Students.Remove(studentToUpdate);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                }
+                else
+                {
+                    // Normal update — no PK change
+                    _context.Students.Update(studentToUpdate);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Sync AspNetUsers — update Email; update UserName only if StudentNum changed
+                var identityUser = await _userManager.FindByNameAsync(OriginalStudentNum);
+                if (identityUser != null)
+                {
+                    if (studentNumChanged)
+                    {
+                        identityUser.UserName = student.StudentNum;
+                        identityUser.NormalizedUserName = student.StudentNum.ToUpperInvariant();
+                    }
+                    if (!string.IsNullOrWhiteSpace(student.StudentEmail))
+                    {
+                        identityUser.Email = student.StudentEmail;
+                        identityUser.NormalizedEmail = student.StudentEmail.ToUpperInvariant();
+                    }
                     await _userManager.UpdateAsync(identityUser);
                 }
 
@@ -1940,6 +2007,19 @@ namespace iBITS_Portal.Controllers
             }
 
             return RedirectToAction(nameof(StudentRecords));
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyAdminPassword(string password)
+        {
+            var adminUser = await _userManager.GetUserAsync(User);
+            if (adminUser == null)
+                return Json(new { success = false });
+
+            var isValid = await _userManager.CheckPasswordAsync(adminUser, password);
+            return Json(new { success = isValid });
         }
 
         [HttpPost]
