@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model LoginModel
 @{
     ViewData["Title"] = "Secure Login";
@@ -638,14 +638,14 @@
                     {
                         <div class="attempt-warning warn-yellow">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <span>⚠️ Warning: <strong>2 attempts remaining</strong> before lockout.</span>
+                            <span>âš ï¸ Warning: <strong>2 attempts remaining</strong> before lockout.</span>
                         </div>
                     }
                     else if (failedAttempts == 4)
                     {
                         <div class="attempt-warning warn-orange">
                             <i class="bi bi-exclamation-octagon-fill"></i>
-                            <span>🚨 Final Warning: <strong>1 attempt remaining!</strong> Next failure locks your account.</span>
+                            <span>ðŸš¨ Final Warning: <strong>1 attempt remaining!</strong> Next failure locks your account.</span>
                         </div>
                     }
 
@@ -666,8 +666,8 @@
 
                         <div class="form-floating">
                             <input asp-for="Input.Email" type="text" class="form-control" id="emailField"
-                                   autocomplete="off" placeholder="ID" />
-                            <label asp-for="Input.Email">@(userType == "Admin" ? "Admin Username" : "Student ID / Username")</label>
+autocomplete="off" placeholder="@(userType == "Admin" ? "Admin Username" : "Student Number")" />
+<label asp-for="Input.Email">@(userType == "Admin" ? "Admin Username" : "Student Number")</label>
                             <span asp-validation-for="Input.Email" class="text-danger"></span>
                         </div>
 

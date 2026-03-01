@@ -866,6 +866,7 @@
                             <form id="ajaxEmailForm">
                                 @Html.AntiForgeryToken()
                                 <div id="emailAlert" class="alert d-none small"></div>
+                                <div class="mb-3"><label class="modal-label text-gold">Current Email</label><div id="currentEmailDisplay" class="form-control" style="background: var(--input-bg); color: rgba(255,255,255,0.5); border-color: var(--input-border); cursor: default;">@(student?.StudentEmail ?? "Not set")</div></div>
                                 <div class="mb-3"><label class="modal-label text-gold">New Email</label><input type="email" name="NewEmail" class="form-control" style="background: var(--input-bg); color: var(--text-strong); border-color: var(--input-border);" required /></div>
                                 <button type="submit" class="btn btn-gold mt-3" id="btnUpdateEmail">Save</button>
                             </form>

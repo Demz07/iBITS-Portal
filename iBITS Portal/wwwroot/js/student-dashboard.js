@@ -1,4 +1,4 @@
-$(document).ready(function () {
+﻿$(document).ready(function () {
     const studentId = $('#hiddenStudentId').val();
 
     // 1. SMALL QR CODE (In the Profile Card)
@@ -213,6 +213,10 @@ $(document).ready(function () {
             data: $(this).serialize(),
             success: function (res) {
                 if (res.success) {
+                    var newEmail = $('input[name="NewEmail"]').val();
+                    $('#currentEmailDisplay').text(newEmail);
+                    $('#ajaxEmailForm input[name="NewEmail"]').val('');
+
                     $('#settingsModal').modal('hide');
                     $('#successModalMsg').text(res.message);
                     new bootstrap.Modal(document.getElementById('successModal')).show();

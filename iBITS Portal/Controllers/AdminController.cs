@@ -1921,6 +1921,15 @@ namespace iBITS_Portal.Controllers
             {
                 _context.Students.Update(studentToUpdate);
                 await _context.SaveChangesAsync();
+                // Sync Identity email only - UserName/NormalizedUserName stays as StudentNum
+                var identityUser = await _userManager.FindByNameAsync(student.StudentNum);
+                if (identityUser != null && !string.IsNullOrWhiteSpace(student.StudentEmail))
+                {
+                    identityUser.Email = student.StudentEmail;
+                    identityUser.NormalizedEmail = student.StudentEmail.ToUpperInvariant();
+                    await _userManager.UpdateAsync(identityUser);
+                }
+
                 await LogAction("Update Student", $"Updated details for {student.StudentNum}");
                 TempData["Message"] = "Student record updated successfully.";
             }
@@ -6022,3 +6031,4 @@ namespace iBITS_Portal.Controllers
         public decimal PendingAmount { get; set; }
     }
 }
+

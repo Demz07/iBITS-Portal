@@ -299,8 +299,8 @@ namespace iBITS_Portal.Controllers
 
             if (result.Succeeded)
             {
-                // Update username as well to keep them synced
-                await _userManager.SetUserNameAsync(user, NewEmail);
+                // DO NOT change UserName — keep it as StudentNum (login remains by StudentNum)
+                // (UserName and NormalizedUserName stay as StudentNum)
 
                 // Update the student record if needed
                 var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentNum == user.UserName);
@@ -355,3 +355,4 @@ namespace iBITS_Portal.Controllers
         }
     }
 }
+
