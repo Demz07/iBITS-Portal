@@ -25,7 +25,9 @@ namespace iBITS_Portal.Utilities
                 "Org Secretary",
                 "Class Secretary",
                 "Org Treasurer",
-                "Class Treasurer"
+                "Class Treasurer",
+                "Org Officer",
+                "Class Officer"
             };
 
             foreach (var roleName in roleNames)

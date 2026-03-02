@@ -42,7 +42,9 @@
     else if (User.IsInRole("Class Treasurer")) { displayRole = "Class Treasurer"; badgeClass = "badge-role-classtreasurer"; badgeIcon = "bi-wallet2"; }
     else if (User.IsInRole("Org Secretary")) { displayRole = "Org Secretary"; badgeClass = "badge-role-orgsecretary"; badgeIcon = "bi-pen-fill"; }
     else if (User.IsInRole("Class Secretary")) { displayRole = "Class Secretary"; badgeClass = "badge-role-classsecretary"; badgeIcon = "bi-journal-check"; }
-    else if (User.IsInRole("Officer")) { displayRole = "Officer"; badgeClass = "badge-role-officer"; badgeIcon = "bi-star-fill"; }
+    else if (User.IsInRole("Org Officer")) { displayRole = "Org Officer"; badgeClass = "badge-role-orgofficer"; badgeIcon = "bi-star-fill"; }
+    else if (User.IsInRole("Class Officer")) { displayRole = "Class Officer"; badgeClass = "badge-role-classofficer"; badgeIcon = "bi-award-fill"; }
+    else if (User.IsInRole("Officer")) { displayRole = "Officer"; badgeClass = "badge-role-officer"; badgeIcon = "bi-star-half"; }
 }
 
 @section Styles {

@@ -115,7 +115,8 @@ namespace iBITS_Portal.Controllers
             ViewBag.AvailableRoles = new List<string>
             {
                 "Member",
-                "Officer",
+                "Org Officer",
+                "Class Officer",
                 "Org Secretary",
                 "Class Secretary",
                 "Org Treasurer",
