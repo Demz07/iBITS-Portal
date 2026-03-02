@@ -634,6 +634,23 @@
                                                 </div>
                                             </div>
 
+                                            @{
+                                                decimal fineForRole = 0;
+                                                bool isIbits = currentEvent.EventType == "iBITS Event";
+                                                if (User.IsInRole("Org Officer") || User.IsInRole("Org Treasurer") || User.IsInRole("Org Secretary"))
+                                                    fineForRole = isIbits ? (currentEvent.FineForOrgOfficer ?? 0) : (currentEvent.NonIbitsFineForOrgOfficer ?? 0);
+                                                else if (User.IsInRole("Class Officer") || User.IsInRole("Class Treasurer") || User.IsInRole("Class Secretary"))
+                                                    fineForRole = isIbits ? (currentEvent.FineForClassOfficer ?? 0) : (currentEvent.NonIbitsFineForClassOfficer ?? 0);
+                                                else
+                                                    fineForRole = isIbits ? (currentEvent.FineForMember ?? 0) : (currentEvent.NonIbitsFineForMember ?? 0);
+                                            }
+
+                                            <div class="role-fine-info d-flex align-items-center" style="background: rgba(212, 175, 55, 0.1); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(212, 175, 55, 0.2); white-space: nowrap; flex-shrink: 0; min-width: max-content;">
+                                                <i class="bi bi-cash-stack me-2 text-warning" style="font-size: 0.85rem;"></i>
+                                                <span class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.3px;">Absence Penalty: </span>
+                                                <span class="ms-1 fw-bold text-strong" style="font-size: 0.8rem;">₱@fineForRole.ToString("N0")</span>
+                                            </div>
+
                                             <div class="live-countdown-wrap" style="display: none;">
                                                 <i class="bi bi-stopwatch me-1 text-gold"></i>
                                                 <span class="countdown-label text-gold fw-bold">Ends in: </span>
