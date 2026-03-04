@@ -212,22 +212,21 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Selector -->
-                    <div class="academic-year-selector d-none d-md-flex align-items-center gap-2">
-                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1.1rem;"></i>
-                        <select id="academicYearSelect" class="form-select academic-year-dropdown" title="Set Current Academic Year">
-                            @{
-                                int currentYear = PhTime.Now.Year;
-                                string currentAY = ViewBag.CurrentAcademicYear ?? $"A.Y. {currentYear}-{currentYear + 1}";
-                                for (int year = currentYear + 1; year >= currentYear - 5; year--)
-                                {
-                                    string ayValue = $"A.Y. {year}-{year + 1}";
-                                    <option value="@ayValue" selected="@(currentAY == ayValue)">@ayValue</option>
-                                }
-                            }
-                        </select>
+                    <!-- Stunning System Context Display (Click to Configure) -->
+                    <div class="system-context-pill d-none d-lg-flex align-items-center gap-2" 
+                         style="cursor: pointer; background: rgba(212, 175, 55, 0.08); padding: 8px 20px; border-radius: 50px; border: 1px solid rgba(212, 175, 55, 0.3); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden;" 
+                         data-bs-toggle="modal" data-bs-target="#systemContextModal"
+                         onmouseover="this.style.background='rgba(212, 175, 55, 0.15)'; this.style.borderColor='rgba(212, 175, 55, 0.6)'; this.style.transform='translateY(-2px)';"
+                         onmouseout="this.style.background='rgba(212, 175, 55, 0.08)'; this.style.borderColor='rgba(212, 175, 55, 0.3)'; this.style.transform='translateY(0)';"
+                         title="Manage Academic Session Context">
+                        <div class="pill-glow" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at center, rgba(212, 175, 55, 0.2) 0%, transparent 70%); opacity: 0.5;"></div>
+                        <i class="bi bi-gear-wide-connected text-gold" style="font-size: 1.1rem; z-index: 1;"></i>
+                        <span class="text-gold fw-bold" style="font-size: 0.85rem; letter-spacing: 0.8px; z-index: 1; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);">
+                            @(ViewBag.CurrentAcademicYear ?? "NOT SET") | @(ViewBag.CurrentSemester?.ToUpper() ?? "SET SEMESTER")
+                        </span>
                     </div>
-                    <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
+
+                    <div class="vr d-none d-lg-block" style="height: 30px; opacity: 0.3;"></div>
                     <div class="d-none d-md-block text-end">
                         <div style="font-weight:bold; color:var(--text-strong);">Administrator</div>
                         <div style="font-size:0.75rem; color:var(--gold-text);">System Access</div>
@@ -328,6 +327,89 @@
         </div>
     </div>
 
+    <!-- SYSTEM CONTEXT MODAL (AY & SEMESTER SETTER) -->
+    <div class="modal fade" id="systemContextModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-modal border-gold shadow-lg" style="background: rgba(10, 25, 47, 0.95); backdrop-filter: blur(25px);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-gold">
+                        <i class="bi bi-gear-wide-connected me-2"></i>System Context Hub
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <!-- LEFT COLUMN: ACTIVE SETTINGS -->
+                        <div class="col-md-6 border-end-md border-gold-subtle pe-md-4">
+                            <h6 class="text-white-50 small text-uppercase fw-bold mb-3">Update Current Session</h6>
+                            
+                            <div class="mb-4">
+                                <label class="form-label text-gold small fw-bold text-uppercase">Academic Year (Type Manual)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-gold" style="background: rgba(212, 175, 55, 0.15); min-width: 45px; justify-content: center;">
+                                        <i class="bi bi-pencil-square" style="color: #D4AF37 !important; font-size: 1.2rem; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4); display: inline-block !important; visibility: visible !important;"></i>
+                                    </span>
+                                    <input type="text" id="modalAcademicYearInput" class="form-control bg-dark text-white border-gold" 
+                                           placeholder="e.g., 2025-2026" value="@(ViewBag.CurrentAcademicYear)">
+                                </div>
+                                <div class="form-text text-muted smaller">Note: You can type any format (e.g., 2025-2026)</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label text-gold small fw-bold text-uppercase">Current Semester</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-gold" style="background: rgba(212, 175, 55, 0.15); min-width: 45px; justify-content: center;">
+                                        <i class="bi bi-mortarboard" style="color: #D4AF37 !important; font-size: 1.2rem; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4); display: inline-block !important; visibility: visible !important;"></i>
+                                    </span>
+                                    <select id="modalSemesterSelect" class="form-select bg-dark text-white border-gold">
+                                        @{
+                                            string mSem = ViewBag.CurrentSemester ?? "1st Semester";
+                                            string[] sems = { "1st Semester", "2nd Semester", "Summer" };
+                                            foreach (var s in sems)
+                                            {
+                                                <option value="@s" selected="@(mSem == s)">@s</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button type="button" id="saveSystemContext" class="btn btn-gold w-100 fw-bold py-2 mt-2">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Global Changes
+                            </button>
+                        </div>
+
+                        <!-- RIGHT COLUMN: YEAR MANAGEMENT (DELETE) -->
+                        <div class="col-md-6 ps-md-4">
+                            <h6 class="text-white-50 small text-uppercase fw-bold mb-3">Manage Historical Years</h6>
+                            <div class="existing-years-container p-2" style="max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.1);">
+                                @if (ViewBag.AllExistingYears != null && ((IEnumerable<string>)ViewBag.AllExistingYears).Any())
+                                {
+                                    foreach (var year in (IEnumerable<string>)ViewBag.AllExistingYears)
+                                    {
+                                        <div class="d-flex align-items-center justify-content-between p-2 mb-2 border-bottom border-white-10 year-row">
+                                            <span class="text-white small fw-bold">@year</span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger border-0 delete-ay-btn" data-year="@year" title="Delete Year Data">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4 text-muted small">No historical years found.</div>
+                                }
+                            </div>
+                            <p class="text-muted smaller mt-3">
+                                <i class="bi bi-info-circle me-1"></i> Deleting a year will clear the "Academic Year" field for all students associated with it.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -353,21 +435,93 @@
                 new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
             }
             
+            // SYSTEM CONTEXT UPDATE LOGIC (Manual Entry)
+            $('#saveSystemContext').on('click', function () {
+                const btn = $(this);
+                const originalHtml = btn.html();
+                const ay = $('#modalAcademicYearInput').val();
+                const sem = $('#modalSemesterSelect').val();
+                const token = $('input[name="__RequestVerificationToken"]').val();
 
-            // Academic Year AJAX logic
-            $('#academicYearSelect').on('change', function () {
-                var selectedYear = $(this).val();
-                $.ajax({
+                if (!ay) {
+                    alert("Academic Year cannot be empty.");
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+
+                // Update Academic Year
+                const ayPromise = $.ajax({
                     url: '@Url.Action("SetCurrentAcademicYear", "Admin")',
                     type: 'POST',
-                    data: { academicYear: selectedYear },
-                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                    success: function (response) {
-                        if (response.success && typeof showToast === 'function') {
-                            showToast('Academic year updated to ' + selectedYear, 'success');
-                        }
-                    }
+                    data: { academicYear: ay },
+                    headers: { 'RequestVerificationToken': token }
                 });
+
+                // Update Semester
+                const semPromise = $.ajax({
+                    url: '@Url.Action("SetCurrentSemester", "Admin")',
+                    type: 'POST',
+                    data: { semester: sem },
+                    headers: { 'RequestVerificationToken': token }
+                });
+
+                Promise.all([ayPromise, semPromise])
+                    .then(results => {
+                        const allSuccess = results.every(r => r.success);
+                        if (allSuccess) {
+                            if (typeof showPortalToast === 'function') {
+                                showPortalToast('success', 'System Updated', 'Global context has been updated.');
+                            }
+                            setTimeout(() => { location.reload(); }, 1000);
+                        } else {
+                            alert("Failed to update context. Please check inputs.");
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("A connection error occurred.");
+                        btn.prop('disabled', false).html(originalHtml);
+                    });
+            });
+
+            // DELETE ACADEMIC YEAR LOGIC
+            $('.delete-ay-btn').on('click', function () {
+                const year = $(this).data('year');
+                const btn = $(this);
+                const token = $('input[name="__RequestVerificationToken"]').val();
+
+                if (confirm('Are you sure you want to delete "' + year + '"? This will clear this year from all student records.')) {
+                    btn.html('<span class="spinner-border spinner-border-sm"></span>').prop('disabled', true);
+                    
+                    $.ajax({
+                        url: '@Url.Action("DeleteAcademicYear", "Admin")',
+                        type: 'POST',
+                        data: { academicYear: year },
+                        headers: { 'RequestVerificationToken': token },
+                        success: function (response) {
+                            if (response.success) {
+                                btn.closest('.year-row').fadeOut(300, function() { 
+                                    $(this).remove(); 
+                                    if ($('.year-row').length === 0) {
+                                        $('.existing-years-container').html('<div class="text-center py-4 text-muted small">No historical years found.</div>');
+                                    }
+                                });
+                                if (typeof showPortalToast === 'function') {
+                                    showPortalToast('success', 'Year Deleted', year + ' has been cleared from records.');
+                                }
+                            } else {
+                                alert(response.message || "Failed to delete year.");
+                                btn.html('<i class="bi bi-trash3-fill"></i>').prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            alert("A connection error occurred.");
+                            btn.html('<i class="bi bi-trash3-fill"></i>').prop('disabled', false);
+                        }
+                    });
+                }
             });
         });
     </script>

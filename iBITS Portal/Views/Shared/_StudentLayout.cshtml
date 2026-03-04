@@ -212,15 +212,25 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Academic Year Display -->
-                    <div class="academic-year-badge d-none d-md-flex align-items-center gap-2" title="Current Academic Year">
-                        <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 1rem;"></i>
-                        <span id="currentAcademicYear" class="academic-year-text">
-                            @(ViewBag.CurrentAcademicYear ?? $"A.Y. {PhTime.Now.Year}-{PhTime.Now.Year + 1}")
-                        </span>
+                    <!-- Global System Context Display -->
+                    <div class="academic-year-badge d-none d-lg-flex align-items-center gap-3" title="Current System Context">
+                        <!-- AY Display -->
+                        <div class="d-flex align-items-center gap-2 pe-3" style="border-right: 1px solid rgba(212, 175, 55, 0.2);">
+                            <i class="bi bi-calendar-range" style="color: var(--gold-primary); font-size: 0.95rem;"></i>
+                            <span class="academic-year-text" style="font-size: 0.85rem;">
+                                @(ViewBag.CurrentAcademicYear ?? $"A.Y. {PhTime.Now.Year}-{PhTime.Now.Year + 1}")
+                            </span>
+                        </div>
+                        <!-- Semester Display -->
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-mortarboard" style="color: var(--gold-primary); font-size: 0.95rem;"></i>
+                            <span class="academic-year-text" style="font-size: 0.85rem;">
+                                @(ViewBag.CurrentSemester ?? "1st Semester")
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="vr d-none d-md-block" style="height: 30px; opacity: 0.3;"></div>
+                    <div class="vr d-none d-lg-block" style="height: 30px; opacity: 0.3;"></div>
 
                     <!-- ? Header Avatar only (chip/name removed) -->
            

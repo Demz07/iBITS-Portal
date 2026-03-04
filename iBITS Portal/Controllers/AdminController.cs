@@ -63,10 +63,37 @@ namespace iBITS_Portal.Controllers
         // Replace the existing PopulateFilterDropdowns method
 
         // =========================================================
-        // HELPER: POPULATE DROPDOWNS DYNAMICALLY
+        // HELPER: POPULATE GLOBAL SYSTEM CONTEXT (AY & SEMESTER)
+        // =========================================================
+        private async Task PopulateGlobalContext()
+        {
+            // 1. Fetch Academic Year
+            var aySetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+
+            // 2. Fetch Semester
+            var semSetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
+            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+
+            // 3. List of unique years for the "Manage Historical Years" hub
+            ViewBag.AllExistingYears = await _context.Students
+                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
+                .Select(s => s.SchoolYearEnrolled)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
+        }
+
+        // =========================================================
+        // HELPER: POPULATE DROPDOWNS DYNAMICALLY (REFINED)
         // =========================================================
         private async Task PopulateFilterDropdowns()
         {
+            // Always include Global Context
+            await PopulateGlobalContext();
+
             ViewBag.Roles = _roleManager.Roles
                 .Where(r => r.Name != "Admin" && r.Name != "Student")
                 .Select(r => r.Name)
@@ -370,6 +397,88 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
+        // ACTION: SET CURRENT SEMESTER (AJAX - For Navbar Dropdown)
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> SetCurrentSemester(string semester)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(semester))
+                {
+                    return Json(new { success = false, message = "Semester cannot be empty." });
+                }
+
+                var setting = await _context.SystemSettings
+                    .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
+
+                if (setting != null)
+                {
+                    setting.SettingValue = semester;
+                    setting.LastUpdated = PhTime.Now;
+                    setting.UpdatedBy = User.Identity?.Name ?? "Admin";
+                }
+                else
+                {
+                    setting = new SystemSetting
+                    {
+                        SettingKey = "CurrentSemester",
+                        SettingValue = semester,
+                        Description = "The current semester for the system",
+                        LastUpdated = PhTime.Now,
+                        UpdatedBy = User.Identity?.Name ?? "Admin"
+                    };
+                    _context.SystemSettings.Add(setting);
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Semester Changed", $"Semester set to {semester}");
+
+                return Json(new { success = true, message = "Semester updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating semester");
+                return Json(new { success = false, message = "An error occurred while updating the semester." });
+            }
+        }
+
+        // =========================================================
+        // ACTION: DELETE ACADEMIC YEAR (Clear from students)
+        // =========================================================
+        [HttpPost]
+        public async Task<IActionResult> DeleteAcademicYear(string academicYear)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(academicYear))
+                {
+                    return Json(new { success = false, message = "Academic year is invalid." });
+                }
+
+                // Find all students assigned to this AY and set it to null
+                var students = await _context.Students
+                    .Where(s => s.SchoolYearEnrolled == academicYear)
+                    .ToListAsync();
+
+                foreach (var student in students)
+                {
+                    student.SchoolYearEnrolled = null;
+                }
+
+                await _context.SaveChangesAsync();
+                await LogAction("Academic Year Deleted", $"Removed students from {academicYear}");
+
+                return Json(new { success = true, message = $"Academic year {academicYear} cleared from records." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting academic year");
+                return Json(new { success = false, message = "An error occurred during deletion." });
+            }
+        }
+
+        // =========================================================
         // ACTION: UPDATE CURRENT ACADEMIC YEAR (Form Post - Legacy)
         // =========================================================
         [HttpPost]
@@ -429,6 +538,7 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         public async Task<IActionResult> Index()
         {
+            await PopulateGlobalContext();
             await PopulateDashboardData();
             return View();
         }

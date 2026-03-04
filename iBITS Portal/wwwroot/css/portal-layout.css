@@ -508,7 +508,7 @@ body {
 }
 
 /* ======================================================= */
-/*      LIGHT MODE FIX – SIDEBAR & FINANCIALS TAB          */
+/*      LIGHT MODE FIX ï¿½ SIDEBAR & FINANCIALS TAB          */
 /* ======================================================= */
 
 [data-theme="light"] #sidebar {
@@ -550,7 +550,7 @@ body {
         }
 
     /* ======================================================= */
-    /*          FINANCIALS SUBMENU – LIGHT MODE FIX             */
+    /*          FINANCIALS SUBMENU ï¿½ LIGHT MODE FIX             */
     /* ======================================================= */
 
     [data-theme="light"] #sidebar ul ul a {
@@ -1012,6 +1012,19 @@ th[style*="color: var(--gold-primary)"] {
 /* Summary Cards in Fees/Fines Views */
 .summary-card .card-value {
     color: #0f172a !important;
+}
+
+/* GLOBAL UTILITY CLASSES */
+.text-gold {
+    color: var(--gold-primary) !important;
+}
+
+.border-gold {
+    border: 1px solid var(--gold-primary) !important;
+}
+
+.border-gold-subtle {
+    border-color: rgba(212, 175, 55, 0.2) !important;
 }
 
 /* Fix icons in summary cards being too washed out */
