@@ -73,13 +73,7 @@ namespace iBITS_Portal.Controllers
                 .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
             ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
 
-            // 3. List of unique years for the "Manage Historical Years" modal
-            ViewBag.AllExistingYears = await _context.Students
-                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
-                .Select(s => s.SchoolYearEnrolled)
-                .Distinct()
-                .OrderByDescending(y => y)
-                .ToListAsync();
+           
 
             // 4. Continue to the actual action
             await next();
@@ -440,41 +434,6 @@ namespace iBITS_Portal.Controllers
             {
                 _logger.LogError(ex, "Error updating semester");
                 return Json(new { success = false, message = "An error occurred while updating the semester." });
-            }
-        }
-
-        // =========================================================
-        // ACTION: DELETE ACADEMIC YEAR (Clear from students)
-        // =========================================================
-        [HttpPost]
-        public async Task<IActionResult> DeleteAcademicYear(string academicYear)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(academicYear))
-                {
-                    return Json(new { success = false, message = "Academic year is invalid." });
-                }
-
-                // Find all students assigned to this AY and set it to null
-                var students = await _context.Students
-                    .Where(s => s.SchoolYearEnrolled == academicYear)
-                    .ToListAsync();
-
-                foreach (var student in students)
-                {
-                    student.SchoolYearEnrolled = null;
-                }
-
-                await _context.SaveChangesAsync();
-                await LogAction("Academic Year Deleted", $"Removed students from {academicYear}");
-
-                return Json(new { success = true, message = $"Academic year {academicYear} cleared from records." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting academic year");
-                return Json(new { success = false, message = "An error occurred during deletion." });
             }
         }
 

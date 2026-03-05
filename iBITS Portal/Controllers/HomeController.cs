@@ -6,6 +6,7 @@ using iBITS_Portal.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using iBITS_Portal.Helpers;
@@ -29,6 +30,20 @@ namespace iBITS_Portal.Controllers
             _signInManager = signInManager;
             _context = context;
             _logger = logger;
+        }
+
+        // =========================================================
+        // GLOBAL CONTEXT LOADER (Fixes the Badge)
+        // =========================================================
+        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        {
+            var aySetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+
+            var semSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
+            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+
+            await next();
         }
 
         [AllowAnonymous]

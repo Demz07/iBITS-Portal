@@ -38,13 +38,6 @@ namespace iBITS_Portal.Controllers
                 .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
             ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
 
-            ViewBag.AllExistingYears = await _context.Students
-                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
-                .Select(s => s.SchoolYearEnrolled)
-                .Distinct()
-                .OrderByDescending(y => y)
-                .ToListAsync();
-
             await next();
         }
 

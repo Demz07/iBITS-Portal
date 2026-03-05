@@ -43,14 +43,6 @@ namespace iBITS_Portal.Controllers
                 .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
             ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
 
-            // 3. List of unique years for the "Manage Historical Years" modal
-            ViewBag.AllExistingYears = await _context.Students
-                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
-                .Select(s => s.SchoolYearEnrolled)
-                .Distinct()
-                .OrderByDescending(y => y)
-                .ToListAsync();
-
             await next();
         }
 
