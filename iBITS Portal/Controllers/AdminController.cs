@@ -28,6 +28,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Filters; 
 
 namespace iBITS_Portal.Controllers
 {
@@ -58,14 +59,9 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // HELPER: POPULATE DROPDOWNS DYNAMICALLY
+        // GLOBAL OVERRIDE: EXECUTES BEFORE EVERY ACTION
         // =========================================================
-        // Replace the existing PopulateFilterDropdowns method
-
-        // =========================================================
-        // HELPER: POPULATE GLOBAL SYSTEM CONTEXT (AY & SEMESTER)
-        // =========================================================
-        private async Task PopulateGlobalContext()
+        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             // 1. Fetch Academic Year
             var aySetting = await _context.SystemSettings
@@ -77,22 +73,25 @@ namespace iBITS_Portal.Controllers
                 .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
             ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
 
-            // 3. List of unique years for the "Manage Historical Years" hub
+            // 3. List of unique years for the "Manage Historical Years" modal
             ViewBag.AllExistingYears = await _context.Students
                 .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
                 .Select(s => s.SchoolYearEnrolled)
                 .Distinct()
                 .OrderByDescending(y => y)
                 .ToListAsync();
+
+            // 4. Continue to the actual action
+            await next();
         }
+
+
 
         // =========================================================
         // HELPER: POPULATE DROPDOWNS DYNAMICALLY (REFINED)
         // =========================================================
         private async Task PopulateFilterDropdowns()
         {
-            // Always include Global Context
-            await PopulateGlobalContext();
 
             ViewBag.Roles = _roleManager.Roles
                 .Where(r => r.Name != "Admin" && r.Name != "Student")
@@ -332,6 +331,7 @@ namespace iBITS_Portal.Controllers
             return $"A.Y. {currentYear - 1}-{currentYear}";
         }
 
+
         // =========================================================
         // HELPER: GENERATE ACADEMIC YEAR OPTIONS FOR DROPDOWNS
         // =========================================================
@@ -538,7 +538,6 @@ namespace iBITS_Portal.Controllers
         // =========================================================
         public async Task<IActionResult> Index()
         {
-            await PopulateGlobalContext();
             await PopulateDashboardData();
             return View();
         }

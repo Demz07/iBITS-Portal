@@ -21,6 +21,86 @@
     <!-- CUSTOM STYLES -->
     <link rel="stylesheet" href="~/css/portal-layout.css" />
 
+    <!-- GLOBAL SYSTEM CONTEXT BADGE STYLING -->
+    <style>
+        /* 1. Base Styles (Layout & Shape) */
+        .sys-context-badge {
+            border-radius: 50px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+        }
+
+        /* 2. DARK MODE (Default) - Glowing Gold look */
+        .sys-context-badge {
+            background: rgba(212, 175, 55, 0.08) !important;
+            border: 1px solid rgba(212, 175, 55, 0.4) !important;
+            color: #d4af37 !important; /* Metallic Gold */
+        }
+
+            .sys-context-badge:hover {
+                background: rgba(212, 175, 55, 0.15) !important;
+                border-color: #d4af37 !important;
+                box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+                transform: translateY(-1px);
+            }
+
+        /* 3. LIGHT MODE - Clean High-Contrast look */
+        [data-theme="light"] .sys-context-badge {
+            background: #ffffff !important;
+            border: 1px solid #d4af37 !important; /* Solid Gold Border */
+            color: #b48d28 !important; /* Slightly darker gold for readability on white */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+            [data-theme="light"] .sys-context-badge:hover {
+                background: #fffbf0 !important; /* Very pale gold tint on hover */
+                border-color: #b48d28 !important;
+                color: #8a6d0b !important;
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+            }
+
+        /* 4. Icon & Text Styling */
+        .sys-context-badge i {
+            font-size: 1.1rem;
+            z-index: 2;
+        }
+
+        .sys-context-badge span {
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        /* 5. Glow Effect (Only visible in Dark Mode) */
+        .sys-context-badge .pill-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.3) 0%, transparent 70%);
+            opacity: 0.5;
+            z-index: 1;
+            transition: opacity 0.3s;
+        }
+
+        /* Hide glow in Light Mode to keep it clean */
+        [data-theme="light"] .sys-context-badge .pill-glow {
+            opacity: 0 !important;
+        }
+    </style>
+
     <!-- STYLES FOR FINANCIAL DROPDOWN & ACADEMIC YEAR SELECTOR -->
     <style>
         /* This makes the link the positioning parent for the arrow */
@@ -212,16 +292,20 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Stunning System Context Display (Click to Configure) -->
-                    <div class="system-context-pill d-none d-lg-flex align-items-center gap-2" 
-                         style="cursor: pointer; background: rgba(212, 175, 55, 0.08); padding: 8px 20px; border-radius: 50px; border: 1px solid rgba(212, 175, 55, 0.3); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden;" 
-                         data-bs-toggle="modal" data-bs-target="#systemContextModal"
-                         onmouseover="this.style.background='rgba(212, 175, 55, 0.15)'; this.style.borderColor='rgba(212, 175, 55, 0.6)'; this.style.transform='translateY(-2px)';"
-                         onmouseout="this.style.background='rgba(212, 175, 55, 0.08)'; this.style.borderColor='rgba(212, 175, 55, 0.3)'; this.style.transform='translateY(0)';"
+                    <!-- Consistent System Context Display -->
+                    <div class="sys-context-badge d-none d-lg-flex"
+                         data-bs-toggle="modal"
+                         data-bs-target="#systemContextModal"
                          title="Manage Academic Session Context">
-                        <div class="pill-glow" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at center, rgba(212, 175, 55, 0.2) 0%, transparent 70%); opacity: 0.5;"></div>
-                        <i class="bi bi-gear-wide-connected text-gold" style="font-size: 1.1rem; z-index: 1;"></i>
-                        <span class="text-gold fw-bold" style="font-size: 0.85rem; letter-spacing: 0.8px; z-index: 1; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);">
+
+                        <!-- Glow Effect (Visible in Dark Mode Only) -->
+                        <div class="pill-glow"></div>
+
+                        <!-- Icon -->
+                        <i class="bi bi-gear-wide-connected"></i>
+
+                        <!-- Text Data -->
+                        <span>
                             @(ViewBag.CurrentAcademicYear ?? "NOT SET") | @(ViewBag.CurrentSemester?.ToUpper() ?? "SET SEMESTER")
                         </span>
                     </div>

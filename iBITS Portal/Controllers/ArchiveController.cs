@@ -1,14 +1,15 @@
 // Controllers/ArchiveController.cs
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-using iBITS_Portal.Models;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Security.Claims;
 using iBITS_Portal.Helpers;
+using iBITS_Portal.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace iBITS_Portal.Controllers
 {
@@ -22,6 +23,29 @@ namespace iBITS_Portal.Controllers
         {
             _context = context;
             _logger = logger;
+        }
+
+        // =========================================================
+        // GLOBAL OVERRIDE: EXECUTES BEFORE EVERY ACTION
+        // =========================================================
+        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        {
+            var aySetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+
+            var semSetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
+            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+
+            ViewBag.AllExistingYears = await _context.Students
+                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
+                .Select(s => s.SchoolYearEnrolled)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
+
+            await next();
         }
 
         // ==========================================

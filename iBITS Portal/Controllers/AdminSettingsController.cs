@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using iBITS_Portal.Models;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace iBITS_Portal.Controllers
 {
@@ -25,6 +26,32 @@ namespace iBITS_Portal.Controllers
             _signInManager = signInManager;
             _context = context;
             _logger = logger;
+        }
+
+        // =========================================================
+        // GLOBAL OVERRIDE: EXECUTES BEFORE EVERY ACTION
+        // =========================================================
+        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+        {
+            // 1. Fetch Academic Year
+            var aySetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+
+            // 2. Fetch Semester
+            var semSetting = await _context.SystemSettings
+                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
+            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+
+            // 3. List of unique years for the "Manage Historical Years" modal
+            ViewBag.AllExistingYears = await _context.Students
+                .Where(s => !string.IsNullOrEmpty(s.SchoolYearEnrolled))
+                .Select(s => s.SchoolYearEnrolled)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToListAsync();
+
+            await next();
         }
 
         // GET: /AdminSettings
