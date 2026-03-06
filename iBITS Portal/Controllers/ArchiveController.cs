@@ -26,17 +26,98 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // GLOBAL OVERRIDE: EXECUTES BEFORE EVERY ACTION
+        // GLOBAL OVERRIDE: SMART CALENDAR & AUTO-ROLLOVER
         // =========================================================
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var aySetting = await _context.SystemSettings
-                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
-            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+            // 1. Fetch All Settings at once
+            var settings = await _context.SystemSettings.ToListAsync();
+            string? GetSetting(string key) => settings.FirstOrDefault(s => s.SettingKey == key)?.SettingValue;
 
-            var semSetting = await _context.SystemSettings
-                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
-            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+            // 2. Load Current Data
+            string currentAy = GetSetting("CurrentAcademicYear") ?? "Not Set";
+            ViewBag.Sem1Start = GetSetting("Sem1Start");
+            ViewBag.Sem1End = GetSetting("Sem1End");
+            ViewBag.Sem2Start = GetSetting("Sem2Start");
+            ViewBag.Sem2End = GetSetting("Sem2End");
+            ViewBag.SummerStart = GetSetting("SummerStart");
+            ViewBag.SummerEnd = GetSetting("SummerEnd");
+
+            // 3. Parse Dates Safely
+            DateTime.TryParse(ViewBag.Sem1Start as string, out DateTime s1Start);
+            DateTime.TryParse(ViewBag.Sem1End as string, out DateTime s1End);
+            DateTime.TryParse(ViewBag.Sem2Start as string, out DateTime s2Start);
+            DateTime.TryParse(ViewBag.Sem2End as string, out DateTime s2End);
+            DateTime.TryParse(ViewBag.SummerStart as string, out DateTime sumStart);
+            DateTime.TryParse(ViewBag.SummerEnd as string, out DateTime sumEnd);
+
+            var today = iBITS_Portal.Helpers.PhTime.Now.Date;
+            string activeSem = "Not Configured";
+
+            // 4. AUTO-ROLLOVER LOGIC
+            // Determine the absolute end of the current calendar configuration
+            DateTime latestDate = new[] { s1End, s2End, sumEnd }.Max();
+
+            if (latestDate != default && today > latestDate)
+            {
+                // logic: The calendar has finished. Increment Year & Reset Semesters.
+                var parts = currentAy.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int startYear) && int.TryParse(parts[1], out int endYear))
+                {
+                    // A. Increment Year
+                    currentAy = $"{startYear + 1}-{endYear + 1}";
+
+                    var aySetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+                    if (aySetting != null)
+                    {
+                        aySetting.SettingValue = currentAy;
+                        _context.SystemSettings.Update(aySetting);
+                    }
+
+                    // B. Reset Semesters (Clear DB Dates)
+                    var keysToReset = new[] {
+                "Sem1Start", "Sem1End",
+                "Sem2Start", "Sem2End",
+                "SummerStart", "SummerEnd",
+                "CurrentSemester"
+            };
+
+                    var settingsToClear = await _context.SystemSettings
+                        .Where(s => keysToReset.Contains(s.SettingKey))
+                        .ToListAsync();
+
+                    foreach (var s in settingsToClear)
+                    {
+                        s.SettingValue = ""; // Clear values
+                        _context.SystemSettings.Update(s);
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    // C. Reset Local Variables so the badge updates immediately
+                    ViewBag.Sem1Start = ViewBag.Sem1End = "";
+                    ViewBag.Sem2Start = ViewBag.Sem2End = "";
+                    ViewBag.SummerStart = ViewBag.SummerEnd = "";
+                    s1Start = s1End = s2Start = s2End = sumStart = sumEnd = default;
+                    activeSem = "Not Configured"; // Force badge to show needs config
+                }
+            }
+            else
+            {
+                // 5. NORMAL SEMESTER CALCULATION (If not rolling over)
+                if (s1Start != default && s1End != default && today >= s1Start && today <= s1End)
+                    activeSem = "1st Semester";
+                else if (s2Start != default && s2End != default && today >= s2Start && today <= s2End)
+                    activeSem = "2nd Semester";
+                else if (sumStart != default && sumEnd != default && today >= sumStart && today <= sumEnd)
+                    activeSem = "Summer";
+                else if (s1Start != default)
+                    activeSem = "Semester Break";
+            }
+
+            // 6. Push final values to View
+            ViewBag.CurrentAcademicYear = currentAy;
+            ViewBag.CurrentSemester = activeSem;
 
             await next();
         }

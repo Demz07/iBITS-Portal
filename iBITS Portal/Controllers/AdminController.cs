@@ -59,26 +59,101 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // GLOBAL OVERRIDE: EXECUTES BEFORE EVERY ACTION
+        // GLOBAL OVERRIDE: SMART CALENDAR & AUTO-ROLLOVER
         // =========================================================
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            // 1. Fetch Academic Year
-            var aySetting = await _context.SystemSettings
-                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
-            ViewBag.CurrentAcademicYear = aySetting?.SettingValue ?? "Not Set";
+            // 1. Fetch All Settings at once
+            var settings = await _context.SystemSettings.ToListAsync();
+            string? GetSetting(string key) => settings.FirstOrDefault(s => s.SettingKey == key)?.SettingValue;
 
-            // 2. Fetch Semester
-            var semSetting = await _context.SystemSettings
-                .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
-            ViewBag.CurrentSemester = semSetting?.SettingValue ?? "1st Semester";
+            // 2. Load Current Data
+            string currentAy = GetSetting("CurrentAcademicYear") ?? "Not Set";
+            ViewBag.Sem1Start = GetSetting("Sem1Start");
+            ViewBag.Sem1End = GetSetting("Sem1End");
+            ViewBag.Sem2Start = GetSetting("Sem2Start");
+            ViewBag.Sem2End = GetSetting("Sem2End");
+            ViewBag.SummerStart = GetSetting("SummerStart");
+            ViewBag.SummerEnd = GetSetting("SummerEnd");
 
-           
+            // 3. Parse Dates Safely
+            DateTime.TryParse(ViewBag.Sem1Start as string, out DateTime s1Start);
+            DateTime.TryParse(ViewBag.Sem1End as string, out DateTime s1End);
+            DateTime.TryParse(ViewBag.Sem2Start as string, out DateTime s2Start);
+            DateTime.TryParse(ViewBag.Sem2End as string, out DateTime s2End);
+            DateTime.TryParse(ViewBag.SummerStart as string, out DateTime sumStart);
+            DateTime.TryParse(ViewBag.SummerEnd as string, out DateTime sumEnd);
 
-            // 4. Continue to the actual action
+            var today = iBITS_Portal.Helpers.PhTime.Now.Date;
+            string activeSem = "Not Configured";
+
+            // 4. AUTO-ROLLOVER LOGIC
+            // Determine the absolute end of the current calendar configuration
+            DateTime latestDate = new[] { s1End, s2End, sumEnd }.Max();
+
+            if (latestDate != default && today > latestDate)
+            {
+                // logic: The calendar has finished. Increment Year & Reset Semesters.
+                var parts = currentAy.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int startYear) && int.TryParse(parts[1], out int endYear))
+                {
+                    // A. Increment Year
+                    currentAy = $"{startYear + 1}-{endYear + 1}";
+
+                    var aySetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+                    if (aySetting != null)
+                    {
+                        aySetting.SettingValue = currentAy;
+                        _context.SystemSettings.Update(aySetting);
+                    }
+
+                    // B. Reset Semesters (Clear DB Dates)
+                    var keysToReset = new[] {
+                "Sem1Start", "Sem1End",
+                "Sem2Start", "Sem2End",
+                "SummerStart", "SummerEnd",
+                "CurrentSemester"
+            };
+
+                    var settingsToClear = await _context.SystemSettings
+                        .Where(s => keysToReset.Contains(s.SettingKey))
+                        .ToListAsync();
+
+                    foreach (var s in settingsToClear)
+                    {
+                        s.SettingValue = ""; // Clear values
+                        _context.SystemSettings.Update(s);
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    // C. Reset Local Variables so the badge updates immediately
+                    ViewBag.Sem1Start = ViewBag.Sem1End = "";
+                    ViewBag.Sem2Start = ViewBag.Sem2End = "";
+                    ViewBag.SummerStart = ViewBag.SummerEnd = "";
+                    s1Start = s1End = s2Start = s2End = sumStart = sumEnd = default;
+                    activeSem = "Not Configured"; // Force badge to show needs config
+                }
+            }
+            else
+            {
+                // 5. NORMAL SEMESTER CALCULATION (If not rolling over)
+                if (s1Start != default && s1End != default && today >= s1Start && today <= s1End)
+                    activeSem = "1st Semester";
+                else if (s2Start != default && s2End != default && today >= s2Start && today <= s2End)
+                    activeSem = "2nd Semester";
+                else if (sumStart != default && sumEnd != default && today >= sumStart && today <= sumEnd)
+                    activeSem = "Summer";
+                else if (s1Start != default)
+                    activeSem = "Semester Break";
+            }
+
+            // 6. Push final values to View
+            ViewBag.CurrentAcademicYear = currentAy;
+            ViewBag.CurrentSemester = activeSem;
+
             await next();
         }
-
 
 
         // =========================================================
@@ -344,96 +419,62 @@ namespace iBITS_Portal.Controllers
         }
 
         // =========================================================
-        // ACTION: SET CURRENT ACADEMIC YEAR (AJAX - For Navbar Dropdown)
+        // ACTION: UPDATE UNIVERSITY CALENDAR & ACADEMIC YEAR
         // =========================================================
         [HttpPost]
-        public async Task<IActionResult> SetCurrentAcademicYear(string academicYear)
+        public async Task<IActionResult> UpdateUniversityCalendar(
+            string academicYear,
+            string sem1Start, string sem1End,
+            string sem2Start, string sem2End,
+            string summerStart, string summerEnd)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(academicYear))
-                {
                     return Json(new { success = false, message = "Academic year cannot be empty." });
-                }
 
-                var setting = await _context.SystemSettings
-                    .FirstOrDefaultAsync(s => s.SettingKey == "CurrentAcademicYear");
+                var adminUser = User.Identity?.Name ?? "Admin";
 
-                if (setting != null)
+                // Helper function to insert or update setting
+                async Task UpsertSetting(string key, string value)
                 {
-                    setting.SettingValue = academicYear;
-                    setting.LastUpdated = PhTime.Now;
-                    setting.UpdatedBy = User.Identity?.Name ?? "Admin";
-                }
-                else
-                {
-                    setting = new SystemSetting
+                    var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == key);
+                    if (setting != null)
                     {
-                        SettingKey = "CurrentAcademicYear",
-                        SettingValue = academicYear,
-                        Description = "The current academic year for student enrollment",
-                        LastUpdated = PhTime.Now,
-                        UpdatedBy = User.Identity?.Name ?? "Admin"
-                    };
-                    _context.SystemSettings.Add(setting);
+                        setting.SettingValue = value;
+                        setting.LastUpdated = PhTime.Now;
+                        setting.UpdatedBy = adminUser;
+                    }
+                    else
+                    {
+                        _context.SystemSettings.Add(new SystemSetting
+                        {
+                            SettingKey = key,
+                            SettingValue = value,
+                            LastUpdated = PhTime.Now,
+                            UpdatedBy = adminUser
+                        });
+                    }
                 }
+
+                // Save all dates to the database
+                await UpsertSetting("CurrentAcademicYear", academicYear);
+                await UpsertSetting("Sem1Start", sem1Start);
+                await UpsertSetting("Sem1End", sem1End);
+                await UpsertSetting("Sem2Start", sem2Start);
+                await UpsertSetting("Sem2End", sem2End);
+                await UpsertSetting("SummerStart", summerStart);
+                await UpsertSetting("SummerEnd", summerEnd);
 
                 await _context.SaveChangesAsync();
-                await LogAction("Academic Year Changed", $"Academic year set to {academicYear}");
+                await LogAction("Calendar Updated", $"Updated University Calendar for AY {academicYear}");
 
-                return Json(new { success = true, message = "Academic year updated successfully." });
+                return Json(new { success = true, message = "Calendar updated successfully." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating academic year");
-                return Json(new { success = false, message = "An error occurred while updating the academic year." });
-            }
-        }
-
-        // =========================================================
-        // ACTION: SET CURRENT SEMESTER (AJAX - For Navbar Dropdown)
-        // =========================================================
-        [HttpPost]
-        public async Task<IActionResult> SetCurrentSemester(string semester)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(semester))
-                {
-                    return Json(new { success = false, message = "Semester cannot be empty." });
-                }
-
-                var setting = await _context.SystemSettings
-                    .FirstOrDefaultAsync(s => s.SettingKey == "CurrentSemester");
-
-                if (setting != null)
-                {
-                    setting.SettingValue = semester;
-                    setting.LastUpdated = PhTime.Now;
-                    setting.UpdatedBy = User.Identity?.Name ?? "Admin";
-                }
-                else
-                {
-                    setting = new SystemSetting
-                    {
-                        SettingKey = "CurrentSemester",
-                        SettingValue = semester,
-                        Description = "The current semester for the system",
-                        LastUpdated = PhTime.Now,
-                        UpdatedBy = User.Identity?.Name ?? "Admin"
-                    };
-                    _context.SystemSettings.Add(setting);
-                }
-
-                await _context.SaveChangesAsync();
-                await LogAction("Semester Changed", $"Semester set to {semester}");
-
-                return Json(new { success = true, message = "Semester updated successfully." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating semester");
-                return Json(new { success = false, message = "An error occurred while updating the semester." });
+                _logger.LogError(ex, "Error updating university calendar");
+                return Json(new { success = false, message = "An error occurred while saving." });
             }
         }
 

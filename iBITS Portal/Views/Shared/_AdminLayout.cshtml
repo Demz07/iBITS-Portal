@@ -99,6 +99,91 @@
         [data-theme="light"] .sys-context-badge .pill-glow {
             opacity: 0 !important;
         }
+
+        /* Theme Aware Modal Inputs */
+        .theme-aware-input {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(212, 175, 55, 0.2) !important;
+            color: #fff !important;
+            border-radius: 8px;
+        }
+
+            .theme-aware-input:focus {
+                border-color: #d4af37 !important;
+                box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2) !important;
+            }
+
+        .theme-aware-addon {
+            background-color: rgba(212, 175, 55, 0.15) !important;
+        }
+
+        .theme-label {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .theme-divider {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Light Mode Overrides */
+        [data-theme="light"] .theme-aware-input {
+            background-color: #ffffff !important;
+            border: 1px solid rgba(212, 175, 55, 0.4) !important;
+            color: #333 !important;
+        }
+
+        [data-theme="light"] .theme-aware-addon {
+            background-color: rgba(212, 175, 55, 0.1) !important;
+        }
+
+        [data-theme="light"] .theme-label {
+            color: #666;
+        }
+
+        [data-theme="light"] .theme-divider {
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* ======================================================= */
+        /* DATE PICKER ICON FIX FOR DARK/LIGHT MODE                */
+        /* ======================================================= */
+
+        /* 1. Default (Dark Mode) - Invert the black icon to white/light gray */
+        input[type="date"].theme-aware-input::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(0.8);
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+            input[type="date"].theme-aware-input::-webkit-calendar-picker-indicator:hover {
+                opacity: 1;
+            }
+
+        /* 2. Light Mode Override - Keep the icon dark */
+        [data-theme="light"] input[type="date"].theme-aware-input::-webkit-calendar-picker-indicator {
+            filter: invert(0); /* Returns it to default dark color */
+            opacity: 0.6;
+        }
+
+            [data-theme="light"] input[type="date"].theme-aware-input::-webkit-calendar-picker-indicator:hover {
+                opacity: 1;
+            }
+
+        /* ======================================================= */
+        /* FIX DECORATIVE ICON VISIBILITY (System Context Modal)   */
+        /* ======================================================= */
+
+        /* 1. Dark Mode (Default) - Keep it Bright Gold */
+        .bi-calendar-range.text-gold {
+            color: #d4af37 !important;
+            transition: color 0.3s ease;
+        }
+
+        /* 2. Light Mode Override - Make it Darker Gold/Bronze for contrast */
+        [data-theme="light"] .bi-calendar-range.text-gold {
+            color: #b48d28 !important; /* Darker shade to pop against light bg */
+        }
     </style>
 
     <!-- STYLES FOR FINANCIAL DROPDOWN & ACADEMIC YEAR SELECTOR -->
@@ -422,44 +507,56 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="row">
-                        <!-- FULL COLUMN: ACTIVE SETTINGS -->
-                        <div class="col-12">
-                            <h6 class="text-white-50 small text-uppercase fw-bold mb-3">Update Current Session</h6>
-
-                            <div class="mb-4">
-                                <label class="form-label text-gold small fw-bold text-uppercase">Academic Year (Type Manual)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text border-gold" style="background: rgba(212, 175, 55, 0.15); min-width: 45px; justify-content: center;">
-                                        <i class="bi bi-pencil-square" style="color: #D4AF37 !important; font-size: 1.2rem; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4);"></i>
-                                    </span>
-                                    <input type="text" id="modalAcademicYearInput" class="form-control bg-dark text-white border-gold"
-                                           placeholder="e.g., 2025-2026" value="@(ViewBag.CurrentAcademicYear)">
-                                </div>
-                                <div class="form-text text-muted smaller">Note: You can type any format (e.g., 2025-2026)</div>
+                    <div class="row g-3">
+                        <!-- Academic Year -->
+                        <div class="col-12 mb-2">
+                            <label class="form-label text-gold small fw-bold text-uppercase">Academic Year</label>
+                            <div class="input-group">
+                                <span class="input-group-text theme-aware-addon border-gold">
+                                    <i class="bi bi-calendar-range text-gold"></i>
+                                </span>
+                                <input type="text" id="calAcadYear" class="form-control theme-aware-input border-gold fw-bold"
+                                       placeholder="e.g., 2025-2026" value="@ViewBag.CurrentAcademicYear">
                             </div>
+                        </div>
 
-                            <div class="mb-4">
-                                <label class="form-label text-gold small fw-bold text-uppercase">Current Semester</label>
-                                <div class="input-group">
-                                    <span class="input-group-text border-gold" style="background: rgba(212, 175, 55, 0.15); min-width: 45px; justify-content: center;">
-                                        <i class="bi bi-mortarboard" style="color: #D4AF37 !important; font-size: 1.2rem; text-shadow: 0 0 8px rgba(212, 175, 55, 0.4);"></i>
-                                    </span>
-                                    <select id="modalSemesterSelect" class="form-select bg-dark text-white border-gold">
-                                        @{
-                                            string mSem = ViewBag.CurrentSemester ?? "1st Semester";
-                                            string[] sems = { "1st Semester", "2nd Semester", "Summer" };
-                                            foreach (var s in sems)
-                                            {
-                                                <option value="@s" selected="@(mSem == s)">@s</option>
-                                            }
-                                        }
-                                    </select>
-                                </div>
-                            </div>
+                        <div class="col-12"><hr class="theme-divider my-2"></div>
+                        <div class="col-12"><p class="theme-label small mb-1"><i class="bi bi-info-circle me-1"></i>Set the timeline below. The system will automatically update the active semester and roll over to the next academic year when completed.</p></div>
 
-                            <button type="button" id="saveSystemContext" class="btn btn-gold w-100 fw-bold py-2 mt-4">
-                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Global Changes
+                        <!-- 1st Semester Timeline -->
+                        <div class="col-6">
+                            <label class="form-label theme-label small">1st Sem Start Date</label>
+                            <input type="date" id="calSem1Start" class="form-control theme-aware-input" value="@ViewBag.Sem1Start">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label theme-label small">1st Sem End Date</label>
+                            <input type="date" id="calSem1End" class="form-control theme-aware-input" value="@ViewBag.Sem1End">
+                        </div>
+
+                        <!-- 2nd Semester Timeline -->
+                        <div class="col-6 mt-3">
+                            <label class="form-label theme-label small">2nd Sem Start Date</label>
+                            <input type="date" id="calSem2Start" class="form-control theme-aware-input" value="@ViewBag.Sem2Start">
+                        </div>
+                        <div class="col-6 mt-3">
+                            <label class="form-label theme-label small">2nd Sem End Date</label>
+                            <input type="date" id="calSem2End" class="form-control theme-aware-input" value="@ViewBag.Sem2End">
+                        </div>
+
+                        <!-- Summer Timeline -->
+                        <div class="col-6 mt-3">
+                            <label class="form-label theme-label small">Summer Start Date</label>
+                            <input type="date" id="calSummerStart" class="form-control theme-aware-input" value="@ViewBag.SummerStart">
+                        </div>
+                        <div class="col-6 mt-3">
+                            <label class="form-label theme-label small">Summer End Date</label>
+                            <input type="date" id="calSummerEnd" class="form-control theme-aware-input" value="@ViewBag.SummerEnd">
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="col-12 mt-4">
+                            <button type="button" id="saveUniversityCalendar" class="btn btn-gold w-100 fw-bold py-2">
+                                <i class="bi bi-calendar-check-fill me-2"></i>Save Calendar & Auto-Sync Semester
                             </button>
                         </div>
                     </div>
@@ -492,57 +589,53 @@
                 $('#statusModalIcon').removeClass().addClass('bi bi-check-circle-fill text-success');
                 new bootstrap.Modal(document.getElementById('statusMessageModal')).show();
             }
-            
-            // SYSTEM CONTEXT UPDATE LOGIC (Manual Entry)
-            $('#saveSystemContext').on('click', function () {
-                const btn = $(this);
-                const originalHtml = btn.html();
-                const ay = $('#modalAcademicYearInput').val();
-                const sem = $('#modalSemesterSelect').val();
-                const token = $('input[name="__RequestVerificationToken"]').val();
 
-                if (!ay) {
-                    alert("Academic Year cannot be empty.");
-                    return;
-                }
+                   // UNIVERSITY CALENDAR UPDATE LOGIC
+        $('#saveUniversityCalendar').on('click', function () {
+            const btn = $(this);
+            const originalHtml = btn.html();
+            const token = $('input[name="__RequestVerificationToken"]').val();
 
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+            // Gather dates from the modal
+            const data = {
+                academicYear: $('#calAcadYear').val(),
+                sem1Start: $('#calSem1Start').val(),
+                sem1End: $('#calSem1End').val(),
+                sem2Start: $('#calSem2Start').val(),
+                sem2End: $('#calSem2End').val(),
+                summerStart: $('#calSummerStart').val(),
+                summerEnd: $('#calSummerEnd').val()
+            };
 
-                // Update Academic Year
-                const ayPromise = $.ajax({
-                    url: '@Url.Action("SetCurrentAcademicYear", "Admin")',
-                    type: 'POST',
-                    data: { academicYear: ay },
-                    headers: { 'RequestVerificationToken': token }
-                });
+            if (!data.academicYear) {
+                alert("Academic Year cannot be empty.");
+                return;
+            }
 
-                // Update Semester
-                const semPromise = $.ajax({
-                    url: '@Url.Action("SetCurrentSemester", "Admin")',
-                    type: 'POST',
-                    data: { semester: sem },
-                    headers: { 'RequestVerificationToken': token }
-                });
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving Calendar...');
 
-                Promise.all([ayPromise, semPromise])
-                    .then(results => {
-                        const allSuccess = results.every(r => r.success);
-                        if (allSuccess) {
-                            if (typeof showPortalToast === 'function') {
-                                showPortalToast('success', 'System Updated', 'Global context has been updated.');
-                            }
-                            setTimeout(() => { location.reload(); }, 1000);
-                        } else {
-                            alert("Failed to update context. Please check inputs.");
-                            btn.prop('disabled', false).html(originalHtml);
+            $.ajax({
+                url: '/Admin/UpdateUniversityCalendar',
+                type: 'POST',
+                data: data,
+                headers: { 'RequestVerificationToken': token },
+                success: function (response) {
+                    if (response.success) {
+                        if (typeof showPortalToast === 'function') {
+                            showPortalToast('success', 'Calendar Updated', 'System context is now auto-syncing with these dates.');
                         }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert("A connection error occurred.");
+                        setTimeout(() => { location.reload(); }, 1000);
+                    } else {
+                        alert(response.message || "Failed to update calendar.");
                         btn.prop('disabled', false).html(originalHtml);
-                    });
+                    }
+                },
+                error: function() {
+                    alert("A connection error occurred.");
+                    btn.prop('disabled', false).html(originalHtml);
+                }
             });
+        });
 
        
         });
