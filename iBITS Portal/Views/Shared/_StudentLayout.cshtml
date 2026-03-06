@@ -383,6 +383,104 @@
         });
     </script>
 
+
+    <!-- ============================================================ -->
+    <!-- SESSION TIMEOUT MANAGER SCRIPT                               -->
+    <!-- ============================================================ -->
+    <script>
+        // Configuration based on Program.cs (5 Minutes)
+        const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 Minutes
+        const WARNING_BUFFER_MS = 1 * 60 * 1000;  // 1 Minute before expiry
+        const WARNING_TIME_MS = SESSION_TIMEOUT_MS - WARNING_BUFFER_MS; // Trigger at 4 minutes
+
+        let warningTimer;
+        let expireTimer;
+
+        // 1. Function to Start/Restart Timers
+        function startSessionTimers() {
+            clearTimeout(warningTimer);
+            clearTimeout(expireTimer);
+
+            // Set Warning Timer (4 Minutes)
+            warningTimer = setTimeout(() => {
+                const warningModal = new bootstrap.Modal(document.getElementById('inactivityWarning'));
+                warningModal.show();
+            }, WARNING_TIME_MS);
+
+            // Set Expiry Timer (5 Minutes)
+            expireTimer = setTimeout(() => {
+                // Hide warning if open
+                const warningEl = document.getElementById('inactivityWarning');
+                const warningInstance = bootstrap.Modal.getInstance(warningEl);
+                if (warningInstance) warningInstance.hide();
+
+                // Show Expired Modal (Soft Lock)
+                const expiredModal = new bootstrap.Modal(document.getElementById('sessionExpiredModal'));
+                expiredModal.show();
+            }, SESSION_TIMEOUT_MS);
+        }
+
+        // 2. Function called by the "Keep Me Logged In" button
+        // Matches the onclick="resetTimer()" in your HTML
+        window.resetTimer = function() {
+            // Hide the modal
+            const warningEl = document.getElementById('inactivityWarning');
+            const warningInstance = bootstrap.Modal.getInstance(warningEl);
+            if (warningInstance) warningInstance.hide();
+
+            // Ping the server to extend the ASP.NET Session Cookie (Sliding Expiration)
+            fetch(window.location.href, { method: 'HEAD' })
+                .then(() => {
+                    console.log('Session extended.');
+                    startSessionTimers(); // Restart local counters
+                })
+                .catch(err => console.error('Error extending session:', err));
+        };
+
+        // 3. User Activity Listener
+        // Resets the timer on mouse move/click ONLY if the warning is not yet shown
+        function onUserActivity() {
+            const warningEl = document.getElementById('inactivityWarning');
+            const expiredEl = document.getElementById('sessionExpiredModal');
+
+            // If modals are NOT shown, reset the timer (User is active)
+            if (!warningEl.classList.contains('show') && !expiredEl.classList.contains('show')) {
+                // We debounce this slightly to avoid clearing/setting timeout on every pixel of mouse movement
+                // Simple approach: Just restart.
+                clearTimeout(warningTimer);
+                clearTimeout(expireTimer);
+
+                // Re-initialize timers
+                warningTimer = setTimeout(() => {
+                    new bootstrap.Modal(document.getElementById('inactivityWarning')).show();
+                }, WARNING_TIME_MS);
+
+                expireTimer = setTimeout(() => {
+                    const wInstance = bootstrap.Modal.getInstance(document.getElementById('inactivityWarning'));
+                    if (wInstance) wInstance.hide();
+                    new bootstrap.Modal(document.getElementById('sessionExpiredModal')).show();
+                }, SESSION_TIMEOUT_MS);
+            }
+        }
+
+        // 4. Attach Listeners
+        // Debounce logic: Only reset if activity happens (simple implementation)
+        let activityThrottle;
+        const activityEvents = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
+
+        activityEvents.forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (!activityThrottle) {
+                    onUserActivity();
+                    activityThrottle = setTimeout(() => { activityThrottle = null; }, 1000); // Throttle to 1 sec
+                }
+            }, { passive: true });
+        });
+
+        // Start timers on page load
+        startSessionTimers();
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
