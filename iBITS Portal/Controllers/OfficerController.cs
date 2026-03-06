@@ -21,6 +21,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using iBITS_Portal.Helpers;
+using iBITS_Portal.ViewModels;
 
 namespace iBITS_Portal.Controllers
 {
@@ -6032,6 +6033,232 @@ namespace iBITS_Portal.Controllers
         }
 
         // Collection Trends method removed
+
+
+        #region Batch Management (Org Treasurer)
+
+        // ============================================================
+        // BATCH MANAGEMENT - MAIN PAGE (Org Treasurer)
+        // ============================================================
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> BatchManagement()
+        {
+            // --- Fee Batches ---
+            var feeBatches = await _context.Fees
+                .Where(f => f.BatchId != null)
+                .GroupBy(f => new { f.BatchId, f.FeeName })
+                .Select(g => new FeeBatchViewModel
+                {
+                    BatchId = g.Key.BatchId,
+                    FeeName = g.Key.FeeName,
+                    StudentCount = g.Count(),
+                    DateCreated = g.Min(f => f.DateCreated),
+                    TotalExpected = g.Sum(f => f.Amount ?? 0),
+                    TotalCollected = g.Sum(f => f.AmountPaid)
+                })
+                .OrderByDescending(b => b.DateCreated)
+                .ToListAsync();
+
+            // --- Fine Batches ---
+            var fineBatches = await _context.Fines
+                .Where(f => f.BatchId != null)
+                .GroupBy(f => new { f.BatchId, f.Description })
+                .Select(g => new FineBatchViewModel
+                {
+                    BatchId = g.Key.BatchId,
+                    FineReason = g.Key.Description,
+                    StudentCount = g.Count(),
+                    DateCreated = null, // Fines don't have a DateCreated, can be added if needed
+                    TotalExpected = g.Sum(f => f.Amount ?? 0),
+                    TotalCollected = g.Sum(f => f.AmountPaid)
+                })
+                .OrderBy(b => b.FineReason)
+                .ToListAsync();
+
+            var model = new Tuple<List<FeeBatchViewModel>, List<FineBatchViewModel>>(feeBatches, fineBatches);
+            return View(model);
+        }
+
+        // ============================================================
+        // AJAX: GET BATCH DETAILS (Updated with Granular Status)
+        // ============================================================
+        [HttpGet]
+        [Authorize(Roles = "Org Treasurer")]
+        public async Task<IActionResult> GetBatchDetails(string batchId, string type)
+        {
+            if (string.IsNullOrEmpty(batchId))
+            {
+                return Json(new { success = false, message = "Batch ID is required." });
+            }
+
+            if (type == "fee")
+            {
+                var fees = await _context.Fees
+                    .Include(f => f.StudentNumNavigation)
+                    .Where(f => f.BatchId == batchId)
+                    .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                    .Select(f => new
+                    {
+                        studentName = f.StudentNumNavigation.FullName,
+                        studentNum = f.StudentNum,
+                        // STATUS LOGIC:
+                        // 1. Paid & Remitted = "Validated"
+                        // 2. Paid & Not Remitted = "Collected"
+                        // 3. Unpaid = "Unpaid"
+                        status = (f.FeeStatus == "Paid" || f.AmountPaid >= f.Amount)
+                                    ? (f.RemittanceStatus == FeeRemittanceStatus.Remitted ? "Validated" : "Collected")
+                                    : "Unpaid",
+                        isRemitted = f.RemittanceStatus == FeeRemittanceStatus.Remitted,
+                        amount = f.Amount
+                    })
+                    .ToListAsync();
+                return Json(new { success = true, data = fees });
+            }
+            else if (type == "fine")
+            {
+                var fines = await _context.Fines
+                    .Include(f => f.StudentNumNavigation)
+                    .Where(f => f.BatchId == batchId)
+                    .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                    .Select(f => new
+                    {
+                        studentName = f.StudentNumNavigation.FullName,
+                        studentNum = f.StudentNum,
+                        // SAME STATUS LOGIC FOR FINES
+                        status = (f.FinesStatus == "Paid" || f.AmountPaid >= f.Amount)
+                                    ? (f.RemittanceStatus == FeeRemittanceStatus.Remitted ? "Validated" : "Collected")
+                                    : "Unpaid",
+                        isRemitted = f.RemittanceStatus == FeeRemittanceStatus.Remitted,
+                        amount = f.Amount
+                    })
+                    .ToListAsync();
+                return Json(new { success = true, data = fines });
+            }
+
+            return Json(new { success = false, message = "Invalid type specified." });
+        }
+
+        // ============================================================
+        // EDIT BATCH ACTION (POST)
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateBatch(string batchId, string type, decimal newAmount, DateTime? newDueDate)
+        {
+            if (newAmount <= 0)
+            {
+                TempData["Error"] = "Amount must be a positive value.";
+                return RedirectToAction("BatchManagement");
+            }
+
+            int updatedCount = 0;
+
+            if (type == "fee")
+            {
+                // Target only UNPAID and UNREMITTED records
+                var query = _context.Fees
+                    .Where(f => f.BatchId == batchId && f.AmountPaid == 0 && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
+
+                if (newDueDate.HasValue)
+                {
+                    // Update Amount AND DueDate
+                    updatedCount = await query.ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Amount, newAmount)
+                        .SetProperty(x => x.FeesDueDate, DateOnly.FromDateTime(newDueDate.Value)));
+                }
+                else
+                {
+                    // Update Amount ONLY (Keep existing DueDate)
+                    updatedCount = await query.ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Amount, newAmount));
+                }
+            }
+            else if (type == "fine")
+            {
+                // Target only UNPAID and UNREMITTED records
+                var query = _context.Fines
+                    .Where(f => f.BatchId == batchId && f.AmountPaid == 0 && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted);
+
+                if (newDueDate.HasValue)
+                {
+                    // Update Amount AND DueDate
+                    updatedCount = await query.ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Amount, newAmount)
+                        .SetProperty(x => x.FinesDueDate, DateOnly.FromDateTime(newDueDate.Value)));
+                }
+                else
+                {
+                    // Update Amount ONLY (Keep existing DueDate)
+                    updatedCount = await query.ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Amount, newAmount));
+                }
+            }
+
+            TempData["Message"] = $"Batch updated successfully. {updatedCount} unpaid record(s) were affected.";
+            return RedirectToAction("BatchManagement");
+        }
+
+
+        // ============================================================
+        // DELETE BATCH ACTION (POST) - WITH PASSWORD & STATUS LOGIC
+        // ============================================================
+        [HttpPost]
+        [Authorize(Roles = "Org Treasurer")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteBatch(string batchId, string type, string password)
+        {
+            // 1. Get Current User
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
+            // 2. Verify Password
+            if (string.IsNullOrEmpty(password) || !await _userManager.CheckPasswordAsync(user, password))
+            {
+                TempData["Error"] = "Deletion Failed: Incorrect password provided.";
+                return RedirectToAction("BatchManagement");
+            }
+
+            int deletedCount = 0;
+
+            // 3. EXECUTE DELETION
+            // LOGIC: We delete records where RemittanceStatus is 'NotRemitted'.
+            // This INCLUDES:
+            //   - "Unpaid" records
+            //   - "Collected" records (Paid to Class Treasurer, but not yet part of a remittance batch)
+            // This EXCLUDES:
+            //   - "Validated" records (Already officially remitted - these are safe)
+            //   - "Pending" records (Currently in a remittance batch - must reject batch first)
+
+            if (type == "fee")
+            {
+                deletedCount = await _context.Fees
+                    .Where(f => f.BatchId == batchId
+                             && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                    .ExecuteDeleteAsync();
+            }
+            else if (type == "fine")
+            {
+                deletedCount = await _context.Fines
+                    .Where(f => f.BatchId == batchId
+                             && f.RemittanceStatus == FeeRemittanceStatus.NotRemitted)
+                    .ExecuteDeleteAsync();
+            }
+
+            if (deletedCount > 0)
+            {
+                TempData["Message"] = $"Batch action complete. {deletedCount} records (Unpaid or Unremitted Collections) were permanently deleted.";
+            }
+            else
+            {
+                TempData["Warning"] = "No records were deleted. This batch might contain only Validated or Pending Remittance records, which cannot be deleted directly.";
+            }
+
+            return RedirectToAction("BatchManagement");
+        }
+
+        #endregion
+
     }
 
     // ============================================================

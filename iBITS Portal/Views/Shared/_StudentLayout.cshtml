@@ -151,6 +151,13 @@
                     <li class="@(controller == "Officer" && action == "OrgFines" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="OrgFines"><i class="bi bi-exclamation-triangle"></i> Fines Management</a>
                     </li>
+
+                    @* === ADD THIS NEW LIST ITEM === *@
+                    <li class="@(controller == "Officer" && action == "BatchManagement" ? "active" : "")">
+                        <a asp-controller="Officer" asp-action="BatchManagement"><i class="bi bi-pencil-square"></i> Batch Management</a>
+                    </li>
+                    @* === END OF NEW ITEM === *@
+
                     <li class="@(controller == "Officer" && action == "PaymentReminders" ? "active" : "")">
                         <a asp-controller="Officer" asp-action="PaymentReminders"><i class="bi bi-megaphone"></i> Payment Reminders</a>
                     </li>
