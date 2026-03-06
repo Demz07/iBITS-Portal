@@ -190,14 +190,27 @@
                         @foreach (var batch in feeBatches)
                         {
                             <div class="batch-card" data-batch-id="@batch.BatchId" data-batch-name="@batch.FeeName" data-batch-type="fee">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <h6 class="text-white fw-bold mb-1">@batch.FeeName</h6>
-                                    <span class="badge bg-primary">Fee</span>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="text-white fw-bold mb-0 text-truncate" style="max-width: 70%;">@batch.FeeName</h6>
+                                    <span class="badge bg-primary rounded-pill" style="font-size: 0.7em;">Fee</span>
                                 </div>
-                                <small class="text-muted d-block mb-2">Created: @batch.DateCreated?.ToString("MMM dd, yyyy")</small>
+
+                                <!-- NEW: Program & Year Badges -->
+                                <div class="mb-2">
+                                    @foreach (var prog in batch.AffectedPrograms)
+                                    {
+                                        <span class="badge" style="background: rgba(212, 175, 55, 0.2); color: var(--gold-primary); font-weight: normal; border: 1px solid rgba(212, 175, 55, 0.3);">@prog</span>
+                                    }
+                                    @foreach (var year in batch.AffectedYearLevels)
+                                    {
+                                        <span class="badge bg-dark border border-secondary text-light fw-normal">Year @year</span>
+                                    }
+                                </div>
+
+                                <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">Created: @batch.DateCreated?.ToString("MMM dd, yyyy")</small>
                                 <div class="d-flex justify-content-between align-items-center text-muted small mb-1">
-                                    <span>Students: @batch.StudentCount</span>
-                                    <span>Collected: @batch.CollectionRate%</span>
+                                    <span><i class="bi bi-people me-1"></i>@batch.StudentCount</span>
+                                    <span>@batch.CollectionRate% Paid</span>
                                 </div>
                                 <div class="progress-bar-custom">
                                     <div class="progress" style="width: @batch.CollectionRate%;"></div>
@@ -230,14 +243,27 @@
                         @foreach (var batch in fineBatches)
                         {
                             <div class="batch-card" data-batch-id="@batch.BatchId" data-batch-name="@batch.FineReason" data-batch-type="fine">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <h6 class="text-white fw-bold mb-1">@batch.FineReason</h6>
-                                    <span class="badge bg-danger">Fine</span>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="text-white fw-bold mb-0 text-truncate" style="max-width: 70%;">@batch.FineReason</h6>
+                                    <span class="badge bg-danger rounded-pill" style="font-size: 0.7em;">Fine</span>
                                 </div>
-                                <small class="text-muted d-block mb-2">Students: @batch.StudentCount</small>
+
+                                <!-- NEW: Program & Year Badges -->
+                                <div class="mb-2">
+                                    @foreach (var prog in batch.AffectedPrograms)
+                                    {
+                                        <span class="badge" style="background: rgba(212, 175, 55, 0.2); color: var(--gold-primary); font-weight: normal; border: 1px solid rgba(212, 175, 55, 0.3);">@prog</span>
+                                    }
+                                    @foreach (var year in batch.AffectedYearLevels)
+                                    {
+                                        <span class="badge bg-dark border border-secondary text-light fw-normal">Year @year</span>
+                                    }
+                                </div>
+
+                                <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">Students: @batch.StudentCount</small>
                                 <div class="d-flex justify-content-between align-items-center text-muted small mb-1">
                                     <span>Total: ₱@batch.TotalExpected.ToString("N2")</span>
-                                    <span>Collected: @batch.CollectionRate%</span>
+                                    <span>@batch.CollectionRate% Paid</span>
                                 </div>
                                 <div class="progress-bar-custom">
                                     <div class="progress" style="width: @batch.CollectionRate%;"></div>
@@ -259,8 +285,6 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
 <!-- EDIT BATCH MODAL -->
 <div class="modal fade" id="editBatchModal" tabindex="-1" data-bs-backdrop="static">

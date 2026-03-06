@@ -6043,9 +6043,19 @@ namespace iBITS_Portal.Controllers
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> BatchManagement()
         {
-            // --- Fee Batches ---
-            var feeBatches = await _context.Fees
+            // ------------------------------------------------------------
+            // FIX: Fetch data first, then Group in Memory (Client-side evaluation)
+            // This prevents the "Unable to translate collection subquery" error
+            // ------------------------------------------------------------
+
+            // 1. GET RAW FEE DATA
+            var rawFees = await _context.Fees
+                .Include(f => f.StudentNumNavigation)
                 .Where(f => f.BatchId != null)
+                .ToListAsync(); // <--- Execute SQL here
+
+            // 2. GROUP IN MEMORY
+            var feeBatches = rawFees
                 .GroupBy(f => new { f.BatchId, f.FeeName })
                 .Select(g => new FeeBatchViewModel
                 {
@@ -6054,57 +6064,86 @@ namespace iBITS_Portal.Controllers
                     StudentCount = g.Count(),
                     DateCreated = g.Min(f => f.DateCreated),
                     TotalExpected = g.Sum(f => f.Amount ?? 0),
-                    TotalCollected = g.Sum(f => f.AmountPaid)
+                    TotalCollected = g.Sum(f => f.AmountPaid),
+
+                    // Complex projections now work fine in memory
+                    AffectedPrograms = g.Select(f => f.StudentNumNavigation?.Course)
+                                        .Where(c => !string.IsNullOrEmpty(c))
+                                        .Distinct()
+                                        .ToList(),
+
+                    AffectedYearLevels = g.Select(f => f.StudentNumNavigation?.YearLevelSection)
+                                          .Where(y => !string.IsNullOrEmpty(y))
+                                          // Extract Year (e.g., "3" from "3-1") safely
+                                          .Select(y => y.Split('-')[0].Trim())
+                                          .Distinct()
+                                          .ToList()
                 })
                 .OrderByDescending(b => b.DateCreated)
-                .ToListAsync();
+                .ToList();
 
-            // --- Fine Batches ---
-            var fineBatches = await _context.Fines
+            // 3. GET RAW FINE DATA
+            var rawFines = await _context.Fines
+                .Include(f => f.StudentNumNavigation)
                 .Where(f => f.BatchId != null)
+                .ToListAsync(); // <--- Execute SQL here
+
+            // 4. GROUP IN MEMORY
+            var fineBatches = rawFines
                 .GroupBy(f => new { f.BatchId, f.Description })
                 .Select(g => new FineBatchViewModel
                 {
                     BatchId = g.Key.BatchId,
                     FineReason = g.Key.Description,
                     StudentCount = g.Count(),
-                    DateCreated = null, // Fines don't have a DateCreated, can be added if needed
+                    // Fines don't typically have DateCreated, so we use the earliest due date or now
+                    DateCreated = g.Min(f => f.FinesStartDate.HasValue
+                        ? f.FinesStartDate.Value.ToDateTime(TimeOnly.MinValue)
+                        : (DateTime?)null),
+
                     TotalExpected = g.Sum(f => f.Amount ?? 0),
-                    TotalCollected = g.Sum(f => f.AmountPaid)
+                    TotalCollected = g.Sum(f => f.AmountPaid),
+
+                    AffectedPrograms = g.Select(f => f.StudentNumNavigation?.Course)
+                                        .Where(c => !string.IsNullOrEmpty(c))
+                                        .Distinct()
+                                        .ToList(),
+
+                    AffectedYearLevels = g.Select(f => f.StudentNumNavigation?.YearLevelSection)
+                                          .Where(y => !string.IsNullOrEmpty(y))
+                                          .Select(y => y.Split('-')[0].Trim())
+                                          .Distinct()
+                                          .ToList()
                 })
                 .OrderBy(b => b.FineReason)
-                .ToListAsync();
+                .ToList();
 
             var model = new Tuple<List<FeeBatchViewModel>, List<FineBatchViewModel>>(feeBatches, fineBatches);
             return View(model);
         }
 
         // ============================================================
-        // AJAX: GET BATCH DETAILS (Updated with Granular Status)
+        // AJAX: GET BATCH DETAILS (Updated with Section/Program)
         // ============================================================
         [HttpGet]
         [Authorize(Roles = "Org Treasurer")]
         public async Task<IActionResult> GetBatchDetails(string batchId, string type)
         {
-            if (string.IsNullOrEmpty(batchId))
-            {
-                return Json(new { success = false, message = "Batch ID is required." });
-            }
+            if (string.IsNullOrEmpty(batchId)) return Json(new { success = false, message = "Batch ID is required." });
 
             if (type == "fee")
             {
                 var fees = await _context.Fees
                     .Include(f => f.StudentNumNavigation)
                     .Where(f => f.BatchId == batchId)
-                    .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                    .OrderBy(f => f.StudentNumNavigation.YearLevelSection) // Sort by section first
+                    .ThenBy(f => f.StudentNumNavigation.StudentLn)
                     .Select(f => new
                     {
                         studentName = f.StudentNumNavigation.FullName,
                         studentNum = f.StudentNum,
-                        // STATUS LOGIC:
-                        // 1. Paid & Remitted = "Validated"
-                        // 2. Paid & Not Remitted = "Collected"
-                        // 3. Unpaid = "Unpaid"
+                        program = f.StudentNumNavigation.Course ?? "N/A", // NEW
+                        section = f.StudentNumNavigation.YearLevelSection ?? "N/A", // NEW
                         status = (f.FeeStatus == "Paid" || f.AmountPaid >= f.Amount)
                                     ? (f.RemittanceStatus == FeeRemittanceStatus.Remitted ? "Validated" : "Collected")
                                     : "Unpaid",
@@ -6119,12 +6158,14 @@ namespace iBITS_Portal.Controllers
                 var fines = await _context.Fines
                     .Include(f => f.StudentNumNavigation)
                     .Where(f => f.BatchId == batchId)
-                    .OrderBy(f => f.StudentNumNavigation.StudentLn)
+                    .OrderBy(f => f.StudentNumNavigation.YearLevelSection)
+                    .ThenBy(f => f.StudentNumNavigation.StudentLn)
                     .Select(f => new
                     {
                         studentName = f.StudentNumNavigation.FullName,
                         studentNum = f.StudentNum,
-                        // SAME STATUS LOGIC FOR FINES
+                        program = f.StudentNumNavigation.Course ?? "N/A", // NEW
+                        section = f.StudentNumNavigation.YearLevelSection ?? "N/A", // NEW
                         status = (f.FinesStatus == "Paid" || f.AmountPaid >= f.Amount)
                                     ? (f.RemittanceStatus == FeeRemittanceStatus.Remitted ? "Validated" : "Collected")
                                     : "Unpaid",
